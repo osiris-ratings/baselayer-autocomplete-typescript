@@ -37,5 +37,5 @@ jobs:
       - run: pnpm check:package
       - name: Markdown
         run: pnpm dlx markdownlint-cli2 README.md CHANGELOG.md CONTRIBUTING.md SECURITY.md "docs/*.md"
-      - name: Demo builds
-        run: pnpm demo:build
+      - name: Site builds
+        run: pnpm site:build
