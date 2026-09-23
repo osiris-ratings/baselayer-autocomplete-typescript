@@ -5,7 +5,6 @@ import "../shared/brand.css";
 import "./demo.css";
 
 import { mount } from "../shared/mount";
-import { SiteFooter } from "../shared/SiteFooter";
 import { SiteHeader } from "../shared/SiteHeader";
 import { App } from "./App";
 
@@ -13,6 +12,5 @@ mount(
   <>
     <SiteHeader current="demo" />
     <App />
-    <SiteFooter />
   </>,
 );
