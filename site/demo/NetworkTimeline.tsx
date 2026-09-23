@@ -4,6 +4,7 @@
 
 import { Fragment, useEffect, useState, useSyncExternalStore } from "react";
 
+import { Collapsible } from "./controls";
 import type { NetworkEntry, NetworkLog } from "./network";
 
 function bytes(n: number | null): string {
@@ -69,7 +70,15 @@ function filtersOf(entry: NetworkEntry): string[] {
   );
 }
 
-export function NetworkTimeline({ log }: { log: NetworkLog }) {
+export function NetworkTimeline({
+  log,
+  open: shown,
+  onToggle,
+}: {
+  log: NetworkLog;
+  open: boolean;
+  onToggle(open: boolean): void;
+}) {
   const all = useSyncExternalStore(log.subscribe, log.getSnapshot);
   const [open, setOpen] = useState<number | null>(null);
   const entries = all.slice(-VISIBLE);
@@ -84,17 +93,20 @@ export function NetworkTimeline({ log }: { log: NetworkLog }) {
   const aborted = all.filter(e => e.outcome === "aborted").length;
 
   return (
-    <section
+    <Collapsible
       className="activity-card"
-      aria-labelledby="network-title"
-      data-testid="demo-network"
-    >
-      <div className="activity-head">
-        <h2 id="network-title">Network</h2>
-        <p className="mono-label">
+      title="Network"
+      testId="demo-network"
+      open={shown}
+      onToggle={onToggle}
+      keepSummary
+      summary={
+        <span className="mono-label">
           {all.length} requests · {mints} mint{mints === 1 ? "" : "s"} ·{" "}
           {aborted} aborted · {bytes(totalBytes)}
-        </p>
+        </span>
+      }
+      actions={
         <button
           type="button"
           className="btn btn-outline btn-sm"
@@ -103,7 +115,8 @@ export function NetworkTimeline({ log }: { log: NetworkLog }) {
         >
           Clear
         </button>
-      </div>
+      }
+    >
       {all.length > VISIBLE && (
         <p className="hint">
           The last {VISIBLE} of {all.length}.
@@ -280,6 +293,6 @@ export function NetworkTimeline({ log }: { log: NetworkLog }) {
           })}
         </div>
       )}
-    </section>
+    </Collapsible>
   );
 }

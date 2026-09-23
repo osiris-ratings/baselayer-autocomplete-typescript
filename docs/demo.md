@@ -103,11 +103,27 @@ form shows the `business_token` and the search it belongs in.
 
 ## Styling
 
-Folded until you open it. First come six presets, each a color theme drawn
-as a small row in its own colors: Light (the console's), Baselayer,
-Midnight, Monokai, Sepia and Rosé. A preset sets the colors, the corners and
-the shadow, and leaves your sizes, behavior and text alone. Then every knob
-the styled component has, grouped: how matches are marked, every color (the
+Styling and the debug panel share the right of the page: one or the other,
+or neither. Folded, each is a tab beside the controls, **Debug here** and
+**Style here**, reading up their spines; open one and a switch at the top of
+the panel flips between the two, and **Hide** folds it back. Opened, the page
+below the header widens to make room; on a narrow screen the tabs lie side by
+side under the controls, and the panel opens below them.
+
+Opening Styling folds Connect away, so the component is what you look at.
+Its menu stays open, blur or no blur, and takes its place in the page rather
+than lying over it. With nothing typed it shows four made-up rows that
+carry every part of a row (highlighted words, a matched alternative name,
+the domicile square and the overflow, an address, officers with a +N, a
+registered agent, the count), so every knob can be judged before a
+keystroke; type a name and the real rows take their place.
+
+First come six presets, each a color theme drawn as a small row in its own
+colors: Light (the console's), Baselayer, Midnight, Monokai, Sepia and Rosé.
+A preset sets the colors, the corners and the shadow, and leaves your sizes,
+behavior and text alone. Then every knob the styled component has, grouped:
+how matched words are highlighted (with one color override for every
+emphasis), every color (the
 `look` prop's and the stylesheet's own variables, each with a swatch that
 opens a color picker), shape and size, behavior (rows, related entities,
 the pause before asking, prewarming), every message it can show, and the
@@ -122,13 +138,14 @@ set.
 
 ## Debug
 
-The debug panel folds to a tab beside the controls, reading **Debug here** up
-its spine, with the number of requests so far. When a request is refused or
-fails, or the SDK logs an error, while it is folded, a red dot pulses on the
-tab's bug until you open it. Folded, the page is as wide as the site's other
-pages; opened, everything below the header widens and the panel takes its
-right half. Its bar folds it back. On a narrow screen the tab is a bar under
-the controls, and the panel opens below them.
+Its tab carries the number of requests so far. When a request is refused or
+fails, or the SDK logs an error, while the panel is not showing, a red dot
+pulses on the tab's bug (and on the switch's, while Styling is up) until you
+open it. Folded, the page is as wide as the site's other pages.
+
+The panel holds three cards, each of which folds: the network timeline,
+open; the session, folded to its dot and timer; and the SDK's log, folded to
+how many entries it has.
 
 ![The demo with its debug panel folded](images/demo-folded.png)
 
@@ -142,9 +159,9 @@ short before anything is shown.
 
 ![A request's details](images/demo-network.png)
 
-Above it, the session: its phase, the requests spent of its budget, when it
+Below it, the session: its phase, the requests spent of its budget, when it
 expires, and the index that answered. Under those, what the session's token
 says beyond them: the origin it is bound to, how many characters of the name
 the officer, state and address filters wait for, and how often the name can
-be replaced by another before the tier wants a new session. Below it all,
-the SDK's log of every mint, request, recovery and change of phase.
+be replaced by another before the tier wants a new session. Last, the SDK's
+log of every mint, request, recovery and change of phase.

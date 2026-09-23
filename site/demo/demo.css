@@ -85,6 +85,9 @@
 }
 
 .fold-heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin: 0;
   font-size: inherit;
   font-weight: inherit;
@@ -95,6 +98,7 @@
   align-items: baseline;
   gap: 12px;
   width: 100%;
+  min-width: 0;
   padding: 0;
   background: none;
   border: 0;
@@ -541,6 +545,16 @@
   min-height: 96px;
 }
 
+/* Held open while Styling is up, the menu takes its place in the page rather
+   than lying over what is below the field. */
+.demo-preview[data-held="true"] .bl-ac-menu {
+  position: relative;
+}
+
+.demo-sample-note {
+  margin: 10px 0 0;
+}
+
 .demo-preview .bl-ac-label {
   font-size: 14px;
 }
@@ -601,26 +615,21 @@
   border-radius: 2px;
 }
 
-.activity-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 14px;
-  margin-bottom: 12px;
-}
-
-.activity-head h2 {
-  margin: 0;
+/* Debug's cards: folds, titled like the panel's other cards. */
+.fold.activity-card .fold-title {
   font-family: var(--serif);
   font-size: 21px;
-  font-weight: 400;
 }
 
-.activity-head .mono-label {
-  margin: 0 auto 0 0;
+.fold.activity-card .fold-body-inner::before {
+  height: 12px;
 }
 
-.activity-head .btn[disabled] {
+.fold.activity-card .fold-summary .mono-label {
+  margin: 0;
+}
+
+.fold.activity-card .fold-heading .btn[disabled] {
   opacity: 0.45;
   cursor: default;
 }
@@ -1195,19 +1204,21 @@
 
 /* ---- Debug: a tab on the edge until it is wanted ------------------------- */
 
-/* Folded, the page is as narrow as every other and the tab sits beside the
+/* Folded, the page is as narrow as every other and the rail sits beside the
    controls; opened, only the page below the header widens, to make room. */
-.demo-split[data-debug="closed"] {
+.demo-split[data-side="closed"] {
   grid-template-columns: minmax(0, 760px) minmax(0, 1fr);
 }
 
-.demo-split[data-debug="closed"] > .debug-tab {
+.side-rail {
+  position: sticky;
+  top: calc(var(--header-h) + 16px);
+  display: grid;
+  gap: 8px;
   justify-self: start;
 }
 
-.debug-tab {
-  position: sticky;
-  top: calc(var(--header-h) + 16px);
+.side-tab {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1226,16 +1237,16 @@
   cursor: pointer;
 }
 
-.debug-tab:hover {
+.side-tab:hover {
   background: var(--faded);
 }
 
-.debug-tab .icon {
+.side-tab .icon {
   color: var(--blue);
 }
 
 /* The label reads bottom to top, as a spine does. */
-.debug-tab-label {
+.side-tab-label {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
 }
@@ -1251,57 +1262,102 @@
   text-align: center;
 }
 
-.debug-bar {
+/* Opened: which of the two, and a way to fold it back. It stays in view as
+   the panel scrolls. */
+.side-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 12px 16px;
+  gap: 12px;
+  padding: 8px;
   background: var(--paper);
   border: 1px solid var(--line-soft);
   border-top: 2px solid var(--blue);
   border-radius: 2px;
-  color: var(--ink);
+}
+
+.side-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--faded);
+  border: 1px solid var(--line-soft);
+  border-radius: 2px;
+}
+
+.side-switch button,
+.side-hide {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  background: none;
+  border: 0;
+  border-radius: 2px;
+  color: var(--muted);
   font-family: var(--mono);
   font-size: 12.5px;
   letter-spacing: 0.08em;
-  text-align: left;
   text-transform: uppercase;
   cursor: pointer;
 }
 
-.debug-bar .icon {
+.side-switch button:hover,
+.side-hide:hover {
+  color: var(--ink);
+}
+
+.side-switch button[aria-pressed="true"] {
+  background: var(--paper);
+  box-shadow: 0 1px 2px rgba(9, 35, 79, 0.14);
+  color: var(--ink);
+}
+
+.side-switch .icon {
   color: var(--blue);
 }
 
-.debug-bar-hide {
+.side-hide {
   margin-left: auto;
-  color: var(--muted);
+  padding: 7px 8px;
 }
 
-.debug-bar .fold-chevron {
+.side-hide .fold-chevron {
   width: 7px;
   height: 7px;
 }
 
-/* On a narrow screen the tab lies flat under the controls, and opening it
-   stacks the debug panel below them. */
+/* On a narrow screen the rail lies flat under the controls, the two tabs side
+   by side, and opening one stacks its panel below them. */
 @media (max-width: 1100px) {
-  .demo-split[data-debug="closed"] {
+  .demo-split[data-side="closed"] {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .debug-tab {
+  .side-rail {
     position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-self: stretch;
+  }
+
+  .side-tab {
     flex-direction: row;
     justify-content: center;
     width: 100%;
     padding: 14px 16px;
   }
 
-  .debug-tab-label {
+  .side-tab-label {
     writing-mode: horizontal-tb;
     transform: none;
+  }
+}
+
+@media (max-width: 420px) {
+  .side-switch button {
+    padding: 7px 10px;
   }
 }
 

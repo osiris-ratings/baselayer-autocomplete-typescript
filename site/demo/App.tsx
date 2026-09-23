@@ -7,6 +7,7 @@ import {
 } from "@baselayer/autocomplete";
 import {
   BusinessAutocomplete,
+  BusinessAutocompleteView,
   useAutocompleteSession,
   type Pick,
 } from "@baselayer/autocomplete/react";
@@ -36,6 +37,7 @@ import {
   previewCss,
   type StyleState,
 } from "./style-state";
+import { SAMPLE_META, SAMPLE_SUGGESTIONS } from "./sample";
 import { StylingPanel } from "./StylingPanel";
 
 const PRODUCTION = "https://api.baselayer.com";
@@ -46,6 +48,8 @@ const PRODUCTION = "https://api.baselayer.com";
 const DEV_SERVER_PATH = import.meta.env.DEV ? "/_baselayer" : null;
 type Environment = "dev-server" | "production" | "custom";
 type Mode = "token" | "key";
+/** What the right of the page shows, if anything: one or the other. */
+type Panel = "debug" | "styling";
 /** The session's phase by name: idle, minting, ready, backoff or unavailable. */
 type PhaseName = SessionPhase["phase"];
 
@@ -323,9 +327,19 @@ export function App() {
   const appliedCount = useRef(0);
   const [connectOpen, setConnectOpen] = useState(true);
   const connectToggle = useRef<HTMLButtonElement>(null);
-  const [stylingOpen, setStylingOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [debugOpen, setDebugOpen] = useState(false);
+  const [panel, setPanelState] = useState<Panel | null>(null);
+  // Opening Styling folds Connect, so the eye goes to the component.
+  const setPanel = (next: Panel | null) => {
+    setPanelState(next);
+    if (next === "styling") setConnectOpen(false);
+  };
+  const debugOpen = panel === "debug";
+  const styling = panel === "styling";
+  // Debug's cards keep their folds while Styling is up.
+  const [networkOpen, setNetworkOpen] = useState(true);
+  const [sessionOpen, setSessionOpen] = useState(false);
+  const [logOpen, setLogOpen] = useState(false);
   const [name, setName] = useState("");
   const [picked, setPicked] = useState<{
     suggestion: BusinessSuggestion;
@@ -447,7 +461,7 @@ export function App() {
 
   return (
     <main className="demo">
-      <div className={`demo-intro ${debugOpen ? "wrap-wide" : "wrap"}`}>
+      <div className={`demo-intro ${panel !== null ? "wrap-wide" : "wrap"}`}>
         <p className="eyebrow">Live demo</p>
         <h1 className="display-sm">
           The typeahead, against your own organization
@@ -460,8 +474,8 @@ export function App() {
       </div>
 
       <div
-        className={`demo-split ${debugOpen ? "wrap-wide" : "wrap"}`}
-        data-debug={debugOpen ? "open" : "closed"}
+        className={`demo-split ${panel !== null ? "wrap-wide" : "wrap"}`}
+        data-side={panel !== null ? "open" : "closed"}
       >
         <div className="demo-controls">
           <Collapsible
@@ -663,7 +677,10 @@ export function App() {
                 />
               </Field>
             </div>
-            <div className="demo-preview">
+            <div
+              className="demo-preview"
+              data-held={styling ? "true" : "false"}
+            >
               {previewCss(style) !== "" && <style>{previewCss(style)}</style>}
               {client === null ? (
                 <div className="bl-ac">
@@ -706,11 +723,47 @@ export function App() {
                     prewarmOnFocus={style.prewarmOnFocus}
                     messages={style.messages}
                     unstyled={style.unstyled}
+                    open={styling}
                     {...(style.pageInput
                       ? { classNames: { input: "demo-input" } }
                       : {})}
                     {...(filters !== undefined ? { filters } : {})}
                   />
+                </>
+              )}
+              {styling && name.trim() === "" && (
+                <>
+                  {/* Sample rows under the empty field, drawn by the same view
+                      the live component uses, so every knob shows on them. */}
+                  <div className="demo-sample" aria-hidden="true">
+                    <BusinessAutocompleteView
+                      id="demo-sample"
+                      value=""
+                      onInputChange={() => {}}
+                      onSelect={() => {}}
+                      renderInput={inputProps => (
+                        <input {...inputProps} hidden tabIndex={-1} />
+                      )}
+                      suggestions={SAMPLE_SUGGESTIONS}
+                      found={SAMPLE_META.found}
+                      foundCapped={false}
+                      truncated={false}
+                      indexTag={SAMPLE_META.indexTag}
+                      roundTripMs={SAMPLE_META.roundTripMs}
+                      isSearching={false}
+                      error={null}
+                      open
+                      look={{ ...changedLook(style) }}
+                      messages={style.messages}
+                      unstyled={style.unstyled}
+                    />
+                  </div>
+                  <p className="hint demo-sample-note">
+                    Sample rows while Styling is open.{" "}
+                    {client === null
+                      ? "Connect and type a name to see real ones."
+                      : "Type a name to see real ones."}
+                  </p>
                 </>
               )}
             </div>
@@ -735,104 +788,172 @@ export function App() {
               </div>
             )}
           </section>
-
-          <Collapsible
-            num="03"
-            title="Styling"
-            open={stylingOpen}
-            onToggle={setStylingOpen}
-            testId="demo-styling"
-          >
-            <StylingPanel state={style} onChange={setStyle} />
-          </Collapsible>
         </div>
 
-        {debugOpen ? (
-          <aside
-            className="demo-activity"
-            id="demo-activity"
-            aria-label="Debug"
-          >
+        {panel === null ? (
+          <div className="side-rail">
             <button
               type="button"
-              className="debug-bar"
-              aria-expanded="true"
-              aria-controls="demo-activity"
-              onClick={() => setDebugOpen(false)}
-              data-testid="demo-debug-close"
+              className="side-tab"
+              aria-expanded="false"
+              aria-controls="demo-side"
+              onClick={() => setPanel("debug")}
+              data-testid="demo-debug-open"
             >
-              <Icon name="bug" />
-              <span>Debug</span>
-              <span className="debug-bar-hide">Hide</span>
-              <span
-                className="fold-chevron"
-                data-open="true"
-                aria-hidden="true"
-              />
-            </button>
-            <section className="activity-card" aria-labelledby="session-title">
-              <div className="activity-head">
-                <h2 id="session-title">Session</h2>
-              </div>
-              {client === null || applied === null ? (
-                <p className="hint">Not connected.</p>
-              ) : (
-                <SessionMeters client={client} applied={applied} />
+              <span className="debug-tab-icon">
+                <Icon name="bug" />
+                {unseenErrors && (
+                  <span
+                    className="debug-tab-alert"
+                    data-testid="demo-debug-alert"
+                  >
+                    <span className="visually-hidden">New errors</span>
+                  </span>
+                )}
+              </span>
+              <span className="side-tab-label">Debug here</span>
+              {requests > 0 && (
+                <span className="debug-tab-count">{requests}</span>
               )}
-            </section>
-            <NetworkTimeline log={network} />
-            <section className="activity-card" aria-labelledby="log-title">
-              <div className="activity-head">
-                <h2 id="log-title">SDK log</h2>
-                <p className="mono-label">newest first</p>
+            </button>
+            <button
+              type="button"
+              className="side-tab"
+              aria-expanded="false"
+              aria-controls="demo-side"
+              onClick={() => setPanel("styling")}
+              data-testid="demo-styling-open"
+            >
+              <Icon name="palette" />
+              <span className="side-tab-label">Style here</span>
+            </button>
+          </div>
+        ) : (
+          <aside
+            className="demo-activity"
+            id="demo-side"
+            aria-label={debugOpen ? "Debug" : "Styling"}
+          >
+            <div className="side-head">
+              <div className="side-switch" role="group" aria-label="Show">
                 <button
                   type="button"
-                  className="btn btn-outline btn-sm"
-                  onClick={clearLog}
-                  disabled={log.length === 0}
+                  aria-pressed={debugOpen}
+                  onClick={() => setPanel("debug")}
+                  data-testid="demo-switch-debug"
                 >
-                  Clear
+                  <span className="debug-tab-icon">
+                    <Icon name="bug" size={18} />
+                    {unseenErrors && (
+                      <span className="debug-tab-alert">
+                        <span className="visually-hidden">New errors</span>
+                      </span>
+                    )}
+                  </span>
+                  Debug
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={styling}
+                  onClick={() => setPanel("styling")}
+                  data-testid="demo-switch-styling"
+                >
+                  <Icon name="palette" size={18} />
+                  Styling
                 </button>
               </div>
-              <ol className="log" data-testid="demo-log">
-                {log.length === 0 && <li className="hint">Nothing yet.</li>}
-                {log.map(line => (
-                  <li key={line.id} className={line.ok ? "ok" : "bad"}>
-                    <span className="mono">{line.at}</span>{" "}
-                    <span className="tag" data-kind={line.kind}>
-                      {line.kind}
-                    </span>{" "}
-                    {line.text}
-                  </li>
-                ))}
-              </ol>
-            </section>
-          </aside>
-        ) : (
-          <button
-            type="button"
-            className="debug-tab"
-            aria-expanded="false"
-            aria-controls="demo-activity"
-            onClick={() => setDebugOpen(true)}
-            data-testid="demo-debug-open"
-          >
-            <span className="debug-tab-icon">
-              <Icon name="bug" />
-              {unseenErrors && (
+              <button
+                type="button"
+                className="side-hide"
+                aria-expanded="true"
+                aria-controls="demo-side"
+                onClick={() => setPanel(null)}
+                data-testid="demo-side-close"
+              >
+                Hide
                 <span
-                  className="debug-tab-alert"
-                  data-testid="demo-debug-alert"
+                  className="fold-chevron"
+                  data-open="true"
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
+            {debugOpen ? (
+              <>
+                <NetworkTimeline
+                  log={network}
+                  open={networkOpen}
+                  onToggle={setNetworkOpen}
+                />
+                <Collapsible
+                  className="activity-card"
+                  title="Session"
+                  open={sessionOpen}
+                  onToggle={setSessionOpen}
+                  testId="demo-session"
+                  summary={
+                    client === null || applied === null ? (
+                      "Not connected"
+                    ) : (
+                      <ConnectionIndicator client={client} applied={applied} />
+                    )
+                  }
                 >
-                  <span className="visually-hidden">New errors</span>
-                </span>
-              )}
-            </span>
-            <span className="debug-tab-label">Debug here</span>
-            {requests > 0 && (
-              <span className="debug-tab-count">{requests}</span>
+                  {client === null || applied === null ? (
+                    <p className="hint">Not connected.</p>
+                  ) : (
+                    <SessionMeters client={client} applied={applied} />
+                  )}
+                </Collapsible>
+                <Collapsible
+                  className="activity-card"
+                  title="SDK log"
+                  open={logOpen}
+                  onToggle={setLogOpen}
+                  testId="demo-log-card"
+                  keepSummary
+                  summary={
+                    <span className="mono-label">
+                      {log.length === 0
+                        ? "nothing yet"
+                        : `${log.length} ${log.length === 1 ? "entry" : "entries"}, newest first`}
+                    </span>
+                  }
+                  actions={
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      onClick={clearLog}
+                      disabled={log.length === 0}
+                    >
+                      Clear
+                    </button>
+                  }
+                >
+                  <ol className="log" data-testid="demo-log">
+                    {log.length === 0 && <li className="hint">Nothing yet.</li>}
+                    {log.map(line => (
+                      <li key={line.id} className={line.ok ? "ok" : "bad"}>
+                        <span className="mono">{line.at}</span>{" "}
+                        <span className="tag" data-kind={line.kind}>
+                          {line.kind}
+                        </span>{" "}
+                        {line.text}
+                      </li>
+                    ))}
+                  </ol>
+                </Collapsible>
+              </>
+            ) : (
+              <section
+                className="activity-card"
+                aria-label="Styling"
+                data-testid="demo-styling"
+              >
+                <StylingPanel state={style} onChange={setStyle} />
+              </section>
             )}
-          </button>
+          </aside>
         )}
       </div>
     </main>

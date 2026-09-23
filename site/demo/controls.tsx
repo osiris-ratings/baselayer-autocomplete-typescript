@@ -19,6 +19,9 @@ export function Collapsible({
   testId,
   icon,
   toggleRef,
+  className,
+  actions,
+  keepSummary = false,
 }: {
   title: string;
   /** Drawn before the title. */
@@ -32,11 +35,18 @@ export function Collapsible({
   testId?: string;
   /** The heading's button, for the host to move focus to. */
   toggleRef?: Ref<HTMLButtonElement>;
+  /** The section's own look, in place of the card or the nested fold. */
+  className?: string;
+  /** Controls beside the toggle (a toggle cannot hold buttons of its own). */
+  actions?: ReactNode;
+  /** Show the summary open as well as folded. */
+  keepSummary?: boolean;
 }) {
   const id = useId();
+  const look = className ?? (nested ? "fold-nested" : "demo-card");
   return (
     <section
-      className={nested ? "fold fold-nested" : "fold demo-card"}
+      className={`fold ${look}`}
       data-open={open ? "true" : "false"}
       data-testid={testId}
     >
@@ -54,11 +64,12 @@ export function Collapsible({
             {title}
             {icon !== undefined && <Icon name={icon} />}
           </span>
-          {summary !== undefined && !open && (
+          {summary !== undefined && (keepSummary || !open) && (
             <span className="fold-summary">{summary}</span>
           )}
           <span className="fold-chevron" aria-hidden="true" />
         </button>
+        {actions}
       </h2>
       {/* Folds by animating its height (a 1fr to 0fr grid row); inert while
           folded, so nothing out of sight can take focus. */}
