@@ -26,7 +26,9 @@ breaking change bumps the minor version.
   `ROW_PARTS`, `RowPart` and `RowParts`: which parts of a row show, named for
   any entity: the title, the flags, the subtitle and the secondary subtitle
   (on a business, the name, the states, the lead address and the officers).
-  Each shows unless set to `false`, and a line left with nothing is not drawn.
+  Each shows unless set to `false`, and a place left empty takes the part
+  below it: the secondary subtitle is promoted to subtitle, the subtitle to
+  title, so no line starts with a gap.
 
 ### Changed
 

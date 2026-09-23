@@ -1262,6 +1262,65 @@ describe("the row's parts", () => {
     expect(noSubtitles.querySelector(".bl-ac-line-title")).not.toBeNull();
   });
 
+  /** Each line of a row, as the test ids of what it holds, in order. */
+  function lines(row: HTMLElement): string[][] {
+    return [...row.querySelectorAll(".bl-ac-line")].map(line =>
+      [
+        ...line.querySelectorAll(
+          ":scope > [data-testid], :scope > .bl-ac-states",
+        ),
+      ].map(part => part.getAttribute("data-testid") ?? "flags"),
+    );
+  }
+
+  it.each([
+    // Without the subtitle, the officers are promoted to subtitle.
+    [
+      { flags: false, subtitle: false },
+      [["business-suggestion-name"], ["business-suggestion-officers"]],
+    ],
+    // Without the title and the subtitle, the officers lead, the flags follow.
+    [
+      { title: false, subtitle: false },
+      [["business-suggestion-officers", "flags"]],
+    ],
+    // Without the title, the address leads beside the flags.
+    [
+      { title: false, secondarySubtitle: false },
+      [["business-suggestion-address", "flags"]],
+    ],
+  ])("packs what %j leaves, so no line starts with a gap", (parts, drawn) => {
+    expect(lines(rowOf(parts))).toEqual(drawn);
+  });
+
+  it("keeps each part in its column on a row that lacks the part beside it", () => {
+    renderTypeahead({ parts: { title: false, subtitle: false } });
+    const [first, second] = screen.getAllByTestId("business-suggestion");
+
+    // The first row leads with its officers; the second has none, and its
+    // flags stay on the right, lined up with the first row's.
+    expect(first!.querySelector(".bl-ac-people")).toHaveAttribute(
+      "data-slot",
+      "left",
+    );
+    expect(first!.querySelector(".bl-ac-states")).toHaveAttribute(
+      "data-slot",
+      "right",
+    );
+    expect(second!.querySelector(".bl-ac-people")).toBeNull();
+    expect(second!.querySelector(".bl-ac-states")).toHaveAttribute(
+      "data-slot",
+      "right",
+    );
+  });
+
+  it("keeps the two lines as ever with every part shown", () => {
+    expect(lines(rowOf(undefined))).toEqual([
+      ["business-suggestion-name", "flags"],
+      ["business-suggestion-address", "business-suggestion-officers"],
+    ]);
+  });
+
   it("drops the title line when both the title and the flags are left out", () => {
     const row = rowOf({ title: false, flags: false });
     expect(row.querySelector(".bl-ac-line-title")).toBeNull();

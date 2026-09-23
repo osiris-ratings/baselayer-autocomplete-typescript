@@ -153,20 +153,31 @@
   color: var(--bl-ac-subtitle);
 }
 
-/* Pushed right, so it stays there when the subtitle is left out. */
 .bl-ac-people {
   flex-shrink: 0;
-  margin-left: auto;
   white-space: nowrap;
 }
 
-/* Pushed right, so they stay there when the title is left out. */
+/* A part in a line's right-hand slot keeps to the right, whatever leads the
+   line or is missing from it, so the column lines up down the menu. */
+.bl-ac-line > [data-slot="right"] {
+  margin-left: auto;
+}
+
+/* Promoted to lead its line, the people give way before the flags beside
+   them, ellipsised. */
+.bl-ac-people[data-slot="left"] {
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .bl-ac-states {
   display: flex;
   flex-shrink: 0;
   gap: 0.25rem;
   align-items: center;
-  margin-left: auto;
 }
 
 .bl-ac-state,

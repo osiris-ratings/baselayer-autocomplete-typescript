@@ -28,6 +28,7 @@ import type {
 } from "@baselayer/autocomplete";
 
 import { resolveMessages, type AutocompleteMessages } from "./messages";
+import { rowLayout } from "./rowLayout";
 import { useBusinessCombobox } from "./useBusinessCombobox";
 
 /** Squares shown before the `+N` overflow: the domicile and two more. */
@@ -199,16 +200,18 @@ function StateSquares({
   suggestion,
   cx,
   more,
+  slot,
 }: {
   suggestion: BusinessSuggestion;
   cx: ClassFor;
   more: (count: number) => string;
+  slot: "left" | "right";
 }) {
   const states = orderedStates(suggestion);
   const shown = states.slice(0, STATE_SQUARES);
   const hidden = states.length - shown.length;
   return (
-    <span className={cx("states", "bl-ac-states")}>
+    <span className={cx("states", "bl-ac-states")} data-slot={slot}>
       {shown.map((state, index) => (
         <span
           key={state}
@@ -268,7 +271,13 @@ export function BusinessAutocompleteView({
   unstyled = false,
 }: BusinessAutocompleteViewProps) {
   const look = resolveLook(lookInput ?? {});
-  const shows = (part: RowPart) => parts?.[part] !== false;
+  // One layout for every row, from the parts asked for.
+  const layout = rowLayout({
+    title: parts?.title !== false,
+    flags: parts?.flags !== false,
+    subtitle: parts?.subtitle !== false,
+    secondarySubtitle: parts?.secondarySubtitle !== false,
+  });
   const text = resolveMessages(messageOverrides);
   const cx = classes(unstyled, classNames);
   const hasFooter = isSearching || error !== null || roundTripMs !== null;
@@ -351,84 +360,104 @@ export function BusinessAutocompleteView({
               const parts = drawMarks ? item.highlight : [];
               const highlighted = highlightedIndex === index;
               const markClass = cx("mark", "bl-ac-mark");
-              const secondary = shows("secondarySubtitle") ? people : null;
+              // Each part as drawn in a slot: a right-hand one keeps right.
+              const partNode: Record<
+                RowPart,
+                (slot: "left" | "right") => ReactNode
+              > = {
+                title: slot => (
+                  <span
+                    className={cx("name", "bl-ac-name")}
+                    data-slot={slot}
+                    data-testid="business-suggestion-name"
+                    data-emphasis={look.matchEmphasis}
+                    data-region={region}
+                  >
+                    {marked(
+                      item.label,
+                      partsFor(item.label, parts, region, tokens),
+                      markClass,
+                    )}
+                    {item.matched_name !== null && (
+                      <span
+                        className={cx("also", "bl-ac-also")}
+                        data-testid="business-suggestion-also"
+                      >
+                        also{" "}
+                        {marked(
+                          item.matched_name,
+                          partsFor(item.matched_name, parts, region, tokens),
+                          markClass,
+                        )}
+                      </span>
+                    )}
+                  </span>
+                ),
+                flags: slot => (
+                  <StateSquares
+                    suggestion={item}
+                    cx={cx}
+                    more={text.more}
+                    slot={slot}
+                  />
+                ),
+                subtitle: slot => (
+                  <span
+                    className={cx("address", "bl-ac-address")}
+                    data-slot={slot}
+                    data-testid="business-suggestion-address"
+                  >
+                    {address ?? text.noAddress}
+                  </span>
+                ),
+                secondarySubtitle: slot =>
+                  people !== null && (
+                    <span
+                      className={cx("people", "bl-ac-people")}
+                      data-slot={slot}
+                      data-testid="business-suggestion-officers"
+                      data-role={people.role}
+                    >
+                      {people.names[0]}
+                      {people.more > 0 ? ` ${text.more(people.more)}` : ""}
+                      {people.role === "agent" ? text.agentSuffix : ""}
+                    </span>
+                  ),
+              };
+              // A line led by the title or the flags is a title line; one led
+              // by the subtitle or the secondary subtitle, a subtitle line.
               const defaultRow = (
                 <>
-                  {(shows("title") || shows("flags")) && (
-                    <div
-                      className={cx("titleLine", "bl-ac-line bl-ac-line-title")}
-                    >
-                      {shows("title") && (
-                        <span
-                          className={cx("name", "bl-ac-name")}
-                          data-testid="business-suggestion-name"
-                          data-emphasis={look.matchEmphasis}
-                          data-region={region}
-                        >
-                          {marked(
-                            item.label,
-                            partsFor(item.label, parts, region, tokens),
-                            markClass,
-                          )}
-                          {item.matched_name !== null && (
-                            <span
-                              className={cx("also", "bl-ac-also")}
-                              data-testid="business-suggestion-also"
-                            >
-                              also{" "}
-                              {marked(
-                                item.matched_name,
-                                partsFor(
-                                  item.matched_name,
-                                  parts,
-                                  region,
-                                  tokens,
-                                ),
-                                markClass,
-                              )}
-                            </span>
-                          )}
-                        </span>
-                      )}
-                      {shows("flags") && (
-                        <StateSquares
-                          suggestion={item}
-                          cx={cx}
-                          more={text.more}
-                        />
-                      )}
-                    </div>
-                  )}
-                  {(shows("subtitle") || secondary !== null) && (
-                    <div
-                      className={cx(
-                        "subtitleLine",
-                        "bl-ac-line bl-ac-line-subtitle",
-                      )}
-                    >
-                      {shows("subtitle") && (
-                        <span
-                          className={cx("address", "bl-ac-address")}
-                          data-testid="business-suggestion-address"
-                        >
-                          {address ?? text.noAddress}
-                        </span>
-                      )}
-                      {secondary !== null && (
-                        <span
-                          className={cx("people", "bl-ac-people")}
-                          data-testid="business-suggestion-officers"
-                          data-role={secondary.role}
-                        >
-                          {secondary.names[0]}
-                          {secondary.more > 0
-                            ? ` ${text.more(secondary.more)}`
-                            : ""}
-                          {secondary.role === "agent" ? text.agentSuffix : ""}
-                        </span>
-                      )}
-                    </div>
-                  )}
+                  {layout.map(line => {
+                    const titled =
+                      line.left === "title" || line.left === "flags";
+                    const left = partNode[line.left]("left");
+                    const right =
+                      line.right === null
+                        ? null
+                        : partNode[line.right]("right");
+                    // A row without the part a line leads with (no officers)
+                    // keeps the line for the other; with neither, drops it.
+                    if (!left && !right) {
+                      return null;
+                    }
+                    return (
+                      <div
+                        key={line.left}
+                        className={
+                          titled
+                            ? cx("titleLine", "bl-ac-line bl-ac-line-title")
+                            : cx(
+                                "subtitleLine",
+                                "bl-ac-line bl-ac-line-subtitle",
+                              )
+                        }
+                      >
+                        {left}
+                        {right}
+                      </div>
+                    );
+                  })}
                 </>
               );
               return (

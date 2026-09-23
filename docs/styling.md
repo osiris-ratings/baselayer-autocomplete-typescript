@@ -121,8 +121,13 @@ a business:
 | `subtitle`          | the lead address                               |
 | `secondarySubtitle` | the officers, or the registered agent          |
 
-`parts` leaves any of them out; each shows unless set to `false`, and a line
-left with nothing to show is not drawn:
+They sit in four places: the title and the flags on the first line, the
+subtitle and the secondary subtitle on the second. `parts` leaves any of them
+out; each shows unless set to `false`. A place whose part is left out takes
+the part below it, so no line starts with a gap: the secondary subtitle is
+promoted to subtitle, and the subtitle to title. Every row of a menu shares
+one layout, so its columns line up; a row without a part (no officers)
+leaves that part's place empty.
 
 ```tsx
 <BusinessAutocomplete parts={{ flags: false, secondarySubtitle: false }} … />
