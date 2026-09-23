@@ -76,7 +76,7 @@ export async function testKey(
   const { grant } = outcome;
   return {
     ok: true,
-    message: `Key accepted: a session for ${grant.expiresIn} s and ${grant.requestBudget} requests, filters from ${grant.filterMinStem} characters.`,
+    message: "Key accepted: it minted a session, which the demo now uses.",
     grant: { grant, mintedAt: Date.now() },
   };
 }
@@ -139,16 +139,8 @@ export async function testToken(
   } catch {
     body = null;
   }
-  const expires = new Date(claims.exp * 1000).toLocaleTimeString();
   if (response.ok) {
-    const index =
-      typeof body === "object" && body !== null && "index" in body
-        ? String((body as { index: unknown }).index)
-        : null;
-    return {
-      ok: true,
-      message: `The tier accepts it${index !== null ? ` (index ${index})` : ""}: ${claims.bud} requests, until ${expires}, bound to ${claims.ori ?? "any origin"}.`,
-    };
+    return { ok: true, message: "The tier accepts this token." };
   }
   const envelope = parseErrorEnvelope(body);
   const detail = envelope?.metadata?.["detail"];

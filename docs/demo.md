@@ -28,9 +28,11 @@ Pick the environment, then one of two ways in, and press **Apply**. The
 button stays grey until there is something to apply. Apply tests what you
 gave it before the demo uses it, and says what the API answered: a refused
 key, a token bound to another page, an expired one. Once it passes, Connect
-folds away to one line that says how you are connected, and the result
-waits inside; open it again to change anything. Run locally, the page starts
-on **Production, through this dev server**.
+folds away to one line that says how you are connected and, at its right, a
+pulsing green dot with how long the session has left. A pasted token's
+connection ends when the token expires; a key's does not, since the next
+search mints a new session. Open Connect again to change anything. Run
+locally, the page starts on **Production, through this dev server**.
 
 **A session token (recommended).** Mint a session from your terminal, bound
 to the demo's origin, and paste the token. Your API key never reaches the
@@ -44,10 +46,11 @@ curl -s -X POST https://api.baselayer.com/autocomplete/sessions \
 ```
 
 A session lasts a few minutes and carries its own request budget; paste a
-new one when it runs out. The page reads the token's terms and shows them.
-Apply checks the token against the tier's `GET /autocomplete/version`, which
-verifies it (signature, expiry, the origin it is bound to) on a budget of its
-own, so the check spends none of the token's requests:
+new one when it runs out. Its terms show in the debug panel once it is
+applied. Apply checks the token against the tier's
+`GET /autocomplete/version`, which verifies it (signature, expiry, the origin
+it is bound to) on a budget of its own, so the check spends none of the
+token's requests:
 
 ![Connecting with a session token](images/demo-connect-token.png)
 
@@ -119,7 +122,7 @@ set.
 
 ## Debug
 
-The debug panel folds to a tab on the right edge, reading **Debug here** up
+The debug panel folds to a tab beside the controls, reading **Debug here** up
 its spine, with the number of requests so far. When a request is refused or
 fails, or the SDK logs an error, while it is folded, a red dot pulses on the
 tab's bug until you open it. Folded, the page is as wide as the site's other
@@ -140,5 +143,8 @@ short before anything is shown.
 ![A request's details](images/demo-network.png)
 
 Above it, the session: its phase, the requests spent of its budget, when it
-expires, and the index that answered. Below it, the SDK's log of every
-mint, request, recovery and change of phase.
+expires, and the index that answered. Under those, what the session's token
+says beyond them: the origin it is bound to, how many characters of the name
+the officer, state and address filters wait for, and how often the name can
+be replaced by another before the tier wants a new session. Below it all,
+the SDK's log of every mint, request, recovery and change of phase.

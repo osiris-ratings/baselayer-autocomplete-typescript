@@ -25,6 +25,7 @@ import {
   withFirstGrant,
   type CheckResult,
 } from "./connect";
+import { connectionStatus, formatRemaining } from "./connection";
 import { Collapsible, FOLD_MS, Field, Select } from "./controls";
 import { keyMint, readClaims, tokenMint } from "./credentials";
 import { NetworkLog } from "./network";
@@ -47,6 +48,16 @@ type Environment = "dev-server" | "production" | "custom";
 type Mode = "token" | "key";
 /** The session's phase by name: idle, minting, ready, backoff or unavailable. */
 type PhaseName = SessionPhase["phase"];
+
+/** The clock, ticking once a second, for the countdowns. */
+function useNow(): number {
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
 
 const ENVIRONMENTS: Environment[] =
   DEV_SERVER_PATH === null
@@ -160,60 +171,133 @@ function useLog(client: AutocompleteClient | null): [LogLine[], () => void] {
   return [lines, () => setLines([])];
 }
 
-function SessionMeters({ client }: { client: AutocompleteClient }) {
+function SessionMeters({
+  client,
+  applied,
+}: {
+  client: AutocompleteClient;
+  applied: Applied;
+}) {
   const { snapshot } = useAutocompleteSession(client);
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
+  const now = useNow();
   const session = snapshot.session;
   const usage = snapshot.usage;
+  // What the session's token says: the held grant's or, before the SDK has
+  // first used a pasted token, that token's.
+  const token =
+    session.phase === "ready"
+      ? session.grant.sessionToken
+      : applied.mode === "token"
+        ? applied.secret
+        : null;
+  const facts = token === null ? null : readClaims(token);
+  const budget = usage.requestBudget ?? facts?.bud ?? null;
+  const expiresAt =
+    session.phase === "ready"
+      ? session.grant.expiresAt
+      : facts !== null
+        ? facts.exp * 1000
+        : null;
   return (
-    <dl className="meters">
-      <div>
-        <dt>Session</dt>
-        <dd data-testid="demo-phase" data-phase={session.phase}>
-          {session.phase}
-        </dd>
-      </div>
-      <div>
-        <dt>Requests</dt>
-        <dd>
-          {usage.requestsSinceMint}
-          {usage.requestBudget !== null ? ` / ${usage.requestBudget}` : ""}
-        </dd>
-      </div>
-      <div>
-        <dt>Expires in</dt>
-        <dd>
-          {session.phase === "ready"
-            ? `${Math.max(0, Math.round((session.grant.expiresAt - now) / 1000))} s`
-            : session.phase === "backoff" || session.phase === "unavailable"
-              ? `waiting ${Math.max(0, Math.round((session.until - now) / 1000))} s`
-              : "–"}
-        </dd>
-      </div>
-      <div>
-        <dt>Index</dt>
-        <dd className="mono">{snapshot.lastIndexTag ?? "–"}</dd>
-      </div>
-    </dl>
+    <>
+      <dl className="meters">
+        <div>
+          <dt>Session</dt>
+          <dd data-testid="demo-phase" data-phase={session.phase}>
+            {session.phase}
+          </dd>
+        </div>
+        <div>
+          <dt>Requests</dt>
+          <dd>
+            {usage.requestsSinceMint}
+            {budget !== null ? ` / ${budget}` : ""}
+          </dd>
+        </div>
+        <div>
+          <dt>Expires in</dt>
+          <dd>
+            {session.phase === "backoff" || session.phase === "unavailable"
+              ? `waiting ${formatRemaining(session.until - now)}`
+              : expiresAt !== null
+                ? formatRemaining(expiresAt - now)
+                : "–"}
+          </dd>
+        </div>
+        <div>
+          <dt>Index</dt>
+          <dd className="mono">{snapshot.lastIndexTag ?? "–"}</dd>
+        </div>
+      </dl>
+      {/* What the session's token says, beyond its budget and its expiry. */}
+      {facts !== null && (
+        <dl className="session-facts">
+          <div>
+            <dt>Bound to</dt>
+            <dd>
+              <code>{facts.ori ?? "any origin"}</code>
+              <span className="hint">
+                {facts.ori !== null
+                  ? "The tier answers this session only on pages from this origin."
+                  : "Minted without an Origin, so it works on any page."}
+              </span>
+            </dd>
+          </div>
+          <div>
+            <dt>Filters</dt>
+            <dd>
+              from {facts.stem} characters
+              <span className="hint">
+                Officer, state and address filters wait until the name has{" "}
+                {facts.stem} characters (punctuation aside); until then the SDK
+                holds them back.
+              </span>
+            </dd>
+          </div>
+          <div>
+            <dt>Name changes</dt>
+            <dd>
+              {facts.piv}
+              <span className="hint">
+                How often the name can be replaced by another before the tier
+                wants a new session. Typing on, backspacing and fixing a typo
+                are not changes.
+              </span>
+            </dd>
+          </div>
+        </dl>
+      )}
+    </>
   );
 }
 
-/** Reports the session's phase to the page, for the Connect panel. */
-function PhaseWatcher({
+/** Folded Connect's far right: a dot for the connection and its timer. */
+function ConnectionIndicator({
   client,
-  onPhase,
+  applied,
 }: {
   client: AutocompleteClient;
-  onPhase(phase: PhaseName): void;
+  applied: Applied;
 }) {
   const { snapshot } = useAutocompleteSession(client);
-  const phase = snapshot.session.phase;
-  useEffect(() => onPhase(phase), [phase, onPhase]);
-  return null;
+  const now = useNow();
+  const claims = applied.mode === "token" ? readClaims(applied.secret) : null;
+  const status = connectionStatus(
+    applied.mode,
+    snapshot.session,
+    now,
+    claims === null ? null : claims.exp * 1000,
+  );
+  return (
+    <span
+      className="connection"
+      data-state={status.state}
+      data-testid="demo-connection"
+    >
+      <span className="connection-dot" aria-hidden="true" />
+      {status.label}
+    </span>
+  );
 }
 
 function parseStates(text: string): string[] {
@@ -242,7 +326,6 @@ export function App() {
   const [stylingOpen, setStylingOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [debugOpen, setDebugOpen] = useState(false);
-  const [phase, setPhase] = useState<PhaseName | null>(null);
   const [name, setName] = useState("");
   const [picked, setPicked] = useState<{
     suggestion: BusinessSuggestion;
@@ -284,7 +367,6 @@ export function App() {
     if (debugOpen) setSeenAt(performance.now());
   }, [debugOpen, lastErrorAt]);
   const unseenErrors = !debugOpen && lastErrorAt > seenAt;
-  const claims = mode === "token" ? readClaims(draft) : null;
   const isApplied =
     applied !== null &&
     applied.mode === mode &&
@@ -304,7 +386,6 @@ export function App() {
       return;
     }
     appliedCount.current += 1;
-    setPhase(null);
     setApplied({
       id: appliedCount.current,
       mode,
@@ -345,12 +426,12 @@ export function App() {
       "Not connected"
     ) : (
       <>
-        {applied.mode === "key" ? "API key" : "Session token"} ·{" "}
-        {ENVIRONMENT_LABELS[applied.environment]}
-        {phase !== null && (
-          <span className="phase-pill" data-phase={phase}>
-            {phase}
-          </span>
+        <span className="fold-summary-text">
+          {applied.mode === "key" ? "API key" : "Session token"} ·{" "}
+          {ENVIRONMENT_LABELS[applied.environment]}
+        </span>
+        {client !== null && (
+          <ConnectionIndicator client={client} applied={applied} />
         )}
       </>
     );
@@ -455,13 +536,6 @@ export function App() {
                     data-testid="demo-token"
                   />
                 </Field>
-                {claims !== null && (
-                  <p className="hint">
-                    Expires {new Date(claims.exp * 1000).toLocaleTimeString()},{" "}
-                    {claims.bud} requests, filters from {claims.stem}{" "}
-                    characters, bound to {claims.ori ?? "any origin"}.
-                  </p>
-                )}
               </>
             ) : (
               <>
@@ -610,7 +684,6 @@ export function App() {
                 </div>
               ) : (
                 <>
-                  <PhaseWatcher client={client} onPhase={setPhase} />
                   <BusinessAutocomplete
                     key={applied?.id}
                     client={client}
@@ -701,10 +774,10 @@ export function App() {
               <div className="activity-head">
                 <h2 id="session-title">Session</h2>
               </div>
-              {client === null ? (
+              {client === null || applied === null ? (
                 <p className="hint">Not connected.</p>
               ) : (
-                <SessionMeters client={client} />
+                <SessionMeters client={client} applied={applied} />
               )}
             </section>
             <NetworkTimeline log={network} />

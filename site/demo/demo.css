@@ -108,6 +108,7 @@
    inline-flex title takes its baseline from the icon and rides up. */
 .fold-title {
   margin-right: auto;
+  white-space: nowrap;
 }
 
 .fold-title .icon {
@@ -126,10 +127,8 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  overflow: hidden;
   color: var(--muted);
   font-size: 13.5px;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -452,14 +451,72 @@
   line-height: 1.6;
 }
 
-.phase-pill {
-  padding: 1px 7px;
-  border: 1px solid currentColor;
-  border-radius: 2px;
+.fold-summary-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A phone has room for the title and the connection, not how it was made. */
+@media (max-width: 640px) {
+  .fold-summary-text {
+    display: none;
+  }
+}
+
+/* Folded Connect's far right: how the connection stands, and for how long. */
+.connection {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 7px;
   font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.connection[data-state="ok"] {
+  color: #0c7a43;
+}
+
+.connection[data-state="pending"] {
+  color: var(--blue);
+}
+
+.connection[data-state="error"] {
+  color: #b42318;
+}
+
+.connection-dot {
+  width: 8px;
+  height: 8px;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+.connection[data-state="ok"] .connection-dot {
+  animation: connection-pulse 1.8s ease-out infinite;
+}
+
+@keyframes connection-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(12, 122, 67, 0.45);
+  }
+
+  70% {
+    box-shadow: 0 0 0 6px rgba(12, 122, 67, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(12, 122, 67, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .connection-dot {
+    animation: none;
+  }
 }
 
 [data-phase="ready"] {
@@ -605,6 +662,47 @@
 @media (max-width: 640px) {
   .demo .meters {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* What the session's token says, beyond the meters. */
+.demo .session-facts {
+  margin: 14px 0 0;
+}
+
+.demo .session-facts > div {
+  display: grid;
+  grid-template-columns: 124px minmax(0, 1fr);
+  gap: 4px 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.demo .session-facts dt {
+  padding-top: 2px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.demo .session-facts dd {
+  min-width: 0;
+  margin: 0;
+  font-size: 14.5px;
+  overflow-wrap: anywhere;
+}
+
+.demo .session-facts .hint {
+  display: block;
+  margin-top: 3px;
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .demo .session-facts > div {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
