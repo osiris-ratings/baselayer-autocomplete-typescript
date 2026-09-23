@@ -8,6 +8,9 @@ import { ColorInput, Field, Fold, Select, Toggle } from "./controls";
 import {
   CSS_VARIABLES,
   DEFAULT_STYLE,
+  PRESETS,
+  activePreset,
+  applyPreset,
   EMPHASES,
   INCLUDES,
   LOOK_COLORS,
@@ -66,8 +69,65 @@ export function StylingPanel({
   const lookChanged = (keys: string[]) =>
     keys.filter(key => key in look).length;
 
+  const active = activePreset(state);
+
   return (
     <div className="styling-panel">
+      <div className="presets-head">
+        <p className="mono-label">Presets</p>
+        {active === null && <p className="hint">Custom colours</p>}
+      </div>
+      <div className="presets" role="radiogroup" aria-label="Presets">
+        {PRESETS.map(preset => {
+          const shown = applyPreset(DEFAULT_STYLE, preset);
+          const on = active?.name === preset.name;
+          return (
+            <button
+              key={preset.name}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              className="preset"
+              onClick={() => onChange(applyPreset(state, preset))}
+            >
+              <span
+                className="preset-swatch"
+                aria-hidden="true"
+                style={{
+                  background: shown.look.backgroundColor,
+                  borderRadius: shown.vars["--bl-ac-radius"],
+                }}
+              >
+                <span
+                  className="preset-title"
+                  style={{ background: shown.look.titleColor }}
+                />
+                <span
+                  className="preset-mark"
+                  style={{ background: shown.vars["--bl-ac-underline"] }}
+                />
+                <span
+                  className="preset-pill"
+                  style={{
+                    background: shown.look.pillBackgroundColor,
+                    color: shown.look.pillForegroundColor,
+                    borderColor: shown.look.primaryPillBorderColor,
+                    borderRadius: shown.vars["--bl-ac-pill-radius"],
+                  }}
+                >
+                  PA
+                </span>
+                <span
+                  className="preset-sub"
+                  style={{ background: shown.look.subtitleColor }}
+                />
+              </span>
+              <span className="preset-name">{preset.name}</span>
+            </button>
+          );
+        })}
+      </div>
+
       <Fold
         title="Matches"
         defaultOpen

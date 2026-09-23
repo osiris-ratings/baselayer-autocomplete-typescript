@@ -44,8 +44,8 @@ export function Collapsible({
         >
           {num !== undefined && <span className="demo-num">{num}</span>}
           <span className="fold-title">
-            {icon !== undefined && <Icon name={icon} />}
             {title}
+            {icon !== undefined && <Icon name={icon} />}
           </span>
           {summary !== undefined && !open && (
             <span className="fold-summary">{summary}</span>

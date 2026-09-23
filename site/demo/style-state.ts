@@ -229,3 +229,169 @@ export function exportCode(state: StyleState): { tsx: string; css: string } {
       : `/* Set them on .bl-ac under a selector of your own. */\n.your-form .bl-ac {\n${vars.map(([name, value]) => `  ${name}: ${value};`).join("\n")}\n}`;
   return { tsx, css };
 }
+
+/** A colour theme: the colours, corners and shadow, over the defaults. */
+export interface Preset {
+  name: string;
+  look: Partial<Pick<Look, LookColor>>;
+  vars: Partial<Record<CssVariable, string>>;
+}
+
+/** What a preset owns; sizes, behaviour and text stay the reader's. */
+const PRESET_VARS: CssVariable[] = [
+  "--bl-ac-highlight-bg",
+  "--bl-ac-border",
+  "--bl-ac-more-fg",
+  "--bl-ac-ink-base",
+  "--bl-ac-also-mark",
+  "--bl-ac-underline",
+  "--bl-ac-marker",
+  "--bl-ac-radius",
+  "--bl-ac-pill-radius",
+  "--bl-ac-shadow",
+];
+
+export const PRESETS: Preset[] = [
+  { name: "Light", look: {}, vars: {} },
+  {
+    name: "Baselayer",
+    look: {
+      titleColor: "#1c1b1c",
+      subtitleColor: "#676b76",
+      pillBackgroundColor: "#c6dbf6",
+      pillForegroundColor: "#09234f",
+      primaryPillBorderColor: "#384ce3",
+      secondaryPillBackgroundColor: "#f1f6fd",
+    },
+    vars: {
+      "--bl-ac-highlight-bg": "#f1f6fd",
+      "--bl-ac-border": "#dce5f5",
+      "--bl-ac-more-fg": "#09234f",
+      "--bl-ac-ink-base": "#676b76",
+      "--bl-ac-also-mark": "#1c1b1c",
+      "--bl-ac-underline": "#384ce3",
+      "--bl-ac-marker": "#c6dbf6",
+      "--bl-ac-radius": "2px",
+      "--bl-ac-pill-radius": "2px",
+      "--bl-ac-shadow": "0 18px 36px rgba(9, 35, 79, 0.12)",
+    },
+  },
+  {
+    name: "Midnight",
+    look: {
+      backgroundColor: "#0b1220",
+      titleColor: "#e5e9f2",
+      subtitleColor: "#8b95a7",
+      pillBackgroundColor: "#1f2a44",
+      pillForegroundColor: "#a5b4fc",
+      primaryPillBorderColor: "#6366f1",
+      secondaryPillBackgroundColor: "#182033",
+    },
+    vars: {
+      "--bl-ac-highlight-bg": "#172036",
+      "--bl-ac-border": "#1f2a44",
+      "--bl-ac-more-fg": "#cbd5e1",
+      "--bl-ac-ink-base": "#8b95a7",
+      "--bl-ac-also-mark": "#e5e9f2",
+      "--bl-ac-underline": "#818cf8",
+      "--bl-ac-marker": "#312e81",
+      "--bl-ac-shadow": "0 12px 32px rgba(0, 0, 0, 0.45)",
+    },
+  },
+  {
+    name: "Monokai",
+    look: {
+      backgroundColor: "#272822",
+      titleColor: "#f8f8f2",
+      subtitleColor: "#a59f85",
+      pillBackgroundColor: "#3e3d32",
+      pillForegroundColor: "#a6e22e",
+      primaryPillBorderColor: "#a6e22e",
+      secondaryPillBackgroundColor: "#3e3d32",
+    },
+    vars: {
+      "--bl-ac-highlight-bg": "#3e3d32",
+      "--bl-ac-border": "#49483e",
+      "--bl-ac-more-fg": "#f8f8f2",
+      "--bl-ac-ink-base": "#a59f85",
+      "--bl-ac-also-mark": "#e6db74",
+      "--bl-ac-underline": "#f92672",
+      "--bl-ac-marker": "#75715e",
+      "--bl-ac-radius": "4px",
+      "--bl-ac-shadow": "0 12px 32px rgba(0, 0, 0, 0.5)",
+    },
+  },
+  {
+    name: "Sepia",
+    look: {
+      backgroundColor: "#fbf6ec",
+      titleColor: "#3b2f25",
+      subtitleColor: "#8a7866",
+      pillBackgroundColor: "#efe2cb",
+      pillForegroundColor: "#6b4a24",
+      primaryPillBorderColor: "#b0793a",
+      secondaryPillBackgroundColor: "#f3ead9",
+    },
+    vars: {
+      "--bl-ac-highlight-bg": "#f3ead9",
+      "--bl-ac-border": "#e7dcc6",
+      "--bl-ac-more-fg": "#6b4a24",
+      "--bl-ac-ink-base": "#8a7866",
+      "--bl-ac-also-mark": "#3b2f25",
+      "--bl-ac-underline": "#b0793a",
+      "--bl-ac-marker": "#f4d9a6",
+    },
+  },
+  {
+    name: "Rosé",
+    look: {
+      titleColor: "#2a1520",
+      subtitleColor: "#8c6a78",
+      pillBackgroundColor: "#fde2ea",
+      pillForegroundColor: "#9d174d",
+      primaryPillBorderColor: "#db2777",
+      secondaryPillBackgroundColor: "#fdf2f6",
+    },
+    vars: {
+      "--bl-ac-highlight-bg": "#fdf2f6",
+      "--bl-ac-border": "#f6dbe5",
+      "--bl-ac-more-fg": "#9d174d",
+      "--bl-ac-ink-base": "#8c6a78",
+      "--bl-ac-also-mark": "#2a1520",
+      "--bl-ac-underline": "#db2777",
+      "--bl-ac-marker": "#fbcfe8",
+      "--bl-ac-radius": "12px",
+      "--bl-ac-pill-radius": "999px",
+    },
+  },
+];
+
+/** The state with a preset's colours and corners, everything else kept. */
+export function applyPreset(state: StyleState, preset: Preset): StyleState {
+  const look = { ...state.look };
+  for (const { key } of LOOK_COLORS) {
+    look[key] = preset.look[key] ?? DEFAULT_STYLE.look[key];
+  }
+  const vars = { ...state.vars };
+  for (const name of PRESET_VARS) {
+    vars[name] = preset.vars[name] ?? CSS_VARIABLES[name].value;
+  }
+  return { ...state, look, vars };
+}
+
+/** The preset the state is in, or null once anything it owns was changed. */
+export function activePreset(state: StyleState): Preset | null {
+  const same = (a: string, b: string) =>
+    a.trim().toLowerCase() === b.trim().toLowerCase();
+  return (
+    PRESETS.find(preset => {
+      const applied = applyPreset(state, preset);
+      return (
+        LOOK_COLORS.every(({ key }) =>
+          same(state.look[key], applied.look[key]),
+        ) &&
+        PRESET_VARS.every(name => same(state.vars[name], applied.vars[name]))
+      );
+    }) ?? null
+  );
+}

@@ -104,16 +104,16 @@
   cursor: pointer;
 }
 
+/* Inline, so the title keeps the text's baseline and "01" sits on it: an
+   inline-flex title takes its baseline from the icon and rides up. */
 .fold-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
   margin-right: auto;
 }
 
 .fold-title .icon {
-  flex: none;
+  margin-left: 10px;
   color: var(--blue);
+  vertical-align: -3px;
 }
 
 .demo-card > .fold-heading .fold-title {
@@ -858,4 +858,353 @@
 
 .demo .log .tag[data-kind="session"] {
   color: var(--muted);
+}
+
+/* ---- Connect: apply, and what the test said ------------------------------ */
+
+.apply-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin-top: 4px;
+}
+
+.apply-row .btn[disabled] {
+  background: #c9ced8;
+  color: #ffffff;
+  cursor: not-allowed;
+}
+
+.demo .apply-note {
+  flex: 1 1 220px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.check {
+  margin: 14px 0 0;
+  padding: 10px 12px;
+  border-left: 2px solid;
+  font-size: 14px;
+}
+
+.check[data-ok="true"] {
+  background: #ecfdf3;
+  border-color: #0c7a43;
+  color: #054f31;
+}
+
+.check[data-ok="false"] {
+  background: #fef3f2;
+  border-color: #b42318;
+  color: #7a271a;
+}
+
+/* ---- Business: the title, and filters off to its right ------------------- */
+
+.demo-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.demo-card-head .demo-card-title {
+  margin: 0;
+}
+
+.link-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  background: none;
+  border: 0;
+  color: var(--blue);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.link-toggle .fold-chevron {
+  width: 7px;
+  height: 7px;
+  margin: 0 2px 3px;
+  border-color: var(--blue);
+}
+
+.fold-chevron[data-open="true"] {
+  margin-bottom: -2px;
+  transform: rotate(-135deg);
+}
+
+.filters-panel {
+  margin: 0 0 18px;
+  padding: 14px 16px 2px;
+  background: var(--faded);
+  border: 1px solid var(--line-soft);
+  border-radius: 2px;
+}
+
+.demo-preview .bl-ac-input:disabled {
+  background: #f7f8fa;
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+/* ---- Styling: presets --------------------------------------------------- */
+
+.presets-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.presets-head .mono-label,
+.presets-head .hint {
+  margin: 0;
+}
+
+.presets {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+@media (max-width: 560px) {
+  .presets {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.preset {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.preset-swatch {
+  position: relative;
+  display: block;
+  height: 58px;
+  overflow: hidden;
+  border: 1px solid #d6d9e0;
+  box-shadow: 0 2px 6px rgba(9, 35, 79, 0.08);
+}
+
+.preset:hover .preset-swatch {
+  border-color: var(--ink-soft);
+}
+
+.preset[aria-checked="true"] .preset-swatch {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.preset-title,
+.preset-mark,
+.preset-sub {
+  position: absolute;
+  left: 9px;
+  height: 5px;
+  border-radius: 1px;
+}
+
+.preset-title {
+  top: 13px;
+  width: 52%;
+}
+
+.preset-mark {
+  top: 20px;
+  width: 26%;
+  height: 2px;
+}
+
+.preset-sub {
+  top: 34px;
+  width: 40%;
+  height: 4px;
+  opacity: 0.8;
+}
+
+.preset-pill {
+  position: absolute;
+  top: 9px;
+  right: 8px;
+  padding: 0 3px;
+  border: 1px solid;
+  font-size: 9px;
+  font-weight: 600;
+  line-height: 13px;
+}
+
+.preset-name {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.preset[aria-checked="true"] .preset-name {
+  color: var(--blue);
+}
+
+/* ---- Debug: a tab on the edge until it is wanted ------------------------- */
+
+.demo-split[data-debug="closed"] {
+  grid-template-columns: minmax(0, 760px) 48px;
+  justify-content: center;
+}
+
+.debug-tab {
+  position: sticky;
+  top: calc(var(--header-h) + 16px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 48px;
+  padding: 16px 0;
+  background: var(--paper);
+  border: 1px solid var(--line-soft);
+  border-top: 2px solid var(--blue);
+  border-radius: 2px;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.debug-tab:hover {
+  background: var(--faded);
+}
+
+.debug-tab .icon {
+  color: var(--blue);
+}
+
+/* The label reads bottom to top, as a spine does. */
+.debug-tab-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.debug-tab-count {
+  min-width: 22px;
+  padding: 2px 5px;
+  background: var(--blue);
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 11px;
+  letter-spacing: 0;
+  text-align: center;
+}
+
+.debug-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--paper);
+  border: 1px solid var(--line-soft);
+  border-top: 2px solid var(--blue);
+  border-radius: 2px;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.debug-bar .icon {
+  color: var(--blue);
+}
+
+.debug-bar-hide {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.debug-bar .fold-chevron {
+  width: 7px;
+  height: 7px;
+}
+
+/* On a narrow screen the tab lies flat under the controls, and opening it
+   stacks the debug panel below them. */
+@media (max-width: 1100px) {
+  .demo-split[data-debug="closed"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .debug-tab {
+    position: static;
+    flex-direction: row;
+    justify-content: center;
+    width: 100%;
+    padding: 14px 16px;
+  }
+
+  .debug-tab-label {
+    writing-mode: horizontal-tb;
+    transform: none;
+  }
+}
+
+/* Errors the reader has not seen, while the panel is folded. */
+.debug-tab-alert {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 12px;
+  height: 12px;
+  background: #d92d20;
+  border: 2px solid var(--paper);
+  border-radius: 50%;
+  animation: debug-pulse 1.6s ease-out infinite;
+}
+
+@keyframes debug-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(217, 45, 32, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(217, 45, 32, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(217, 45, 32, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .debug-tab-alert {
+    animation: none;
+  }
+}
+
+@media (max-width: 1100px) {
+  .debug-tab {
+    position: relative;
+  }
 }

@@ -1,12 +1,12 @@
 # Live demo
 
-The demo is the styled component against your own organization, on a split
-screen. On the left you connect, type a business name with any filters, and
-restyle the component. On the right you watch what the SDK does about it:
-the session, every request on a network timeline with its timing and size,
-and the SDK's own log. On a narrow screen the two sides stack.
+The demo is the styled component against your own organization. You
+connect, type a business name with any filters, and restyle the component.
+Beside it, folded away until you want it, is what the SDK did about it: the
+session, every request on a network timeline with its timing and size, and
+the SDK's own log.
 
-![The demo, typing "howard concrete pum" against production](images/demo-split.png)
+![The demo with its debug panel open, typing "howard concrete pum"](images/demo-split.png)
 
 It is the `/demo/` page of [the site](site.md), which the `Site` workflow
 publishes from this repository's `main` to GitHub Pages, at
@@ -24,10 +24,13 @@ production answers to a local run.
 
 ## Connecting
 
-Pick the environment, then one of two ways in. Run locally, the page
-starts on **Production, through this dev server**. Once a session is ready,
-Connect folds away to one line that says how you are connected; open it
-again to change anything.
+Pick the environment, then one of two ways in, and press **Apply**. The
+button stays grey until there is something to apply. Apply tests what you
+gave it before the demo uses it, and says what the API answered: a refused
+key, a token bound to another page, an expired one. Once it passes, Connect
+folds away to one line that says how you are connected; open it again to
+change anything. Run locally, the page starts on **Production, through this
+dev server**.
 
 **A session token (recommended).** Mint a session from your terminal, bound
 to the demo's origin, and paste the token. Your API key never reaches the
@@ -41,7 +44,10 @@ curl -s -X POST https://api.baselayer.com/autocomplete/sessions \
 ```
 
 A session lasts a few minutes and carries its own request budget; paste a
-new one when it runs out. The page reads the token's terms and shows them:
+new one when it runs out. The page reads the token's terms and shows them.
+Apply checks the token against the tier's `GET /autocomplete/version`, which
+verifies it (signature, expiry, the origin it is bound to) on a budget of its
+own, so the check spends none of the token's requests:
 
 ![Connecting with a session token](images/demo-connect-token.png)
 
@@ -49,8 +55,10 @@ new one when it runs out. The page reads the token's terms and shows them:
 key stays in the tab's memory, is sent only to the API host you picked (or
 to the local dev server, which forwards it there), and is never stored; the
 page loads no third-party code and ships a Content-Security-Policy that
-allows none. On the published page this mode needs the API to accept the
-demo's origin.
+allows none. An API key has no test but a mint, so Apply mints one session
+and the demo uses it: the test costs nothing the first keystroke would not
+have. On the published page this mode needs the API to accept the demo's
+origin.
 
 Either way, every session is a real session on your organization's pool,
 and the key must belong to a production application: sessions are not
@@ -83,29 +91,42 @@ For another environment, pick **Custom URL** and give its API host.
 
 ## The business form
 
-The business name is the field under test; its suggestions open beneath it.
-Above it, folded away, are the filters it can carry: an officer or agent's
-name, the states the business is registered in, and an address. The SDK
-holds them back until the name is long enough to narrow by, and the log
-says when it did. Pick a row and the form shows the `business_token` and
-the search it belongs in.
+The business name is always there; its suggestions open beneath it. The
+filters it can carry (an officer or agent's name, the states the business
+is registered in, an address) fold away behind **Add filters**, beside the
+title, which counts the ones set. The SDK holds them back until the name is
+long enough to narrow by, and the log says when it did. Pick a row and the
+form shows the `business_token` and the search it belongs in.
 
 ## Styling
 
-Every knob the styled component has, grouped: how matches are marked, every
-colour (the `look` prop's and the stylesheet's own variables, each with a
-swatch that opens a colour picker), shape and size, behaviour (rows,
-related entities, the pause before asking, prewarming), every message it
-can show, and the structural switches (`classNames`, `unstyled`). Changes
-apply as you make them. **Your configuration** at the bottom is the code
-that reproduces the result: the props that differ from the defaults, and the
-CSS variables to set.
+Folded until you open it. First come six presets, each a colour theme drawn
+as a small row in its own colours: Light (the console's), Baselayer,
+Midnight, Monokai, Sepia and Rosé. A preset sets the colours, the corners and
+the shadow, and leaves your sizes, behaviour and text alone. Then every knob
+the styled component has, grouped: how matches are marked, every colour (the
+`look` prop's and the stylesheet's own variables, each with a swatch that
+opens a colour picker), shape and size, behaviour (rows, related entities,
+the pause before asking, prewarming), every message it can show, and the
+structural switches (`classNames`, `unstyled`). Changes apply as you make
+them. **Your configuration** at the bottom is the code that reproduces the
+result: the props that differ from the defaults, and the CSS variables to
+set.
 
 ![The styling panel](images/demo-styling.png)
 
-![The component with background marks and the brand's colours](images/demo-styled.png)
+![The component in the Midnight preset](images/demo-styled.png)
 
-## Network and log
+## Debug
+
+The debug panel folds to a tab on the right edge, reading **Debug here** up
+its spine, with the number of requests so far. When a request is refused or
+fails, or the SDK logs an error, while it is folded, a red dot pulses on the
+tab until you open it. Opened, the panel takes the right half of the page;
+its bar folds it back. On a narrow screen the tab is a bar under the
+controls, and the panel opens below them.
+
+![The demo with its debug panel folded](images/demo-folded.png)
 
 The network timeline lists every request the page made: when it started,
 whether it was a mint or a query (with the query and any filters), its

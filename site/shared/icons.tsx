@@ -12,7 +12,8 @@ export type IconName =
   | "lock"
   | "clock"
   | "nocookie"
-  | "lien";
+  | "lien"
+  | "bug";
 
 const PATHS: Record<IconName, string> = {
   caret: "M9 6h6M9 18h6M12 6v12",
@@ -28,6 +29,7 @@ const PATHS: Record<IconName, string> = {
   lock: "M6 11h12v9H6zM8.5 11V8a3.5 3.5 0 0 1 7 0v3M12 14.5v2.5",
   clock: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3.5 2",
   lien: "M7 3h7l4 4v14H7zM14 3v4h4M10 12h5M10 16h5",
+  bug: "M9 9V7a3 3 0 0 1 6 0v2M7 9h10v6a5 5 0 0 1-10 0zM12 11v8M3 13h4M17 13h4M4 8l3 2M20 8l-3 2M4 19l3-2M20 19l-3-2",
   nocookie:
     "M12 21a9 9 0 1 1 8.5-12 2.5 2.5 0 0 1-3-3A9 9 0 0 0 12 3M9 10h.01M14 15h.01M9 15.5h.01M4 4l16 16",
 };

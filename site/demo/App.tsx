@@ -10,9 +10,22 @@ import {
   useAutocompleteSession,
   type Pick,
 } from "@baselayer/autocomplete/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
-import { Collapsible, Field, Fold, Select } from "./controls";
+import { Icon } from "../shared/icons";
+import {
+  testKey,
+  testToken,
+  withFirstGrant,
+  type CheckResult,
+} from "./connect";
+import { Collapsible, Field, Select } from "./controls";
 import { keyMint, readClaims, tokenMint } from "./credentials";
 import { NetworkLog } from "./network";
 import { NetworkTimeline } from "./NetworkTimeline";
@@ -48,6 +61,8 @@ const ENVIRONMENT_LABELS: Record<Environment, string> = {
 interface LogLine {
   id: number;
   at: string;
+  /** `performance.now()` when it was logged. */
+  t: number;
   kind: "mint" | "request" | "session";
   text: string;
   ok: boolean;
@@ -57,22 +72,34 @@ function clock(): string {
   return new Date().toLocaleTimeString([], { hour12: false });
 }
 
-function useClient(
-  baseUrl: string,
-  mode: Mode,
-  secret: string,
-  network: NetworkLog,
-) {
+/** What Apply accepted: the credential, where it goes, and the session its test minted. */
+interface Applied {
+  id: number;
+  mode: Mode;
+  secret: string;
+  baseUrl: string;
+  environment: Environment;
+  firstGrant?: Extract<CheckResult, { ok: true }>["grant"];
+}
+
+function useClient(applied: Applied | null, network: NetworkLog) {
   return useMemo(() => {
-    if (secret.trim().length === 0) {
+    if (applied === null) {
       return null;
     }
     const mint =
-      mode === "key"
-        ? keyMint(baseUrl, secret.trim(), network.fetch)
-        : tokenMint(secret);
-    return createAutocompleteClient({ baseUrl, mint, fetch: network.fetch });
-  }, [baseUrl, mode, secret, network]);
+      applied.mode === "key"
+        ? withFirstGrant(
+            applied.firstGrant,
+            keyMint(applied.baseUrl, applied.secret, network.fetch),
+          )
+        : tokenMint(applied.secret);
+    return createAutocompleteClient({
+      baseUrl: applied.baseUrl,
+      mint,
+      fetch: network.fetch,
+    });
+  }, [applied, network]);
 }
 
 function useLog(client: AutocompleteClient | null): [LogLine[], () => void] {
@@ -83,12 +110,12 @@ function useLog(client: AutocompleteClient | null): [LogLine[], () => void] {
     if (client === null) {
       return;
     }
-    const push = (line: Omit<LogLine, "id" | "at">) =>
+    const push = (line: Omit<LogLine, "id" | "at" | "t">) =>
       setLines(previous =>
-        [{ ...line, id: next.current++, at: clock() }, ...previous].slice(
-          0,
-          80,
-        ),
+        [
+          { ...line, id: next.current++, at: clock(), t: performance.now() },
+          ...previous,
+        ].slice(0, 80),
       );
     let phase: PhaseName | null = null;
     const offState = client.on("stateChange", snapshot => {
@@ -198,12 +225,19 @@ function parseStates(text: string): string[] {
 
 export function App() {
   const network = useMemo(() => new NetworkLog(), []);
+  const entries = useSyncExternalStore(network.subscribe, network.getSnapshot);
+  const requests = entries.length;
   const [environment, setEnvironment] = useState<Environment>(ENVIRONMENTS[0]!);
   const [customUrl, setCustomUrl] = useState("");
   const [mode, setMode] = useState<Mode>("token");
-  const [secret, setSecret] = useState("");
+  const [draft, setDraft] = useState("");
+  const [applied, setApplied] = useState<Applied | null>(null);
+  const [check, setCheck] = useState<CheckResult | "testing" | null>(null);
+  const appliedCount = useRef(0);
   const [connectOpen, setConnectOpen] = useState(true);
-  const [stylingOpen, setStylingOpen] = useState(true);
+  const [stylingOpen, setStylingOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [debugOpen, setDebugOpen] = useState(false);
   const [phase, setPhase] = useState<PhaseName | null>(null);
   const [name, setName] = useState("");
   const [picked, setPicked] = useState<{
@@ -226,18 +260,56 @@ export function App() {
         ? customBase
         : PRODUCTION;
   const apiHost = environment === "custom" ? customBase : PRODUCTION;
-  const client = useClient(baseUrl, mode, secret, network);
+  const client = useClient(applied, network);
   const [log, clearLog] = useLog(client);
-  const claims = mode === "token" ? readClaims(secret) : null;
 
-  // Fold Connect away once, when a session first lands; reopening is the reader's call.
-  const folded = useRef<AutocompleteClient | null>(null);
+  // When the last error happened, a refused or failed request or an error in
+  // the log, against when the debug panel last showed it: the folded tab
+  // pulses only for errors nobody has seen, and clearing a list hides none.
+  const lastErrorAt = Math.max(
+    0,
+    ...entries
+      .filter(
+        e => e.outcome === "failed" || (e.status !== null && e.status >= 400),
+      )
+      .map(e => e.endedAt ?? e.startedAt),
+    ...log.filter(line => !line.ok).map(line => line.t),
+  );
+  const [seenAt, setSeenAt] = useState(0);
   useEffect(() => {
-    if (client !== null && phase === "ready" && folded.current !== client) {
-      folded.current = client;
-      setConnectOpen(false);
+    if (debugOpen) setSeenAt(performance.now());
+  }, [debugOpen, lastErrorAt]);
+  const unseenErrors = !debugOpen && lastErrorAt > seenAt;
+  const claims = mode === "token" ? readClaims(draft) : null;
+  const isApplied =
+    applied !== null &&
+    applied.mode === mode &&
+    applied.secret === draft.trim() &&
+    applied.baseUrl === baseUrl;
+
+  const apply = async () => {
+    const secret = draft.trim();
+    setCheck("testing");
+    const result =
+      mode === "key"
+        ? await testKey(baseUrl, secret, network.fetch)
+        : await testToken(baseUrl, secret, network.fetch);
+    setCheck(result);
+    if (!result.ok) {
+      return;
     }
-  }, [client, phase]);
+    appliedCount.current += 1;
+    setPhase(null);
+    setApplied({
+      id: appliedCount.current,
+      mode,
+      secret,
+      baseUrl,
+      environment,
+      ...(result.grant !== undefined ? { firstGrant: result.grant } : {}),
+    });
+    setConnectOpen(false);
+  };
 
   const filters: Filters | undefined = useMemo(() => {
     const f: Filters = {};
@@ -257,15 +329,27 @@ export function App() {
   -H "X-API-Key: $BASELAYER_API_KEY" \\
   -H "Origin: ${origin}" | jq -r .session_token`;
 
-  const connectSummary = (
+  const connectSummary =
+    applied === null ? (
+      "Not connected"
+    ) : (
+      <>
+        {applied.mode === "key" ? "API key" : "Session token"} ·{" "}
+        {ENVIRONMENT_LABELS[applied.environment]}
+        {phase !== null && (
+          <span className="phase-pill" data-phase={phase}>
+            {phase}
+          </span>
+        )}
+      </>
+    );
+
+  const label = (
     <>
-      {mode === "key" ? "API key" : "Session token"} ·{" "}
-      {ENVIRONMENT_LABELS[environment]}
-      {phase !== null && client !== null && (
-        <span className="phase-pill" data-phase={phase}>
-          {phase}
-        </span>
-      )}
+      {style.label}
+      <span className="field-required" aria-hidden="true">
+        *
+      </span>
     </>
   );
 
@@ -283,7 +367,10 @@ export function App() {
         </p>
       </div>
 
-      <div className="demo-split wrap-wide">
+      <div
+        className="demo-split wrap-wide"
+        data-debug={debugOpen ? "open" : "closed"}
+      >
         <div className="demo-controls">
           <Collapsible
             num="01"
@@ -317,7 +404,8 @@ export function App() {
                 aria-selected={mode === "token"}
                 onClick={() => {
                   setMode("token");
-                  setSecret("");
+                  setDraft("");
+                  setCheck(null);
                 }}
               >
                 Session token (recommended)
@@ -327,7 +415,8 @@ export function App() {
                 aria-selected={mode === "key"}
                 onClick={() => {
                   setMode("key");
-                  setSecret("");
+                  setDraft("");
+                  setCheck(null);
                 }}
               >
                 API key
@@ -343,8 +432,11 @@ export function App() {
                 <pre className="demo-code">{curl}</pre>
                 <Field label="Session token">
                   <textarea
-                    value={secret}
-                    onChange={e => setSecret(e.target.value)}
+                    value={draft}
+                    onChange={e => {
+                      setDraft(e.target.value);
+                      setCheck(null);
+                    }}
                     rows={3}
                     spellCheck={false}
                     placeholder="eyJhbGciOiJFZERTQSIs…"
@@ -379,22 +471,75 @@ export function App() {
                   <input
                     type="password"
                     autoComplete="off"
-                    value={secret}
-                    onChange={e => setSecret(e.target.value)}
+                    value={draft}
+                    onChange={e => {
+                      setDraft(e.target.value);
+                      setCheck(null);
+                    }}
                     data-testid="demo-key"
                   />
                 </Field>
               </>
             )}
+            <div className="apply-row">
+              <button
+                type="button"
+                className="btn btn-primary"
+                disabled={
+                  draft.trim() === "" || check === "testing" || isApplied
+                }
+                onClick={() => void apply()}
+                data-testid="demo-apply"
+              >
+                {check === "testing"
+                  ? "Testing…"
+                  : isApplied
+                    ? "Applied"
+                    : mode === "key"
+                      ? "Apply API key"
+                      : "Apply session token"}
+              </button>
+              <p className="hint apply-note">
+                {mode === "key"
+                  ? "Apply mints one session to test the key, and the demo uses it."
+                  : "Apply checks the token with the tier; none of its request budget is spent."}
+              </p>
+            </div>
+            {check !== null && check !== "testing" && (
+              <p
+                className="check"
+                data-ok={check.ok ? "true" : "false"}
+                role="status"
+              >
+                {check.message}
+              </p>
+            )}
           </Collapsible>
 
           <section className="demo-card" aria-labelledby="demo-business-title">
-            <h2 className="demo-card-title" id="demo-business-title">
-              <span className="demo-num">02</span> Business
-            </h2>
-            <Fold
-              title="Filters"
-              summary={filterCount === 0 ? "none" : `${filterCount} set`}
+            <div className="demo-card-head">
+              <h2 className="demo-card-title" id="demo-business-title">
+                <span className="demo-num">02</span> Business
+              </h2>
+              <button
+                type="button"
+                className="link-toggle"
+                aria-expanded={filtersOpen}
+                aria-controls="demo-filters"
+                onClick={() => setFiltersOpen(open => !open)}
+              >
+                {filterCount > 0 ? `Filters · ${filterCount}` : "+ Add filters"}
+                <span
+                  className="fold-chevron"
+                  data-open={filtersOpen ? "true" : "false"}
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
+            <div
+              id="demo-filters"
+              className="filters-panel"
+              hidden={!filtersOpen}
             >
               <p className="hint">
                 Filters apply once the name is long enough to narrow by. Until
@@ -425,26 +570,34 @@ export function App() {
                   placeholder="2327 Hill Church"
                 />
               </Field>
-            </Fold>
+            </div>
             <div className="demo-preview">
               {previewCss(style) !== "" && <style>{previewCss(style)}</style>}
               {client === null ? (
-                <p className="hint">Connect first.</p>
+                <div className="bl-ac">
+                  <label
+                    className="bl-ac-label"
+                    htmlFor="demo-business-offline"
+                  >
+                    {label}
+                  </label>
+                  <input
+                    id="demo-business-offline"
+                    className={
+                      style.pageInput ? "bl-ac-input demo-input" : "bl-ac-input"
+                    }
+                    disabled
+                    placeholder="Connect first, then type a business name"
+                  />
+                </div>
               ) : (
                 <>
                   <PhaseWatcher client={client} onPhase={setPhase} />
                   <BusinessAutocomplete
-                    key={`${baseUrl}|${mode}|${secret}`}
+                    key={applied?.id}
                     client={client}
                     id="demo-business"
-                    label={
-                      <>
-                        {style.label}
-                        <span className="field-required" aria-hidden="true">
-                          *
-                        </span>
-                      </>
-                    }
+                    label={label}
                     value={name}
                     onChange={value => {
                       setName(value);
@@ -503,45 +656,88 @@ export function App() {
           </Collapsible>
         </div>
 
-        <aside className="demo-activity" aria-label="What the SDK did">
-          <section className="activity-card" aria-labelledby="session-title">
-            <div className="activity-head">
-              <h2 id="session-title">Session</h2>
-            </div>
-            {client === null ? (
-              <p className="hint">Not connected.</p>
-            ) : (
-              <SessionMeters client={client} />
+        {debugOpen ? (
+          <aside
+            className="demo-activity"
+            id="demo-activity"
+            aria-label="Debug"
+          >
+            <button
+              type="button"
+              className="debug-bar"
+              aria-expanded="true"
+              aria-controls="demo-activity"
+              onClick={() => setDebugOpen(false)}
+              data-testid="demo-debug-close"
+            >
+              <Icon name="bug" />
+              <span>Debug</span>
+              <span className="debug-bar-hide">Hide</span>
+              <span
+                className="fold-chevron"
+                data-open="true"
+                aria-hidden="true"
+              />
+            </button>
+            <section className="activity-card" aria-labelledby="session-title">
+              <div className="activity-head">
+                <h2 id="session-title">Session</h2>
+              </div>
+              {client === null ? (
+                <p className="hint">Not connected.</p>
+              ) : (
+                <SessionMeters client={client} />
+              )}
+            </section>
+            <NetworkTimeline log={network} />
+            <section className="activity-card" aria-labelledby="log-title">
+              <div className="activity-head">
+                <h2 id="log-title">SDK log</h2>
+                <p className="mono-label">newest first</p>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={clearLog}
+                  disabled={log.length === 0}
+                >
+                  Clear
+                </button>
+              </div>
+              <ol className="log" data-testid="demo-log">
+                {log.length === 0 && <li className="hint">Nothing yet.</li>}
+                {log.map(line => (
+                  <li key={line.id} className={line.ok ? "ok" : "bad"}>
+                    <span className="mono">{line.at}</span>{" "}
+                    <span className="tag" data-kind={line.kind}>
+                      {line.kind}
+                    </span>{" "}
+                    {line.text}
+                  </li>
+                ))}
+              </ol>
+            </section>
+          </aside>
+        ) : (
+          <button
+            type="button"
+            className="debug-tab"
+            aria-expanded="false"
+            aria-controls="demo-activity"
+            onClick={() => setDebugOpen(true)}
+            data-testid="demo-debug-open"
+          >
+            <Icon name="bug" />
+            <span className="debug-tab-label">Debug here</span>
+            {requests > 0 && (
+              <span className="debug-tab-count">{requests}</span>
             )}
-          </section>
-          <NetworkTimeline log={network} />
-          <section className="activity-card" aria-labelledby="log-title">
-            <div className="activity-head">
-              <h2 id="log-title">SDK log</h2>
-              <p className="mono-label">newest first</p>
-              <button
-                type="button"
-                className="btn btn-outline btn-sm"
-                onClick={clearLog}
-                disabled={log.length === 0}
-              >
-                Clear
-              </button>
-            </div>
-            <ol className="log" data-testid="demo-log">
-              {log.length === 0 && <li className="hint">Nothing yet.</li>}
-              {log.map(line => (
-                <li key={line.id} className={line.ok ? "ok" : "bad"}>
-                  <span className="mono">{line.at}</span>{" "}
-                  <span className="tag" data-kind={line.kind}>
-                    {line.kind}
-                  </span>{" "}
-                  {line.text}
-                </li>
-              ))}
-            </ol>
-          </section>
-        </aside>
+            {unseenErrors && (
+              <span className="debug-tab-alert" data-testid="demo-debug-alert">
+                <span className="visually-hidden">New errors</span>
+              </span>
+            )}
+          </button>
+        )}
       </div>
     </main>
   );
