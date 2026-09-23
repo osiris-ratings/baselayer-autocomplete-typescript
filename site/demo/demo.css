@@ -321,7 +321,7 @@
   transform: translateY(-70%) rotate(45deg);
 }
 
-/* A colour: a swatch that opens the picker, and the hex beside it. */
+/* A color: a swatch that opens the picker, and the hex beside it. */
 .color {
   display: flex;
   gap: 8px;

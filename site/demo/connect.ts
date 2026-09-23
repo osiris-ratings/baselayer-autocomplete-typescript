@@ -33,7 +33,7 @@ function describeRefusal(refused: Refused): string {
   const { status, code } = refused;
   if (status === 0)
     return refused.message ?? "The API did not answer this page.";
-  if (status === 401) return "The API does not recognise this key.";
+  if (status === 401) return "The API does not recognize this key.";
   if (status === 402) return "The organization is locked. Contact Baselayer.";
   if (status === 403 && code === 30)
     return "The key lacks the autocomplete.read permission.";

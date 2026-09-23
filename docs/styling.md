@@ -12,7 +12,7 @@ change it, from the lightest to the heaviest.
 ## 1. `look`
 
 The same knobs the Baselayer console reads, as a prop. Any knob left out
-keeps its default; an unusable value (a colour that is not hex, an unknown
+keeps its default; an unusable value (a color that is not hex, an unknown
 emphasis) keeps its default too.
 
 ```tsx

@@ -11,7 +11,7 @@ import {
  * console's `refusedThePin.test.ts`. The console read an axios error; the SDK
  * takes the status and the envelope's code, 0 standing for no response.
  *
- * The recovery must not depend on recognising catalog codes. A refusal that
+ * The recovery must not depend on recognizing catalog codes. A refusal that
  * carries none is exactly the one a caller cannot escape: a client deployed
  * ahead of the API, or an API rolled back under it, gets a bare pydantic 422
  * for the unknown `business_token` field, and while the pin survived that,

@@ -25,7 +25,7 @@ breaking change bumps the minor version.
 
 - Framework-free client (`@baselayer/autocomplete`): session minting through
   a host-provided `mint`, lazy refresh at 80 % of the session's life,
-  single-flighted mints, the refresh fallback, cold-mint backoff honouring
+  single-flighted mints, the refresh fallback, cold-mint backoff honoring
   `Retry-After`, the day and window pools, the step-aside on 503 code 481,
   one recovery per keystroke (re-mint or wait), the auth brake, the filter
   gate on `filterMinStem`, events and a store-friendly snapshot.

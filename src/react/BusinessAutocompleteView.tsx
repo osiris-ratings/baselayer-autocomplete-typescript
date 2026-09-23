@@ -117,7 +117,7 @@ function classes(
   };
 }
 
-/** The look's colours as CSS variables, only where they differ from the stylesheet's. */
+/** The look's colors as CSS variables, only where they differ from the stylesheet's. */
 function lookVariables(look: Look): CSSProperties {
   const vars: Record<string, string> = {};
   const set = (name: string, value: string, fallback: string) => {

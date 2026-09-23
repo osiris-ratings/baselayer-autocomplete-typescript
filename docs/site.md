@@ -71,7 +71,7 @@ SITE_BASE=/autocomplete/ pnpm site:build
 The pages carry their own Content-Security-Policy and load nothing from a
 third party; the fonts are self-hosted. Uncut Sans is baselayer.com's own
 sans; Newsreader and Geist Mono stand in for its licensed serif and mono,
-and can be swapped for them in `site/shared/brand.css` if the licence covers
+and can be swapped for them in `site/shared/brand.css` if the license covers
 this site.
 
 The demo on the published page calls the API from the browser, so its

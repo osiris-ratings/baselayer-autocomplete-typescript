@@ -14,7 +14,7 @@ import {
 // does the knob-by-knob validation the console's overrides schema did.
 describe("resolveLook", () => {
   it("reads the footer's diagnostics flag, which is off until a row says otherwise", () => {
-    // `show_debug_info` is the one leaf that is not a colour or an emphasis:
+    // `show_debug_info` is the one leaf that is not a color or an emphasis:
     // it puts the round trip and the artifact tag in the menu's footer. It is
     // off by default, so the resolver has to read a staged `true` for anyone
     // to see it.
@@ -60,9 +60,9 @@ describe("resolveLook", () => {
     ).toEqual({ ...DEFAULT_LOOK, subtitleColor: "#4a5568" });
   });
 
-  it("takes only hex colours, and keeps the default for anything else", () => {
+  it("takes only hex colors, and keeps the default for anything else", () => {
     // The console's defaults were Chakra tokens; the SDK's are hex, and a
-    // token, a colour name or a CSS function is a knob it cannot use.
+    // token, a color name or a CSS function is a knob it cannot use.
     for (const unusable of [
       "green.100",
       "red",
@@ -84,7 +84,7 @@ describe("resolveLook", () => {
     );
   });
 
-  it("reads the emphasis colour as null unless it is a usable hex", () => {
+  it("reads the emphasis color as null unless it is a usable hex", () => {
     expect(resolveLook({ matchEmphasisColor: "#319795" })).toMatchObject({
       matchEmphasisColor: "#319795",
     });
@@ -111,7 +111,7 @@ describe("resolveLook", () => {
     }
   });
 
-  it("stages every colour knob on its own", () => {
+  it("stages every color knob on its own", () => {
     const colors = {
       backgroundColor: "#111111",
       titleColor: "#222222",
@@ -125,7 +125,7 @@ describe("resolveLook", () => {
     expect(resolveLook(colors)).toEqual({ ...DEFAULT_LOOK, ...colors });
   });
 
-  it("defaults to hex colours, and hands back a look of its own", () => {
+  it("defaults to hex colors, and hands back a look of its own", () => {
     const hex = /^#[0-9A-F]{6}$/i;
     for (const [knob, value] of Object.entries(DEFAULT_LOOK)) {
       if (knob.endsWith("Color") && value !== null) {

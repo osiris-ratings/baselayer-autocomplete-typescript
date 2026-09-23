@@ -68,7 +68,7 @@ export class AutocompleteError extends Error {
 
 /**
  * `instanceof`, and by shape as well: a bundler that ends up with two copies
- * of the core must still recognise one copy's errors in the other.
+ * of the core must still recognize one copy's errors in the other.
  */
 export function isAutocompleteError(
   error: unknown,
@@ -81,7 +81,7 @@ export function isAutocompleteError(
   );
 }
 
-/** `true` for the `AbortError` a cancelled fetch or wait rejects with. */
+/** `true` for the `AbortError` a canceled fetch or wait rejects with. */
 export function isAbortError(error: unknown): boolean {
   return (
     typeof error === "object" &&

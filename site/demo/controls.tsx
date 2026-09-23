@@ -167,7 +167,7 @@ function sixDigits(hex: string): string {
 }
 
 /**
- * A hex colour: a swatch that opens the platform's colour picker, and the
+ * A hex color: a swatch that opens the platform's color picker, and the
  * value as text for pasting. With `allowAuto`, an empty value means "the
  * default for this treatment" and the swatch shows as unset.
  */
@@ -190,7 +190,7 @@ export function ColorInput({
     <span className="color" data-auto={value === null ? "true" : undefined}>
       <input
         type="color"
-        aria-label={`${label}: pick a colour`}
+        aria-label={`${label}: pick a color`}
         value={valid ? sixDigits(value) : "#ffffff"}
         onChange={event => onChange(event.target.value)}
       />

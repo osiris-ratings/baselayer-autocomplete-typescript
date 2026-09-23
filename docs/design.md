@@ -12,9 +12,9 @@ This is the design record. The customer documentation is the
 The Legal Entity Name typeahead in the console is the reference
 implementation of the autocomplete product. It is about 1,500 lines of
 TypeScript that mint and refresh sessions, debounce keystrokes, talk to the
-tier, honour every refusal the API and the tier can answer, and turn a pick
+tier, honor every refusal the API and the tier can answer, and turn a pick
 into a `business_token` on the search. A further 3,000 lines of tests prove
-each of those behaviours.
+each of those behaviors.
 
 A customer embedding autocomplete in their own product would have to rebuild
 all of that from the API documentation, and would get each edge wrong once:
@@ -58,7 +58,7 @@ A three-stem query, each stem matching a different word of the name:
   drives with their own backend as the only piece of server code they write.
 - The console and the admin console consume that package as ordinary npm
   consumers, pinned to an exact version.
-- Every behaviour the console has today survives the move, with its tests.
+- Every behavior the console has today survives the move, with its tests.
 - Every timing, threshold and message is configuration with our defaults;
   every visual element is reachable by class name, CSS variable or slot.
 - A framework-free core, so a second binding is a thin layer.
@@ -126,7 +126,7 @@ curl -s -X POST https://api.baselayer.com/autocomplete/sessions \
 #      "filter_min_stem": 5}
 ```
 
-| Mint answer           | Meaning                       | SDK behaviour                          |
+| Mint answer           | Meaning                       | SDK behavior                           |
 | --------------------- | ----------------------------- | -------------------------------------- |
 | 201                   | grant                         | cache, refresh at 80 % of `expires_in` |
 | 401 20/21/22/24       | key rejected                  | report `mint_refused`, wait 10 s       |
@@ -904,7 +904,7 @@ export function resolveLook(
 ): Look; // invalid or null -> default
 ```
 
-Colours become CSS variables on the component root. The defaults are the
+Colors become CSS variables on the component root. The defaults are the
 console's Chakra tokens resolved to hex, so the SDK renders the console's
 look with no Chakra present.
 
@@ -953,7 +953,7 @@ selector two classes deep always wins. The stylesheet is deliberately
 unlayered, because both consoles ship unlayered resets and an `@layer`
 would lose to them; it sets `box-sizing`, `margin`, `padding`,
 `list-style`, `font` and `color` on the elements it draws so those resets
-cannot leak in. Colour variables are written inline on the root only for
+cannot leak in. Color variables are written inline on the root only for
 knobs that differ from the defaults, so a host that sets `--bl-ac-*` in its
 own CSS is not overridden by the component. `unstyled` emits no `bl-ac-*`
 class at all and keeps every `data-*` attribute, for a host that styles
@@ -1075,7 +1075,7 @@ fits (tsup for ESM and CJS with declarations, vitest, pnpm with its own
 lockfile) and adds what a React package needs. The React entry imports the
 core through the package's own name and keeps it external, so an
 application that imports both entries loads one copy of the core, and an
-error thrown by a client made from `.` is recognised by the hooks in
+error thrown by a client made from `.` is recognized by the hooks in
 `./react`.
 
 - **Build**: tsup, three configs: the core; `./react` with React external,
@@ -1179,7 +1179,7 @@ Visual parity was measured, not assumed. Nine states of the console's
 typeahead were rendered through its Playwright lane before and after the
 migration (osiris-app ENG-7950), from the same production answers on the
 same machine: rows with underline marks, a highlighted row, substring marks,
-background marks with staged colours, weight marks with an alternative
+background marks with staged colors, weight marks with an alternative
 name, ink marks with an agent, searching, a refusal, and a truncated
 answer. All nine differ by zero pixels. Getting there found two differences
 in this stylesheet, both fixed: the console's rows inherit a line-height of
@@ -1324,7 +1324,7 @@ ENG-7953 closes.
 - **Query folding drifts.** `queryTokens` reproduces the tier's folding for
   the `substring` region. A tier change to folding is a doc-visible change
   and should say so in its PR.
-- **Enrolment messages.** A customer page that sees 403 code 37 gets
+- **Enrollment messages.** A customer page that sees 403 code 37 gets
   `mint_refused` and silence. A `messages.notEnrolled` may be worth adding
   once the first customer integrates; deliberately not in 1.0.
 - **Contract-drift token.** The scheduled workflow needs a read token for

@@ -25,7 +25,7 @@ export interface MintContext {
 export interface MintedGrant {
   /** The compact JWS the tier verifies; opaque to the SDK. */
   sessionToken: string;
-  /** Seconds until the tier stops honouring the grant. */
+  /** Seconds until the tier stops honoring the grant. */
   expiresIn: number;
   /** Requests the grant is good for, per route. */
   requestBudget: number;

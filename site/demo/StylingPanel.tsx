@@ -75,7 +75,7 @@ export function StylingPanel({
     <div className="styling-panel">
       <div className="presets-head">
         <p className="mono-label">Presets</p>
-        {active === null && <p className="hint">Custom colours</p>}
+        {active === null && <p className="hint">Custom colors</p>}
       </div>
       <div className="presets" role="radiogroup" aria-label="Presets">
         {PRESETS.map(preset => {
@@ -157,12 +157,12 @@ export function StylingPanel({
             />
           </Field>
           <Field
-            label="Mark colour"
+            label="Mark color"
             group
-            hint="Empty: each emphasis's own colour."
+            hint="Empty: each emphasis's own color."
           >
             <ColorInput
-              label="Mark colour"
+              label="Mark color"
               allowAuto
               value={state.look.matchEmphasisColor}
               onChange={value => setLook("matchEmphasisColor", value)}
@@ -180,7 +180,7 @@ export function StylingPanel({
       </Fold>
 
       <Fold
-        title="Colours"
+        title="Colors"
         summary={count(
           lookChanged(LOOK_COLORS.map(c => c.key)) +
             vars.filter(([name]) => CSS_VARIABLES[name].kind === "color")
@@ -243,7 +243,7 @@ export function StylingPanel({
         </div>
       </Fold>
 
-      <Fold title="Behaviour">
+      <Fold title="Behavior">
         <div className="field-grid">
           <Field label="Rows" hint="1 to 20">
             <input

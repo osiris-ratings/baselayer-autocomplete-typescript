@@ -1,5 +1,5 @@
 // Everything the styled component lets a host change, as one piece of state:
-// the `look` knobs, the CSS variables that are not knobs, the behaviour
+// the `look` knobs, the CSS variables that are not knobs, the behavior
 // props, the text, and the structural switches. Defaults are the SDK's own,
 // imported rather than copied, except the stylesheet's variables, which the
 // stylesheet declares.
@@ -230,14 +230,14 @@ export function exportCode(state: StyleState): { tsx: string; css: string } {
   return { tsx, css };
 }
 
-/** A colour theme: the colours, corners and shadow, over the defaults. */
+/** A color theme: the colors, corners and shadow, over the defaults. */
 export interface Preset {
   name: string;
   look: Partial<Pick<Look, LookColor>>;
   vars: Partial<Record<CssVariable, string>>;
 }
 
-/** What a preset owns; sizes, behaviour and text stay the reader's. */
+/** What a preset owns; sizes, behavior and text stay the reader's. */
 const PRESET_VARS: CssVariable[] = [
   "--bl-ac-highlight-bg",
   "--bl-ac-border",
@@ -366,7 +366,7 @@ export const PRESETS: Preset[] = [
   },
 ];
 
-/** The state with a preset's colours and corners, everything else kept. */
+/** The state with a preset's colors and corners, everything else kept. */
 export function applyPreset(state: StyleState, preset: Preset): StyleState {
   const look = { ...state.look };
   for (const { key } of LOOK_COLORS) {

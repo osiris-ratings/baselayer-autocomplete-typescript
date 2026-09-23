@@ -3,7 +3,7 @@
  *
  * Every rule is one class deep, so a host's global reset (Chakra's, Tailwind's
  * preflight, a `* { … }`) never outranks it, and a host class loaded after this
- * file wins a tie. Colours are custom properties: set them on `.bl-ac`, or pass
+ * file wins a tie. Colors are custom properties: set them on `.bl-ac`, or pass
  * `look` to the component. The values are the Baselayer console's own.
  */
 
@@ -207,7 +207,7 @@
 
 /*
  * The marks, one treatment per emphasis. The name owns its weight; the
- * alternative name stays at the subtitle's colour and normal weight, so a mark
+ * alternative name stays at the subtitle's color and normal weight, so a mark
  * on it darkens rather than emboldens past the label.
  */
 .bl-ac-name[data-emphasis="underline"] .bl-ac-mark {

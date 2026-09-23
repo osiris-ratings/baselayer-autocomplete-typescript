@@ -14,7 +14,7 @@ export interface SessionPolicy {
   /** The floor between two cold mint attempts when no `Retry-After` says otherwise. */
   mintRetryMs: number;
   /**
-   * The longest a `Retry-After` on a failed mint is honoured for. A day is the
+   * The longest a `Retry-After` on a failed mint is honored for. A day is the
    * longest the API asks for, and it sits well under the 2^31 ms a timer takes.
    */
   maxMintBackoffMs: number;

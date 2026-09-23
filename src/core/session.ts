@@ -9,14 +9,14 @@ import type { SessionPolicy } from "./policy";
 
 /**
  * A grant as the client holds it: what the mint said, plus when to refresh it
- * and when the tier stops honouring it.
+ * and when the tier stops honoring it.
  */
 export interface Grant extends MintedGrant {
   /** Epoch ms of the mint. */
   mintedAt: number;
   /** Epoch ms after which the grant is refreshed before use. */
   refreshAt: number;
-  /** Epoch ms at which the tier stops honouring the grant. */
+  /** Epoch ms at which the tier stops honoring the grant. */
   expiresAt: number;
 }
 
@@ -71,7 +71,7 @@ export class SessionManager {
   private inFlightReason: MintReason = "cold";
   /**
    * The grant an in-flight mint falls back on if it fails: the one it is
-   * replacing, for as long as the tier still honours it. A field rather than
+   * replacing, for as long as the tier still honors it. A field rather than
    * a closure capture so that `force` can WITHDRAW it: a refresh starts at 80 %
    * of the TTL, the tier can refuse that same grant while the refresh is in
    * the air, and a forced caller that joins the running mint must not be
@@ -298,7 +298,7 @@ export class SessionManager {
       throw this.unavailableError(this.unavailableUntil);
     }
     // A refresh starts at 80 % of the TTL, so a mint can fail while the grant
-    // it was replacing is still one the tier honours, and the caller who walks
+    // it was replacing is still one the tier honors, and the caller who walks
     // into the mint limiter is exactly the one who has been typing. Serve it,
     // and hold the next attempt off so the rest of its life is not one mint
     // per keystroke.

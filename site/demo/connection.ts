@@ -27,7 +27,7 @@ export function connectionStatus(
   mode: "token" | "key",
   session: SessionPhase,
   now: number,
-  /** Epoch ms the pasted token stops being honoured (token mode). */
+  /** Epoch ms the pasted token stops being honored (token mode). */
   tokenExpiresAt: number | null,
 ): ConnectionStatus {
   if (mode === "token" && tokenExpiresAt !== null && tokenExpiresAt <= now) {

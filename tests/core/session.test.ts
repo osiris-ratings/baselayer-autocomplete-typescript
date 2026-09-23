@@ -188,7 +188,7 @@ describe("getSession", () => {
 
       const first = await client.getSession();
       // Past the refresh point, well short of the expiry: the tier still
-      // honours grant-1 for another 20% of its TTL.
+      // honors grant-1 for another 20% of its TTL.
       const refreshPoint = MINTED_AT + TTL_MS * REFRESH_AT_FRACTION;
       at(refreshPoint);
 
@@ -538,7 +538,7 @@ describe("getSession", () => {
     expect((await client.getSession()).sessionToken).toBe("after-backoff");
   });
 
-  it("honours Retry-After on a refused mint rather than its own floor", async () => {
+  it("honors Retry-After on a refused mint rather than its own floor", async () => {
     const retryAfterSeconds = 600;
     mint.mockResolvedValue(
       refusal(429, {}, { "retry-after": String(retryAfterSeconds) }),

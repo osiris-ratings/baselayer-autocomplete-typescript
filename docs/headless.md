@@ -64,7 +64,7 @@ createAutocompleteClient({
     refreshAtFraction: 0.8, // refresh at 80 % of the session's life
     refreshRetryMs: 5_000, // a failed refresh serves the old session
     mintRetryMs: 10_000, // floor between two failed cold mints
-    maxMintBackoffMs: 86_400_000, // longest Retry-After honoured
+    maxMintBackoffMs: 86_400_000, // longest Retry-After honored
     unavailableCooldownMs: 300_000, // after a 503 code 481
   },
   request: {

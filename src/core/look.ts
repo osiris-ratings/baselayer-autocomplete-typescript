@@ -3,7 +3,7 @@
  * overrides, and a customer's plain configuration, with the defaults filled
  * in so the component reads a complete look and never a maybe.
  *
- * Colours are hex strings. The defaults are the console's Chakra tokens
+ * Colors are hex strings. The defaults are the console's Chakra tokens
  * resolved to hex, so the SDK renders the console's typeahead with no design
  * system present.
  */
@@ -25,7 +25,7 @@ export interface Look {
   showDebugInfo: boolean;
   /** How the words a typed token matched are marked. */
   matchEmphasis: MatchEmphasis;
-  /** The marks' own colour, or null for the treatment's default. */
+  /** The marks' own color, or null for the treatment's default. */
   matchEmphasisColor: string | null;
   /** The whole word a token starts, or only the typed characters. */
   matchEmphasisRegion: MatchRegion;
@@ -81,7 +81,7 @@ function oneOf<T extends string>(
 /**
  * The look with the staged knobs laid over the defaults. A knob that is
  * absent, null, or one this build cannot use keeps its default, so one bad
- * colour costs that colour and nothing else.
+ * color costs that color and nothing else.
  */
 export function resolveLook(staged: LookInput = {}): Look {
   const base = DEFAULT_LOOK;

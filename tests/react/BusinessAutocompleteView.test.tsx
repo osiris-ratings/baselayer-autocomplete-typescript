@@ -684,9 +684,9 @@ describe("the match marks", () => {
     ]);
   });
 
-  it("paints the background highlight in the look's own colour", () => {
-    // The console asserted Chakra's computed style; the SDK hands the colour to
-    // its stylesheet as a variable on the root, and says a colour is staged.
+  it("paints the background highlight in the look's own color", () => {
+    // The console asserted Chakra's computed style; the SDK hands the color to
+    // its stylesheet as a variable on the root, and says a color is staged.
     const { root } = renderTypeahead({
       suggestions: [stableMarked],
       found: 1,
@@ -709,7 +709,7 @@ describe("the match marks", () => {
     expect(root.style.getPropertyValue("--bl-ac-mark")).toBe("#fef08a");
   });
 
-  it("leaves the mark colour to the treatment when the look stages none", () => {
+  it("leaves the mark color to the treatment when the look stages none", () => {
     const { root } = renderTypeahead({
       suggestions: [stableMarked],
       found: 1,
@@ -721,9 +721,9 @@ describe("the match marks", () => {
     expect(root.style.getPropertyValue("--bl-ac-mark")).toBe("");
   });
 
-  it("paints the menu, the lines and the squares in the look's colours", () => {
+  it("paints the menu, the lines and the squares in the look's colors", () => {
     // The console asserted each element's computed Chakra style; the SDK sets
-    // one variable per colour on the root, which its classes read.
+    // one variable per color on the root, which its classes read.
     const { root } = renderTypeahead({
       suggestions: [osiris],
       found: 1,
@@ -767,12 +767,12 @@ describe("the match marks", () => {
     );
   });
 
-  it("sets a variable only for a colour that differs from the default", () => {
+  it("sets a variable only for a color that differs from the default", () => {
     const { root } = renderTypeahead({
       look: {
         titleColor: "#f7fafc",
         backgroundColor: DEFAULT_LOOK.backgroundColor,
-        // Not a hex colour: it keeps the default, and sets nothing.
+        // Not a hex color: it keeps the default, and sets nothing.
         subtitleColor: "gray.500",
       },
     });
@@ -863,13 +863,13 @@ describe("the default label and input", () => {
     unmount();
 
     openDefault(baseProps({ label: "Business name", inputName: "legalName" }));
-    // The listbox is labelled by it too, as downshift wires it.
-    const labelled = screen.getByLabelText("Business name", {
+    // The listbox is labeled by it too, as downshift wires it.
+    const labeled = screen.getByLabelText("Business name", {
       selector: "input",
     });
-    expect(labelled).toBe(screen.getByRole("combobox"));
+    expect(labeled).toBe(screen.getByRole("combobox"));
     expect(screen.getByRole("listbox")).toHaveAccessibleName("Business name");
-    expect(labelled).toHaveAttribute("name", "legalName");
+    expect(labeled).toHaveAttribute("name", "legalName");
     expect(screen.getByText("Business name")).toHaveClass("bl-ac-label");
   });
 

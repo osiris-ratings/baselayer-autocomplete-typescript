@@ -25,7 +25,7 @@ production answers to a local run.
 ## Connecting
 
 Pick the environment, then one of two ways in, and press **Apply**. The
-button stays grey until there is something to apply. Apply tests what you
+button stays gray until there is something to apply. Apply tests what you
 gave it before the demo uses it, and says what the API answered: a refused
 key, a token bound to another page, an expired one. Once it passes, Connect
 folds away to one line that says how you are connected and, at its right, a
@@ -103,13 +103,13 @@ form shows the `business_token` and the search it belongs in.
 
 ## Styling
 
-Folded until you open it. First come six presets, each a colour theme drawn
-as a small row in its own colours: Light (the console's), Baselayer,
-Midnight, Monokai, Sepia and Rosé. A preset sets the colours, the corners and
-the shadow, and leaves your sizes, behaviour and text alone. Then every knob
-the styled component has, grouped: how matches are marked, every colour (the
+Folded until you open it. First come six presets, each a color theme drawn
+as a small row in its own colors: Light (the console's), Baselayer,
+Midnight, Monokai, Sepia and Rosé. A preset sets the colors, the corners and
+the shadow, and leaves your sizes, behavior and text alone. Then every knob
+the styled component has, grouped: how matches are marked, every color (the
 `look` prop's and the stylesheet's own variables, each with a swatch that
-opens a colour picker), shape and size, behaviour (rows, related entities,
+opens a color picker), shape and size, behavior (rows, related entities,
 the pause before asking, prewarming), every message it can show, and the
 structural switches (`classNames`, `unstyled`). Changes apply as you make
 them. **Your configuration** at the bottom is the code that reproduces the
