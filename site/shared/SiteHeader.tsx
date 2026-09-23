@@ -101,7 +101,14 @@ export function SiteHeader({ current }: { current: Page }) {
             <GitHubMark size={16} /> GitHub
           </a>
         </nav>
+        {/* Try the demo leads, so leaving it out on the demo itself moves
+            nothing else. */}
         <div className="header-actions">
+          {current !== "demo" && (
+            <a className="btn btn-primary btn-sm" href={links.demo}>
+              Try the demo
+            </a>
+          )}
           <a
             className="btn btn-outline btn-sm btn-github"
             href={links.source}
@@ -113,11 +120,6 @@ export function SiteHeader({ current }: { current: Page }) {
           <a className="btn btn-outline btn-sm" href={links.console}>
             Sign in
           </a>
-          {current !== "demo" && (
-            <a className="btn btn-primary btn-sm" href={links.demo}>
-              Try the demo
-            </a>
-          )}
           <button
             type="button"
             className="btn btn-outline btn-sm menu-toggle"
