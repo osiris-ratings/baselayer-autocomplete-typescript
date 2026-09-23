@@ -1,0 +1,68 @@
+# Publish @baselayer/autocomplete to npm when a version tag is pushed.
+#
+# Auth is npm trusted publishing (OIDC): no long-lived token in the repo.
+# While the repository is private npm refuses provenance, so `--provenance`
+# is added only once it is public. NPM_TOKEN, when the secret exists, is the
+# fallback for a package that has no trusted publisher configured yet.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to publish (vX.Y.Z)
+        required: true
+        type: string
+      dist_tag:
+        description: npm dist-tag
+        default: latest
+        type: string
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - name: Tag, package.json and changelog agree
+        run: |
+          tag="${{ inputs.tag || github.ref_name }}"
+          want="${tag#v}"
+          have="$(node -p "require('./package.json').version")"
+          if [ "$want" != "$have" ]; then
+            echo "::error::tag $tag is not package.json version $have"; exit 1
+          fi
+          if ! grep -q "^## \[$want\]" CHANGELOG.md; then
+            echo "::error::CHANGELOG.md has no section for $want"; exit 1
+          fi
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck && pnpm lint && pnpm test && pnpm build
+      - run: pnpm check:package
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PROVENANCE: ${{ github.event.repository.private && '' || '--provenance' }}
+          DIST_TAG: ${{ inputs.dist_tag || (contains(github.ref_name, '-') && 'next' || 'latest') }}
+        run: |
+          # Trusted publishing needs npm 11.5.1 or later; Node 22 bundles 10.
+          npm install -g npm@^11.5.1
+          npm publish --access public --tag "$DIST_TAG" $PROVENANCE

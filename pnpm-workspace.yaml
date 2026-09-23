@@ -1,0 +1,7 @@
+# pnpm reads project settings from here, not the package.json `pnpm`
+# field (which it ignores). See https://pnpm.io/settings.
+#
+# pnpm blocks dependency build scripts by default; esbuild's install
+# script places the platform binary tsup and vitest run on.
+allowBuilds:
+  esbuild: true

@@ -1,0 +1,37 @@
+# The tier's OpenAPI document lives in osiris-app. This compares the copy the
+# SDK's wire types were written against with osiris-app's main, daily and on
+# demand, and fails when they differ. Needs OSIRIS_APP_READ_TOKEN: a
+# fine-grained token (or GitHub App token) with contents:read on osiris-app.
+name: Contract drift
+
+on:
+  schedule:
+    - cron: "17 7 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tier-openapi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compare with osiris-app main
+        env:
+          TOKEN: ${{ secrets.OSIRIS_APP_READ_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then
+            echo "::warning::OSIRIS_APP_READ_TOKEN is not set; skipping the drift check"
+            exit 0
+          fi
+          curl -fsSL \
+            -H "Authorization: Bearer $TOKEN" \
+            -H "Accept: application/vnd.github.raw+json" \
+            "https://api.github.com/repos/osiris-ratings/osiris-app/contents/services/autocomplete/openapi.json?ref=main" \
+            -o upstream.json
+          if ! diff -u <(jq -S . contracts/tier-openapi.json) <(jq -S . upstream.json); then
+            echo "::error::contracts/tier-openapi.json differs from osiris-app main; see CONTRIBUTING.md"
+            exit 1
+          fi
