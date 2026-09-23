@@ -7,7 +7,7 @@ import { links } from "../shared/links";
 import { SiteFooter } from "../shared/SiteFooter";
 import { SiteHeader } from "../shared/SiteHeader";
 import { ArchitectureDiagram } from "./ArchitectureDiagram";
-import { Icon, type IconName } from "./icons";
+import { Icon, type IconName } from "../shared/icons";
 import { RequestFlow } from "./RequestFlow";
 
 const INSTALL = "npm install @baselayer/autocomplete";

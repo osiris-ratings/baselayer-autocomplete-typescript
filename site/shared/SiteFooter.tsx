@@ -1,10 +1,11 @@
+import { GitHubMark } from "./GitHubMark";
 import { links } from "./links";
 import { Logo } from "./Logo";
 
-export function SiteFooter() {
+export function SiteFooter({ wide = false }: { wide?: boolean }) {
   return (
     <footer className="site-footer">
-      <div className="wrap">
+      <div className={wide ? "wrap-wide" : "wrap"}>
         <div className="footer-grid">
           <div>
             <a
@@ -64,7 +65,9 @@ export function SiteFooter() {
                 <a href={links.console}>Sign in to the console</a>
               </li>
               <li>
-                <a href={links.source}>Source on GitHub</a>
+                <a className="footer-github" href={links.source}>
+                  <GitHubMark size={16} /> Source on GitHub
+                </a>
               </li>
             </ul>
           </nav>

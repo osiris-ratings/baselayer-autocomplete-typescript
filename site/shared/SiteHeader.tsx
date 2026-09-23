@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import { GitHubMark } from "./GitHubMark";
 import { links, type Page } from "./links";
 import { Logo } from "./Logo";
 import { useScrollSpy } from "./useScrollSpy";
@@ -40,7 +41,13 @@ const HOME_SECTIONS = NAV.flatMap(item =>
   item.section !== undefined ? [item.section] : [],
 );
 
-export function SiteHeader({ current }: { current: Page }) {
+export function SiteHeader({
+  current,
+  wide = false,
+}: {
+  current: Page;
+  wide?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const section = useScrollSpy(current === "home" ? HOME_SECTIONS : []);
 
@@ -60,7 +67,7 @@ export function SiteHeader({ current }: { current: Page }) {
 
   return (
     <header className="site-header">
-      <div className="wrap">
+      <div className={wide ? "wrap-wide" : "wrap"}>
         <div className="brand">
           <a
             className="brand-logo"
@@ -96,8 +103,19 @@ export function SiteHeader({ current }: { current: Page }) {
               {item.label}
             </a>
           ))}
+          <a className="nav-github" href={links.source}>
+            <GitHubMark size={16} /> GitHub
+          </a>
         </nav>
         <div className="header-actions">
+          <a
+            className="btn btn-outline btn-sm btn-github"
+            href={links.source}
+            aria-label="Source on GitHub"
+          >
+            <GitHubMark />
+            <span className="btn-github-label">GitHub</span>
+          </a>
           <a className="btn btn-outline btn-sm" href={links.console}>
             Sign in
           </a>

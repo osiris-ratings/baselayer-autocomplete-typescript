@@ -91,6 +91,13 @@ kbd {
   padding: 0 var(--gutter);
 }
 
+/* The demo's split screen, and the header and footer around it. */
+.wrap-wide {
+  max-width: 1560px;
+  margin: 0 auto;
+  padding: 0 var(--gutter);
+}
+
 .visually-hidden {
   position: absolute;
   width: 1px;
@@ -110,7 +117,8 @@ kbd {
   border-bottom: 1px solid var(--line);
 }
 
-.site-header .wrap {
+.site-header .wrap,
+.site-header .wrap-wide {
   display: flex;
   align-items: center;
   gap: 36px;
@@ -184,8 +192,28 @@ kbd {
   display: none;
 }
 
+.btn-github {
+  gap: 8px;
+}
+
+.btn-github svg {
+  flex: none;
+}
+
+/* In the collapsed menu only; the header has its own button. */
+.site-nav .nav-github {
+  display: none;
+}
+
+.footer-github {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 @media (max-width: 1080px) {
-  .site-header .wrap {
+  .site-header .wrap,
+  .site-header .wrap-wide {
     gap: 16px;
   }
 
@@ -218,6 +246,20 @@ kbd {
 
   .header-actions .menu-toggle {
     display: inline-flex;
+  }
+
+  .btn-github {
+    padding: 0 11px;
+  }
+
+  .btn-github-label {
+    display: none;
+  }
+
+  .site-nav[data-open="true"] .nav-github {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
   }
 }
 
