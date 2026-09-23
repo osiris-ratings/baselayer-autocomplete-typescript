@@ -17,7 +17,7 @@ function contentSecurityPolicy(): Plugin {
     "script-src 'self'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data:",
-    "connect-src https://api.baselayer.com https://api.staging.baselayer.com https:",
+    "connect-src https://api.baselayer.com https:",
     "base-uri 'self'",
     "form-action 'none'",
   ].join("; ");

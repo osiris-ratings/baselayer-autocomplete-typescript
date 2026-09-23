@@ -18,7 +18,6 @@ import { keyMint, readClaims, tokenMint } from "./credentials";
 
 const ENVIRONMENTS = {
   production: "https://api.baselayer.com",
-  staging: "https://api.staging.baselayer.com",
 } as const;
 type Environment = keyof typeof ENVIRONMENTS | "custom";
 type Mode = "token" | "key";
@@ -127,7 +126,7 @@ function SessionMeters({ client }: { client: AutocompleteClient }) {
 }
 
 export function App() {
-  const [environment, setEnvironment] = useState<Environment>("staging");
+  const [environment, setEnvironment] = useState<Environment>("production");
   const [customUrl, setCustomUrl] = useState("");
   const [mode, setMode] = useState<Mode>("token");
   const [secret, setSecret] = useState("");
@@ -192,9 +191,6 @@ export function App() {
               value={environment}
               onChange={e => setEnvironment(e.target.value as Environment)}
             >
-              <option value="staging">
-                Staging (api.staging.baselayer.com)
-              </option>
               <option value="production">Production (api.baselayer.com)</option>
               <option value="custom">Custom URL</option>
             </select>

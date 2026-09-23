@@ -39,8 +39,8 @@ documentation (see "SDK documentation").
 
 ## What the SDK reproduces
 
-The console's typeahead as it stands, captured on 2026-09-22 against the
-staging index `v2-13-202609202230`. Each row is the canonical name with the
+The console's typeahead as it stands, captured on 2026-09-23 against the
+production index `v2-16-202609221511`. Each row is the canonical name with the
 matched words marked, the family's states as squares (domicile first),
 the lead address and the lead officer; the footer carries the count. The
 styled layer of the SDK has to draw exactly this, and the console's
@@ -1150,7 +1150,7 @@ E  1.0.0: repo public, provenance, docs page, public OpenAPI      after all
 P and A start together; S, B follow A; C and D run in parallel after B;
 E closes. Each step has a checkpoint:
 
-- **P**: a request from a foreign origin passes preflight on staging; the
+- **P**: a request from a foreign origin passes preflight in production; the
   mint appears in `task generate:openapi:public`.
 - **A**: 0.1.0 on npm; the five ported core and hook suites green in
   vitest; a test asserts the core imports no React.

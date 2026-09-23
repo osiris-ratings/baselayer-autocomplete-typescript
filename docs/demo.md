@@ -5,13 +5,20 @@ log of what the SDK does on every keystroke: each mint, each request, the
 recovery it chose, the session's budget and expiry, and the index that
 answered.
 
-![The demo answering "osiris ra" against staging](images/demo-typeahead-osiris-ra.png)
+![The demo answering "osiris ra" in production](images/demo-typeahead-osiris-ra.png)
 
 It is published from this repository's `main` to GitHub Pages by the
 `Demo` workflow, at <https://curly-adventure-y83og2w.pages.github.io/>.
 While the repository is private, so is the site: open it signed in to
 GitHub as a member of the osiris-ratings organization. The address changes
 when the site goes public.
+
+The page talks to the production API, `https://api.baselayer.com`, from
+the browser. That needs the autocomplete tier to answer CORS for the demo's
+origin and the API to accept its mint, which osiris-app ENG-7947 deploys;
+until it is in production the browser refuses both calls. The screenshots
+below are production answers, taken while the calls were relayed by the
+test browser's harness rather than made by the page.
 
 ## Connecting
 
@@ -52,8 +59,11 @@ pnpm install
 pnpm demo        # http://localhost:3000
 ```
 
-The staging API accepts requests from `http://localhost:3000`, so both
-ways in work locally against staging.
+Locally the page runs on `http://localhost:3000`. Production accepts a
+session token from there once the tier answers CORS for every origin
+(ENG-7947); the API-key mode needs the API to list the page's origin, which
+production does for the hosted demo only. For another environment, pick
+**Custom URL** and give its API host.
 
 ## What it shows
 
