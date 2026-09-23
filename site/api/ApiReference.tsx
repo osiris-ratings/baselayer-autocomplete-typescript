@@ -3,13 +3,14 @@
 // `virtual:api-reference` (contracts/ + the overlay, assembled at build
 // time). Nothing here names a route.
 
-import { Fragment } from "react";
+import { Fragment, useState } from "react";
 import { document, html } from "virtual:api-reference";
 
 import { Code, type Snippet } from "../shared/Code";
 import { SiteFooter } from "../shared/SiteFooter";
 import { SiteHeader } from "../shared/SiteHeader";
 import { useScrollSpy } from "../shared/useScrollSpy";
+import { fieldTree, visibleRows } from "./fieldTree";
 import {
   describeType,
   fieldRows,
@@ -49,48 +50,86 @@ function Markdown({
   );
 }
 
+/**
+ * A schema's fields, nested models folded under their parent until opened:
+ * a response reads as its top level first, and a reader opens what they came
+ * for.
+ */
 function FieldList({ schema }: { schema: JsonSchema | undefined }) {
+  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
   if (schema === undefined) {
     return null;
   }
   const rows = fieldRows(schema);
+  const tree = fieldTree(rows);
+  const childCount = new Map(
+    rows.map((row, i) => [row.path, tree[i]!.childCount]),
+  );
+  const toggle = (path: string) =>
+    setOpen(previous => {
+      const next = new Set(previous);
+      if (next.has(path)) next.delete(path);
+      else next.add(path);
+      return next;
+    });
   return (
     <dl className="fields">
-      {rows.map(row => (
-        <div
-          key={row.path}
-          className="field"
-          data-depth={row.depth}
-          style={{ marginLeft: `${row.depth * 20}px` }}
-        >
-          <dt>
-            <code className="field-name">{row.name}</code>
-            <span className="field-type">{row.type}</span>
-            {row.required && <span className="pill">required</span>}
-            {row.depth > 0 && <span className="field-path">{row.path}</span>}
-          </dt>
-          <dd>
-            <Markdown text={row.description} inline />
-            {row.values.length > 0 && (
-              <p className="field-values">
-                One of{" "}
-                {row.values.map((value, i) => (
-                  <Fragment key={value}>
-                    {i > 0 && ", "}
-                    <code>{value}</code>
-                  </Fragment>
-                ))}
-                .
-              </p>
-            )}
-            {row.sameAs !== null && (
-              <p className="field-values">
-                Same shape as <code>{row.sameAs}</code>.
-              </p>
-            )}
-          </dd>
-        </div>
-      ))}
+      {visibleRows(rows, open).map(row => {
+        const children = childCount.get(row.path) ?? 0;
+        const isOpen = open.has(row.path);
+        const count = `${children} field${children === 1 ? "" : "s"}`;
+        return (
+          <div
+            key={row.path}
+            className="field"
+            data-depth={row.depth}
+            style={{ marginLeft: `${row.depth * 20}px` }}
+          >
+            <dt>
+              <code className="field-name">{row.name}</code>
+              <span className="field-type">{row.type}</span>
+              {row.required && <span className="pill">required</span>}
+              {row.depth > 0 && <span className="field-path">{row.path}</span>}
+              {children > 0 && (
+                <button
+                  type="button"
+                  className="field-toggle"
+                  aria-expanded={isOpen}
+                  aria-label={`${isOpen ? "Hide" : "Show"} the ${count} of ${row.path}`}
+                  onClick={() => toggle(row.path)}
+                >
+                  <span aria-hidden="true">{count}</span>
+                  <span
+                    className="field-chevron"
+                    data-open={isOpen ? "true" : "false"}
+                    aria-hidden="true"
+                  />
+                </button>
+              )}
+            </dt>
+            <dd>
+              <Markdown text={row.description} inline />
+              {row.values.length > 0 && (
+                <p className="field-values">
+                  One of{" "}
+                  {row.values.map((value, i) => (
+                    <Fragment key={value}>
+                      {i > 0 && ", "}
+                      <code>{value}</code>
+                    </Fragment>
+                  ))}
+                  .
+                </p>
+              )}
+              {row.sameAs !== null && (
+                <p className="field-values">
+                  Same shape as <code>{row.sameAs}</code>.
+                </p>
+              )}
+            </dd>
+          </div>
+        );
+      })}
     </dl>
   );
 }

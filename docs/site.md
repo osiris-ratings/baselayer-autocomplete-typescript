@@ -45,6 +45,9 @@ contracts/autocomplete.overlay.yaml  what the specs lack          ─┘
   `api/openapi.json` for anyone who wants it in Postman or a generator.
 - A target the overlay names that no longer exists fails the build.
 
+A nested model starts folded under its field, which says how many fields it
+holds; `site/api/fieldTree.ts` works out which rows belong to which.
+
 ![The API reference](images/site-api-reference.png)
 
 ## Running it
