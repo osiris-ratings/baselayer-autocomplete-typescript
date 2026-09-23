@@ -440,6 +440,12 @@
   color: #ffffff;
 }
 
+/* Not served yet: muted, and dashed like the graph's coming-soon branch. */
+.entity-chips li[data-live="false"] {
+  border: 1px dashed #c9ced8;
+  color: var(--muted);
+}
+
 .entity-chips li span {
   color: var(--muted);
   font-size: 10.5px;
@@ -481,13 +487,20 @@
 }
 
 .entity-card[data-live="false"] {
-  background: #fbfcff;
+  background: #f7f8fa;
 }
 
+.entity-card[data-live="false"] h3,
+.entity-card[data-live="false"] p {
+  color: var(--muted);
+}
+
+/* The pill drops below a title too long to share the line with it. */
 .entity-card-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 6px 10px;
 }
 
 .entity-card-head .icon {
@@ -496,7 +509,7 @@
 }
 
 .entity-card[data-live="false"] .entity-card-head .icon {
-  color: var(--muted);
+  color: #a3a8b3;
 }
 
 .entity-card h3 {
@@ -511,7 +524,7 @@
 }
 
 .entity-card[data-live="false"] .pill {
-  border-color: #d6d8de;
+  border: 1px dashed #c9ced8;
   color: var(--muted);
 }
 
