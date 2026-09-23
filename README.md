@@ -9,7 +9,7 @@ that business.
 > **Pre-release.** 0.x is being adopted by the Baselayer console and
 > changes on minor versions. 1.0 freezes the API.
 
-![The typeahead for "how con pum"](docs/images/typeahead-how-con-pum.png)
+![The typeahead for "howard concrete pum"](docs/images/typeahead-howard-concrete-pum.png)
 
 - **Framework-free core** (`@baselayer/autocomplete`): sessions, refresh,
   backoff, and every refusal the API can answer, handled for you.
@@ -136,7 +136,7 @@ pnpm test          # vitest: core and server in node, react in jsdom
 pnpm typecheck
 pnpm lint
 pnpm build         # dist/ with ESM, CJS and type declarations
-pnpm demo          # the demo app on http://localhost:3000
+pnpm demo          # the demo on http://localhost:3000, forwarding to production
 ```
 
 Releases are tags; see [CONTRIBUTING.md](CONTRIBUTING.md).
