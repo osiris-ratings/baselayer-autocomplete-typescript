@@ -2,17 +2,47 @@ import { useEffect, useState } from "react";
 
 import { links, type Page } from "./links";
 import { Logo } from "./Logo";
+import { useScrollSpy } from "./useScrollSpy";
 
-const NAV: { label: string; href: string; page?: Page }[] = [
-  { label: "Overview", href: links.home, page: "home" },
-  { label: "How it works", href: links.howItWorks },
-  { label: "Quick start", href: links.quickStart },
+interface NavItem {
+  label: string;
+  href: string;
+  /** The page this item is, or the page its section is on. */
+  page: Page;
+  /** The section on the overview this item scrolls to. */
+  section?: string;
+}
+
+const NAV: NavItem[] = [
+  {
+    label: "Overview",
+    href: links.overview,
+    page: "home",
+    section: "overview",
+  },
+  {
+    label: "How it works",
+    href: links.howItWorks,
+    page: "home",
+    section: "how-it-works",
+  },
+  {
+    label: "Quick start",
+    href: links.quickStart,
+    page: "home",
+    section: "quick-start",
+  },
   { label: "API reference", href: links.api, page: "api" },
   { label: "Demo", href: links.demo, page: "demo" },
 ];
 
+const HOME_SECTIONS = NAV.flatMap(item =>
+  item.section !== undefined ? [item.section] : [],
+);
+
 export function SiteHeader({ current }: { current: Page }) {
   const [open, setOpen] = useState(false);
+  const section = useScrollSpy(current === "home" ? HOME_SECTIONS : []);
 
   useEffect(() => {
     if (!open) {
@@ -25,17 +55,25 @@ export function SiteHeader({ current }: { current: Page }) {
     return () => window.removeEventListener("keydown", close);
   }, [open]);
 
+  const isCurrent = (item: NavItem): boolean =>
+    item.page === current && (current !== "home" || item.section === section);
+
   return (
     <header className="site-header">
       <div className="wrap">
-        <a
-          className="brand"
-          href={links.home}
-          aria-label="Baselayer Autocomplete SDK, home"
-        >
-          <Logo />
-          <span className="brand-product">Autocomplete SDK</span>
-        </a>
+        <div className="brand">
+          <a
+            className="brand-logo"
+            href={links.baselayer}
+            aria-label="Baselayer"
+          >
+            <Logo />
+          </a>
+          <a className="brand-product" href={links.home}>
+            <span>Autocomplete</span>
+            <span>SDK</span>
+          </a>
+        </div>
         <nav
           className="site-nav"
           id="site-nav"
@@ -46,7 +84,13 @@ export function SiteHeader({ current }: { current: Page }) {
             <a
               key={item.label}
               href={item.href}
-              aria-current={item.page === current ? "page" : undefined}
+              aria-current={
+                isCurrent(item)
+                  ? item.section !== undefined
+                    ? "location"
+                    : "page"
+                  : undefined
+              }
               onClick={() => setOpen(false)}
             >
               {item.label}

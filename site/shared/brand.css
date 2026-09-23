@@ -122,19 +122,31 @@ kbd {
   flex: none;
   align-items: center;
   gap: 14px;
-  color: var(--blue);
-  text-decoration: none;
 }
 
+.brand-logo {
+  display: flex;
+  color: var(--blue);
+}
+
+/* The product's name, on two lines beside the logo: the site's home. */
 .brand-product {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   padding-left: 14px;
   border-left: 1px solid var(--line);
   color: var(--ink);
   font-family: var(--mono);
   font-size: 12px;
-  line-height: 26px;
+  line-height: 1.25;
   letter-spacing: 0.08em;
+  text-decoration: none;
   text-transform: uppercase;
+}
+
+.brand-product:hover {
+  color: var(--blue);
 }
 
 .site-nav {
@@ -156,7 +168,8 @@ kbd {
   color: var(--blue);
 }
 
-.site-nav a[aria-current="page"] {
+.site-nav a[aria-current="page"],
+.site-nav a[aria-current="location"] {
   border-bottom-color: var(--blue);
   color: var(--blue);
 }
@@ -209,7 +222,6 @@ kbd {
 }
 
 @media (max-width: 640px) {
-  .brand-product,
   .header-actions .btn-outline:not(.menu-toggle) {
     display: none;
   }
@@ -218,6 +230,20 @@ kbd {
 @media (max-width: 420px) {
   .header-actions .btn-primary {
     display: none;
+  }
+
+  .brand {
+    gap: 10px;
+  }
+
+  .brand-logo svg {
+    width: 126px;
+    height: 21px;
+  }
+
+  .brand-product {
+    padding-left: 10px;
+    font-size: 11px;
   }
 }
 
@@ -531,6 +557,7 @@ h3 code {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   vertical-align: 1px;
+  white-space: nowrap;
 }
 
 /* ---- Footer ---------------------------------------------------------- */
@@ -542,7 +569,7 @@ h3 code {
   font-size: 15px;
 }
 
-.site-footer .brand {
+.site-footer .brand-logo {
   color: #ffffff;
 }
 

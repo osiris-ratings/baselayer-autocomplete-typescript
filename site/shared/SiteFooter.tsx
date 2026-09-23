@@ -7,12 +7,17 @@ export function SiteFooter() {
       <div className="wrap">
         <div className="footer-grid">
           <div>
-            <a className="brand" href={links.home} aria-label="Baselayer">
+            <a
+              className="brand-logo"
+              href={links.baselayer}
+              aria-label="Baselayer"
+            >
               <Logo height={22} />
             </a>
             <p>
-              Business-name autocomplete for your own product, backed by
-              Baselayer&apos;s registry of US business registrations.
+              Entity autocomplete for your own product, from Baselayer&apos;s
+              registry: businesses today, people, addresses and liens soon, each
+              linked to the rest.
             </p>
           </div>
           <nav aria-labelledby="footer-sdk">

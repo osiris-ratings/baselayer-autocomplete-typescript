@@ -4,6 +4,7 @@ const base = import.meta.env.BASE_URL;
 
 export const links = {
   home: base,
+  overview: `${base}#overview`,
   howItWorks: `${base}#how-it-works`,
   quickStart: `${base}#quick-start`,
   security: `${base}#security`,

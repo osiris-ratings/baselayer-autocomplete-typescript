@@ -3,12 +3,13 @@
 // `virtual:api-reference` (contracts/ + the overlay, assembled at build
 // time). Nothing here names a route.
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment } from "react";
 import { document, html } from "virtual:api-reference";
 
 import { Code, type Snippet } from "../shared/Code";
 import { SiteFooter } from "../shared/SiteFooter";
 import { SiteHeader } from "../shared/SiteHeader";
+import { useScrollSpy } from "../shared/useScrollSpy";
 import {
   describeType,
   fieldRows,
@@ -288,27 +289,6 @@ function OperationSection({
   );
 }
 
-function useActiveSection(ids: string[]): string {
-  const [active, setActive] = useState(ids[0] ?? "");
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      entries => {
-        const visible = entries
-          .filter(entry => entry.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible[0] !== undefined) setActive(visible[0].target.id);
-      },
-      { rootMargin: "-90px 0px -60% 0px" },
-    );
-    for (const id of ids) {
-      const element = window.document.getElementById(id);
-      if (element !== null) observer.observe(element);
-    }
-    return () => observer.disconnect();
-  }, [ids]);
-  return active;
-}
-
 function SectionView({ section, index }: { section: Section; index: number }) {
   switch (section.kind) {
     case "overview":
@@ -372,9 +352,10 @@ function SectionView({ section, index }: { section: Section; index: number }) {
   }
 }
 
+const SECTION_IDS = sections.map(section => section.id);
+
 export function ApiReference() {
-  const ids = sections.map(section => section.id);
-  const active = useActiveSection(ids);
+  const active = useScrollSpy(SECTION_IDS);
   return (
     <>
       <SiteHeader current="api" />
