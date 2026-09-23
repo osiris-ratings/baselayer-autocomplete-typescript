@@ -37,7 +37,7 @@ import {
   previewCss,
   type StyleState,
 } from "./style-state";
-import { SAMPLE_META, SAMPLE_QUERY, SAMPLE_SUGGESTIONS } from "./sample";
+import { SAMPLE_META, SAMPLE_QUERY, sampleRows } from "./sample";
 import { StylingPanel } from "./StylingPanel";
 
 const PRODUCTION = "https://api.baselayer.com";
@@ -790,7 +790,10 @@ export function App() {
                       renderInput={inputProps => (
                         <input {...inputProps} hidden tabIndex={-1} />
                       )}
-                      suggestions={SAMPLE_SUGGESTIONS}
+                      suggestions={sampleRows({
+                        limit: style.limit,
+                        include: style.include,
+                      })}
                       found={SAMPLE_META.found}
                       foundCapped={false}
                       truncated={false}

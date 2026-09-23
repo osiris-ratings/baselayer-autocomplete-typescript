@@ -7,6 +7,7 @@ import { queryTokens } from "@baselayer/autocomplete";
 import type {
   BusinessSuggestion,
   HighlightPart,
+  Include,
   RelatedItem,
   RelatedSet,
 } from "@baselayer/autocomplete";
@@ -112,7 +113,74 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
       liens: set([], 0),
     },
   }),
+  row("HARBOR CONCRETE & MASONRY, LLC", {
+    domicile_state: "MD",
+    states: ["DC", "MD", "VA"],
+    related: {
+      people: set([person("Grace Oduya", "officer")], 2),
+      addresses: set([address("2210 Key Hwy, Baltimore, MD 21230")]),
+      liens: set([], 0),
+    },
+  }),
+  row("CONCRETE HARBOR PARTNERS, LP", {
+    domicile_state: "TX",
+    states: ["TX"],
+    related: {
+      people: set([person("Silverline Agent Services, Inc.", "agent")]),
+      addresses: set([address("700 Harborside Dr, Galveston, TX 77550")]),
+      liens: set([], 0),
+    },
+  }),
+  row("HARBOR CONCRETE FORMING, INC.", {
+    domicile_state: "WA",
+    states: ["AK", "OR", "WA"],
+    related: {
+      people: set([person("Tomas Lindqvist", "officer")]),
+      addresses: set([address("3100 Marine View Dr, Tacoma, WA 98422")]),
+      liens: set([], 0),
+    },
+  }),
+  row("BAYSIDE HARBOR CONCRETE, INC.", {
+    domicile_state: "CA",
+    states: ["AZ", "CA", "NV", "OR"],
+    related: {
+      people: set([person("Maya Castellanos", "officer")], 3),
+      addresses: set([address("55 Embarcadero W, Oakland, CA 94607")]),
+      liens: set([], 0),
+    },
+  }),
 ];
+
+const NOT_REQUESTED: RelatedSet = {
+  count: null,
+  matched: null,
+  truncated: false,
+  items: [],
+};
+
+/**
+ * The sample rows as the Behavior knobs would have them come back: no more
+ * than `limit`, and a relation left out of `include` not sent, as the tier
+ * leaves it out. The other knobs act on typing, which the sample has none of.
+ */
+export function sampleRows({
+  limit,
+  include,
+}: {
+  limit: number;
+  include: readonly Include[];
+}): BusinessSuggestion[] {
+  const asked = (relation: Include, set: RelatedSet) =>
+    include.includes(relation) ? set : NOT_REQUESTED;
+  return SAMPLE_SUGGESTIONS.slice(0, limit).map(row => ({
+    ...row,
+    related: {
+      people: asked("people", row.related.people),
+      addresses: asked("addresses", row.related.addresses),
+      liens: asked("liens", row.related.liens),
+    },
+  }));
+}
 
 /** What the preview's count row and diagnostics say. */
 export const SAMPLE_META = {

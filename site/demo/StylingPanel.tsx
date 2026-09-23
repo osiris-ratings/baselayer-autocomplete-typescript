@@ -244,6 +244,10 @@ export function StylingPanel({
       </Fold>
 
       <Fold title="Behavior">
+        <p className="hint fold-note">
+          Rows and related entities show on the sample rows too; the characters,
+          the pause and the session act as you type.
+        </p>
         <div className="field-grid">
           <Field label="Rows" hint="1 to 20">
             <input

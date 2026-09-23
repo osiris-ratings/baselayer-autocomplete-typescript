@@ -2,7 +2,11 @@ import { partsFor } from "@baselayer/autocomplete";
 import { queryTokens } from "@baselayer/autocomplete";
 import { describe, expect, it } from "vitest";
 
-import { SAMPLE_QUERY, SAMPLE_SUGGESTIONS } from "../../site/demo/sample";
+import {
+  SAMPLE_QUERY,
+  SAMPLE_SUGGESTIONS,
+  sampleRows,
+} from "../../site/demo/sample";
 
 const tokens = queryTokens(SAMPLE_QUERY);
 
@@ -48,5 +52,32 @@ describe("the Styling preview's sample rows", () => {
     expect(
       marked(partsFor(name, first!.highlight, "substring", tokens)),
     ).toEqual(["HARBOR CONCR"]);
+  });
+});
+
+describe("the sample rows under Behavior", () => {
+  const all = ["people", "addresses", "liens"] as const;
+
+  it("shows as many rows as Rows asks for, up to the sample's own", () => {
+    expect(sampleRows({ limit: 2, include: [...all] })).toHaveLength(2);
+    expect(sampleRows({ limit: 20, include: [...all] })).toHaveLength(
+      SAMPLE_SUGGESTIONS.length,
+    );
+    // More rows than the default limit, so raising it shows more.
+    expect(SAMPLE_SUGGESTIONS.length).toBeGreaterThan(5);
+  });
+
+  it("leaves out the related entities Related entities does not ask for", () => {
+    const rows = sampleRows({ limit: 20, include: ["people"] });
+
+    for (const row of rows) {
+      expect(row.related.addresses).toEqual({
+        count: null,
+        matched: null,
+        truncated: false,
+        items: [],
+      });
+    }
+    expect(rows.some(row => row.related.people.items.length > 0)).toBe(true);
   });
 });
