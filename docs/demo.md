@@ -92,9 +92,10 @@ published page does, and works once ENG-7947 is in production: a session
 token from any origin, the API-key mode only from the published page's.
 For another environment, pick **Custom URL** and give its API host.
 
-## The business form
+## The test form
 
-The business name is always there; its suggestions open beneath it. The
+02 Live UI Component Test Form is the component on a form of its own. The
+business name is always there; its suggestions open beneath it. The
 filters it can carry (an officer or agent's name, the states the business
 is registered in, an address) fold away behind **Add filters**, beside the
 title, which counts the ones set. The SDK holds them back until the name is

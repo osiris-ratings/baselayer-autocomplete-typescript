@@ -625,7 +625,7 @@ export function App() {
           <section className="demo-card" aria-labelledby="demo-business-title">
             <div className="demo-card-head">
               <h2 className="demo-card-title" id="demo-business-title">
-                <span className="demo-num">02</span> Business
+                <span className="demo-num">02</span> Live UI Component Test Form
               </h2>
               <button
                 type="button"
