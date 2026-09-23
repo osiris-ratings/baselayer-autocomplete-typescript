@@ -1,14 +1,8 @@
-import { StrictMode } from "react";
-import { createRoot } from "react-dom/client";
-
 import "../shared/fonts";
 import "../shared/brand.css";
 import "./home.css";
 
+import { mount } from "../shared/mount";
 import { Home } from "./Home";
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <Home />
-  </StrictMode>,
-);
+mount(<Home />);
