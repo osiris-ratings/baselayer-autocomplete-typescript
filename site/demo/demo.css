@@ -1097,15 +1097,14 @@
 
 /* ---- Debug: a tab on the edge until it is wanted ------------------------- */
 
-/* Folded, the page is as narrow as every other and the tab sits on its right
-   edge, under the header's buttons; opened, only the page below the header
-   widens, to make room. */
+/* Folded, the page is as narrow as every other and the tab sits beside the
+   controls; opened, only the page below the header widens, to make room. */
 .demo-split[data-debug="closed"] {
   grid-template-columns: minmax(0, 760px) minmax(0, 1fr);
 }
 
 .demo-split[data-debug="closed"] > .debug-tab {
-  justify-self: end;
+  justify-self: start;
 }
 
 .debug-tab {
