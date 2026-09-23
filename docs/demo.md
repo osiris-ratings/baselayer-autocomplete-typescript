@@ -138,20 +138,19 @@ them, as the tier would leave it out. The characters, the pause and the
 session act only as you type.
 
 First come six presets, each a color theme drawn as a small row in its own
-colors: Light (the console's), Baselayer, Midnight, Monokai, Sepia and Rosé.
-A preset sets the colors, the corners and the shadow, and leaves your sizes,
+colors: Light (the console's), Baselayer, Midnight, Monokai, Sepia and Rosé. A
+preset sets the colors, the corners and the shadow, and leaves your sizes,
 behavior and text alone. Then every knob the styled component has, grouped:
-the components a row shows (its title, flags, subtitle and secondary
-subtitle: on a business, the name, the states, the lead address and the
-officers), how matched words are highlighted (with one color override for every
-emphasis), every color (the
-`look` prop's and the stylesheet's own variables, each with a swatch that
-opens a color picker), shape and size, behavior (rows, related entities,
-the pause before asking, prewarming), every message it can show, and the
-structural switches (`classNames`, `unstyled`). Changes apply as you make
-them. **Your configuration** at the bottom is the code that reproduces the
-result: the props that differ from the defaults, and the CSS variables to
-set.
+the components a row shows (beside its title, which always shows, its flags,
+subtitle and secondary subtitle: on a business, the states, the lead address
+and the officers), how matched words are highlighted (with one color override
+for every emphasis), every color (the `look` prop's and the stylesheet's own
+variables, each with a swatch that opens a color picker), shape and size,
+behavior (rows, related entities, the pause before asking, prewarming), every
+message it can show, and the structural switches (`classNames`, `unstyled`).
+Changes apply as you make them. **Your configuration** at the bottom is the
+code that reproduces the result: the props that differ from the defaults, and
+the CSS variables to set.
 
 ![The styling panel](images/demo-styling.png)
 

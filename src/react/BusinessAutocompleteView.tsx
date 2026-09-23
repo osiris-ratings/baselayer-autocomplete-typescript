@@ -11,7 +11,6 @@ import {
   resolveLook,
   type Look,
   type LookInput,
-  type RowPart,
   type RowParts,
 } from "@baselayer/autocomplete";
 import {
@@ -28,7 +27,7 @@ import type {
 } from "@baselayer/autocomplete";
 
 import { resolveMessages, type AutocompleteMessages } from "./messages";
-import { rowLayout } from "./rowLayout";
+import { rowLayout, type RowPlace } from "./rowLayout";
 import { useBusinessCombobox } from "./useBusinessCombobox";
 
 /** Squares shown before the `+N` overflow: the domicile and two more. */
@@ -89,9 +88,9 @@ export interface BusinessAutocompleteViewProps {
    */
   open?: boolean | undefined;
   /**
-   * Which parts of a row show: the title, the flags, the subtitle and the
-   * secondary subtitle. Each shows unless set to `false`; a line with nothing
-   * left to show is not drawn.
+   * Which parts of a row show besides its title, which always does: the flags,
+   * the subtitle and the secondary subtitle. Each shows unless set to
+   * `false`; without the subtitle, the secondary subtitle takes its place.
    */
   parts?: Partial<RowParts> | undefined;
 
@@ -273,7 +272,6 @@ export function BusinessAutocompleteView({
   const look = resolveLook(lookInput ?? {});
   // One layout for every row, from the parts asked for.
   const layout = rowLayout({
-    title: parts?.title !== false,
     flags: parts?.flags !== false,
     subtitle: parts?.subtitle !== false,
     secondarySubtitle: parts?.secondarySubtitle !== false,
@@ -362,7 +360,7 @@ export function BusinessAutocompleteView({
               const markClass = cx("mark", "bl-ac-mark");
               // Each part as drawn in a slot: a right-hand one keeps right.
               const partNode: Record<
-                RowPart,
+                RowPlace,
                 (slot: "left" | "right") => ReactNode
               > = {
                 title: slot => (

@@ -23,12 +23,12 @@ breaking change bumps the minor version.
   for a style preview or a design tool. It still shows only what there is to
   show, and letting go leaves the menu where it would have been.
 - `parts` on `BusinessAutocomplete` and `BusinessAutocompleteView`, with
-  `ROW_PARTS`, `RowPart` and `RowParts`: which parts of a row show, named for
-  any entity: the title, the flags, the subtitle and the secondary subtitle
-  (on a business, the name, the states, the lead address and the officers).
-  Each shows unless set to `false`, and a place left empty takes the part
-  below it: the secondary subtitle is promoted to subtitle, the subtitle to
-  title, so no line starts with a gap.
+  `ROW_PARTS`, `RowPart` and `RowParts`: which parts of a row show besides
+  its title, named for any entity: the flags, the subtitle and the secondary
+  subtitle (on a business, the states, the lead address and the officers).
+  Each shows unless set to `false`; without the subtitle, the secondary
+  subtitle is promoted to its place. The title always shows: a row is the
+  entity it names.
 
 ### Changed
 

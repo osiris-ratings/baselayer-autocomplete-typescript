@@ -45,17 +45,13 @@ export interface Look {
 }
 
 /**
- * The parts of a suggestion row, named for what they are on any entity: the
- * title (a business's name, with an alternative name that matched), its flags
- * (a business's states), the subtitle (its lead address) and the secondary
- * subtitle (its officers, or its agent).
+ * The parts of a suggestion row a host may leave out, named for what they are
+ * on any entity: its flags (a business's states), the subtitle (its lead
+ * address) and the secondary subtitle (its officers, or its agent). The title
+ * (a business's name, with an alternative name that matched) always shows: a
+ * row is the entity it names.
  */
-export const ROW_PARTS = [
-  "title",
-  "flags",
-  "subtitle",
-  "secondarySubtitle",
-] as const;
+export const ROW_PARTS = ["flags", "subtitle", "secondarySubtitle"] as const;
 export type RowPart = (typeof ROW_PARTS)[number];
 /** Which parts a row shows; a part left out, or anything but `false`, shows. */
 export type RowParts = Record<RowPart, boolean>;

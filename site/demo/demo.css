@@ -458,6 +458,15 @@
   accent-color: var(--blue);
 }
 
+/* Fixed on: shown, but not a choice. */
+.toggle[data-disabled] {
+  cursor: default;
+}
+
+.toggle[data-disabled] input {
+  opacity: 0.55;
+}
+
 .toggle-row {
   display: flex;
   flex-wrap: wrap;

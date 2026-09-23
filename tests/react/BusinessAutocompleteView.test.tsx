@@ -1235,7 +1235,6 @@ describe("the row's parts", () => {
   });
 
   it.each([
-    ["title", "business-suggestion-name"],
     ["flags", "business-suggestion-state"],
     ["subtitle", "business-suggestion-address"],
     ["secondarySubtitle", "business-suggestion-officers"],
@@ -1256,10 +1255,15 @@ describe("the row's parts", () => {
     },
   );
 
-  it("drops a line whose parts are all left out", () => {
-    const noSubtitles = rowOf({ subtitle: false, secondarySubtitle: false });
-    expect(noSubtitles.querySelector(".bl-ac-line-subtitle")).toBeNull();
-    expect(noSubtitles.querySelector(".bl-ac-line-title")).not.toBeNull();
+  it("always shows the title: a row is the entity it names", () => {
+    const row = rowOf({
+      flags: false,
+      subtitle: false,
+      secondarySubtitle: false,
+    });
+
+    expect(within(row, "business-suggestion-name")).toBe(1);
+    expect(row.querySelectorAll(".bl-ac-line")).toHaveLength(1);
   });
 
   /** Each line of a row, as the test ids of what it holds, in order. */
@@ -1273,47 +1277,6 @@ describe("the row's parts", () => {
     );
   }
 
-  it.each([
-    // Without the subtitle, the officers are promoted to subtitle.
-    [
-      { flags: false, subtitle: false },
-      [["business-suggestion-name"], ["business-suggestion-officers"]],
-    ],
-    // Without the title and the subtitle, the officers lead, the flags follow.
-    [
-      { title: false, subtitle: false },
-      [["business-suggestion-officers", "flags"]],
-    ],
-    // Without the title, the address leads beside the flags.
-    [
-      { title: false, secondarySubtitle: false },
-      [["business-suggestion-address", "flags"]],
-    ],
-  ])("packs what %j leaves, so no line starts with a gap", (parts, drawn) => {
-    expect(lines(rowOf(parts))).toEqual(drawn);
-  });
-
-  it("keeps each part in its column on a row that lacks the part beside it", () => {
-    renderTypeahead({ parts: { title: false, subtitle: false } });
-    const [first, second] = screen.getAllByTestId("business-suggestion");
-
-    // The first row leads with its officers; the second has none, and its
-    // flags stay on the right, lined up with the first row's.
-    expect(first!.querySelector(".bl-ac-people")).toHaveAttribute(
-      "data-slot",
-      "left",
-    );
-    expect(first!.querySelector(".bl-ac-states")).toHaveAttribute(
-      "data-slot",
-      "right",
-    );
-    expect(second!.querySelector(".bl-ac-people")).toBeNull();
-    expect(second!.querySelector(".bl-ac-states")).toHaveAttribute(
-      "data-slot",
-      "right",
-    );
-  });
-
   it("keeps the two lines as ever with every part shown", () => {
     expect(lines(rowOf(undefined))).toEqual([
       ["business-suggestion-name", "flags"],
@@ -1321,9 +1284,44 @@ describe("the row's parts", () => {
     ]);
   });
 
-  it("drops the title line when both the title and the flags are left out", () => {
-    const row = rowOf({ title: false, flags: false });
-    expect(row.querySelector(".bl-ac-line-title")).toBeNull();
-    expect(within(row, "business-suggestion-address")).toBe(1);
+  it.each([
+    // Without the subtitle, the officers are promoted to subtitle.
+    [
+      { subtitle: false },
+      [["business-suggestion-name", "flags"], ["business-suggestion-officers"]],
+    ],
+    [
+      { flags: false, subtitle: false },
+      [["business-suggestion-name"], ["business-suggestion-officers"]],
+    ],
+    // Without the flags, every other part keeps its place.
+    [
+      { flags: false },
+      [
+        ["business-suggestion-name"],
+        ["business-suggestion-address", "business-suggestion-officers"],
+      ],
+    ],
+    // Without both subtitles, the title's line is the row.
+    [
+      { subtitle: false, secondarySubtitle: false },
+      [["business-suggestion-name", "flags"]],
+    ],
+  ])("places what %j leaves, so no line starts with a gap", (parts, drawn) => {
+    expect(lines(rowOf(parts))).toEqual(drawn);
+  });
+
+  it("leaves a row with no officers to promote at its title line", () => {
+    renderTypeahead({ parts: { subtitle: false } });
+    const [first, second] = screen.getAllByTestId("business-suggestion");
+
+    expect(first!.querySelectorAll(".bl-ac-line")).toHaveLength(2);
+    // The second row has no officers: nothing is promoted, and no empty line
+    // is drawn where they would have been.
+    expect(second!.querySelectorAll(".bl-ac-line")).toHaveLength(1);
+    expect(second!.querySelector(".bl-ac-states")).toHaveAttribute(
+      "data-slot",
+      "right",
+    );
   });
 });

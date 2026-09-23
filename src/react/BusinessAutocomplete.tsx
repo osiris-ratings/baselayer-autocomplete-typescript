@@ -64,8 +64,8 @@ interface CommonProps {
    */
   open?: boolean;
   /**
-   * Which parts of a row show: the title, the flags, the subtitle and the
-   * secondary subtitle. Each shows unless set to `false`.
+   * Which parts of a row show besides its title, which always does: the flags,
+   * the subtitle and the secondary subtitle. Each shows unless set to `false`.
    */
   parts?: Partial<RowParts>;
   /** The deployment cannot mint (503 code 481), or can again. */

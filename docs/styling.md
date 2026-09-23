@@ -122,12 +122,12 @@ a business:
 | `secondarySubtitle` | the officers, or the registered agent          |
 
 They sit in four places: the title and the flags on the first line, the
-subtitle and the secondary subtitle on the second. `parts` leaves any of them
-out; each shows unless set to `false`. A place whose part is left out takes
-the part below it, so no line starts with a gap: the secondary subtitle is
-promoted to subtitle, and the subtitle to title. Every row of a menu shares
-one layout, so its columns line up; a row without a part (no officers)
-leaves that part's place empty.
+subtitle and the secondary subtitle on the second. The title always shows: a
+row is the entity it names. `parts` leaves any of the other three out; each
+shows unless set to `false`. With the subtitle left out, the secondary
+subtitle is promoted to its place, so no line starts with a gap. Every row of
+a menu shares one layout, so its columns line up; a row without a part (no
+officers) leaves that part's place empty.
 
 ```tsx
 <BusinessAutocomplete parts={{ flags: false, secondarySubtitle: false }} … />

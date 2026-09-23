@@ -44,10 +44,6 @@ function count(n: number): string | undefined {
 
 /** A row's parts, as any entity has them, and what they are on a business. */
 const COMPONENTS: Record<RowPart, { label: string; business: string }> = {
-  title: {
-    label: "Title",
-    business: "the name, and an alternative name that matched",
-  },
   flags: { label: "Flags", business: "the states" },
   subtitle: { label: "Subtitle", business: "the lead address" },
   secondarySubtitle: {
@@ -152,6 +148,13 @@ export function StylingPanel({
           business:
         </p>
         <div className="toggle-list">
+          {/* A row is the entity it names, so its title always shows. */}
+          <Toggle checked disabled onChange={() => {}}>
+            Title{" "}
+            <span className="hint">
+              the name, and an alternative name that matched; always shown
+            </span>
+          </Toggle>
           {ROW_PARTS.map(part => (
             <Toggle
               key={part}

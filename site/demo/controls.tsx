@@ -232,16 +232,19 @@ export function Toggle({
   checked,
   onChange,
   children,
+  disabled = false,
 }: {
   checked: boolean;
   onChange(checked: boolean): void;
   children: ReactNode;
+  disabled?: boolean;
 }) {
   return (
-    <label className="toggle">
+    <label className="toggle" data-disabled={disabled || undefined}>
       <input
         type="checkbox"
         checked={checked}
+        disabled={disabled}
         onChange={event => onChange(event.target.checked)}
       />
       <span>{children}</span>

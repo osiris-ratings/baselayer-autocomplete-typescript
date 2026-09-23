@@ -21,57 +21,36 @@ function drawn(layout: ReturnType<typeof rowLayout>): string[] {
 }
 
 describe("rowLayout", () => {
+  it("names the parts a host may leave out: every part but the title", () => {
+    expect(ROW_PARTS).toEqual([F, S, X]);
+  });
+
   it.each([
     // Every part: the title line and the subtitle line, as ever.
     [
-      [T, F, S, X],
+      [F, S, X],
       [`${T}|${F}`, `${S}|${X}`],
     ],
     [
-      [T, F, S],
+      [F, S],
       [`${T}|${F}`, `${S}|-`],
-    ],
-    // No flags: every other part keeps its place.
-    [
-      [T, S, X],
-      [`${T}|-`, `${S}|${X}`],
     ],
     // No subtitle: the secondary subtitle is promoted to subtitle.
     [
-      [T, F, X],
+      [F, X],
       [`${T}|${F}`, `${X}|-`],
     ],
-    [
-      [T, S],
-      [`${T}|-`, `${S}|-`],
-    ],
-    [[T, F], [`${T}|${F}`]],
-    [
-      [T, X],
-      [`${T}|-`, `${X}|-`],
-    ],
-    [[T], [`${T}|-`]],
-    // No title: the subtitle is promoted to title, the secondary to subtitle.
-    [
-      [F, S, X],
-      [`${S}|${F}`, `${X}|-`],
-    ],
-    [[F, S], [`${S}|${F}`]],
+    [[F], [`${T}|${F}`]],
+    // No flags: every other part keeps its place.
     [
       [S, X],
-      [`${S}|-`, `${X}|-`],
+      [`${T}|-`, `${S}|${X}`],
     ],
-    [[S], [`${S}|-`]],
-    // No title and no subtitle: the secondary subtitle, promoted twice, leads.
-    [[F, X], [`${X}|${F}`]],
-    [[X], [`${X}|-`]],
-    // A part alone sits at the left.
-    [[F], [`${F}|-`]],
+    [[S], [`${T}|-`, `${S}|-`]],
+    [[X], [`${T}|-`, `${X}|-`]],
+    // Nothing else: the title is the row.
+    [[], [`${T}|-`]],
   ] as const)("lays out %j as %j", (on, lines) => {
     expect(drawn(rowLayout(parts(...on)))).toEqual(lines);
-  });
-
-  it("still shows the title when no part is asked for", () => {
-    expect(drawn(rowLayout(parts()))).toEqual([`${T}|-`]);
   });
 });
