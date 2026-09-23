@@ -11,6 +11,8 @@ import {
   resolveLook,
   type Look,
   type LookInput,
+  type RowPart,
+  type RowParts,
 } from "@baselayer/autocomplete";
 import {
   formatFound,
@@ -85,6 +87,12 @@ export interface BusinessAutocompleteViewProps {
    * It still shows only what there is to show.
    */
   open?: boolean | undefined;
+  /**
+   * Which parts of a row show: the title, the flags, the subtitle and the
+   * secondary subtitle. Each shows unless set to `false`; a line with nothing
+   * left to show is not drawn.
+   */
+  parts?: Partial<RowParts> | undefined;
 
   /** How the rows are drawn; any knob left out keeps its default. */
   look?: LookInput | undefined;
@@ -249,6 +257,7 @@ export function BusinessAutocompleteView({
   isSearching,
   error,
   open = false,
+  parts,
   look: lookInput,
   messages: messageOverrides,
   label,
@@ -259,6 +268,7 @@ export function BusinessAutocompleteView({
   unstyled = false,
 }: BusinessAutocompleteViewProps) {
   const look = resolveLook(lookInput ?? {});
+  const shows = (part: RowPart) => parts?.[part] !== false;
   const text = resolveMessages(messageOverrides);
   const cx = classes(unstyled, classNames);
   const hasFooter = isSearching || error !== null || roundTripMs !== null;
@@ -341,62 +351,84 @@ export function BusinessAutocompleteView({
               const parts = drawMarks ? item.highlight : [];
               const highlighted = highlightedIndex === index;
               const markClass = cx("mark", "bl-ac-mark");
+              const secondary = shows("secondarySubtitle") ? people : null;
               const defaultRow = (
                 <>
-                  <div
-                    className={cx("titleLine", "bl-ac-line bl-ac-line-title")}
-                  >
-                    <span
-                      className={cx("name", "bl-ac-name")}
-                      data-testid="business-suggestion-name"
-                      data-emphasis={look.matchEmphasis}
-                      data-region={region}
+                  {(shows("title") || shows("flags")) && (
+                    <div
+                      className={cx("titleLine", "bl-ac-line bl-ac-line-title")}
                     >
-                      {marked(
-                        item.label,
-                        partsFor(item.label, parts, region, tokens),
-                        markClass,
-                      )}
-                      {item.matched_name !== null && (
+                      {shows("title") && (
                         <span
-                          className={cx("also", "bl-ac-also")}
-                          data-testid="business-suggestion-also"
+                          className={cx("name", "bl-ac-name")}
+                          data-testid="business-suggestion-name"
+                          data-emphasis={look.matchEmphasis}
+                          data-region={region}
                         >
-                          also{" "}
                           {marked(
-                            item.matched_name,
-                            partsFor(item.matched_name, parts, region, tokens),
+                            item.label,
+                            partsFor(item.label, parts, region, tokens),
                             markClass,
+                          )}
+                          {item.matched_name !== null && (
+                            <span
+                              className={cx("also", "bl-ac-also")}
+                              data-testid="business-suggestion-also"
+                            >
+                              also{" "}
+                              {marked(
+                                item.matched_name,
+                                partsFor(
+                                  item.matched_name,
+                                  parts,
+                                  region,
+                                  tokens,
+                                ),
+                                markClass,
+                              )}
+                            </span>
                           )}
                         </span>
                       )}
-                    </span>
-                    <StateSquares suggestion={item} cx={cx} more={text.more} />
-                  </div>
-                  <div
-                    className={cx(
-                      "subtitleLine",
-                      "bl-ac-line bl-ac-line-subtitle",
-                    )}
-                  >
-                    <span
-                      className={cx("address", "bl-ac-address")}
-                      data-testid="business-suggestion-address"
+                      {shows("flags") && (
+                        <StateSquares
+                          suggestion={item}
+                          cx={cx}
+                          more={text.more}
+                        />
+                      )}
+                    </div>
+                  )}
+                  {(shows("subtitle") || secondary !== null) && (
+                    <div
+                      className={cx(
+                        "subtitleLine",
+                        "bl-ac-line bl-ac-line-subtitle",
+                      )}
                     >
-                      {address ?? text.noAddress}
-                    </span>
-                    {people !== null && (
-                      <span
-                        className={cx("people", "bl-ac-people")}
-                        data-testid="business-suggestion-officers"
-                        data-role={people.role}
-                      >
-                        {people.names[0]}
-                        {people.more > 0 ? ` ${text.more(people.more)}` : ""}
-                        {people.role === "agent" ? text.agentSuffix : ""}
-                      </span>
-                    )}
-                  </div>
+                      {shows("subtitle") && (
+                        <span
+                          className={cx("address", "bl-ac-address")}
+                          data-testid="business-suggestion-address"
+                        >
+                          {address ?? text.noAddress}
+                        </span>
+                      )}
+                      {secondary !== null && (
+                        <span
+                          className={cx("people", "bl-ac-people")}
+                          data-testid="business-suggestion-officers"
+                          data-role={secondary.role}
+                        >
+                          {secondary.names[0]}
+                          {secondary.more > 0
+                            ? ` ${text.more(secondary.more)}`
+                            : ""}
+                          {secondary.role === "agent" ? text.agentSuffix : ""}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </>
               );
               return (

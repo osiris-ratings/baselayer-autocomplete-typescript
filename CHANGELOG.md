@@ -22,6 +22,11 @@ breaking change bumps the minor version.
   `useSuggestionCombobox`: hold the menu open whatever focus and Escape do,
   for a style preview or a design tool. It still shows only what there is to
   show, and letting go leaves the menu where it would have been.
+- `parts` on `BusinessAutocomplete` and `BusinessAutocompleteView`, with
+  `ROW_PARTS`, `RowPart` and `RowParts`: which parts of a row show, named for
+  any entity: the title, the flags, the subtitle and the secondary subtitle
+  (on a business, the name, the states, the lead address and the officers).
+  Each shows unless set to `false`, and a line left with nothing is not drawn.
 
 ### Changed
 

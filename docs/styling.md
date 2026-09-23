@@ -109,7 +109,30 @@ the menu yourself too: it is the element with `data-testid="autocomplete-menu"`.
 Past that, drop the component and build on the hooks: see
 [Headless use](headless.md).
 
-## 5. Previewing a style
+## 5. A row's parts
+
+A row has four parts, named for what they are on any entity rather than on
+a business:
+
+| Part                | On a business                                  |
+| ------------------- | ---------------------------------------------- |
+| `title`             | the name, and an alternative name that matched |
+| `flags`             | the states, the domicile first                 |
+| `subtitle`          | the lead address                               |
+| `secondarySubtitle` | the officers, or the registered agent          |
+
+`parts` leaves any of them out; each shows unless set to `false`, and a line
+left with nothing to show is not drawn:
+
+```tsx
+<BusinessAutocomplete parts={{ flags: false, secondarySubtitle: false }} … />
+```
+
+Leaving a part out does not stop it being fetched: the lead address still
+arrives, and fills the form on a pick, unless `include` leaves `addresses`
+out.
+
+## 6. Previewing a style
 
 `open` holds the menu open whatever focus does, so a style can be judged
 without typing and retyping. It shows only what there is to show: rows, or

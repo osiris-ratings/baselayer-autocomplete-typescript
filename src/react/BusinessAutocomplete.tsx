@@ -9,7 +9,7 @@ import {
 
 import type { Filters } from "@baselayer/autocomplete";
 import type { AutocompleteClient } from "@baselayer/autocomplete";
-import type { LookInput } from "@baselayer/autocomplete";
+import type { LookInput, RowParts } from "@baselayer/autocomplete";
 import { defaultMint, type MintFunction } from "@baselayer/autocomplete";
 import { BUSINESS_TOKEN_TTL_SECONDS } from "@baselayer/autocomplete";
 import type { BusinessSuggestion, Include } from "@baselayer/autocomplete";
@@ -63,6 +63,11 @@ interface CommonProps {
    * It still shows only what there is to show.
    */
   open?: boolean;
+  /**
+   * Which parts of a row show: the title, the flags, the subtitle and the
+   * secondary subtitle. Each shows unless set to `false`.
+   */
+  parts?: Partial<RowParts>;
   /** The deployment cannot mint (503 code 481), or can again. */
   onUnavailable?: (state: { unavailable: boolean }) => void;
 }
@@ -138,6 +143,7 @@ function Connected({
   classNames,
   unstyled,
   open,
+  parts,
   onUnavailable,
 }: CommonProps & { client: AutocompleteClient }) {
   const client = useResolvedClient(given);
@@ -204,6 +210,7 @@ function Connected({
       classNames={classNames}
       unstyled={unstyled}
       open={open}
+      parts={parts}
     />
   );
 }

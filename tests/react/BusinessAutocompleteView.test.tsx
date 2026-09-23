@@ -1216,3 +1216,55 @@ describe("messages", () => {
     expect(footer()).toHaveTextContent("Partial list");
   });
 });
+
+describe("the row's parts", () => {
+  function rowOf(parts: BusinessAutocompleteViewProps["parts"]) {
+    renderTypeahead(parts === undefined ? {} : { parts });
+    return screen.getAllByTestId("business-suggestion")[0]!;
+  }
+  const within = (row: HTMLElement, id: string) =>
+    row.querySelectorAll(`[data-testid="${id}"]`).length;
+
+  it("shows the title, the flags, the subtitle and the secondary subtitle by default", () => {
+    const row = rowOf(undefined);
+
+    expect(within(row, "business-suggestion-name")).toBe(1);
+    expect(within(row, "business-suggestion-state")).toBeGreaterThan(0);
+    expect(within(row, "business-suggestion-address")).toBe(1);
+    expect(within(row, "business-suggestion-officers")).toBe(1);
+  });
+
+  it.each([
+    ["title", "business-suggestion-name"],
+    ["flags", "business-suggestion-state"],
+    ["subtitle", "business-suggestion-address"],
+    ["secondarySubtitle", "business-suggestion-officers"],
+  ] as const)(
+    "leaves out the %s when told to, and nothing else",
+    (part, id) => {
+      const row = rowOf({ [part]: false });
+
+      expect(within(row, id)).toBe(0);
+      const others = [
+        "business-suggestion-name",
+        "business-suggestion-address",
+        "business-suggestion-officers",
+      ].filter(other => other !== id);
+      for (const other of others) {
+        expect(within(row, other)).toBe(1);
+      }
+    },
+  );
+
+  it("drops a line whose parts are all left out", () => {
+    const noSubtitles = rowOf({ subtitle: false, secondarySubtitle: false });
+    expect(noSubtitles.querySelector(".bl-ac-line-subtitle")).toBeNull();
+    expect(noSubtitles.querySelector(".bl-ac-line-title")).not.toBeNull();
+  });
+
+  it("drops the title line when both the title and the flags are left out", () => {
+    const row = rowOf({ title: false, flags: false });
+    expect(row.querySelector(".bl-ac-line-title")).toBeNull();
+    expect(within(row, "business-suggestion-address")).toBe(1);
+  });
+});

@@ -228,6 +228,26 @@ describe("BusinessAutocomplete", () => {
     expect(screen.getAllByTestId("business-suggestion")).toHaveLength(2);
   });
 
+  it("draws only the parts of a row it is given", async () => {
+    vi.stubGlobal("fetch", tierFetch());
+    const user = userEvent.setup();
+    render(
+      <Host
+        source={{ mint: grantingMint(), baseUrl: BASE_URL }}
+        prewarmOnFocus={false}
+        parts={{ subtitle: false }}
+      />,
+    );
+
+    await user.type(input(), "osiris");
+    const rows = await screen.findAllByTestId("business-suggestion");
+
+    expect(rows[0]).toHaveTextContent("OSIRIS RATINGS, INC.");
+    expect(screen.queryAllByTestId("business-suggestion-address")).toHaveLength(
+      0,
+    );
+  });
+
   it("hands the host the pick and its token, and does not query the picked name", async () => {
     const fetch = tierFetch();
     const mint = grantingMint();

@@ -153,16 +153,20 @@
   color: var(--bl-ac-subtitle);
 }
 
+/* Pushed right, so it stays there when the subtitle is left out. */
 .bl-ac-people {
   flex-shrink: 0;
+  margin-left: auto;
   white-space: nowrap;
 }
 
+/* Pushed right, so they stay there when the title is left out. */
 .bl-ac-states {
   display: flex;
   flex-shrink: 0;
   gap: 0.25rem;
   align-items: center;
+  margin-left: auto;
 }
 
 .bl-ac-state,
