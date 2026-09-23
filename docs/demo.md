@@ -132,11 +132,18 @@ keystroke; type a name and the real rows take their place. The rows pretend
 region shows its difference: whole word highlights CONCRETE, typed
 characters only its CONCR.
 
+Behavior acts on the sample rows as it would on real ones: Rows sets how
+many there are, and a relation left out of Related entities is left out of
+them, as the tier would leave it out. The characters, the pause and the
+session act only as you type.
+
 First come six presets, each a color theme drawn as a small row in its own
 colors: Light (the console's), Baselayer, Midnight, Monokai, Sepia and Rosé.
 A preset sets the colors, the corners and the shadow, and leaves your sizes,
 behavior and text alone. Then every knob the styled component has, grouped:
-how matched words are highlighted (with one color override for every
+the components a row shows (its title, flags, subtitle and secondary
+subtitle: on a business, the name, the states, the lead address and the
+officers), how matched words are highlighted (with one color override for every
 emphasis), every color (the
 `look` prop's and the stylesheet's own variables, each with a swatch that
 opens a color picker), shape and size, behavior (rows, related entities,

@@ -1,7 +1,7 @@
 // Every knob the styled component has, grouped the way a designer would reach
 // for them, and at the end the code that reproduces the result.
 
-import type { Include } from "@baselayer/autocomplete";
+import { ROW_PARTS, type Include, type RowPart } from "@baselayer/autocomplete";
 
 import { Code } from "../shared/Code";
 import { ColorInput, Field, Fold, Select, Toggle } from "./controls";
@@ -41,6 +41,20 @@ const MESSAGE_LABELS: Record<TextMessage, string> = {
 function count(n: number): string | undefined {
   return n === 0 ? undefined : `${n} changed`;
 }
+
+/** A row's parts, as any entity has them, and what they are on a business. */
+const COMPONENTS: Record<RowPart, { label: string; business: string }> = {
+  title: {
+    label: "Title",
+    business: "the name, and an alternative name that matched",
+  },
+  flags: { label: "Flags", business: "the states" },
+  subtitle: { label: "Subtitle", business: "the lead address" },
+  secondarySubtitle: {
+    label: "Secondary subtitle",
+    business: "the officers, or the registered agent",
+  },
+};
 
 export function StylingPanel({
   state,
@@ -127,6 +141,31 @@ export function StylingPanel({
           );
         })}
       </div>
+
+      <Fold
+        title="Components"
+        defaultOpen
+        summary={count(ROW_PARTS.filter(part => !state.parts[part]).length)}
+      >
+        <p className="hint fold-note">
+          What each row shows, named for any entity (<code>parts</code>). On a
+          business:
+        </p>
+        <div className="toggle-list">
+          {ROW_PARTS.map(part => (
+            <Toggle
+              key={part}
+              checked={state.parts[part]}
+              onChange={on =>
+                onChange({ ...state, parts: { ...state.parts, [part]: on } })
+              }
+            >
+              {COMPONENTS[part].label}{" "}
+              <span className="hint">{COMPONENTS[part].business}</span>
+            </Toggle>
+          ))}
+        </div>
+      </Fold>
 
       <Fold
         title="Highlights"

@@ -6,10 +6,12 @@
 
 import {
   DEFAULT_LOOK,
+  ROW_PARTS,
   type Include,
   type Look,
   type MatchEmphasis,
   type MatchRegion,
+  type RowParts,
 } from "@baselayer/autocomplete";
 import {
   DEBOUNCE_MS,
@@ -27,7 +29,7 @@ export const CSS_VARIABLES = {
     value: "#edf2f7",
   },
   "--bl-ac-border": { label: "Menu border", kind: "color", value: "#edf2f7" },
-  "--bl-ac-more-fg": { label: "+N count ink", kind: "color", value: "#2d3748" },
+  "--bl-ac-more-fg": { label: "+N flag text", kind: "color", value: "#2d3748" },
   "--bl-ac-ink-base": {
     label: "Unmatched ink (ink mode)",
     kind: "color",
@@ -50,7 +52,7 @@ export const CSS_VARIABLES = {
   },
   "--bl-ac-radius": { label: "Menu corners", kind: "length", value: "0.5rem" },
   "--bl-ac-pill-radius": {
-    label: "State square corners",
+    label: "Flag corners",
     kind: "length",
     value: "0.25rem",
   },
@@ -89,6 +91,8 @@ export type TextMessage = (typeof TEXT_MESSAGES)[number];
 
 export interface StyleState {
   look: Look;
+  /** Which parts of a row show (`parts`). */
+  parts: RowParts;
   vars: Record<CssVariable, string>;
   limit: number;
   include: Include[];
@@ -107,6 +111,7 @@ const DEFAULT_INCLUDE: Include[] = ["people", "addresses"];
 
 export const DEFAULT_STYLE: StyleState = {
   look: { ...DEFAULT_LOOK },
+  parts: Object.fromEntries(ROW_PARTS.map(part => [part, true])) as RowParts,
   vars: Object.fromEntries(
     Object.entries(CSS_VARIABLES).map(([name, spec]) => [name, spec.value]),
   ) as Record<CssVariable, string>,
@@ -133,12 +138,12 @@ export type LookColor = {
 
 export const LOOK_COLORS: { key: LookColor; label: string }[] = [
   { key: "backgroundColor", label: "Menu background" },
-  { key: "titleColor", label: "Name" },
-  { key: "subtitleColor", label: "Second line" },
-  { key: "pillBackgroundColor", label: "State square" },
-  { key: "pillForegroundColor", label: "State square ink" },
-  { key: "primaryPillBorderColor", label: "Domicile border" },
-  { key: "secondaryPillBackgroundColor", label: "+N square" },
+  { key: "titleColor", label: "Title" },
+  { key: "subtitleColor", label: "Subtitles" },
+  { key: "pillBackgroundColor", label: "Flag" },
+  { key: "pillForegroundColor", label: "Flag text" },
+  { key: "primaryPillBorderColor", label: "Domicile flag border" },
+  { key: "secondaryPillBackgroundColor", label: "+N flag" },
 ];
 
 export const EMPHASES: MatchEmphasis[] = [
@@ -197,6 +202,12 @@ export function exportCode(state: StyleState): { tsx: string; css: string } {
   if (look.length > 0) {
     props.push(
       `look={{\n${look.map(([key, value]) => `    ${key}: ${literal(value)},`).join("\n")}\n  }}`,
+    );
+  }
+  const hidden = ROW_PARTS.filter(part => !state.parts[part]);
+  if (hidden.length > 0) {
+    props.push(
+      `parts={{ ${hidden.map(part => `${part}: false`).join(", ")} }}`,
     );
   }
   if (state.limit !== DEFAULT_STYLE.limit) props.push(`limit={${state.limit}}`);

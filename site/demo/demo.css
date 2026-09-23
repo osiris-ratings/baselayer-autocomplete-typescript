@@ -464,6 +464,25 @@
   gap: 0 16px;
 }
 
+/* One toggle a line, each with what it is on a business. */
+.toggle-list {
+  display: grid;
+}
+
+.toggle-list .toggle {
+  min-height: 34px;
+}
+
+.toggle-list .hint {
+  margin-left: 4px;
+  font-size: 13px;
+}
+
+.fold-note {
+  margin: 0 0 12px;
+  font-size: 13px;
+}
+
 /* ---- Connect ------------------------------------------------------------ */
 
 .demo .tabs {
