@@ -16,7 +16,8 @@
     "types": ["node"],
     "baseUrl": ".",
     "paths": {
-      "@baselayer/autocomplete": ["./src/index.ts"]
+      "@baselayer/autocomplete": ["./src/index.ts"],
+      "@baselayer/autocomplete/react": ["./src/react/index.ts"]
     }
   },
   "include": [
