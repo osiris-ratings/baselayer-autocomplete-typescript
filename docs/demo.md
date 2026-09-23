@@ -116,7 +116,10 @@ than lying over it. With nothing typed it shows four made-up rows that
 carry every part of a row (highlighted words, a matched alternative name,
 the domicile square and the overflow, an address, officers with a +N, a
 registered agent, the count), so every knob can be judged before a
-keystroke; type a name and the real rows take their place.
+keystroke; type a name and the real rows take their place. The rows pretend
+"harbor concr" was typed, one word in full and the next only begun, so the
+region shows its difference: whole word highlights CONCRETE, typed
+characters only its CONCR.
 
 First come six presets, each a color theme drawn as a small row in its own
 colors: Light (the console's), Baselayer, Midnight, Monokai, Sepia and Rosé.

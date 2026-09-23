@@ -1,14 +1,22 @@
 // Made-up rows for the Styling preview, so every part of a row can be styled
-// before anything is typed: marks, an alternative name that matched, the
+// before anything is typed: highlights, an alternative name that matched, the
 // domicile square and the overflow, an address, officers with a +N, and a
 // registered agent. None of these businesses is real.
 
+import { queryTokens } from "@baselayer/autocomplete";
 import type {
   BusinessSuggestion,
   HighlightPart,
   RelatedItem,
   RelatedSet,
 } from "@baselayer/autocomplete";
+
+/**
+ * What the rows pretend was typed: one word in full and the next only begun,
+ * so "whole word" and "typed characters" highlight them differently.
+ */
+export const SAMPLE_QUERY = "harbor concr";
+const TOKENS = queryTokens(SAMPLE_QUERY);
 
 function set(items: RelatedItem[], count = items.length): RelatedSet {
   return { count, matched: null, truncated: count > items.length, items };
@@ -28,11 +36,18 @@ function person(label: string, role: "officer" | "agent"): RelatedItem {
   return { type: "person", token: null, label, role, matched: false };
 }
 
-/** A name with the words of the preview's pretend query ("harbor concrete") marked. */
-function marked(name: string): HighlightPart[] {
+/**
+ * A name split as the tier splits it: each word a typed token starts is one
+ * highlighted part, whole, and the text between words is another.
+ */
+function highlight(name: string): HighlightPart[] {
   return name
-    .split(/(\s+)/)
-    .map(text => ({ text, matched: /^(harbor|concrete)\b/i.test(text) }));
+    .split(/([A-Za-z0-9]+)/)
+    .filter(text => text !== "")
+    .map(text => ({
+      text,
+      matched: TOKENS.some(token => text.toLowerCase().startsWith(token)),
+    }));
 }
 
 function row(
@@ -52,7 +67,7 @@ function row(
     label,
     matched_name: matchedName ?? null,
     match: "strong",
-    highlight: marked(matchedName ?? label),
+    highlight: highlight(matchedName ?? label),
   };
 }
 

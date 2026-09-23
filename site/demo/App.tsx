@@ -37,7 +37,7 @@ import {
   previewCss,
   type StyleState,
 } from "./style-state";
-import { SAMPLE_META, SAMPLE_SUGGESTIONS } from "./sample";
+import { SAMPLE_META, SAMPLE_QUERY, SAMPLE_SUGGESTIONS } from "./sample";
 import { StylingPanel } from "./StylingPanel";
 
 const PRODUCTION = "https://api.baselayer.com";
@@ -738,7 +738,7 @@ export function App() {
                   <div className="demo-sample" aria-hidden="true">
                     <BusinessAutocompleteView
                       id="demo-sample"
-                      value=""
+                      value={SAMPLE_QUERY}
                       onInputChange={() => {}}
                       onSelect={() => {}}
                       renderInput={inputProps => (
@@ -759,7 +759,8 @@ export function App() {
                     />
                   </div>
                   <p className="hint demo-sample-note">
-                    Sample rows while Styling is open.{" "}
+                    Sample rows for &ldquo;{SAMPLE_QUERY}&rdquo; while Styling
+                    is open.{" "}
                     {client === null
                       ? "Connect and type a name to see real ones."
                       : "Type a name to see real ones."}
