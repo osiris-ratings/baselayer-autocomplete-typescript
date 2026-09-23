@@ -1,0 +1,11 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["vite/client"],
+    "paths": {
+      "@baselayer/autocomplete": ["../src/index.ts"],
+      "@baselayer/autocomplete/react": ["../src/react/index.ts"]
+    }
+  },
+  "include": [".", "../src"]
+}
