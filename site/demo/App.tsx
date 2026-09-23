@@ -3,31 +3,52 @@ import {
   type AutocompleteClient,
   type BusinessSuggestion,
   type Filters,
-  type Look,
-  type MatchEmphasis,
-  type MatchRegion,
+  type SessionPhase,
 } from "@baselayer/autocomplete";
 import {
   BusinessAutocomplete,
   useAutocompleteSession,
   type Pick,
 } from "@baselayer/autocomplete/react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
+import { Collapsible, Field, Fold, Select } from "./controls";
 import { keyMint, readClaims, tokenMint } from "./credentials";
+import { NetworkLog } from "./network";
+import { NetworkTimeline } from "./NetworkTimeline";
+import {
+  DEFAULT_STYLE,
+  changedLook,
+  previewCss,
+  type StyleState,
+} from "./style-state";
+import { StylingPanel } from "./StylingPanel";
 
 const PRODUCTION = "https://api.baselayer.com";
 /**
- * `pnpm demo` forwards this path to production (demo/vite.config.ts). The
+ * `pnpm demo` forwards this path to production (site/vite.config.ts). The
  * published page is static, so it has no server to forward through.
  */
 const DEV_SERVER_PATH = import.meta.env.DEV ? "/_baselayer" : null;
 type Environment = "dev-server" | "production" | "custom";
 type Mode = "token" | "key";
+/** The session's phase by name: idle, minting, ready, backoff or unavailable. */
+type PhaseName = SessionPhase["phase"];
+
+const ENVIRONMENTS: Environment[] =
+  DEV_SERVER_PATH === null
+    ? ["production", "custom"]
+    : ["dev-server", "production", "custom"];
+const ENVIRONMENT_LABELS: Record<Environment, string> = {
+  "dev-server": "Production, through this dev server",
+  production: "Production (api.baselayer.com)",
+  custom: "Custom URL",
+};
 
 interface LogLine {
+  id: number;
   at: string;
-  kind: "mint" | "request";
+  kind: "mint" | "request" | "session";
   text: string;
   ok: boolean;
 }
@@ -36,30 +57,54 @@ function clock(): string {
   return new Date().toLocaleTimeString([], { hour12: false });
 }
 
-function useClient(baseUrl: string, mode: Mode, secret: string) {
+function useClient(
+  baseUrl: string,
+  mode: Mode,
+  secret: string,
+  network: NetworkLog,
+) {
   return useMemo(() => {
     if (secret.trim().length === 0) {
       return null;
     }
     const mint =
-      mode === "key" ? keyMint(baseUrl, secret.trim()) : tokenMint(secret);
-    return createAutocompleteClient({ baseUrl, mint });
-  }, [baseUrl, mode, secret]);
+      mode === "key"
+        ? keyMint(baseUrl, secret.trim(), network.fetch)
+        : tokenMint(secret);
+    return createAutocompleteClient({ baseUrl, mint, fetch: network.fetch });
+  }, [baseUrl, mode, secret, network]);
 }
 
-function useLog(client: AutocompleteClient | null): LogLine[] {
+function useLog(client: AutocompleteClient | null): [LogLine[], () => void] {
   const [lines, setLines] = useState<LogLine[]>([]);
+  const next = useRef(1);
   useEffect(() => {
     setLines([]);
     if (client === null) {
       return;
     }
-    const push = (line: LogLine) =>
-      setLines(previous => [line, ...previous].slice(0, 40));
+    const push = (line: Omit<LogLine, "id" | "at">) =>
+      setLines(previous =>
+        [{ ...line, id: next.current++, at: clock() }, ...previous].slice(
+          0,
+          80,
+        ),
+      );
+    let phase: PhaseName | null = null;
+    const offState = client.on("stateChange", snapshot => {
+      const now = snapshot.session.phase;
+      if (now !== phase) {
+        push({
+          kind: "session",
+          ok: now !== "unavailable",
+          text: `${phase ?? "start"} → ${now}`,
+        });
+        phase = now;
+      }
+    });
     const offMint = client.on("mint", event => {
       const outcome = event.outcome;
       push({
-        at: clock(),
         kind: "mint",
         ok: outcome.kind === "granted",
         text:
@@ -70,7 +115,6 @@ function useLog(client: AutocompleteClient | null): LogLine[] {
     });
     const offRequest = client.on("request", event => {
       push({
-        at: clock(),
         kind: "request",
         ok: event.error === null,
         text:
@@ -80,12 +124,13 @@ function useLog(client: AutocompleteClient | null): LogLine[] {
       });
     });
     return () => {
+      offState();
       offMint();
       offRequest();
       client.reset();
     };
   }, [client]);
-  return lines;
+  return [lines, () => setLines([])];
 }
 
 function SessionMeters({ client }: { client: AutocompleteClient }) {
@@ -101,7 +146,9 @@ function SessionMeters({ client }: { client: AutocompleteClient }) {
     <dl className="meters">
       <div>
         <dt>Session</dt>
-        <dd data-testid="demo-phase">{session.phase}</dd>
+        <dd data-testid="demo-phase" data-phase={session.phase}>
+          {session.phase}
+        </dd>
       </div>
       <div>
         <dt>Requests</dt>
@@ -128,23 +175,45 @@ function SessionMeters({ client }: { client: AutocompleteClient }) {
   );
 }
 
+/** Reports the session's phase to the page, for the Connect panel. */
+function PhaseWatcher({
+  client,
+  onPhase,
+}: {
+  client: AutocompleteClient;
+  onPhase(phase: PhaseName): void;
+}) {
+  const { snapshot } = useAutocompleteSession(client);
+  const phase = snapshot.session.phase;
+  useEffect(() => onPhase(phase), [phase, onPhase]);
+  return null;
+}
+
+function parseStates(text: string): string[] {
+  return text
+    .split(/[\s,]+/)
+    .map(s => s.trim().toUpperCase())
+    .filter(s => /^[A-Z]{2}$/.test(s));
+}
+
 export function App() {
-  const [environment, setEnvironment] = useState<Environment>(
-    DEV_SERVER_PATH === null ? "production" : "dev-server",
-  );
+  const network = useMemo(() => new NetworkLog(), []);
+  const [environment, setEnvironment] = useState<Environment>(ENVIRONMENTS[0]!);
   const [customUrl, setCustomUrl] = useState("");
   const [mode, setMode] = useState<Mode>("token");
   const [secret, setSecret] = useState("");
+  const [connectOpen, setConnectOpen] = useState(true);
+  const [stylingOpen, setStylingOpen] = useState(true);
+  const [phase, setPhase] = useState<PhaseName | null>(null);
   const [name, setName] = useState("");
   const [picked, setPicked] = useState<{
     suggestion: BusinessSuggestion;
     pick: Pick;
   } | null>(null);
-  const [emphasis, setEmphasis] = useState<MatchEmphasis>("underline");
-  const [region, setRegion] = useState<MatchRegion>("token");
-  const [debug, setDebug] = useState(true);
   const [person, setPerson] = useState("");
-  const [state, setState] = useState("");
+  const [states, setStates] = useState("");
+  const [address, setAddress] = useState("");
+  const [style, setStyle] = useState<StyleState>(DEFAULT_STYLE);
 
   const origin = typeof location === "undefined" ? "" : location.origin;
   const customBase = customUrl.replace(/\/+$/, "");
@@ -157,280 +226,323 @@ export function App() {
         ? customBase
         : PRODUCTION;
   const apiHost = environment === "custom" ? customBase : PRODUCTION;
-  const client = useClient(baseUrl, mode, secret);
-  const log = useLog(client);
+  const client = useClient(baseUrl, mode, secret, network);
+  const [log, clearLog] = useLog(client);
   const claims = mode === "token" ? readClaims(secret) : null;
+
+  // Fold Connect away once, when a session first lands; reopening is the reader's call.
+  const folded = useRef<AutocompleteClient | null>(null);
+  useEffect(() => {
+    if (client !== null && phase === "ready" && folded.current !== client) {
+      folded.current = client;
+      setConnectOpen(false);
+    }
+  }, [client, phase]);
 
   const filters: Filters | undefined = useMemo(() => {
     const f: Filters = {};
     if (person.trim()) f.person = { name: person.trim() };
-    if (state.trim())
-      f.state = state
-        .split(",")
-        .map(s => s.trim().toUpperCase())
-        .filter(Boolean);
+    const codes = parseStates(states);
+    if (codes.length > 0) f.state = codes;
+    if (address.trim()) f.address = { text: address.trim() };
     return Object.keys(f).length > 0 ? f : undefined;
-  }, [person, state]);
-
-  const look: Partial<Look> = {
-    matchEmphasis: emphasis,
-    matchEmphasisRegion: region,
-    showDebugInfo: debug,
-  };
+  }, [person, states, address]);
+  const filterCount = [
+    person.trim(),
+    parseStates(states).join(""),
+    address.trim(),
+  ].filter(Boolean).length;
 
   const curl = `curl -s -X POST ${apiHost || PRODUCTION}/autocomplete/sessions \\
   -H "X-API-Key: $BASELAYER_API_KEY" \\
   -H "Origin: ${origin}" | jq -r .session_token`;
 
+  const connectSummary = (
+    <>
+      {mode === "key" ? "API key" : "Session token"} ·{" "}
+      {ENVIRONMENT_LABELS[environment]}
+      {phase !== null && client !== null && (
+        <span className="phase-pill" data-phase={phase}>
+          {phase}
+        </span>
+      )}
+    </>
+  );
+
   return (
-    <main className="demo wrap">
-      <div className="demo-intro">
+    <main className="demo">
+      <div className="demo-intro wrap-wide">
         <p className="eyebrow">Live demo</p>
         <h1 className="display-sm">
           The typeahead, against your own organization
         </h1>
         <p className="lede">
-          The <code>@baselayer/autocomplete</code> component with a log of
-          everything it does. Every session this page mints is a real, billable
-          session on your organization&apos;s pool.
+          Configure the component and watch every request it makes, as it makes
+          it. Every session this page mints is a real, billable session on your
+          organization&apos;s pool.
         </p>
       </div>
 
-      <section className="demo-card">
-        <h2>
-          <span className="demo-num">01</span> Connect
-        </h2>
-        <div className="row">
-          <label>
-            Environment
-            <select
-              value={environment}
-              onChange={e => setEnvironment(e.target.value as Environment)}
-            >
-              {DEV_SERVER_PATH !== null && (
-                <option value="dev-server">
-                  Production, through this dev server
-                </option>
-              )}
-              <option value="production">Production (api.baselayer.com)</option>
-              <option value="custom">Custom URL</option>
-            </select>
-          </label>
-          {environment === "custom" && (
-            <label>
-              API URL
-              <input
-                value={customUrl}
-                onChange={e => setCustomUrl(e.target.value)}
-                placeholder="https://…"
-              />
-            </label>
-          )}
-        </div>
-        <div className="tabs" role="tablist">
-          <button
-            role="tab"
-            aria-selected={mode === "token"}
-            onClick={() => {
-              setMode("token");
-              setSecret("");
-            }}
+      <div className="demo-split wrap-wide">
+        <div className="demo-controls">
+          <Collapsible
+            num="01"
+            title="Connect"
+            icon="token"
+            summary={connectSummary}
+            open={connectOpen}
+            onToggle={setConnectOpen}
+            testId="demo-connect"
           >
-            Session token (recommended)
-          </button>
-          <button
-            role="tab"
-            aria-selected={mode === "key"}
-            onClick={() => {
-              setMode("key");
-              setSecret("");
-            }}
-          >
-            API key
-          </button>
-        </div>
-        {mode === "token" ? (
-          <>
-            <p className="hint">
-              Mint a session from your terminal, bound to this page, and paste
-              it below. Your key never reaches the browser. A session lasts a
-              few minutes.
-            </p>
-            <pre className="demo-code">{curl}</pre>
-            <label>
-              Session token
-              <textarea
-                value={secret}
-                onChange={e => setSecret(e.target.value)}
-                rows={3}
-                spellCheck={false}
-                placeholder="eyJhbGciOiJFZERTQSIs…"
-                data-testid="demo-token"
+            <Field label="Environment">
+              <Select<Environment>
+                value={environment}
+                options={ENVIRONMENTS}
+                labels={ENVIRONMENT_LABELS}
+                onChange={setEnvironment}
               />
-            </label>
-            {claims !== null && (
-              <p className="hint">
-                Expires {new Date(claims.exp * 1000).toLocaleTimeString()},{" "}
-                {claims.bud} requests, filters from {claims.stem} characters,
-                bound to {claims.ori ?? "any origin"}.
-              </p>
+            </Field>
+            {environment === "custom" && (
+              <Field label="API URL">
+                <input
+                  value={customUrl}
+                  onChange={e => setCustomUrl(e.target.value)}
+                  placeholder="https://…"
+                />
+              </Field>
             )}
-          </>
-        ) : (
-          <>
-            <p className="warning">
-              Your key stays in this tab&apos;s memory and is sent only to{" "}
-              {environment === "dev-server" ? (
-                <>
-                  this dev server, which forwards it to{" "}
-                  <code>{PRODUCTION}</code>
-                </>
-              ) : (
-                <code>{apiHost || "the API"}</code>
-              )}
-              . It is not stored, and this page loads no third-party code. In
-              your product, the key belongs on your backend (
-              <code>@baselayer/autocomplete/server</code>).
-            </p>
-            <label>
-              API key
-              <input
-                type="password"
-                autoComplete="off"
-                value={secret}
-                onChange={e => setSecret(e.target.value)}
-                data-testid="demo-key"
-              />
-            </label>
-          </>
-        )}
-      </section>
-
-      <section className="demo-card">
-        <h2>
-          <span className="demo-num">02</span> Type a business name
-        </h2>
-        {client === null ? (
-          <p className="hint">Connect first.</p>
-        ) : (
-          <div className="demo-field">
-            <BusinessAutocomplete
-              key={`${baseUrl}|${mode}|${secret}`}
-              client={client}
-              id="demo-business"
-              label="Legal entity name"
-              value={name}
-              onChange={value => {
-                setName(value);
-                if (picked !== null && value !== picked.suggestion.label)
-                  setPicked(null);
-              }}
-              onPick={(suggestion, pick) => setPicked({ suggestion, pick })}
-              look={look}
-              {...(filters !== undefined ? { filters } : {})}
-            />
-          </div>
-        )}
-        <details>
-          <summary>Look and filters</summary>
-          <div className="row">
-            <label>
-              Match emphasis
-              <select
-                value={emphasis}
-                onChange={e => setEmphasis(e.target.value as MatchEmphasis)}
+            <div className="tabs" role="tablist">
+              <button
+                role="tab"
+                aria-selected={mode === "token"}
+                onClick={() => {
+                  setMode("token");
+                  setSecret("");
+                }}
               >
-                {["underline", "background", "weight", "ink", "plain"].map(
-                  v => (
-                    <option key={v}>{v}</option>
-                  ),
+                Session token (recommended)
+              </button>
+              <button
+                role="tab"
+                aria-selected={mode === "key"}
+                onClick={() => {
+                  setMode("key");
+                  setSecret("");
+                }}
+              >
+                API key
+              </button>
+            </div>
+            {mode === "token" ? (
+              <>
+                <p className="hint">
+                  Mint a session from your terminal, bound to this page, and
+                  paste it below. Your key never reaches the browser. A session
+                  lasts a few minutes.
+                </p>
+                <pre className="demo-code">{curl}</pre>
+                <Field label="Session token">
+                  <textarea
+                    value={secret}
+                    onChange={e => setSecret(e.target.value)}
+                    rows={3}
+                    spellCheck={false}
+                    placeholder="eyJhbGciOiJFZERTQSIs…"
+                    data-testid="demo-token"
+                  />
+                </Field>
+                {claims !== null && (
+                  <p className="hint">
+                    Expires {new Date(claims.exp * 1000).toLocaleTimeString()},{" "}
+                    {claims.bud} requests, filters from {claims.stem}{" "}
+                    characters, bound to {claims.ori ?? "any origin"}.
+                  </p>
                 )}
-              </select>
-            </label>
-            <label>
-              Match region
-              <select
-                value={region}
-                onChange={e => setRegion(e.target.value as MatchRegion)}
-              >
-                <option>token</option>
-                <option>substring</option>
-              </select>
-            </label>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={debug}
-                onChange={e => setDebug(e.target.checked)}
-              />
-              Round trip and index in the footer
-            </label>
-          </div>
-          <div className="row">
-            <label>
-              Officer or agent name
-              <input
-                value={person}
-                onChange={e => setPerson(e.target.value)}
-                placeholder="frank"
-              />
-            </label>
-            <label>
-              States
-              <input
-                value={state}
-                onChange={e => setState(e.target.value)}
-                placeholder="PA, OH"
-              />
-            </label>
-          </div>
-          <p className="hint">
-            Filters wait until the name is as long as the session allows (5
-            characters by default); below that they are held back.
-          </p>
-        </details>
-      </section>
+              </>
+            ) : (
+              <>
+                <p className="warning">
+                  Your key stays in this tab&apos;s memory and is sent only to{" "}
+                  {environment === "dev-server" ? (
+                    <>
+                      this dev server, which forwards it to{" "}
+                      <code>{PRODUCTION}</code>
+                    </>
+                  ) : (
+                    <code>{apiHost || "the API"}</code>
+                  )}
+                  . It is not stored, and this page loads no third-party code.
+                  In your product, the key belongs on your backend (
+                  <code>@baselayer/autocomplete/server</code>).
+                </p>
+                <Field label="API key">
+                  <input
+                    type="password"
+                    autoComplete="off"
+                    value={secret}
+                    onChange={e => setSecret(e.target.value)}
+                    data-testid="demo-key"
+                  />
+                </Field>
+              </>
+            )}
+          </Collapsible>
 
-      {picked !== null && (
-        <section className="demo-card" data-testid="demo-pick">
-          <h2>
-            <span className="demo-num">03</span> The pick
-          </h2>
-          <p>
-            <strong>{picked.suggestion.label}</strong>, domiciled in{" "}
-            {picked.suggestion.domicile_state}, registered in{" "}
-            {picked.suggestion.states.join(", ")}.
-          </p>
-          <p className="hint">
-            Send the token with your search; it is good until{" "}
-            {new Date(picked.pick.expiresAt).toLocaleTimeString()}.
-          </p>
-          <pre className="demo-code">{`POST ${apiHost}/searches
+          <section className="demo-card" aria-labelledby="demo-business-title">
+            <h2 className="demo-card-title" id="demo-business-title">
+              <span className="demo-num">02</span> Business
+            </h2>
+            <Fold
+              title="Filters"
+              summary={filterCount === 0 ? "none" : `${filterCount} set`}
+            >
+              <p className="hint">
+                Filters apply once the name is long enough to narrow by. Until
+                then the SDK holds them back, and says so in the log.
+              </p>
+              <Field label="Officer or agent name" optional>
+                <input
+                  value={person}
+                  onChange={e => setPerson(e.target.value)}
+                  placeholder="frank"
+                />
+              </Field>
+              <Field
+                label="States"
+                optional
+                hint="Two-letter codes, separated by commas."
+              >
+                <input
+                  value={states}
+                  onChange={e => setStates(e.target.value)}
+                  placeholder="PA, OH"
+                />
+              </Field>
+              <Field label="Address" optional>
+                <input
+                  value={address}
+                  onChange={e => setAddress(e.target.value)}
+                  placeholder="2327 Hill Church"
+                />
+              </Field>
+            </Fold>
+            <div className="demo-preview">
+              {previewCss(style) !== "" && <style>{previewCss(style)}</style>}
+              {client === null ? (
+                <p className="hint">Connect first.</p>
+              ) : (
+                <>
+                  <PhaseWatcher client={client} onPhase={setPhase} />
+                  <BusinessAutocomplete
+                    key={`${baseUrl}|${mode}|${secret}`}
+                    client={client}
+                    id="demo-business"
+                    label={
+                      <>
+                        {style.label}
+                        <span className="field-required" aria-hidden="true">
+                          *
+                        </span>
+                      </>
+                    }
+                    value={name}
+                    onChange={value => {
+                      setName(value);
+                      if (picked !== null && value !== picked.suggestion.label)
+                        setPicked(null);
+                    }}
+                    onPick={(suggestion, pick) =>
+                      setPicked({ suggestion, pick })
+                    }
+                    look={{ ...changedLook(style) }}
+                    limit={style.limit}
+                    include={style.include}
+                    minChars={style.minChars}
+                    debounceMs={style.debounceMs}
+                    prewarmOnFocus={style.prewarmOnFocus}
+                    messages={style.messages}
+                    unstyled={style.unstyled}
+                    {...(style.pageInput
+                      ? { classNames: { input: "demo-input" } }
+                      : {})}
+                    {...(filters !== undefined ? { filters } : {})}
+                  />
+                </>
+              )}
+            </div>
+            {picked !== null && (
+              <div className="demo-pick" data-testid="demo-pick">
+                <p className="mono-label">The pick</p>
+                <p>
+                  <strong>{picked.suggestion.label}</strong>, domiciled in{" "}
+                  {picked.suggestion.domicile_state}, registered in{" "}
+                  {picked.suggestion.states.join(", ")}.
+                </p>
+                <p className="hint">
+                  Send the token with your search; it is good until{" "}
+                  {new Date(picked.pick.expiresAt).toLocaleTimeString()}.
+                </p>
+                <pre className="demo-code">{`POST ${apiHost}/searches
 {
   "name": ${JSON.stringify(picked.suggestion.label)},
   "address": ${JSON.stringify(picked.suggestion.related.addresses.items[0]?.label ?? "")},
   "business_token": "${picked.pick.businessToken.slice(0, 24)}…"
 }`}</pre>
-        </section>
-      )}
+              </div>
+            )}
+          </section>
 
-      {client !== null && (
-        <section className="demo-card">
-          <h2>
-            <span className="demo-num">04</span> What the SDK did
-          </h2>
-          <SessionMeters client={client} />
-          <ol className="log" data-testid="demo-log">
-            {log.length === 0 && <li className="hint">Nothing yet.</li>}
-            {log.map((line, index) => (
-              <li key={index} className={line.ok ? "ok" : "bad"}>
-                <span className="mono">{line.at}</span>{" "}
-                <span className="tag">{line.kind}</span> {line.text}
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
+          <Collapsible
+            num="03"
+            title="Styling"
+            open={stylingOpen}
+            onToggle={setStylingOpen}
+            testId="demo-styling"
+          >
+            <StylingPanel state={style} onChange={setStyle} />
+          </Collapsible>
+        </div>
+
+        <aside className="demo-activity" aria-label="What the SDK did">
+          <section className="activity-card" aria-labelledby="session-title">
+            <div className="activity-head">
+              <h2 id="session-title">Session</h2>
+            </div>
+            {client === null ? (
+              <p className="hint">Not connected.</p>
+            ) : (
+              <SessionMeters client={client} />
+            )}
+          </section>
+          <NetworkTimeline log={network} />
+          <section className="activity-card" aria-labelledby="log-title">
+            <div className="activity-head">
+              <h2 id="log-title">SDK log</h2>
+              <p className="mono-label">newest first</p>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={clearLog}
+                disabled={log.length === 0}
+              >
+                Clear
+              </button>
+            </div>
+            <ol className="log" data-testid="demo-log">
+              {log.length === 0 && <li className="hint">Nothing yet.</li>}
+              {log.map(line => (
+                <li key={line.id} className={line.ok ? "ok" : "bad"}>
+                  <span className="mono">{line.at}</span>{" "}
+                  <span className="tag" data-kind={line.kind}>
+                    {line.kind}
+                  </span>{" "}
+                  {line.text}
+                </li>
+              ))}
+            </ol>
+          </section>
+        </aside>
+      </div>
     </main>
   );
 }

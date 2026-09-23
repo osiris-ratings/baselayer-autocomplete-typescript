@@ -10,11 +10,15 @@ import {
  * server (see docs/mint-endpoint.md). The browser sets `Origin` itself, so the
  * session is bound to this page.
  */
-export function keyMint(baseUrl: string, apiKey: string): MintFunction {
+export function keyMint(
+  baseUrl: string,
+  apiKey: string,
+  fetchImpl: (input: string, init?: RequestInit) => Promise<Response> = fetch,
+): MintFunction {
   return async ({ signal }) => {
     let response: Response;
     try {
-      response = await fetch(`${baseUrl}/autocomplete/sessions`, {
+      response = await fetchImpl(`${baseUrl}/autocomplete/sessions`, {
         method: "POST",
         headers: { Accept: "application/json", "X-API-Key": apiKey },
         credentials: "omit",

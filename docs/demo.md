@@ -1,11 +1,12 @@
 # Live demo
 
-The demo is the styled component against your own organization, with a
-log of what the SDK does on every keystroke: each mint, each request, the
-recovery it chose, the session's budget and expiry, and the index that
-answered.
+The demo is the styled component against your own organization, on a split
+screen. On the left you connect, type a business name with any filters, and
+restyle the component. On the right you watch what the SDK does about it:
+the session, every request on a network timeline with its timing and size,
+and the SDK's own log. On a narrow screen the two sides stack.
 
-![The demo answering "osiris ra" in production](images/demo-typeahead-osiris-ra.png)
+![The demo, typing "howard concrete pum" against production](images/demo-split.png)
 
 It is the `/demo/` page of [the site](site.md), which the `Site` workflow
 publishes from this repository's `main` to GitHub Pages, at
@@ -24,7 +25,9 @@ production answers to a local run.
 ## Connecting
 
 Pick the environment, then one of two ways in. Run locally, the page
-starts on **Production, through this dev server**.
+starts on **Production, through this dev server**. Once a session is ready,
+Connect folds away to one line that says how you are connected; open it
+again to change anything.
 
 **A session token (recommended).** Mint a session from your terminal, bound
 to the demo's origin, and paste the token. Your API key never reaches the
@@ -48,8 +51,6 @@ to the local dev server, which forwards it there), and is never stored; the
 page loads no third-party code and ships a Content-Security-Policy that
 allows none. On the published page this mode needs the API to accept the
 demo's origin.
-
-![Connecting with an API key, with substring marks](images/demo-key-mode-how-con-pum.png)
 
 Either way, every session is a real session on your organization's pool,
 and the key must belong to a production application: sessions are not
@@ -80,11 +81,42 @@ published page does, and works once ENG-7947 is in production: a session
 token from any origin, the API-key mode only from the published page's.
 For another environment, pick **Custom URL** and give its API host.
 
-## What it shows
+## The business form
 
-Pick a row and the page shows the `business_token` and the search it
-belongs in, beside the SDK's own account of the session: its phase, the
-requests spent of its budget, when it expires, the index that answered,
-and a log of every mint and request with its status, latency and recovery.
+The business name is the field under test; its suggestions open beneath it.
+Above it, folded away, are the filters it can carry: an officer or agent's
+name, the states the business is registered in, and an address. The SDK
+holds them back until the name is long enough to narrow by, and the log
+says when it did. Pick a row and the form shows the `business_token` and
+the search it belongs in.
 
-![A pick, and what the SDK did](images/demo-pick-and-log.png)
+## Styling
+
+Every knob the styled component has, grouped: how matches are marked, every
+colour (the `look` prop's and the stylesheet's own variables, each with a
+swatch that opens a colour picker), shape and size, behaviour (rows,
+related entities, the pause before asking, prewarming), every message it
+can show, and the structural switches (`classNames`, `unstyled`). Changes
+apply as you make them. **Your configuration** at the bottom is the code
+that reproduces the result: the props that differ from the defaults, and the
+CSS variables to set.
+
+![The styling panel](images/demo-styling.png)
+
+![The component with background marks and the brand's colours](images/demo-styled.png)
+
+## Network and log
+
+The network timeline lists every request the page made: when it started,
+whether it was a mint or a query (with the query and any filters), its
+status, the size of the body, and how long it took. The waterfall puts them
+on one time axis, with the tier's own time (`Server-Timing`) drawn inside
+each round trip, and a request a newer keystroke aborted drawn hatched.
+Click a row for its URL, timings, headers and body; credentials are cut
+short before anything is shown.
+
+![A request's details](images/demo-network.png)
+
+Above it, the session: its phase, the requests spent of its budget, when it
+expires, and the index that answered. Below it, the SDK's log of every
+mint, request, recovery and change of phase.
