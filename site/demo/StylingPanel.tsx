@@ -129,7 +129,7 @@ export function StylingPanel({
       </div>
 
       <Fold
-        title="Matches"
+        title="Highlights"
         defaultOpen
         summary={count(
           lookChanged([
@@ -157,12 +157,12 @@ export function StylingPanel({
             />
           </Field>
           <Field
-            label="Mark color"
+            label="Color override"
             group
-            hint="Empty: each emphasis's own color."
+            hint="One color for every emphasis, in place of each one's own (the underline, the background, the text). Empty: each keeps its own."
           >
             <ColorInput
-              label="Mark color"
+              label="Color override"
               allowAuto
               value={state.look.matchEmphasisColor}
               onChange={value => setLook("matchEmphasisColor", value)}

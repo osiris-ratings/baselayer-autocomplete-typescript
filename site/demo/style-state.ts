@@ -22,7 +22,7 @@ import {
 /** The variables in react/styles.css that `look` does not set. */
 export const CSS_VARIABLES = {
   "--bl-ac-highlight-bg": {
-    label: "Highlighted row",
+    label: "Active row",
     kind: "color",
     value: "#edf2f7",
   },
@@ -34,17 +34,17 @@ export const CSS_VARIABLES = {
     value: "#4a5568",
   },
   "--bl-ac-also-mark": {
-    label: "Alternative-name mark",
+    label: "Alternative-name highlight",
     kind: "color",
     value: "#2d3748",
   },
   "--bl-ac-underline": {
-    label: "Underline mark",
+    label: "Underline highlight",
     kind: "color",
     value: "#38a169",
   },
   "--bl-ac-marker": {
-    label: "Background mark",
+    label: "Background highlight",
     kind: "color",
     value: "#c6f6d5",
   },
