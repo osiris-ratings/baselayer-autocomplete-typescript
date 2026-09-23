@@ -113,8 +113,10 @@ kbd {
   position: sticky;
   top: 0;
   z-index: 50;
-  background: rgba(255, 255, 255, 0.97);
+  background: rgba(255, 255, 255, 0.82);
   border-bottom: 1px solid var(--line);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  backdrop-filter: saturate(180%) blur(12px);
 }
 
 .site-header .wrap {
