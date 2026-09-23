@@ -1,7 +1,8 @@
-# Build the demo (demo/) against the SDK's source and deploy it to GitHub
-# Pages. While the repository is private the site is private too: only
-# members of the organization can open it.
-name: Demo
+# Build the site (site/: the overview, the API reference and the demo) against
+# the SDK's source and deploy it to GitHub Pages. While the repository is
+# private the site is private too: only members of the organization can open
+# it.
+name: Site
 
 on:
   push:
@@ -31,12 +32,12 @@ jobs:
       - uses: actions/configure-pages@v5
         id: pages
       - run: pnpm install --frozen-lockfile
-      - run: pnpm demo:build
+      - run: pnpm site:build
         env:
-          DEMO_BASE: ${{ steps.pages.outputs.base_path }}/
+          SITE_BASE: ${{ steps.pages.outputs.base_path }}/
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: demo-dist
+          path: site-dist
 
   deploy:
     needs: build

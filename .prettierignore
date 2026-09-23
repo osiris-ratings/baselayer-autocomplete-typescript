@@ -3,4 +3,4 @@ coverage
 pnpm-lock.yaml
 contracts
 docs/images
-demo-dist
+site-dist

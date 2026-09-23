@@ -1,13 +1,14 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
-import "@baselayer/autocomplete/react/styles.css";
+import "../shared/fonts";
+import "../shared/brand.css";
+import "./api.css";
 
-import { App } from "./App";
-import "./demo.css";
+import { ApiReference } from "./ApiReference";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    <ApiReference />
   </StrictMode>,
 );

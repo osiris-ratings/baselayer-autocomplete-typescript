@@ -1,0 +1,171 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "baselayer-api-service",
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "https://api.baselayer.com/"
+    }
+  ],
+  "paths": {
+    "/autocomplete/sessions": {
+      "post": {
+        "summary": "Mint an autocomplete session",
+        "description": "Mints the grant every request to the autocomplete tier carries in ``X-Autocomplete-Session``. Minting writes one Order and is rate limited per organization, per ten-minute window and per rolling day, one pool drawn from by every caller in it; the keystrokes it admits write nothing. The grant is bound to the ``Origin`` it was minted with, expires after ``expires_in`` seconds (refresh at about 80% of it) and admits ``request_budget`` requests per route. A caller whose ``autocomplete.enabled`` override is off is answered 403; a locked organization is answered 402; a sandbox application is answered 422, since sandbox searches resolve against fixtures.",
+        "operationId": "mint_autocomplete_session_autocomplete_sessions_post",
+        "responses": {
+          "201": {
+            "description": "Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1.AutocompleteSessionGrantResponse"
+                }
+              },
+              "application/vnd.baselayer.v1+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/v1.AutocompleteSessionGrantResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "APIKeyHeader": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "v1.AutocompleteSessionGrantResponse": {
+        "description": "The grant a caller presents to the autocomplete tier.",
+        "properties": {
+          "session_token": {
+            "description": "Opaque, signed session grant. Send it verbatim in the ``X-Autocomplete-Session`` header of every autocomplete request; it carries its own expiry and budget.",
+            "examples": [
+              "eyJhbGciOiJFZERTQSIsInR5cCI6ImFjczEiLCJraWQiOiJ…"
+            ],
+            "title": "Session Token",
+            "type": "string"
+          },
+          "expires_in": {
+            "description": "Seconds until the grant expires. Mint the next one at about 80% of this so expiry never lands on the typing path.",
+            "examples": [
+              180
+            ],
+            "title": "Expires In",
+            "type": "integer"
+          },
+          "request_budget": {
+            "description": "Requests this session may make per autocomplete route. Past it the tier answers 429 with ``session_budget_spent``; the remedy is a new session, not a retry.",
+            "examples": [
+              150
+            ],
+            "title": "Request Budget",
+            "type": "integer"
+          },
+          "pivot_allowance": {
+            "description": "How many times this session may change its query to a different name before the tier refuses it (429, code 482). Growing, trimming or correcting the name being typed never counts.",
+            "examples": [
+              5
+            ],
+            "title": "Pivot Allowance",
+            "type": "integer"
+          },
+          "filter_min_stem": {
+            "description": "Characters the query needs before the ``person.*``, ``address.*`` and ``state`` filters narrow the suggestions; shorter, a filtered request is a 422 naming ``q``.",
+            "examples": [
+              5
+            ],
+            "title": "Filter Min Stem",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_token",
+          "expires_in",
+          "request_budget",
+          "pivot_allowance",
+          "filter_min_stem"
+        ],
+        "title": "AutocompleteSessionGrantResponse (v1)",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "APIKeyHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-API-Key"
+      }
+    }
+  }
+}

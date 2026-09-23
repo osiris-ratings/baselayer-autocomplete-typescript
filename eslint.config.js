@@ -4,14 +4,14 @@ import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", "coverage", "node_modules", "demo-dist"] },
+  { ignores: ["dist", "coverage", "node_modules", "site-dist"] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
     files: [
       "src/react/**/*.{ts,tsx}",
       "tests/react/**/*.{ts,tsx}",
-      "demo/**/*.{ts,tsx}",
+      "site/**/*.{ts,tsx}",
     ],
     plugins: { "react-hooks": reactHooks, "jsx-a11y": jsxA11y },
     rules: {

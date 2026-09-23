@@ -3,13 +3,17 @@ import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin, type ProxyOptions } from "vite";
 
+import { apiReference } from "./api/spec/plugin";
+
 const src = (path: string) =>
   fileURLToPath(new URL(`../src/${path}`, import.meta.url));
+const page = (path: string) => fileURLToPath(new URL(path, import.meta.url));
 
 /**
- * The published page loads nothing but its own bundle and talks to nothing
- * but a Baselayer API host (or the custom URL a visitor types). Added at build
- * time only: the dev server's hot reload needs an inline script.
+ * The published pages load nothing but their own bundles and fonts, and talk
+ * to nothing but a Baselayer API host (or the custom URL a demo visitor
+ * types). Added at build time only: the dev server's hot reload needs an
+ * inline script.
  */
 function contentSecurityPolicy(): Plugin {
   const policy = [
@@ -58,11 +62,18 @@ const throughDevServer: ProxyOptions = {
   },
 };
 
-// The demo runs on the SDK's source, so it always shows what `main` does.
+// The site: the overview at `/`, the API reference at `/api/` and the demo at
+// `/demo/`. The demo runs on the SDK's source, so it always shows what `main`
+// does. `SITE_BASE` serves it under a sub-path of whatever domain hosts it.
 export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),
-  base: process.env.DEMO_BASE ?? "/",
-  plugins: [react(), contentSecurityPolicy()],
+  base: process.env.SITE_BASE ?? "/",
+  appType: "mpa",
+  plugins: [
+    react(),
+    contentSecurityPolicy(),
+    apiReference(fileURLToPath(new URL("..", import.meta.url))),
+  ],
   resolve: {
     alias: [
       {
@@ -77,12 +88,19 @@ export default defineConfig({
     ],
   },
   server: {
-    port: Number(process.env.DEMO_PORT ?? 3000),
+    port: Number(process.env.SITE_PORT ?? 3000),
     strictPort: true,
     proxy: { "/_baselayer/autocomplete": throughDevServer },
   },
   build: {
-    outDir: fileURLToPath(new URL("../demo-dist", import.meta.url)),
+    outDir: fileURLToPath(new URL("../site-dist", import.meta.url)),
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        home: page("index.html"),
+        api: page("api/index.html"),
+        demo: page("demo/index.html"),
+      },
+    },
   },
 });

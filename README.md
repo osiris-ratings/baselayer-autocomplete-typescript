@@ -125,6 +125,8 @@ code)` tells you when that is the right move.
 - [Error states](docs/error-states.md): what the SDK does with every answer
 - [Security](docs/security.md): what the session is and what never leaves
   your backend
+- [The site](docs/site.md): the overview, the generated API reference and
+  the demo, and how to publish them
 - [Live demo](docs/demo.md): try it with your own key or a session token
 - [Design record](docs/design.md): why it is built the way it is
 
@@ -136,7 +138,8 @@ pnpm test          # vitest: core and server in node, react in jsdom
 pnpm typecheck
 pnpm lint
 pnpm build         # dist/ with ESM, CJS and type declarations
-pnpm demo          # the demo on http://localhost:3000, forwarding to production
+pnpm site          # the site on http://localhost:3000
+pnpm demo          # the same, opened on the demo, forwarding to production
 ```
 
 Releases are tags; see [CONTRIBUTING.md](CONTRIBUTING.md).

@@ -7,11 +7,11 @@ answered.
 
 ![The demo answering "osiris ra" in production](images/demo-typeahead-osiris-ra.png)
 
-It is published from this repository's `main` to GitHub Pages by the
-`Demo` workflow, at <https://curly-adventure-y83og2w.pages.github.io/>.
-While the repository is private, so is the site: open it signed in to
-GitHub as a member of the osiris-ratings organization. The address changes
-when the site goes public.
+It is the `/demo/` page of [the site](site.md), which the `Site` workflow
+publishes from this repository's `main` to GitHub Pages, at
+<https://curly-adventure-y83og2w.pages.github.io/demo/>. While the
+repository is private, so is the site: open it signed in to GitHub as a
+member of the osiris-ratings organization.
 
 The published page talks to the production API, `https://api.baselayer.com`,
 from the browser. That needs the autocomplete tier to answer CORS for the
@@ -59,10 +59,10 @@ minted for a sandbox application.
 
 ```bash
 pnpm install
-pnpm demo        # http://localhost:3000
+pnpm demo        # the site, opened on http://localhost:3000/demo/
 ```
 
-The page runs on `http://localhost:3000` and starts on **Production,
+The page runs on `http://localhost:3000/demo/` and starts on **Production,
 through this dev server**: it calls `/_baselayer/autocomplete/…` on its own
 origin, and the dev server forwards those calls to production. That is the
 shape of a real integration, the dev server standing in for your backend,

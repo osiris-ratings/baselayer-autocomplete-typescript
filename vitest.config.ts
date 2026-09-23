@@ -29,6 +29,13 @@ export default defineConfig({
         },
       },
       {
+        test: {
+          name: "site",
+          include: ["tests/site/**/*.test.ts"],
+          environment: "node",
+        },
+      },
+      {
         resolve: { alias },
         test: {
           name: "react",

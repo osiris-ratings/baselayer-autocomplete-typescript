@@ -183,18 +183,23 @@ export function App() {
   -H "Origin: ${origin}" | jq -r .session_token`;
 
   return (
-    <div className="page">
-      <header>
-        <h1>Baselayer autocomplete</h1>
-        <p>
-          The <code>@baselayer/autocomplete</code> typeahead against your own
-          organization. Every session this page mints is a real, billable
+    <main className="demo wrap">
+      <div className="demo-intro">
+        <p className="eyebrow">Live demo</p>
+        <h1 className="display-sm">
+          The typeahead, against your own organization
+        </h1>
+        <p className="lede">
+          The <code>@baselayer/autocomplete</code> component with a log of
+          everything it does. Every session this page mints is a real, billable
           session on your organization&apos;s pool.
         </p>
-      </header>
+      </div>
 
-      <section className="panel">
-        <h2>1. Connect</h2>
+      <section className="demo-card">
+        <h2>
+          <span className="demo-num">01</span> Connect
+        </h2>
         <div className="row">
           <label>
             Environment
@@ -251,7 +256,7 @@ export function App() {
               it below. Your key never reaches the browser. A session lasts a
               few minutes.
             </p>
-            <pre className="code">{curl}</pre>
+            <pre className="demo-code">{curl}</pre>
             <label>
               Session token
               <textarea
@@ -301,12 +306,14 @@ export function App() {
         )}
       </section>
 
-      <section className="panel">
-        <h2>2. Type a business name</h2>
+      <section className="demo-card">
+        <h2>
+          <span className="demo-num">02</span> Type a business name
+        </h2>
         {client === null ? (
           <p className="hint">Connect first.</p>
         ) : (
-          <div className="field">
+          <div className="demo-field">
             <BusinessAutocomplete
               key={`${baseUrl}|${mode}|${secret}`}
               client={client}
@@ -385,8 +392,10 @@ export function App() {
       </section>
 
       {picked !== null && (
-        <section className="panel" data-testid="demo-pick">
-          <h2>3. The pick</h2>
+        <section className="demo-card" data-testid="demo-pick">
+          <h2>
+            <span className="demo-num">03</span> The pick
+          </h2>
           <p>
             <strong>{picked.suggestion.label}</strong>, domiciled in{" "}
             {picked.suggestion.domicile_state}, registered in{" "}
@@ -396,7 +405,7 @@ export function App() {
             Send the token with your search; it is good until{" "}
             {new Date(picked.pick.expiresAt).toLocaleTimeString()}.
           </p>
-          <pre className="code">{`POST ${apiHost}/searches
+          <pre className="demo-code">{`POST ${apiHost}/searches
 {
   "name": ${JSON.stringify(picked.suggestion.label)},
   "address": ${JSON.stringify(picked.suggestion.related.addresses.items[0]?.label ?? "")},
@@ -406,8 +415,10 @@ export function App() {
       )}
 
       {client !== null && (
-        <section className="panel">
-          <h2>What the SDK did</h2>
+        <section className="demo-card">
+          <h2>
+            <span className="demo-num">04</span> What the SDK did
+          </h2>
           <SessionMeters client={client} />
           <ol className="log" data-testid="demo-log">
             {log.length === 0 && <li className="hint">Nothing yet.</li>}
@@ -420,12 +431,6 @@ export function App() {
           </ol>
         </section>
       )}
-
-      <footer>
-        <a href="https://github.com/osiris-ratings/baselayer-autocomplete-typescript">
-          Source and docs
-        </a>
-      </footer>
-    </div>
+    </main>
   );
 }

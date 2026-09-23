@@ -79,8 +79,10 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "check:package": "publint && attw --pack . --profile node16 --exclude-entrypoints ./react/styles.css",
-    "demo": "vite --config demo/vite.config.ts",
-    "demo:build": "tsc --noEmit -p demo && vite build --config demo/vite.config.ts"
+    "site": "vite --config site/vite.config.ts",
+    "site:build": "tsc --noEmit -p site && vite build --config site/vite.config.ts",
+    "demo": "vite --config site/vite.config.ts --open /demo/",
+    "contracts:sessions": "node scripts/vendor-sessions-spec.ts"
   },
   "peerDependencies": {
     "react": "^18.2.0 || ^19.0.0",
@@ -100,6 +102,9 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.5",
     "@eslint/js": "^9.39.5",
+    "@fontsource-variable/newsreader": "^5.3.0",
+    "@fontsource/geist-mono": "^5.3.0",
+    "@fontsource/uncut-sans": "^5.3.0",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.3",
@@ -113,15 +118,18 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^5.2.0",
     "jsdom": "^26.1.0",
+    "marked": "^18.0.14",
     "prettier": "^3.9.8",
     "publint": "^0.3.24",
     "react": "19.2.0",
     "react-dom": "19.2.0",
+    "sugar-high": "^2.4.1",
     "tsup": "^8.5.1",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.70.1",
     "vite": "^7.3.6",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.11",
+    "yaml": "^2.9.1"
   },
   "packageManager": "pnpm@12.4.2"
 }
