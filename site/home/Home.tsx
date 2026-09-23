@@ -12,6 +12,128 @@ import { RequestFlow } from "./RequestFlow";
 
 const INSTALL = "npm install @baselayer/autocomplete";
 
+const ENTITIES: {
+  name: string;
+  icon: IconName;
+  live: boolean;
+  links: string;
+}[] = [
+  {
+    name: "Businesses",
+    icon: "name",
+    live: true,
+    links:
+      "Every state registration of a company folded into one, with its footprint, officers, agents and addresses.",
+  },
+  {
+    name: "People",
+    icon: "people",
+    live: false,
+    links: "Officers and registered agents, with the businesses they serve.",
+  },
+  {
+    name: "Addresses",
+    icon: "address",
+    live: false,
+    links: "Registered addresses, with the businesses and people at them.",
+  },
+  {
+    name: "Liens",
+    icon: "lien",
+    live: false,
+    links: "Liens, with the businesses they name.",
+  },
+];
+
+/** One production suggestion for `howard concrete`, and what it links to. */
+const GRAPH = {
+  label: "HOWARD CONCRETE PUMPING CO., INC.",
+  states: ["PA", "IL", "KY"],
+  moreStates: 6,
+  people: {
+    count: 6,
+    items: [
+      { label: "FRANK M. HOWARD, JR.", role: "officer" },
+      { label: "FRANK M. HOWARD, III", role: "officer" },
+      { label: "PAMELA CARLINI", role: "officer" },
+    ],
+  },
+  addresses: {
+    count: 3,
+    items: [
+      {
+        label: "2327 Hill Church Houston Rd, Canonsburg, PA 15317",
+        role: "principal",
+      },
+      { label: "701 Millers Run Rd, Cuddy, PA 15031", role: "principal" },
+      { label: "400 Justabout Rd, Venetia, PA 15367", role: "officer" },
+    ],
+  },
+};
+
+function EntityGraph() {
+  return (
+    <figure className="graph">
+      <figcaption className="mono-label">
+        One suggestion, and what it links to
+      </figcaption>
+      <div className="graph-root">
+        <Icon name="name" />
+        <div>
+          <p className="graph-root-label">{GRAPH.label}</p>
+          <p className="graph-states">
+            {GRAPH.states.map((state, i) => (
+              <span key={state} data-domicile={i === 0 ? "true" : undefined}>
+                {state}
+              </span>
+            ))}
+            <span data-more="true">+{GRAPH.moreStates}</span>
+          </p>
+        </div>
+      </div>
+      <ul className="graph-branches">
+        <li>
+          <p className="graph-branch">
+            <code>related.people</code> <span>{GRAPH.people.count}</span>
+          </p>
+          <ul>
+            {GRAPH.people.items.map(item => (
+              <li key={item.label}>
+                <Icon name="people" size={18} />
+                {item.label}
+                <span className="graph-role">{item.role}</span>
+              </li>
+            ))}
+          </ul>
+        </li>
+        <li>
+          <p className="graph-branch">
+            <code>related.addresses</code> <span>{GRAPH.addresses.count}</span>
+          </p>
+          <ul>
+            {GRAPH.addresses.items.map(item => (
+              <li key={item.label}>
+                <Icon name="address" size={18} />
+                {item.label}
+                <span className="graph-role">{item.role}</span>
+              </li>
+            ))}
+          </ul>
+        </li>
+        <li data-soon="true">
+          <p className="graph-branch">
+            <code>related.liens</code> <span>coming soon</span>
+          </p>
+        </li>
+      </ul>
+      <p className="graph-source">
+        <span className="mono-label">Answer for</span>{" "}
+        <code>howard concrete</code>
+      </p>
+    </figure>
+  );
+}
+
 const FIELDS_LEFT: { icon: IconName; title: string; field: string }[] = [
   { icon: "name", title: "Canonical name", field: "label" },
   {
@@ -250,7 +372,11 @@ export function Home() {
     <>
       <SiteHeader current="home" />
       <main>
-        <section className="hero wrap" aria-labelledby="hero-title">
+        <section
+          className="hero wrap"
+          id="overview"
+          aria-labelledby="hero-title"
+        >
           <div className="hero-copy">
             <p className="eyebrow">
               <span className="eyebrow-icon" aria-hidden="true">
@@ -259,15 +385,27 @@ export function Home() {
               Autocomplete SDK
             </p>
             <h1 className="display" id="hero-title">
-              Business-name autocomplete, straight from the registry
+              Pick the right business as you type
             </h1>
           </div>
           <div className="hero-aside">
             <p className="lede">
-              Type three letters of a company and get its canonical name, the
-              states it is registered in, its lead address and officers, and a
-              token that pins your Baselayer search to exactly that business.
+              Every suggestion is a canonical entity from Baselayer&apos;s
+              registry, already linked to the entities around it: a business
+              arrives with its officers, agents and addresses. Pick one, and
+              your Baselayer search is pinned to exactly that business.
             </p>
+            <ul className="entity-chips" aria-label="What it searches">
+              {ENTITIES.map(entity => (
+                <li
+                  key={entity.name}
+                  data-live={entity.live ? "true" : "false"}
+                >
+                  {entity.name}
+                  {!entity.live && <span>soon</span>}
+                </li>
+              ))}
+            </ul>
             <div className="hero-actions">
               <a className="btn btn-primary" href={links.demo}>
                 Try the demo
@@ -292,9 +430,7 @@ export function Home() {
               ))}
             </div>
             <figure className="specimen-card">
-              <div className="specimen-label mono-label">
-                Live answer · production
-              </div>
+              <div className="specimen-label mono-label">Live answer</div>
               <img
                 src={heroShot}
                 width={592}
@@ -315,7 +451,42 @@ export function Home() {
         </section>
 
         <div className="wrap sections">
-          <Panel num="01" id="layers">
+          <Panel num="01" id="entities">
+            <div className="entities">
+              <div>
+                <h2 className="display-sm" id="entities-title">
+                  Every entity, linked to the rest
+                </h2>
+                <p className="lede">
+                  Search by the entity you have in hand. Each result comes back
+                  as a canonical entity with the entities it is linked to, so
+                  the person typing can tell the right Howard Concrete Pumping
+                  from the four others by who runs it and where it is.
+                </p>
+                <div className="entity-cards">
+                  {ENTITIES.map(entity => (
+                    <article
+                      key={entity.name}
+                      className="entity-card"
+                      data-live={entity.live ? "true" : "false"}
+                    >
+                      <div className="entity-card-head">
+                        <Icon name={entity.icon} />
+                        <h3>{entity.name}</h3>
+                        <span className="pill">
+                          {entity.live ? "Live" : "Coming soon"}
+                        </span>
+                      </div>
+                      <p>{entity.links}</p>
+                    </article>
+                  ))}
+                </div>
+              </div>
+              <EntityGraph />
+            </div>
+          </Panel>
+
+          <Panel num="02" id="layers">
             <h2 className="display-sm" id="layers-title">
               One package, three layers
             </h2>
@@ -358,7 +529,7 @@ export function Home() {
             </div>
           </Panel>
 
-          <Panel num="02" id="how-it-works">
+          <Panel num="03" id="how-it-works">
             <h2 className="display-sm" id="how-it-works-title">
               Your key stays home. Keystrokes go direct.
             </h2>
@@ -400,7 +571,7 @@ export function Home() {
             </ol>
           </Panel>
 
-          <Panel num="03" id="request-flow">
+          <Panel num="04" id="request-flow">
             <h2 className="display-sm" id="request-flow-title">
               Request by request
             </h2>
@@ -418,7 +589,7 @@ export function Home() {
             </figure>
           </Panel>
 
-          <Panel num="04" id="quick-start">
+          <Panel num="05" id="quick-start">
             <h2 className="display-sm" id="quick-start-title">
               Three steps to a working field
             </h2>
@@ -447,8 +618,8 @@ export function Home() {
                   <p>
                     Point it at your endpoint with <code>mintUrl</code> and at
                     Baselayer with <code>baseUrl</code>. It warms a session up
-                    on focus, waits for three characters, and handles every
-                    refusal itself.
+                    on focus, asks as the user types, and handles every refusal
+                    itself.
                   </p>
                   <p>
                     Prefer your own markup? Use the hooks, or the core alone.
@@ -478,7 +649,7 @@ export function Home() {
             </div>
           </Panel>
 
-          <Panel num="05" id="security">
+          <Panel num="06" id="security">
             <h2 className="display-sm" id="security-title">
               The browser holds a session, never a key
             </h2>
@@ -518,7 +689,7 @@ export function Home() {
             </div>
           </Panel>
 
-          <Panel num="06" id="styling">
+          <Panel num="07" id="styling">
             <div className="styling">
               <div>
                 <h2 className="display-sm" id="styling-title">

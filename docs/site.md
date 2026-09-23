@@ -2,17 +2,19 @@
 
 `site/` builds three static pages in Baselayer's brand:
 
-| Page          | Path     | What                                           |
-| ------------- | -------- | ---------------------------------------------- |
-| Overview      | `/`      | the SDK, how it fits your backend, quick start |
-| API reference | `/api/`  | the two routes, generated from their specs     |
-| Demo          | `/demo/` | the component against your own organization    |
+| Page          | Path     | What                                               |
+| ------------- | -------- | -------------------------------------------------- |
+| Overview      | `/`      | the entities it searches, how it fits your backend |
+| API reference | `/api/`  | the two routes, generated from their specs         |
+| Demo          | `/demo/` | the component against your own organization        |
 
 ![The overview](images/site-overview.png)
 
-The overview explains the integration in two diagrams: where each piece
-runs, and every request from focus to submit in three swim lanes, for the
-browser, your backend and Baselayer.
+The overview leads with what the autocomplete searches (businesses today;
+people, addresses and liens next) and how each result links to the rest,
+then explains the integration in two diagrams: where each piece runs, and
+every request from focus to submit in three swim lanes, for the browser,
+your backend and Baselayer.
 
 ![How it works](images/site-how-it-works.png)
 

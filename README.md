@@ -1,10 +1,13 @@
 # @baselayer/autocomplete
 
-Business-name autocomplete for your own product, backed by Baselayer's
-registry of US business registrations. Type three letters of a company and
-get its canonical name, the states it is registered in, its lead address and
-officers, and a `business_token` that pins your Baselayer search to exactly
-that business.
+Autocomplete for your own product, backed by Baselayer's registry, that
+helps the person typing pick the right business. Every suggestion is a
+canonical entity already linked to the entities around it: a business
+arrives with its registered states, officers, agents and addresses, and a
+`business_token` that pins your Baselayer search to exactly that business.
+
+It searches businesses today; people, addresses and liens are coming, each
+linked to the rest.
 
 > **Pre-release.** 0.x is being adopted by the Baselayer console and
 > changes on minor versions. 1.0 freezes the API.
