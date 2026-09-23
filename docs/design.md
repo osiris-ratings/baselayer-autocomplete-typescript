@@ -165,6 +165,13 @@ mint directly, exactly as the console does today. A customer holds an API
 key, which cannot live in the browser, so the mint hops through their
 backend. Neither console uses the server helper.
 
+The admin console's Operations → Autocomplete page (osiris-app ENG-7951)
+is the second host: the styled component in the admin theme, set through
+the CSS variables, with every tier parameter beside it and the client's
+session and events as live meters. Captured against production:
+
+![The admin console's autocomplete page](images/admin-autocomplete.png)
+
 The console's adapter is about ten lines and stays in the console:
 
 ```ts
@@ -1168,13 +1175,31 @@ E closes. Each step has a checkpoint:
   app installs and renders; the runbook and the public docs point at the
   SDK.
 
-Visual parity is proven with Playwright's `toHaveScreenshot` in the console:
-the typeahead's idle, open-with-rows, highlighted, loading and unavailable
-states, with baselines captured on the pre-migration commit by the Linux
-end-to-end job, `maxDiffPixelRatio: 0.001` and animations disabled. That
-measures the console's real pixels under its Chakra theme, which is the
-parity target; a Storybook in the SDK would render a different theme and
-prove less.
+Visual parity was measured, not assumed. Nine states of the console's
+typeahead were rendered through its Playwright lane before and after the
+migration (osiris-app ENG-7950), from the same production answers on the
+same machine: rows with underline marks, a highlighted row, substring marks,
+background marks with staged colours, weight marks with an alternative
+name, ink marks with an agent, searching, a refusal, and a truncated
+answer. All nine differ by zero pixels. Getting there found two differences
+in this stylesheet, both fixed: the console's rows inherit a line-height of
+1.5 from Chakra's reset, and its line clamp ellipsises at a word. The
+measurement is of the console's real pixels under its Chakra theme, which
+is the parity target; a Storybook in the SDK would render a different theme
+and prove less. Four of the nine, before on the left, after on the right:
+
+![Rows with underline marks](images/parity/console-1-rows-underline.png)
+
+![Substring marks](images/parity/console-3-substring.png)
+
+![Weight marks with an alternative name](images/parity/console-5-weight-also.png)
+
+![A refusal from the tier](images/parity/console-8-error.png)
+
+The comparison ran locally rather than as a committed `toHaveScreenshot`
+spec, because baselines are font- and platform-specific and the console's
+end-to-end job does not pin a browser image; a committed spec is worth
+adding once it does.
 
 ### What moves and what stays
 
