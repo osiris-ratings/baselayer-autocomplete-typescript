@@ -1,0 +1,259 @@
+/*
+ * @baselayer/autocomplete: the styled typeahead.
+ *
+ * Every rule is one class deep, so a host's global reset (Chakra's, Tailwind's
+ * preflight, a `* { … }`) never outranks it, and a host class loaded after this
+ * file wins a tie. Colours are custom properties: set them on `.bl-ac`, or pass
+ * `look` to the component. The values are the Baselayer console's own.
+ */
+
+.bl-ac {
+  --bl-ac-bg: #ffffff;
+  --bl-ac-title: #1a202c;
+  --bl-ac-subtitle: #718096;
+  --bl-ac-pill-bg: #c6f6d5;
+  --bl-ac-pill-fg: #22543d;
+  --bl-ac-pill-primary-border: #48bb78;
+  --bl-ac-pill-secondary-bg: #edf2f7;
+  --bl-ac-more-fg: #2d3748;
+  --bl-ac-highlight-bg: #edf2f7;
+  --bl-ac-border: #edf2f7;
+  --bl-ac-ink-base: #4a5568;
+  --bl-ac-also-mark: #2d3748;
+  --bl-ac-underline: #38a169;
+  --bl-ac-marker: #faf089;
+  --bl-ac-radius: 0.5rem;
+  --bl-ac-pill-radius: 0.25rem;
+  --bl-ac-shadow: 0 4px 8px rgba(16, 24, 40, 0.08);
+  --bl-ac-z: 1000;
+  --bl-ac-menu-width: 560px;
+  --bl-ac-list-max-height: 24rem;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.bl-ac-label {
+  display: block;
+  margin: 0 0 0.375rem;
+  font: inherit;
+  font-weight: 500;
+}
+
+.bl-ac-input {
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  color: inherit;
+  background: #ffffff;
+  border: 1px solid #cbd5e0;
+  border-radius: 0.375rem;
+}
+
+.bl-ac-input:focus-visible {
+  outline: 2px solid #3182ce;
+  outline-offset: 1px;
+}
+
+/* The popover: anchored at the field's left edge, wider than a form column. */
+.bl-ac-menu {
+  position: absolute;
+  z-index: var(--bl-ac-z);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: calc(100vw - 2rem);
+  margin: 0.25rem 0 0;
+  padding: 0;
+  overflow: hidden;
+  line-height: normal;
+  text-align: left;
+  background: var(--bl-ac-bg);
+  border: 1px solid var(--bl-ac-border);
+  border-radius: var(--bl-ac-radius);
+  box-shadow: var(--bl-ac-shadow);
+}
+
+.bl-ac-menu[hidden] {
+  display: none;
+}
+
+@media (min-width: 48em) {
+  .bl-ac-menu {
+    width: var(--bl-ac-menu-width);
+  }
+}
+
+.bl-ac-list {
+  box-sizing: border-box;
+  max-height: var(--bl-ac-list-max-height);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.bl-ac-row {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0.5rem 0.875rem;
+  cursor: pointer;
+}
+
+.bl-ac-row:first-child {
+  padding-top: 0.75rem;
+}
+
+.bl-ac-row[data-highlighted] {
+  background: var(--bl-ac-highlight-bg);
+}
+
+.bl-ac-line {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: space-between;
+  margin: 0;
+}
+
+.bl-ac-line-title {
+  align-items: center;
+}
+
+.bl-ac-line-subtitle {
+  align-items: baseline;
+  font-size: 14px;
+  color: var(--bl-ac-subtitle);
+}
+
+/* One line, ellipsised. */
+.bl-ac-name,
+.bl-ac-address {
+  display: block;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/*
+ * The underline mark sits below the baseline, and `overflow: hidden` clips at
+ * the line box: with a font whose descent is shallow the mark vanished. The
+ * padding gives the clip room for it and the negative margin hands the room
+ * back, so the row's layout does not move.
+ */
+.bl-ac-name {
+  padding-bottom: 4px;
+  margin-bottom: -4px;
+}
+
+.bl-ac-name {
+  font-weight: 600;
+  color: var(--bl-ac-title);
+}
+
+.bl-ac-also {
+  margin-left: 0.5rem;
+  font-weight: normal;
+  color: var(--bl-ac-subtitle);
+}
+
+.bl-ac-people {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.bl-ac-states {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.bl-ac-state,
+.bl-ac-more-states {
+  box-sizing: border-box;
+  padding: 0.125rem 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  border-radius: var(--bl-ac-pill-radius);
+}
+
+.bl-ac-state {
+  color: var(--bl-ac-pill-fg);
+  background: var(--bl-ac-pill-bg);
+  border: 1px solid transparent;
+}
+
+.bl-ac-state[data-domicile] {
+  border-color: var(--bl-ac-pill-primary-border);
+}
+
+.bl-ac-more-states {
+  color: var(--bl-ac-more-fg);
+  background: var(--bl-ac-pill-secondary-bg);
+}
+
+.bl-ac-footer {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0;
+  padding: 0.5rem 0.875rem;
+  font-size: 14px;
+  color: #718096;
+}
+
+.bl-ac-footer[data-rows] {
+  border-top: 1px solid var(--bl-ac-border);
+}
+
+/*
+ * The marks, one treatment per emphasis. The name owns its weight; the
+ * alternative name stays at the subtitle's colour and normal weight, so a mark
+ * on it darkens rather than emboldens past the label.
+ */
+.bl-ac-name[data-emphasis="underline"] .bl-ac-mark {
+  text-decoration: underline;
+  text-decoration-color: var(--bl-ac-mark, var(--bl-ac-underline));
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+.bl-ac-name[data-emphasis="background"] .bl-ac-mark {
+  margin: 0 -0.125rem;
+  padding: 0 0.125rem;
+  background: var(--bl-ac-mark, var(--bl-ac-marker));
+  border-radius: 0.25rem;
+}
+
+.bl-ac-name[data-emphasis="weight"] {
+  font-weight: 500;
+}
+
+.bl-ac-name[data-emphasis="weight"] > .bl-ac-mark {
+  font-weight: 700;
+}
+
+.bl-ac[data-mark-color] .bl-ac-name[data-emphasis="weight"] > .bl-ac-mark {
+  color: var(--bl-ac-mark);
+}
+
+.bl-ac-name[data-emphasis="weight"] .bl-ac-also .bl-ac-mark {
+  font-weight: 600;
+  color: var(--bl-ac-mark, var(--bl-ac-also-mark));
+}
+
+.bl-ac-name[data-emphasis="ink"] {
+  color: var(--bl-ac-ink-base);
+}
+
+.bl-ac-name[data-emphasis="ink"] > .bl-ac-mark {
+  color: var(--bl-ac-mark, var(--bl-ac-title));
+}
+
+.bl-ac-name[data-emphasis="ink"] .bl-ac-also .bl-ac-mark {
+  color: var(--bl-ac-mark, var(--bl-ac-also-mark));
+}
