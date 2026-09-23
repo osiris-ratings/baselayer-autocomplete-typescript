@@ -25,7 +25,7 @@ import {
   withFirstGrant,
   type CheckResult,
 } from "./connect";
-import { Collapsible, Field, Select } from "./controls";
+import { Collapsible, FOLD_MS, Field, Select } from "./controls";
 import { keyMint, readClaims, tokenMint } from "./credentials";
 import { NetworkLog } from "./network";
 import { NetworkTimeline } from "./NetworkTimeline";
@@ -233,8 +233,12 @@ export function App() {
   const [draft, setDraft] = useState("");
   const [applied, setApplied] = useState<Applied | null>(null);
   const [check, setCheck] = useState<CheckResult | "testing" | null>(null);
+  // A successful check, for screen readers: the section it would show in is
+  // folded away (and inert) by the same click.
+  const [announced, setAnnounced] = useState("");
   const appliedCount = useRef(0);
   const [connectOpen, setConnectOpen] = useState(true);
+  const connectToggle = useRef<HTMLButtonElement>(null);
   const [stylingOpen, setStylingOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [debugOpen, setDebugOpen] = useState(false);
@@ -290,12 +294,13 @@ export function App() {
   const apply = async () => {
     const secret = draft.trim();
     setCheck("testing");
+    setAnnounced("");
     const result =
       mode === "key"
         ? await testKey(baseUrl, secret, network.fetch)
         : await testToken(baseUrl, secret, network.fetch);
-    setCheck(result);
     if (!result.ok) {
+      setCheck(result);
       return;
     }
     appliedCount.current += 1;
@@ -308,7 +313,13 @@ export function App() {
       environment,
       ...(result.grant !== undefined ? { firstGrant: result.grant } : {}),
     });
+    setCheck(null);
+    setAnnounced(result.message);
     setConnectOpen(false);
+    connectToggle.current?.focus();
+    // The result joins the section once it has folded: arriving with the
+    // fold, it would make the section grow just as it starts to shrink.
+    window.setTimeout(() => setCheck(result), FOLD_MS);
   };
 
   const filters: Filters | undefined = useMemo(() => {
@@ -379,6 +390,7 @@ export function App() {
             summary={connectSummary}
             open={connectOpen}
             onToggle={setConnectOpen}
+            toggleRef={connectToggle}
             testId="demo-connect"
           >
             <Field label="Environment">
@@ -485,10 +497,13 @@ export function App() {
               <button
                 type="button"
                 className="btn btn-primary"
-                disabled={
-                  draft.trim() === "" || check === "testing" || isApplied
-                }
-                onClick={() => void apply()}
+                disabled={draft.trim() === "" || isApplied}
+                // Not `disabled` while testing: that would drop keyboard
+                // focus to the page.
+                aria-disabled={check === "testing" || undefined}
+                onClick={() => {
+                  if (check !== "testing") void apply();
+                }}
                 data-testid="demo-apply"
               >
                 {check === "testing"
@@ -509,12 +524,15 @@ export function App() {
               <p
                 className="check"
                 data-ok={check.ok ? "true" : "false"}
-                role="status"
+                role={check.ok ? undefined : "status"}
               >
                 {check.message}
               </p>
             )}
           </Collapsible>
+          <p className="visually-hidden" role="status">
+            {announced}
+          </p>
 
           <section className="demo-card" aria-labelledby="demo-business-title">
             <div className="demo-card-head">

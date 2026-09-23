@@ -1,9 +1,12 @@
 // The demo's form controls. Every one is the same height and border as a text
 // input, selects included, so the panels read as one form.
 
-import { useId, useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode, type Ref } from "react";
 
 import { Icon, type IconName } from "../shared/icons";
+
+/** How long a fold takes to open or close: `.fold-body`'s transition. */
+export const FOLD_MS = 320;
 
 export function Collapsible({
   title,
@@ -15,6 +18,7 @@ export function Collapsible({
   nested = false,
   testId,
   icon,
+  toggleRef,
 }: {
   title: string;
   /** Drawn before the title. */
@@ -26,6 +30,8 @@ export function Collapsible({
   children: ReactNode;
   nested?: boolean;
   testId?: string;
+  /** The heading's button, for the host to move focus to. */
+  toggleRef?: Ref<HTMLButtonElement>;
 }) {
   const id = useId();
   return (
@@ -36,6 +42,7 @@ export function Collapsible({
     >
       <h2 className="fold-heading">
         <button
+          ref={toggleRef}
           type="button"
           className="fold-toggle"
           aria-expanded={open}
@@ -53,8 +60,15 @@ export function Collapsible({
           <span className="fold-chevron" aria-hidden="true" />
         </button>
       </h2>
-      <div id={id} className="fold-body" hidden={!open}>
-        {children}
+      {/* Folds by animating its height (a 1fr to 0fr grid row); inert while
+          folded, so nothing out of sight can take focus. */}
+      <div
+        id={id}
+        className="fold-body"
+        data-open={open ? "true" : "false"}
+        inert={!open}
+      >
+        <div className="fold-body-inner">{children}</div>
       </div>
     </section>
   );

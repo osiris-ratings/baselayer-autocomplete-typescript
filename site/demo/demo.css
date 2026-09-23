@@ -157,7 +157,36 @@
 }
 
 .fold-body {
-  margin-top: 18px;
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition:
+    grid-template-rows 320ms ease,
+    opacity 220ms ease;
+}
+
+.fold-body[data-open="false"] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.fold-body-inner {
+  min-height: 0;
+  margin: 0 -6px -6px;
+  padding: 0 6px 6px;
+  overflow: hidden;
+}
+
+.fold-body-inner::before {
+  display: block;
+  height: 18px;
+  content: "";
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fold-body {
+    transition: none;
+  }
 }
 
 .fold-nested {
@@ -175,8 +204,8 @@
   text-transform: uppercase;
 }
 
-.fold-nested .fold-body {
-  margin-top: 14px;
+.fold-nested .fold-body-inner::before {
+  height: 14px;
 }
 
 .fold-nested:last-child {
@@ -870,7 +899,8 @@
   margin-top: 4px;
 }
 
-.apply-row .btn[disabled] {
+.apply-row .btn[disabled],
+.apply-row .btn[aria-disabled="true"] {
   background: #c9ced8;
   color: #ffffff;
   cursor: not-allowed;
