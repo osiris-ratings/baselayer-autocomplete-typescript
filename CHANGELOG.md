@@ -18,6 +18,10 @@ breaking change bumps the minor version.
   and each route's filters (`FiltersByRelation`).
 - `useEntityAutocomplete` and `useSuggestionCombobox`, of which
   `useBusinessAutocomplete` and `useBusinessCombobox` are the businesses form.
+- `open` on `BusinessAutocomplete`, `BusinessAutocompleteView` and
+  `useSuggestionCombobox`: hold the menu open whatever focus and Escape do,
+  for a style preview or a design tool. It still shows only what there is to
+  show, and letting go leaves the menu where it would have been.
 
 ## [0.1.0] - 2026-09-22
 

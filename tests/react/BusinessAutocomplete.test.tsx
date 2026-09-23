@@ -206,6 +206,28 @@ describe("BusinessAutocomplete", () => {
     });
   });
 
+  it("keeps its rows on screen after the field loses focus while held open", async () => {
+    vi.stubGlobal("fetch", tierFetch());
+    const user = userEvent.setup();
+    render(
+      <>
+        <Host
+          source={{ mint: grantingMint(), baseUrl: BASE_URL }}
+          prewarmOnFocus={false}
+          open
+        />
+        <button type="button">elsewhere</button>
+      </>,
+    );
+
+    await user.type(input(), "osiris");
+    await screen.findAllByTestId("business-suggestion");
+    await user.click(screen.getByRole("button", { name: "elsewhere" }));
+
+    expect(input()).not.toHaveFocus();
+    expect(screen.getAllByTestId("business-suggestion")).toHaveLength(2);
+  });
+
   it("hands the host the pick and its token, and does not query the picked name", async () => {
     const fetch = tierFetch();
     const mint = grantingMint();

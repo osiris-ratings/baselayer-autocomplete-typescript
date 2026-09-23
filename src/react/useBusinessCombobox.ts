@@ -13,6 +13,12 @@ export interface UseSuggestionComboboxOptions<T extends Suggestion> {
   onPick(item: T): void;
   /** Whether a footer row (count, "searching", an error) has anything to say. */
   hasFooter: boolean;
+  /**
+   * Hold the menu open whatever focus and Escape do, for a preview. Read
+   * alongside downshift's own state rather than controlling it, so letting go
+   * leaves downshift where it was.
+   */
+  open?: boolean | undefined;
 }
 
 export interface SuggestionCombobox<T extends Suggestion> extends Pick<
@@ -66,6 +72,7 @@ export function useSuggestionCombobox<T extends Suggestion>({
   onInputChange,
   onPick,
   hasFooter,
+  open = false,
 }: UseSuggestionComboboxOptions<T>): SuggestionCombobox<T> {
   const combobox = useCombobox<T>({
     id,
@@ -86,10 +93,11 @@ export function useSuggestionCombobox<T extends Suggestion>({
           }
         : changes,
   });
-  const hasRows = combobox.isOpen && items.length > 0;
-  const menuVisible = hasRows || (combobox.isOpen && hasFooter);
+  const isOpen = open || combobox.isOpen;
+  const hasRows = isOpen && items.length > 0;
+  const menuVisible = hasRows || (isOpen && hasFooter);
   return {
-    isOpen: combobox.isOpen,
+    isOpen,
     highlightedIndex: combobox.highlightedIndex,
     getLabelProps: combobox.getLabelProps,
     getMenuProps: combobox.getMenuProps,

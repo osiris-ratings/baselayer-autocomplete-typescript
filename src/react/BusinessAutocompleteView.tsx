@@ -80,6 +80,11 @@ export interface BusinessAutocompleteViewProps {
   roundTripMs: number | null;
   isSearching: boolean;
   error: string | null;
+  /**
+   * Hold the menu open whatever focus does: a style preview, a design tool.
+   * It still shows only what there is to show.
+   */
+  open?: boolean | undefined;
 
   /** How the rows are drawn; any knob left out keeps its default. */
   look?: LookInput | undefined;
@@ -243,6 +248,7 @@ export function BusinessAutocompleteView({
   roundTripMs,
   isSearching,
   error,
+  open = false,
   look: lookInput,
   messages: messageOverrides,
   label,
@@ -263,6 +269,7 @@ export function BusinessAutocompleteView({
     onInputChange,
     onPick: onSelect,
     hasFooter,
+    open,
   });
   // What was typed, as the tier tokenizes it, for cutting a marked word down
   // to the typed characters under the `substring` region.

@@ -464,6 +464,96 @@ describe("BusinessAutocompleteView", () => {
 // Ported from the console's AutocompleteMenu shell, which the SDK folds into
 // the view: the same `data-testid` and `data-open`, hidden rather than unmounted.
 describe("the menu", () => {
+  function heldOpen(overrides: Partial<BusinessAutocompleteViewProps> = {}) {
+    return render(
+      <BusinessAutocompleteView
+        id="businessName"
+        value=""
+        onInputChange={vi.fn()}
+        onSelect={vi.fn()}
+        suggestions={[osiris, stable]}
+        found={2}
+        foundCapped={false}
+        truncated={false}
+        indexTag={null}
+        roundTripMs={23}
+        isSearching={false}
+        error={null}
+        open
+        {...overrides}
+      />,
+    );
+  }
+
+  it("shows its rows when held open, before any focus or typing", () => {
+    heldOpen();
+
+    expect(screen.getByTestId("autocomplete-menu")).toHaveAttribute(
+      "data-open",
+      "true",
+    );
+    expect(screen.getAllByTestId("business-suggestion")).toHaveLength(2);
+    expect(screen.getByRole("combobox")).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("2 matches");
+  });
+
+  it("stays open through a blur and Escape while held open", () => {
+    heldOpen();
+    const input = screen.getByRole("combobox");
+
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "osiri" } });
+    fireEvent.blur(input);
+    fireEvent.keyDown(input, { key: "Escape" });
+
+    expect(screen.getByTestId("autocomplete-menu")).toHaveAttribute(
+      "data-open",
+      "true",
+    );
+    expect(screen.getAllByTestId("business-suggestion")).toHaveLength(2);
+  });
+
+  it("still shows nothing when held open with nothing to show", () => {
+    heldOpen({ suggestions: [], found: 0, roundTripMs: null });
+
+    expect(screen.getByTestId("autocomplete-menu")).toHaveAttribute(
+      "data-open",
+      "false",
+    );
+    expect(screen.getByRole("combobox")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
+  it("closes as usual once it is no longer held open", () => {
+    const { rerender } = heldOpen();
+    rerender(
+      <BusinessAutocompleteView
+        id="businessName"
+        value=""
+        onInputChange={vi.fn()}
+        onSelect={vi.fn()}
+        suggestions={[osiris, stable]}
+        found={2}
+        foundCapped={false}
+        truncated={false}
+        indexTag={null}
+        roundTripMs={23}
+        isSearching={false}
+        error={null}
+      />,
+    );
+
+    expect(screen.getByTestId("autocomplete-menu")).toHaveAttribute(
+      "data-open",
+      "false",
+    );
+  });
+
   it("keeps its contents mounted whether open or closed, and says which it is", () => {
     const { rerender } = render(
       <BusinessAutocompleteView

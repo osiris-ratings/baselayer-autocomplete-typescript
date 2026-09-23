@@ -58,6 +58,11 @@ interface CommonProps {
   renderRow?: (props: RowRenderProps) => ReactNode;
   classNames?: Partial<Record<SlotName, string>>;
   unstyled?: boolean;
+  /**
+   * Hold the menu open whatever focus does: a style preview, a design tool.
+   * It still shows only what there is to show.
+   */
+  open?: boolean;
   /** The deployment cannot mint (503 code 481), or can again. */
   onUnavailable?: (state: { unavailable: boolean }) => void;
 }
@@ -132,6 +137,7 @@ function Connected({
   renderRow,
   classNames,
   unstyled,
+  open,
   onUnavailable,
 }: CommonProps & { client: AutocompleteClient }) {
   const client = useResolvedClient(given);
@@ -197,6 +203,7 @@ function Connected({
       renderRow={renderRow}
       classNames={classNames}
       unstyled={unstyled}
+      open={open}
     />
   );
 }

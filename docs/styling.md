@@ -108,3 +108,39 @@ the menu yourself too: it is the element with `data-testid="autocomplete-menu"`.
 
 Past that, drop the component and build on the hooks: see
 [Headless use](headless.md).
+
+## 5. Previewing a style
+
+`open` holds the menu open whatever focus does, so a style can be judged
+without typing and retyping. It shows only what there is to show: rows, or
+the count row once there is something to count. Letting go of it leaves the
+menu open or closed as it would have been.
+
+To style rows before any are fetched, draw `BusinessAutocompleteView` (the
+component without its data) with rows of your own, the way the live demo
+does:
+
+```tsx
+import { BusinessAutocompleteView } from "@baselayer/autocomplete/react";
+
+<BusinessAutocompleteView
+  id="preview"
+  value=""
+  onInputChange={() => {}}
+  onSelect={() => {}}
+  suggestions={sampleRows}
+  found={27}
+  foundCapped={false}
+  truncated={false}
+  indexTag={null}
+  roundTripMs={42}
+  isSearching={false}
+  error={null}
+  look={look}
+  open
+/>;
+```
+
+With nothing typed, a row's marks cover its matched words whole: the
+`substring` region cuts them down to the typed characters, and nothing has
+been typed.
