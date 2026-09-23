@@ -28,9 +28,9 @@ Pick the environment, then one of two ways in, and press **Apply**. The
 button stays grey until there is something to apply. Apply tests what you
 gave it before the demo uses it, and says what the API answered: a refused
 key, a token bound to another page, an expired one. Once it passes, Connect
-folds away to one line that says how you are connected; open it again to
-change anything. Run locally, the page starts on **Production, through this
-dev server**.
+folds away to one line that says how you are connected, and the result
+waits inside; open it again to change anything. Run locally, the page starts
+on **Production, through this dev server**.
 
 **A session token (recommended).** Mint a session from your terminal, bound
 to the demo's origin, and paste the token. Your API key never reaches the
@@ -122,9 +122,10 @@ set.
 The debug panel folds to a tab on the right edge, reading **Debug here** up
 its spine, with the number of requests so far. When a request is refused or
 fails, or the SDK logs an error, while it is folded, a red dot pulses on the
-tab until you open it. Opened, the panel takes the right half of the page;
-its bar folds it back. On a narrow screen the tab is a bar under the
-controls, and the panel opens below them.
+tab's bug until you open it. Folded, the page is as wide as the site's other
+pages; opened, everything below the header widens and the panel takes its
+right half. Its bar folds it back. On a narrow screen the tab is a bar under
+the controls, and the panel opens below them.
 
 ![The demo with its debug panel folded](images/demo-folded.png)
 
