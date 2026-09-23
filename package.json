@@ -82,7 +82,8 @@
     "site": "vite --config site/vite.config.ts",
     "site:build": "tsc --noEmit -p site && vite build --config site/vite.config.ts",
     "demo": "vite --config site/vite.config.ts --open /demo/",
-    "contracts:sessions": "node scripts/vendor-sessions-spec.ts"
+    "contracts:sessions": "node scripts/vendor-sessions-spec.ts",
+    "diagrams": "UPDATE_DIAGRAMS=1 vitest run --project site tests/site/diagrams.test.tsx"
   },
   "peerDependencies": {
     "react": "^18.2.0 || ^19.0.0",

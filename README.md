@@ -33,20 +33,28 @@ neither React nor a DOM.
 
 ## How it fits together
 
-```text
-your page (browser)          your backend                 Baselayer
-────────────────────         ────────────────────         ───────────────
-SDK needs a session  ─────►  POST /api/ac-session  ─────► mint a session
-                             (your route, your auth)       with your API key
-                     ◄─────  status, body, Retry-After ◄── bound to the
-                             passed straight through       page's Origin
-keystrokes  ───────────────────────────────────────────► autocomplete tier
-            X-Autocomplete-Session: <session>             rows
-```
+![The browser, your backend and Baselayer, and the five hops between them](docs/images/architecture.svg)
+
+1. When the field gets focus, the SDK asks your endpoint for a session. Your
+   own cookie authenticates the call.
+2. Your backend mints it with your API key, forwarding the page's `Origin`,
+   and returns Baselayer's answer unchanged.
+3. Every keystroke goes straight to Baselayer with the session in a header:
+   no cookies, no key.
+4. Picking a row hands your form its `business_token`.
+5. Your backend sends the token with `POST /searches`, so the search
+   resolves to exactly the business that was picked.
 
 Your API key stays on your backend. The browser holds only a short-lived
 session that is bound to your page's origin and carries its own request
 budget.
+
+Request by request, from focus to submit:
+
+![Every request between the browser, your backend and Baselayer](docs/images/request-flow.svg)
+
+Both diagrams are the site's own, rendered to files by `pnpm diagrams`; a
+test fails when a file falls behind its component.
 
 ## 1. Add the mint endpoint to your backend
 
@@ -123,6 +131,8 @@ code)` tells you when that is the right move.
 - [Mint endpoint contract](docs/mint-endpoint.md): the three rules, and
   examples for Next.js, Express and curl
 - [Headless use](docs/headless.md): the hooks, and the core without React
+- [Entities beyond businesses](docs/entities.md): people, addresses and
+  liens, the routes to come, and `search`
 - [Styling](docs/styling.md): CSS variables, class names, render props,
   `unstyled`
 - [Error states](docs/error-states.md): what the SDK does with every answer
