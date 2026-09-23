@@ -726,15 +726,20 @@ export function App() {
             onClick={() => setDebugOpen(true)}
             data-testid="demo-debug-open"
           >
-            <Icon name="bug" />
+            <span className="debug-tab-icon">
+              <Icon name="bug" />
+              {unseenErrors && (
+                <span
+                  className="debug-tab-alert"
+                  data-testid="demo-debug-alert"
+                >
+                  <span className="visually-hidden">New errors</span>
+                </span>
+              )}
+            </span>
             <span className="debug-tab-label">Debug here</span>
             {requests > 0 && (
               <span className="debug-tab-count">{requests}</span>
-            )}
-            {unseenErrors && (
-              <span className="debug-tab-alert" data-testid="demo-debug-alert">
-                <span className="visually-hidden">New errors</span>
-              </span>
             )}
           </button>
         )}
