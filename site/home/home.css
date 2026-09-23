@@ -590,10 +590,11 @@
   list-style: none;
 }
 
-/* The tree's lines: a trunk down the left, a branch to each item. */
+/* The tree's lines: a trunk down the left, a branch to each item. Each
+   branch draws its own stretch of trunk; the last one's stops at its elbow,
+   so the trunk ends where the last branch leaves it. */
 .graph-branches {
   margin-left: 26px;
-  border-left: 1px solid var(--dusk-line);
 }
 
 .graph-branches > li {
@@ -610,9 +611,18 @@
   content: "";
 }
 
-.graph-branches > li:last-child {
-  margin-left: -1px;
-  border-left: 1px solid var(--paper);
+.graph-branches > li::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-left: 1px solid var(--dusk-line);
+  content: "";
+}
+
+.graph-branches > li:last-child::after {
+  bottom: auto;
+  height: 27px;
 }
 
 .graph-branch {
