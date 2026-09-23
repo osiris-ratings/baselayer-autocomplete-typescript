@@ -57,6 +57,7 @@ Set them on `.bl-ac` or any ancestor selector more specific than it:
 | `--bl-ac-z`                   | `1000`                             | the menu's stacking              |
 | `--bl-ac-menu-width`          | `560px`                            | the menu from 48em up            |
 | `--bl-ac-list-max-height`     | `24rem`                            | the scrolling list               |
+| `--bl-ac-line-height`         | `1.5`                              | every line in the menu           |
 
 ```css
 .my-form .bl-ac {

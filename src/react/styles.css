@@ -28,6 +28,7 @@
   --bl-ac-z: 1000;
   --bl-ac-menu-width: 560px;
   --bl-ac-list-max-height: 24rem;
+  --bl-ac-line-height: 1.5;
   position: relative;
   box-sizing: border-box;
 }
@@ -66,7 +67,7 @@
   margin: 0.25rem 0 0;
   padding: 0;
   overflow: hidden;
-  line-height: normal;
+  line-height: var(--bl-ac-line-height);
   text-align: left;
   background: var(--bl-ac-bg);
   border: 1px solid var(--bl-ac-border);
@@ -125,26 +126,20 @@
   color: var(--bl-ac-subtitle);
 }
 
-/* One line, ellipsised. */
+/*
+ * One line, ellipsised at a word, as the console's line clamp does. The menu's
+ * line-height (1.5) leaves room below the baseline for the underline mark,
+ * which a tight line-height would clip.
+ */
 .bl-ac-name,
 .bl-ac-address {
-  display: block;
+  display: -webkit-box;
   min-width: 0;
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/*
- * The underline mark sits below the baseline, and `overflow: hidden` clips at
- * the line box: with a font whose descent is shallow the mark vanished. The
- * padding gives the clip room for it and the negative margin hands the room
- * back, so the row's layout does not move.
- */
-.bl-ac-name {
-  padding-bottom: 4px;
-  margin-bottom: -4px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
 }
 
 .bl-ac-name {
