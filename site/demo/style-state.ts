@@ -46,7 +46,7 @@ export const CSS_VARIABLES = {
   "--bl-ac-marker": {
     label: "Background mark",
     kind: "color",
-    value: "#faf089",
+    value: "#c6f6d5",
   },
   "--bl-ac-radius": { label: "Menu corners", kind: "length", value: "0.5rem" },
   "--bl-ac-pill-radius": {

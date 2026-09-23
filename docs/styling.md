@@ -51,7 +51,7 @@ Set them on `.bl-ac` or any ancestor selector more specific than it:
 | `--bl-ac-border`              | `#edf2f7`                          | the menu border, the footer rule |
 | `--bl-ac-mark`                | unset                              | every mark, when set             |
 | `--bl-ac-underline`           | `#38a169`                          | the underline mark               |
-| `--bl-ac-marker`              | `#faf089`                          | the background mark              |
+| `--bl-ac-marker`              | `#c6f6d5`                          | the background mark              |
 | `--bl-ac-radius`              | `0.5rem`                           | the menu                         |
 | `--bl-ac-shadow`              | `0 4px 8px rgba(16, 24, 40, 0.08)` | the menu                         |
 | `--bl-ac-z`                   | `1000`                             | the menu's stacking              |

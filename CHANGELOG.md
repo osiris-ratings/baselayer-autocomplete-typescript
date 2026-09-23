@@ -23,6 +23,12 @@ breaking change bumps the minor version.
   for a style preview or a design tool. It still shows only what there is to
   show, and letting go leaves the menu where it would have been.
 
+### Changed
+
+- The `background` emphasis highlights in light green (`--bl-ac-marker`,
+  `#c6f6d5`, Chakra's green.100) instead of yellow (`#faf089`). Hosts that
+  set `--bl-ac-marker` or `matchEmphasisColor` see no change.
+
 ## [0.1.0] - 2026-09-22
 
 ### Added

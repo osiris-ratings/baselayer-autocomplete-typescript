@@ -923,7 +923,7 @@ look with no Chakra present.
 | `show_debug_info`                 | prop only                     | `false`               |
 
 When `--bl-ac-mark` is unset the stylesheet falls back per emphasis:
-`#38A169` (green.500) for `underline`, `#FAF089` (yellow.200) for
+`#38A169` (green.500) for `underline`, `#C6F6D5` (green.100) for
 `background`, the title's own ink for `weight` and `ink`. `plain` draws no
 marks. The region drives `partsFor`, not CSS: `token` draws the tier's
 highlight parts as sent, `substring` cuts each marked word at the typed
