@@ -117,8 +117,7 @@ kbd {
   border-bottom: 1px solid var(--line);
 }
 
-.site-header .wrap,
-.site-header .wrap-wide {
+.site-header .wrap {
   display: flex;
   align-items: center;
   gap: 36px;
@@ -212,8 +211,7 @@ kbd {
 }
 
 @media (max-width: 1080px) {
-  .site-header .wrap,
-  .site-header .wrap-wide {
+  .site-header .wrap {
     gap: 16px;
   }
 

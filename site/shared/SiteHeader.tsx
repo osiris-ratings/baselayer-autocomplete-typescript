@@ -41,13 +41,7 @@ const HOME_SECTIONS = NAV.flatMap(item =>
   item.section !== undefined ? [item.section] : [],
 );
 
-export function SiteHeader({
-  current,
-  wide = false,
-}: {
-  current: Page;
-  wide?: boolean;
-}) {
+export function SiteHeader({ current }: { current: Page }) {
   const [open, setOpen] = useState(false);
   const section = useScrollSpy(current === "home" ? HOME_SECTIONS : []);
 
@@ -67,7 +61,7 @@ export function SiteHeader({
 
   return (
     <header className="site-header">
-      <div className={wide ? "wrap-wide" : "wrap"}>
+      <div className="wrap">
         <div className="brand">
           <a
             className="brand-logo"

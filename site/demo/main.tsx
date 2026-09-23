@@ -13,8 +13,8 @@ import { App } from "./App";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <SiteHeader current="demo" wide />
+    <SiteHeader current="demo" />
     <App />
-    <SiteFooter wide />
+    <SiteFooter />
   </StrictMode>,
 );

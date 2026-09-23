@@ -355,7 +355,7 @@ export function App() {
 
   return (
     <main className="demo">
-      <div className="demo-intro wrap-wide">
+      <div className={`demo-intro ${debugOpen ? "wrap-wide" : "wrap"}`}>
         <p className="eyebrow">Live demo</p>
         <h1 className="display-sm">
           The typeahead, against your own organization
@@ -368,7 +368,7 @@ export function App() {
       </div>
 
       <div
-        className="demo-split wrap-wide"
+        className={`demo-split ${debugOpen ? "wrap-wide" : "wrap"}`}
         data-debug={debugOpen ? "open" : "closed"}
       >
         <div className="demo-controls">

@@ -2,10 +2,10 @@ import { GitHubMark } from "./GitHubMark";
 import { links } from "./links";
 import { Logo } from "./Logo";
 
-export function SiteFooter({ wide = false }: { wide?: boolean }) {
+export function SiteFooter() {
   return (
     <footer className="site-footer">
-      <div className={wide ? "wrap-wide" : "wrap"}>
+      <div className="wrap">
         <div className="footer-grid">
           <div>
             <a
