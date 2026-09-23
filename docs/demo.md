@@ -8,9 +8,10 @@ answered.
 ![The demo answering "osiris ra" against staging](images/demo-typeahead-osiris-ra.png)
 
 It is published from this repository's `main` to GitHub Pages by the
-`Demo` workflow. While the repository is private, so is the site: open it
-signed in to GitHub as a member of the osiris-ratings organization. The
-address is on the repository's Pages settings and on every Demo run.
+`Demo` workflow, at <https://curly-adventure-y83og2w.pages.github.io/>.
+While the repository is private, so is the site: open it signed in to
+GitHub as a member of the osiris-ratings organization. The address changes
+when the site goes public.
 
 ## Connecting
 
