@@ -6,6 +6,19 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+### Added
+
+- An entity model for the routes beyond businesses: `EntityType`,
+  `Relation`, `ROUTES`, and the row types `PersonSuggestion`,
+  `AddressSuggestion` and `LienSuggestion` over a shared `SuggestionBase`,
+  from the working specification. Only businesses is served.
+- `client.search(relation, query)`, typed by route; `suggest` is its
+  businesses form. `RequestEvent.relation` names the route asked.
+- `parseSuggestResponse(relation, body)`, `buildSuggestUrl`, `filterParams`,
+  and each route's filters (`FiltersByRelation`).
+- `useEntityAutocomplete` and `useSuggestionCombobox`, of which
+  `useBusinessAutocomplete` and `useBusinessCombobox` are the businesses form.
+
 ## [0.1.0] - 2026-09-22
 
 ### Added

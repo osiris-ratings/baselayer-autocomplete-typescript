@@ -1,12 +1,23 @@
-import type { Include } from "./wire";
+import { ROUTES, type IncludeOf, type Relation } from "./entities";
 
-/** Narrowing filters on `GET /autocomplete/businesses`. */
+/** A person's role on a business: what `sos_officers` records. */
+export type PersonRole = "officer" | "agent";
+/** Which side of a lien a party is on. */
+export type LienPartyRole = "debtor" | "secured_party";
+/** What an address is to the entity that holds it. */
+export type AddressRole = "principal" | "mailing" | "agent" | "officer";
+export type LienStatus = "active" | "lapsed" | "terminated";
+
+/**
+ * Narrowing filters on `GET /autocomplete/businesses`: exactly the set the
+ * tier serves today, which answers 422 to any other parameter.
+ */
 export interface Filters {
   /** Any state the family is registered in; sent as ONE comma-joined `state`. */
   state?: string[];
   /** The root registration's state. */
   domicileState?: string;
-  person?: { name?: string; role?: "officer" | "agent" };
+  person?: { name?: string; role?: PersonRole };
   address?: {
     text?: string;
     city?: string;
@@ -15,16 +26,66 @@ export interface Filters {
   };
 }
 
-export interface Query {
-  /** The business name as typed. */
+interface BusinessRelationFilter {
+  name?: string;
+  state?: string[];
+}
+
+interface AddressRelationFilter {
+  text?: string;
+  city?: string;
+  postalCode?: string[];
+  state?: string[];
+  role?: AddressRole[];
+}
+
+/** Not served yet: the working specification's filters on `/autocomplete/people`. */
+export interface PeopleFilters {
+  state?: string[];
+  business?: BusinessRelationFilter;
+  address?: AddressRelationFilter;
+  lien?: { state?: string[]; status?: LienStatus[]; role?: LienPartyRole[] };
+}
+
+/** Not served yet: the working specification's filters on `/autocomplete/addresses`. */
+export interface AddressesFilters {
+  state?: string[];
+  business?: BusinessRelationFilter;
+  person?: { name?: string; role?: PersonRole[] };
+}
+
+/** Not served yet: the working specification's filters on `/autocomplete/liens`. */
+export interface LiensFilters {
+  /** The filing state. */
+  state?: string[];
+  business?: BusinessRelationFilter;
+  person?: { name?: string; role?: LienPartyRole[] };
+  address?: AddressRelationFilter;
+  /** The row's own status: on this route the lien is the row. */
+  lien?: { status?: LienStatus[] };
+}
+
+export interface FiltersByRelation {
+  businesses: Filters;
+  people: PeopleFilters;
+  addresses: AddressesFilters;
+  liens: LiensFilters;
+}
+
+/** One keystroke's query on a route. */
+export interface RouteQuery<R extends Relation> {
+  /** The text as typed. */
   q: string;
   /** 1 to 20; omitted, the tier answers 10. */
   limit?: number;
-  /** Omitted, the tier includes people and addresses. */
-  include?: Include[];
+  /** Omitted, the tier expands the route's default relations. */
+  include?: IncludeOf<R>[];
   /** Subject to the grant's `filterMinStem`; see `onShortStem`. */
-  filters?: Filters;
+  filters?: FiltersByRelation[R];
 }
+
+/** A query on `GET /autocomplete/businesses`. */
+export type Query = RouteQuery<"businesses">;
 
 /** What to do with filters on a query shorter than the grant's filter stem. */
 export type ShortStemPolicy = "withhold" | "send" | "throw";
@@ -85,35 +146,83 @@ export function stemLength(q: string): number {
   return Array.from(depunct(strippedQuery(q))).length;
 }
 
-export function hasFilters(filters: Filters | undefined): boolean {
-  if (filters === undefined) {
-    return false;
+/**
+ * Every filter parameter a route can take, in the one order they are sent.
+ * The tier parses strictly (an unknown or repeated parameter is a 422), and
+ * a fixed order keeps one query one URL.
+ */
+const FILTER_PARAMS: {
+  param: string;
+  path: readonly [string] | readonly [string, string];
+}[] = [
+  { param: "state", path: ["state"] },
+  { param: "domicile_state", path: ["domicileState"] },
+  { param: "person.name", path: ["person", "name"] },
+  { param: "person.role", path: ["person", "role"] },
+  { param: "business.name", path: ["business", "name"] },
+  { param: "business.state", path: ["business", "state"] },
+  { param: "address.text", path: ["address", "text"] },
+  { param: "address.city", path: ["address", "city"] },
+  { param: "address.postal_code", path: ["address", "postalCode"] },
+  { param: "address.state", path: ["address", "state"] },
+  { param: "address.role", path: ["address", "role"] },
+  { param: "lien.state", path: ["lien", "state"] },
+  { param: "lien.status", path: ["lien", "status"] },
+  { param: "lien.role", path: ["lien", "role"] },
+];
+
+/** The value a parameter carries: trimmed text, or a non-empty comma list. */
+function paramValue(value: unknown): string | null {
+  if (typeof value === "string") {
+    return value.trim().length > 0 ? value : null;
   }
-  const { state, domicileState, person, address } = filters;
-  return (
-    (state !== undefined && state.length > 0) ||
-    nonEmpty(domicileState) ||
-    nonEmpty(person?.name) ||
-    person?.role !== undefined ||
-    nonEmpty(address?.text) ||
-    nonEmpty(address?.city) ||
-    nonEmpty(address?.postalCode) ||
-    nonEmpty(address?.state)
-  );
+  if (Array.isArray(value)) {
+    const items = value.filter(
+      (item): item is string => typeof item === "string" && item.trim() !== "",
+    );
+    return items.length > 0 ? items.join(",") : null;
+  }
+  return null;
 }
 
-function nonEmpty(value: string | undefined): value is string {
-  return value !== undefined && value.trim().length > 0;
+/** The filter parameters a query sends, in order. */
+export function filterParams(filters: object | undefined): [string, string][] {
+  if (filters === undefined) {
+    return [];
+  }
+  const record = filters as Record<string, unknown>;
+  const out: [string, string][] = [];
+  for (const { param, path } of FILTER_PARAMS) {
+    const [head, field] = path;
+    const holder = record[head];
+    const value =
+      field === undefined
+        ? holder
+        : typeof holder === "object" && holder !== null
+          ? (holder as Record<string, unknown>)[field]
+          : undefined;
+    const text = paramValue(value);
+    if (text !== null) {
+      out.push([param, text]);
+    }
+  }
+  return out;
+}
+
+/** Whether a query carries any filter, on any route. */
+export function hasFilters(filters: object | undefined): boolean {
+  return filterParams(filters).length > 0;
 }
 
 /**
- * The request URL. Parameters are emitted once each, in a fixed order, and
- * only when set: the tier parses strictly and answers 422 to an unknown or
- * repeated one.
+ * The request URL for a route. Parameters are emitted once each, in a fixed
+ * order, and only when set: the tier parses strictly and answers 422 to an
+ * unknown or repeated one.
  */
-export function buildBusinessesUrl(
+export function buildSuggestUrl<R extends Relation>(
   baseUrl: string,
-  query: Query,
+  relation: R,
+  query: RouteQuery<R>,
   { withFilters = true }: { withFilters?: boolean } = {},
 ): string {
   const params = new URLSearchParams();
@@ -124,35 +233,21 @@ export function buildBusinessesUrl(
   if (query.include !== undefined) {
     params.set("include", query.include.join(","));
   }
-  const filters = withFilters ? query.filters : undefined;
-  if (filters !== undefined) {
-    if (filters.state !== undefined && filters.state.length > 0) {
-      params.set("state", filters.state.join(","));
-    }
-    if (nonEmpty(filters.domicileState)) {
-      params.set("domicile_state", filters.domicileState);
-    }
-    if (nonEmpty(filters.person?.name)) {
-      params.set("person.name", filters.person.name);
-    }
-    if (filters.person?.role !== undefined) {
-      params.set("person.role", filters.person.role);
-    }
-    const address = filters.address;
-    if (nonEmpty(address?.text)) {
-      params.set("address.text", address.text);
-    }
-    if (nonEmpty(address?.city)) {
-      params.set("address.city", address.city);
-    }
-    if (nonEmpty(address?.postalCode)) {
-      params.set("address.postal_code", address.postalCode);
-    }
-    if (nonEmpty(address?.state)) {
-      params.set("address.state", address.state);
+  if (withFilters) {
+    for (const [param, value] of filterParams(query.filters)) {
+      params.set(param, value);
     }
   }
-  return `${baseUrl.replace(/\/+$/, "")}/autocomplete/businesses?${params.toString()}`;
+  return `${baseUrl.replace(/\/+$/, "")}${ROUTES[relation].path}?${params.toString()}`;
+}
+
+/** The request URL for `GET /autocomplete/businesses`. */
+export function buildBusinessesUrl(
+  baseUrl: string,
+  query: Query,
+  options: { withFilters?: boolean } = {},
+): string {
+  return buildSuggestUrl(baseUrl, "businesses", query, options);
 }
 
 export type Recovery = "remint" | "wait" | "none";

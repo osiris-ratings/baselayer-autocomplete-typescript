@@ -2,15 +2,17 @@ import {
   MAX_LIMIT,
   MAX_Q_CHARS,
   MIN_Q_CHARS,
-  buildBusinessesUrl,
+  buildSuggestUrl,
   hasFilters,
   recoveryFor,
   stemLength,
   strippedQuery,
   type Query,
   type Recovery,
+  type RouteQuery,
   type ShortStemPolicy,
 } from "./businesses";
+import type { Relation } from "./entities";
 import { AutocompleteError, abortError, isAbortError } from "./errors";
 import type { MintFunction } from "./mint";
 import {
@@ -28,9 +30,9 @@ import {
 import {
   ContractViolation,
   firstValidationMessage,
-  parseBusinessesResponse,
   parseErrorEnvelope,
-  type BusinessesResponse,
+  parseSuggestResponse,
+  type SuggestResponse,
 } from "./wire";
 
 /** The subset of `Response` the client reads; `fetch` satisfies it. */
@@ -71,8 +73,8 @@ export interface AutocompleteClientConfig {
   onShortStem?: ShortStemPolicy;
 }
 
-export interface SuggestResult {
-  response: BusinessesResponse;
+export interface SearchResult<R extends Relation = "businesses"> {
+  response: SuggestResponse<R>;
   /** `X-Autocomplete-Index` of the artifact that answered. */
   indexTag: string | null;
   requestId: string | null;
@@ -83,6 +85,9 @@ export interface SuggestResult {
   /** The query carried filters and the stem was too short for them. */
   filtersWithheld: boolean;
 }
+
+/** A search on `GET /autocomplete/businesses`. */
+export type SuggestResult = SearchResult<"businesses">;
 
 export interface BrakeState {
   until: number;
@@ -104,6 +109,8 @@ export interface ClientSnapshot {
 }
 
 export interface RequestEvent {
+  /** The route asked. */
+  relation: Relation;
   q: string;
   filtersWithheld: boolean;
   /** The final reply's status; 0 when none arrived. */
@@ -125,11 +132,21 @@ export interface ClientEvents {
 }
 
 export interface AutocompleteClient {
-  /** Suggestions for one keystroke, recovering at most once. */
+  /** Business suggestions for one keystroke, recovering at most once. */
   suggest(
     query: Query,
     options?: { signal?: AbortSignal },
   ): Promise<SuggestResult>;
+  /**
+   * Suggestions for one keystroke on any route, recovering at most once. One
+   * session serves every route; its budget is counted per route by the tier.
+   * Only `businesses` is served today.
+   */
+  search<R extends Relation>(
+    relation: R,
+    query: RouteQuery<R>,
+    options?: { signal?: AbortSignal },
+  ): Promise<SearchResult<R>>;
   /** The current grant, minting or refreshing when needed. */
   getSession(options?: { force?: boolean }): Promise<Grant>;
   /** Mint ahead of the first keystroke; failures are not reported. */
@@ -396,7 +413,7 @@ export function createAutocompleteClient(
     return Math.min(seconds * 1000, requestPolicy.maxRetryAfterMs);
   }
 
-  function validate(query: Query): void {
+  function validate(query: RouteQuery<Relation>): void {
     const stripped = strippedQuery(query.q);
     const length = Array.from(query.q.trim()).length;
     if (Array.from(stripped).length < MIN_Q_CHARS || length > MAX_Q_CHARS) {
@@ -426,10 +443,11 @@ export function createAutocompleteClient(
     listeners.request.forEach(handler => handler(event));
   }
 
-  async function suggest(
-    query: Query,
+  async function search<R extends Relation>(
+    relation: R,
+    query: RouteQuery<R>,
     { signal }: { signal?: AbortSignal } = {},
-  ): Promise<SuggestResult> {
+  ): Promise<SearchResult<R>> {
     validate(query);
     if (now() < authBrakeUntil) {
       throw new AutocompleteError({
@@ -460,7 +478,7 @@ export function createAutocompleteClient(
         });
       }
       filtersWithheld = shortStem_ && shortStem === "withhold";
-      const url = buildBusinessesUrl(baseUrl, query, {
+      const url = buildSuggestUrl(baseUrl, relation, query, {
         withFilters: !filtersWithheld,
       });
       const startedAt = elapsed();
@@ -487,6 +505,7 @@ export function createAutocompleteClient(
         });
         emitRequest(
           requestEvent(
+            relation,
             query,
             0,
             null,
@@ -503,10 +522,10 @@ export function createAutocompleteClient(
       if (response.ok) {
         consecutiveAuthFailures = 0;
         let body: unknown;
-        let parsed: BusinessesResponse;
+        let parsed: SuggestResponse<R>;
         try {
           body = await response.json();
-          parsed = parseBusinessesResponse(body);
+          parsed = parseSuggestResponse(relation, body);
         } catch (error) {
           if (isAbortError(error)) {
             throw error;
@@ -522,6 +541,7 @@ export function createAutocompleteClient(
           });
           emitRequest(
             requestEvent(
+              relation,
               query,
               response.status,
               roundTripMs,
@@ -538,6 +558,7 @@ export function createAutocompleteClient(
         lastIndexTag = indexTag;
         emitRequest(
           requestEvent(
+            relation,
             query,
             response.status,
             roundTripMs,
@@ -580,6 +601,7 @@ export function createAutocompleteClient(
         });
         emitRequest(
           requestEvent(
+            relation,
             query,
             response.status,
             roundTripMs,
@@ -607,7 +629,8 @@ export function createAutocompleteClient(
   }
 
   function requestEvent(
-    query: Query,
+    relation: Relation,
+    query: RouteQuery<Relation>,
     status: number,
     roundTripMs: number | null,
     response: ResponseLike | null,
@@ -617,6 +640,7 @@ export function createAutocompleteClient(
     error: AutocompleteError | null,
   ): RequestEvent {
     return {
+      relation,
       q: query.q,
       filtersWithheld,
       status,
@@ -633,7 +657,8 @@ export function createAutocompleteClient(
 
   return {
     baseUrl,
-    suggest,
+    suggest: (query, options) => search("businesses", query, options),
+    search,
     getSession: options => session.getSession(options),
     prewarm: () => {
       void session.getSession({ prewarm: true }).catch(() => undefined);

@@ -1,6 +1,8 @@
 /**
- * The wire shapes of `GET /autocomplete/businesses` and the error envelope, as
- * the Rust tier serves them: snake_case, nulls spelled out.
+ * The wire shapes of `GET /autocomplete/{relation}` and the error envelope, as
+ * the Rust tier serves them: snake_case, nulls spelled out. Every route answers
+ * the same envelope and the same row, and each entity type adds its own
+ * fields to the row (see `entities.ts`; only businesses is served today).
  *
  * Hand-written types and a small structural validator rather than a schema
  * library. Three shapes do not justify a validator dependency in a snippet
@@ -15,7 +17,16 @@
  * be absent as well as null; either reads as null.
  */
 
-export type Include = "people" | "addresses" | "liens";
+import {
+  ENTITY_OF,
+  ROUTES,
+  type EntityType,
+  type IncludeOf,
+  type Relation,
+} from "./entities";
+
+/** The relations `GET /autocomplete/businesses` can expand. */
+export type Include = IncludeOf<"businesses">;
 
 export interface RelatedItem {
   /** `business`, `person`, `address`, `lien` today; open. */
@@ -46,21 +57,20 @@ export interface HighlightPart {
   matched: boolean;
 }
 
-export interface BusinessSuggestion {
-  type: "business";
+/** What every row carries, whatever the route. */
+export interface SuggestionBase<T extends EntityType, R extends Relation> {
+  type: T;
   /**
-   * An opaque handle for the business family, passed back verbatim as
-   * `business_token` on `POST /searches`. Sealed by the tier.
+   * An opaque handle for the entity, sealed by the tier. A business's is
+   * passed back verbatim as `business_token` on `POST /searches`.
    */
   token: string;
   label: string;
   /** The indexed name that matched, when it is not `label`. */
   matched_name: string | null;
-  /** `exact`, `strong`, `partial` today; open. */
+  /** `exact`, `strong`, `partial` today; open. Order the rows by position, never by this. */
   match: string;
-  domicile_state: string;
-  states: string[];
-  related: Record<Include, RelatedSet>;
+  related: Record<IncludeOf<R>, RelatedSet>;
   /**
    * The name that matched, split into parts, the words a typed token starts
    * marked. Empty when the query reached the row some other way.
@@ -68,25 +78,76 @@ export interface BusinessSuggestion {
   highlight: HighlightPart[];
 }
 
+export interface BusinessSuggestion extends SuggestionBase<
+  "business",
+  "businesses"
+> {
+  domicile_state: string;
+  states: string[];
+}
+
+/** Not served yet: the working specification's row. A person has no jurisdiction of its own. */
+export type PersonSuggestion = SuggestionBase<"person", "people">;
+
+export interface AddressComponents {
+  line1: string;
+  line2: string | null;
+  city: string;
+  state: string;
+  postal_code: string;
+}
+
+/** Not served yet: the working specification's row. */
+export interface AddressSuggestion extends SuggestionBase<
+  "address",
+  "addresses"
+> {
+  components: AddressComponents;
+}
+
+/** Not served yet: the working specification's row. */
+export interface LienSuggestion extends SuggestionBase<"lien", "liens"> {
+  /** `UCC1`, `UCC3`, …; open. */
+  filing_type: string;
+  /** Unique only within `filing_state`. */
+  filing_number: string;
+  filing_state: string;
+  /** `active`, `lapsed`, `terminated` today; open. */
+  status: string;
+}
+
+export interface SuggestionByRelation {
+  businesses: BusinessSuggestion;
+  people: PersonSuggestion;
+  addresses: AddressSuggestion;
+  liens: LienSuggestion;
+}
+
+/** A row from any route. */
+export type Suggestion = SuggestionByRelation[Relation];
+
 export interface Source {
   /** `ok`, `not_requested`, `unavailable` today; open. */
   status: string;
 }
 
-export interface BusinessesResponse {
+export interface SuggestResponse<R extends Relation = "businesses"> {
   query: string;
   found: number;
   /** The count stopped at the cap: `found` is a floor, drawn as `500+`. */
   found_capped: boolean;
   /**
-   * The tier did not finish looking, so a matching business may be missing.
+   * The tier did not finish looking, so a matching entity may be missing.
    * Absent or null reads as `false`: a tier that predates the field is
    * complete by definition.
    */
   truncated: boolean;
-  sources: Record<Include, Source>;
-  suggestions: BusinessSuggestion[];
+  /** One per relation the route can expand; read it before an empty `related`. */
+  sources: Record<IncludeOf<R>, Source>;
+  suggestions: SuggestionByRelation[R][];
 }
+
+export type BusinessesResponse = SuggestResponse<"businesses">;
 
 /** The catalog envelope the API and the tier answer refusals with. */
 export interface ErrorEnvelope {
@@ -197,35 +258,79 @@ function highlightPart(value: Json, path: string): HighlightPart {
   };
 }
 
-function relations<T>(
+function relations<K extends string, T>(
+  keys: readonly K[],
   value: Json,
   path: string,
   parse: (v: Json, p: string) => T,
-): Record<Include, T> {
+): Record<K, T> {
+  const o = object(value, path);
+  const out = {} as Record<K, T>;
+  for (const key of keys) {
+    out[key] = parse(o[key], `${path}.${key}`);
+  }
+  return out;
+}
+
+function addressComponents(value: Json, path: string): AddressComponents {
   const o = object(value, path);
   return {
-    people: parse(o.people, `${path}.people`),
-    addresses: parse(o.addresses, `${path}.addresses`),
-    liens: parse(o.liens, `${path}.liens`),
+    line1: string(o.line1, `${path}.line1`),
+    line2: nullable(o.line2, `${path}.line2`, string),
+    city: string(o.city, `${path}.city`),
+    state: string(o.state, `${path}.state`),
+    postal_code: string(o.postal_code, `${path}.postal_code`),
   };
 }
 
-function suggestion(value: Json, path: string): BusinessSuggestion {
+/** The fields each entity type adds to the row. */
+const ROW_FIELDS: {
+  [R in Relation]: (
+    o: Record<string, unknown>,
+    path: string,
+  ) => Omit<SuggestionByRelation[R], keyof SuggestionBase<EntityType, R>>;
+} = {
+  businesses: (o, path) => ({
+    domicile_state: string(o.domicile_state, `${path}.domicile_state`),
+    states: array(o.states, `${path}.states`, string),
+  }),
+  people: () => ({}),
+  addresses: (o, path) => ({
+    components: addressComponents(o.components, `${path}.components`),
+  }),
+  liens: (o, path) => ({
+    filing_type: string(o.filing_type, `${path}.filing_type`),
+    filing_number: string(o.filing_number, `${path}.filing_number`),
+    filing_state: string(o.filing_state, `${path}.filing_state`),
+    status: string(o.status, `${path}.status`),
+  }),
+};
+
+function suggestion<R extends Relation>(
+  relation: R,
+  value: Json,
+  path: string,
+): SuggestionByRelation[R] {
   const o = object(value, path);
-  if (o.type !== "business") {
-    throw new ContractViolation(`${path}.type`, '"business"');
+  const type = ENTITY_OF[relation];
+  if (o.type !== type) {
+    throw new ContractViolation(`${path}.type`, `"${type}"`);
   }
   return {
-    type: "business",
+    type,
     token: nonEmptyString(o.token, `${path}.token`),
     label: string(o.label, `${path}.label`),
     matched_name: nullable(o.matched_name, `${path}.matched_name`, string),
     match: string(o.match, `${path}.match`),
-    domicile_state: string(o.domicile_state, `${path}.domicile_state`),
-    states: array(o.states, `${path}.states`, string),
-    related: relations(o.related, `${path}.related`, relatedSet),
+    ...ROW_FIELDS[relation](o, path),
+    related: relations(
+      ROUTES[relation].includes,
+      o.related,
+      `${path}.related`,
+      relatedSet,
+    ),
     highlight: array(o.highlight, `${path}.highlight`, highlightPart),
-  };
+  } as SuggestionByRelation[R];
 }
 
 function source(value: Json, path: string): Source {
@@ -234,10 +339,14 @@ function source(value: Json, path: string): Source {
 }
 
 /**
- * The body of a 200 from `GET /autocomplete/businesses`, validated. Unknown
- * keys are dropped, so the value a caller sees is exactly this type.
+ * The body of a 200 from `GET /autocomplete/{relation}`, validated. Unknown
+ * keys are dropped, so the value a caller sees is exactly this type; unknown
+ * enum values are kept as the strings they are.
  */
-export function parseBusinessesResponse(body: Json): BusinessesResponse {
+export function parseSuggestResponse<R extends Relation>(
+  relation: R,
+  body: Json,
+): SuggestResponse<R> {
   const o = object(body, "response");
   const truncated = nullable(o.truncated, "response.truncated", boolean);
   return {
@@ -245,9 +354,21 @@ export function parseBusinessesResponse(body: Json): BusinessesResponse {
     found: count(o.found, "response.found"),
     found_capped: boolean(o.found_capped, "response.found_capped"),
     truncated: truncated ?? false,
-    sources: relations(o.sources, "response.sources", source),
-    suggestions: array(o.suggestions, "response.suggestions", suggestion),
-  };
+    sources: relations(
+      ROUTES[relation].includes,
+      o.sources,
+      "response.sources",
+      source,
+    ),
+    suggestions: array(o.suggestions, "response.suggestions", (v, p) =>
+      suggestion(relation, v, p),
+    ),
+  } as SuggestResponse<R>;
+}
+
+/** The body of a 200 from `GET /autocomplete/businesses`, validated. */
+export function parseBusinessesResponse(body: Json): BusinessesResponse {
+  return parseSuggestResponse("businesses", body);
 }
 
 /** The catalog envelope, or null when the body is not one. */

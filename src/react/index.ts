@@ -9,13 +9,19 @@ export {
   EMPTY_AUTOCOMPLETE_STATE,
   MIN_QUERY_CHARS,
   useBusinessAutocomplete,
+  useEntityAutocomplete,
   type BusinessAutocompleteState,
+  type EntityAutocompleteState,
   type UseBusinessAutocompleteOptions,
+  type UseEntityAutocompleteOptions,
 } from "./useBusinessAutocomplete";
 export {
   useBusinessCombobox,
+  useSuggestionCombobox,
   type BusinessCombobox,
+  type SuggestionCombobox,
   type UseBusinessComboboxOptions,
+  type UseSuggestionComboboxOptions,
 } from "./useBusinessCombobox";
 export {
   BusinessAutocompleteView,

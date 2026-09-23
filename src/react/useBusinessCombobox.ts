@@ -1,22 +1,22 @@
 import { useCombobox, type UseComboboxReturnValue } from "downshift";
 import type { ChangeEvent, FocusEventHandler, Ref } from "react";
 
-import type { BusinessSuggestion } from "@baselayer/autocomplete";
+import type { BusinessSuggestion, Suggestion } from "@baselayer/autocomplete";
 
-export interface UseBusinessComboboxOptions {
+export interface UseSuggestionComboboxOptions<T extends Suggestion> {
   id: string;
-  items: BusinessSuggestion[];
+  items: T[];
   /** The input's value; the host owns it. */
   inputValue: string;
   /** Typing only. A pick rewrites the input without a change event. */
   onInputChange(value: string): void;
-  onPick(item: BusinessSuggestion): void;
+  onPick(item: T): void;
   /** Whether a footer row (count, "searching", an error) has anything to say. */
   hasFooter: boolean;
 }
 
-export interface BusinessCombobox extends Pick<
-  UseComboboxReturnValue<BusinessSuggestion>,
+export interface SuggestionCombobox<T extends Suggestion> extends Pick<
+  UseComboboxReturnValue<T>,
   | "getLabelProps"
   | "getMenuProps"
   | "getItemProps"
@@ -37,6 +37,17 @@ export interface BusinessCombobox extends Pick<
   getFooterProps(): { role: "status"; "aria-live": "polite" };
 }
 
+export type UseBusinessComboboxOptions =
+  UseSuggestionComboboxOptions<BusinessSuggestion>;
+export type BusinessCombobox = SuggestionCombobox<BusinessSuggestion>;
+
+/** The combobox over business rows. */
+export function useBusinessCombobox(
+  options: UseBusinessComboboxOptions,
+): BusinessCombobox {
+  return useSuggestionCombobox(options);
+}
+
 /**
  * ARIA 1.2 combobox wiring over downshift, with the console's three decisions:
  *
@@ -46,17 +57,17 @@ export interface BusinessCombobox extends Pick<
  * - a blur is not a pick: downshift commits the highlighted row on blur, and a
  *   pointer resting on the menu is what highlights one;
  * - `aria-expanded` follows what is drawn, and the footer lives outside the
- *   listbox, so a screen reader hears a list of businesses and then a note.
+ *   listbox, so a screen reader hears a list of rows and then a note.
  */
-export function useBusinessCombobox({
+export function useSuggestionCombobox<T extends Suggestion>({
   id,
   items,
   inputValue,
   onInputChange,
   onPick,
   hasFooter,
-}: UseBusinessComboboxOptions): BusinessCombobox {
-  const combobox = useCombobox<BusinessSuggestion>({
+}: UseSuggestionComboboxOptions<T>): SuggestionCombobox<T> {
+  const combobox = useCombobox<T>({
     id,
     items,
     inputValue,

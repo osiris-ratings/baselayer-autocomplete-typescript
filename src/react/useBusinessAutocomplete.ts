@@ -1,12 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import type { Filters } from "@baselayer/autocomplete";
 import type { AutocompleteClient } from "@baselayer/autocomplete";
 import {
   isAutocompleteError,
   type AutocompleteErrorKind,
 } from "@baselayer/autocomplete";
-import type { BusinessSuggestion, Include } from "@baselayer/autocomplete";
+import type {
+  FiltersByRelation,
+  IncludeOf,
+  Relation,
+  SuggestionByRelation,
+} from "@baselayer/autocomplete";
 
 import { useResolvedClient } from "./context";
 import { resolveMessages, type AutocompleteMessages } from "./messages";
@@ -18,23 +22,30 @@ export const DEBOUNCE_MS = 250;
 /** Rows per keystroke: five two-line cells plus the count row fit a field. */
 export const DEFAULT_LIMIT = 5;
 
-export interface UseBusinessAutocompleteOptions {
-  /** The business name as typed. */
+export interface UseEntityAutocompleteOptions<R extends Relation> {
+  /** The route to ask: `businesses` today; people, addresses and liens to come. */
+  relation: R;
+  /** The text as typed. */
   query: string;
   enabled: boolean;
   /** Else the one from `<AutocompleteClientProvider>`. */
   client?: AutocompleteClient;
-  /** Narrowing filters; held back while the name is shorter than the grant's stem. */
-  filters?: Filters;
+  /** Narrowing filters; held back while the text is shorter than the grant's stem. */
+  filters?: FiltersByRelation[R];
   limit?: number;
-  include?: Include[];
+  include?: IncludeOf<R>[];
   minChars?: number;
   debounceMs?: number;
   messages?: Partial<AutocompleteMessages>;
 }
 
-export interface BusinessAutocompleteState {
-  suggestions: BusinessSuggestion[];
+export type UseBusinessAutocompleteOptions = Omit<
+  UseEntityAutocompleteOptions<"businesses">,
+  "relation"
+>;
+
+export interface EntityAutocompleteState<R extends Relation> {
+  suggestions: SuggestionByRelation[R][];
   found: number;
   foundCapped: boolean;
   /**
@@ -56,6 +67,8 @@ export interface BusinessAutocompleteState {
   filtersWithheld: boolean;
   requestId: string | null;
 }
+
+export type BusinessAutocompleteState = EntityAutocompleteState<"businesses">;
 
 export const EMPTY_AUTOCOMPLETE_STATE: BusinessAutocompleteState =
   Object.freeze({
@@ -79,8 +92,24 @@ const UNAVAILABLE_STATE: BusinessAutocompleteState = Object.freeze({
   errorKind: "session_unavailable",
 }) as BusinessAutocompleteState;
 
+// One frozen empty state serves every route: its rows are an empty array.
+function emptyState<R extends Relation>(): EntityAutocompleteState<R> {
+  return EMPTY_AUTOCOMPLETE_STATE as unknown as EntityAutocompleteState<R>;
+}
+
+function unavailableState<R extends Relation>(): EntityAutocompleteState<R> {
+  return UNAVAILABLE_STATE as unknown as EntityAutocompleteState<R>;
+}
+
+/** Debounced suggestions for a business-name field: the businesses route of `useEntityAutocomplete`. */
+export function useBusinessAutocomplete(
+  options: UseBusinessAutocompleteOptions,
+): BusinessAutocompleteState {
+  return useEntityAutocomplete({ ...options, relation: "businesses" });
+}
+
 /**
- * Debounced suggestions for a business-name field.
+ * Debounced suggestions for a field on any route.
  *
  * One debounce window per keystroke, an AbortController so a superseded
  * request can neither apply its rows nor keep the spinner alive, and the
@@ -89,7 +118,8 @@ const UNAVAILABLE_STATE: BusinessAutocompleteState = Object.freeze({
  * deployment cannot mint, a spent pool) arms a timer that brings the
  * suggestions back the moment it ends, not on the next keystroke.
  */
-export function useBusinessAutocomplete({
+export function useEntityAutocomplete<R extends Relation>({
+  relation,
   query,
   enabled,
   client,
@@ -99,10 +129,10 @@ export function useBusinessAutocomplete({
   minChars = MIN_QUERY_CHARS,
   debounceMs = DEBOUNCE_MS,
   messages,
-}: UseBusinessAutocompleteOptions): BusinessAutocompleteState {
+}: UseEntityAutocompleteOptions<R>): EntityAutocompleteState<R> {
   const resolved = useResolvedClient(client);
   const text = resolveMessages(messages);
-  const [state, setState] = useState(EMPTY_AUTOCOMPLETE_STATE);
+  const [state, setState] = useState<EntityAutocompleteState<R>>(emptyState);
   // Bumped when a cooldown ends, so the effect re-reads it then: left alone,
   // `unavailable` would outlive the cooldown for as long as nothing is typed.
   const [cooldownsEnded, setCooldownsEnded] = useState(0);
@@ -113,12 +143,14 @@ export function useBusinessAutocomplete({
   const includeKey = include?.join(",") ?? "";
   const stableFilters = useMemo(
     () =>
-      filtersKey === "null" ? undefined : (JSON.parse(filtersKey) as Filters),
+      filtersKey === "null"
+        ? undefined
+        : (JSON.parse(filtersKey) as FiltersByRelation[R]),
     [filtersKey],
   );
   const stableInclude = useMemo(
     () =>
-      includeKey === "" ? undefined : (includeKey.split(",") as Include[]),
+      includeKey === "" ? undefined : (includeKey.split(",") as IncludeOf<R>[]),
     [includeKey],
   );
   // Read through a ref, so a host passing a fresh messages object (or inline
@@ -138,12 +170,12 @@ export function useBusinessAutocomplete({
     // length floor so the fallback does not flap with every short query.
     const session = resolved.getSnapshot().session;
     if (enabled && session.phase === "unavailable") {
-      setState(UNAVAILABLE_STATE);
+      setState(unavailableState<R>());
       const cooldownId = armCooldownEnd(session.until);
       return () => clearTimeout(cooldownId);
     }
     if (!enabled || trimmedQuery.length < minChars) {
-      setState(EMPTY_AUTOCOMPLETE_STATE);
+      setState(emptyState<R>());
       return;
     }
     const controller = new AbortController();
@@ -160,7 +192,8 @@ export function useBusinessAutocomplete({
         unavailable: false,
       }));
       try {
-        const result = await resolved.suggest(
+        const result = await resolved.search(
+          relation,
           {
             q: trimmedQuery,
             limit,
@@ -193,12 +226,12 @@ export function useBusinessAutocomplete({
         const { dayLimit, unavailable, authUnavailable, httpFallback } =
           textRef.current;
         if (!isAutocompleteError(error)) {
-          setState({ ...EMPTY_AUTOCOMPLETE_STATE, error: unavailable });
+          setState({ ...emptyState<R>(), error: unavailable });
           return;
         }
         switch (error.kind) {
           case "session_unavailable":
-            setState(UNAVAILABLE_STATE);
+            setState(unavailableState<R>());
             cooldownId = armCooldownEnd(error.until ?? Date.now());
             return;
           case "mint_backoff":
@@ -207,18 +240,18 @@ export function useBusinessAutocomplete({
             // until tomorrow, which the user should hear. Either way a timer
             // brings the suggestions back when the wait ends.
             setState({
-              ...EMPTY_AUTOCOMPLETE_STATE,
+              ...emptyState<R>(),
               error: error.scope === "day" ? dayLimit : null,
               errorKind: error.kind,
             });
             cooldownId = armCooldownEnd(error.until ?? Date.now());
             return;
           case "query_invalid":
-            setState({ ...EMPTY_AUTOCOMPLETE_STATE, errorKind: error.kind });
+            setState({ ...emptyState<R>(), errorKind: error.kind });
             return;
           case "auth_braked":
             setState({
-              ...EMPTY_AUTOCOMPLETE_STATE,
+              ...emptyState<R>(),
               error: authUnavailable,
               errorKind: error.kind,
             });
@@ -227,7 +260,7 @@ export function useBusinessAutocomplete({
             // Nothing of the previous reply survives: its round trip and index
             // described an answer, and beside this error they describe nothing.
             setState({
-              ...EMPTY_AUTOCOMPLETE_STATE,
+              ...emptyState<R>(),
               error:
                 error.userMessage ??
                 (error.status !== null && error.status > 0
@@ -239,7 +272,7 @@ export function useBusinessAutocomplete({
           case "mint_refused":
           case "contract":
             setState({
-              ...EMPTY_AUTOCOMPLETE_STATE,
+              ...emptyState<R>(),
               error: unavailable,
               errorKind: error.kind,
             });
@@ -256,6 +289,7 @@ export function useBusinessAutocomplete({
     };
   }, [
     resolved,
+    relation,
     enabled,
     trimmedQuery,
     cooldownsEnded,

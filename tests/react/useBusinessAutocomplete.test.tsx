@@ -42,9 +42,14 @@ const IDLE = snapshotWith({ phase: "idle" });
  * fake is a client whose `suggest` and `getSnapshot` stand in for them.
  */
 function fakeClient() {
+  const suggest = vi.fn<AutocompleteClient["suggest"]>();
   return {
     baseUrl: "https://api.example.test",
-    suggest: vi.fn<AutocompleteClient["suggest"]>(),
+    suggest,
+    // The hook asks through `search`; on the businesses route that is `suggest`.
+    search: vi.fn((_relation: string, query, options) =>
+      suggest(query, options),
+    ) as unknown as AutocompleteClient["search"],
     getSnapshot: vi.fn<AutocompleteClient["getSnapshot"]>(() => IDLE),
     getSession: vi.fn<AutocompleteClient["getSession"]>(),
     prewarm: vi.fn<AutocompleteClient["prewarm"]>(),
