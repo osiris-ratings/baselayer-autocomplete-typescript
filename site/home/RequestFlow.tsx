@@ -48,7 +48,7 @@ const STEPS: Step[] = [
     detail: "status, body and Retry-After as Baselayer sent them",
     reply: true,
   },
-  { kind: "phase", label: "Typing: from 3 characters, after 250 ms" },
+  { kind: "phase", label: "As someone types" },
   {
     kind: "message",
     from: "browser",
@@ -147,17 +147,86 @@ const LANES: { lane: Lane; title: string; host: string; fill: string }[] = [
   },
 ];
 
-/** Text that stays legible where it crosses a lifeline. */
-const halo = (fill: string) => ({
-  stroke: fill,
-  strokeWidth: 7,
-  strokeLinejoin: "round" as const,
-  paintOrder: "stroke" as const,
-});
+/**
+ * How wide a label draws, for keeping lifelines out from under it. Geist
+ * Mono advances 0.6 em a glyph; Uncut Sans averages under 0.55 em, so that
+ * errs wide.
+ */
+function textWidth(
+  text: string,
+  size: number,
+  mono: boolean,
+  tracking = 0,
+): number {
+  const glyphs = [...text].length;
+  return (
+    glyphs * size * (mono ? 0.6 : 0.55) +
+    Math.max(0, glyphs - 1) * size * tracking
+  );
+}
 
-function laneFill(x: number): string {
-  const index = Math.min(2, Math.floor(x / LANE_WIDTH));
-  return LANES[index]!.fill;
+interface Box {
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
+}
+
+/** The boxes a row's labels occupy; lifelines break where they pass. */
+function labelBoxes(step: Step, top: number): Box[] {
+  switch (step.kind) {
+    case "phase": {
+      const w = textWidth(step.label, 11.5, true, 0.08);
+      return [{ x0: 14, x1: 26 + w, y0: top + 20, y1: top + 40 }];
+    }
+    case "message": {
+      const mid = (CENTER[step.from] + CENTER[step.to]) / 2;
+      const lineY = top + 34;
+      const boxes: Box[] = [];
+      const w = textWidth(step.label, 12.5, true);
+      boxes.push({
+        x0: mid - w / 2 - 8,
+        x1: mid + w / 2 + 8,
+        y0: lineY - 26,
+        y1: lineY - 4,
+      });
+      if (step.detail !== undefined) {
+        const d = textWidth(step.detail, 12.5, false);
+        boxes.push({
+          x0: mid - d / 2 - 8,
+          x1: mid + d / 2 + 8,
+          y0: lineY + 5,
+          y1: lineY + 25,
+        });
+      }
+      return boxes;
+    }
+    case "note":
+    case "ref":
+      // Drawn as white boxes over the lifelines already.
+      return [];
+  }
+}
+
+/** A lifeline from `y0` to `y1`, broken wherever a label box covers `x`. */
+function lifeline(
+  x: number,
+  y0: number,
+  y1: number,
+  boxes: Box[],
+): [number, number][] {
+  const gaps = boxes
+    .filter(box => box.x0 <= x && x <= box.x1)
+    .map(box => [box.y0, box.y1] as const)
+    .sort((a, b) => a[0] - b[0]);
+  const segments: [number, number][] = [];
+  let from = y0;
+  for (const [g0, g1] of gaps) {
+    if (g0 > from) segments.push([from, g0]);
+    from = Math.max(from, g1);
+  }
+  if (from < y1) segments.push([from, y1]);
+  return segments;
 }
 
 export function RequestFlow() {
@@ -168,6 +237,7 @@ export function RequestFlow() {
     return { step, top };
   });
   const height = y + 20;
+  const boxes = rows.flatMap(({ step, top }) => labelBoxes(step, top));
 
   return (
     <svg
@@ -235,14 +305,19 @@ export function RequestFlow() {
           >
             {lane.host}
           </text>
-          <line
-            x1={CENTER[lane.lane]}
-            y1={HEADER}
-            x2={CENTER[lane.lane]}
-            y2={height - 12}
-            stroke="#b9c8e6"
-            strokeDasharray="3 5"
-          />
+          {lifeline(CENTER[lane.lane], HEADER, height - 12, boxes).map(
+            ([y0, y1]) => (
+              <line
+                key={y0}
+                x1={CENTER[lane.lane]}
+                y1={y0}
+                x2={CENTER[lane.lane]}
+                y2={y1}
+                stroke="#b9c8e6"
+                strokeDasharray="3 5"
+              />
+            ),
+          )}
         </g>
       ))}
       <line
@@ -272,7 +347,6 @@ export function RequestFlow() {
                   fontSize={11.5}
                   letterSpacing="0.08em"
                   fill={BLUE}
-                  style={halo(LANES[0]!.fill)}
                 >
                   {step.label.toUpperCase()}
                 </text>
@@ -284,7 +358,6 @@ export function RequestFlow() {
             const direction = x2 > x1 ? 1 : -1;
             const mid = (x1 + x2) / 2;
             const lineY = top + 34;
-            const fill = laneFill(mid);
             return (
               <g key={index}>
                 <text
@@ -294,7 +367,6 @@ export function RequestFlow() {
                   fontFamily="var(--mono)"
                   fontSize={12.5}
                   fill={step.reply ? "#3d4a6b" : INK}
-                  style={halo(fill)}
                 >
                   {step.label}
                 </text>
@@ -324,7 +396,6 @@ export function RequestFlow() {
                     fontFamily="var(--sans)"
                     fontSize={12.5}
                     fill={MUTED}
-                    style={halo(fill)}
                   >
                     {step.detail}
                   </text>
