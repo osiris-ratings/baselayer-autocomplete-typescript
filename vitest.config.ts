@@ -29,6 +29,7 @@ export default defineConfig({
         },
       },
       {
+        resolve: { alias },
         test: {
           name: "site",
           include: ["tests/site/**/*.test.{ts,tsx}"],
