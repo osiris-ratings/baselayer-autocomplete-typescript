@@ -18,6 +18,7 @@ type FetchMock = Mock<typeof fetch>;
 const granted = {
   session_token: "eyJhbGciOiJFZERTQSJ9.e30.sig",
   expires_in: 900,
+  expires_at: "2026-09-23T12:15:00Z",
   request_budget: 150,
   pivot_allowance: 6,
   filter_min_stem: 3,

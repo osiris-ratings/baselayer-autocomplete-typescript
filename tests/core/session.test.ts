@@ -44,13 +44,17 @@ const NOT_CONFIGURED = {
 };
 
 /** A 201 as the API sends it, read the way every mint adapter reads it. */
-function grant(token: string): MintOutcome {
+function grant(
+  token: string,
+  extra: Record<string, unknown> = {},
+): MintOutcome {
   return parseMintResponse(201, null, {
     session_token: token,
     expires_in: 180,
     request_budget: 150,
     pivot_allowance: 5,
     filter_min_stem: 5,
+    ...extra,
   });
 }
 
@@ -148,6 +152,30 @@ describe("getSession", () => {
     const refreshed = await client.getSession();
 
     expect(refreshed.sessionToken).toBe("grant-2");
+    expect(mint).toHaveBeenCalledTimes(2);
+  });
+
+  it("times the refresh from expires_in, whatever expires_at says", async () => {
+    // A year behind: one of the two clocks is far off, and it must not matter.
+    const aYearAgo = new Date(MINTED_AT - 365 * 86_400_000).toISOString();
+    mint
+      .mockResolvedValueOnce(grant("grant-1", { expires_at: aYearAgo }))
+      .mockResolvedValueOnce(grant("grant-2"));
+
+    const first = await client.getSession();
+
+    expect(first.expiresAtUtc).toBe(aYearAgo);
+    expect(first.expiresAt).toBe(MINTED_AT + TTL_MS);
+    expect(first.refreshAt).toBe(MINTED_AT + TTL_MS * REFRESH_AT_FRACTION);
+
+    // Neither expired nor refreshed early.
+    at(MINTED_AT + TTL_MS * REFRESH_AT_FRACTION - 1);
+    expect(await client.getSession()).toBe(first);
+    expect(client.getSnapshot().session.phase).toBe("ready");
+
+    // Refreshed on schedule.
+    at(MINTED_AT + TTL_MS * REFRESH_AT_FRACTION);
+    expect((await client.getSession()).sessionToken).toBe("grant-2");
     expect(mint).toHaveBeenCalledTimes(2);
   });
 

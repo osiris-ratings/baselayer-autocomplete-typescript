@@ -114,6 +114,8 @@ export function tokenMint(token: string): MintFunction {
       grant: {
         sessionToken: token.trim(),
         expiresIn: remaining,
+        // What the API would have sent: its `expires_at` is the token's `exp`.
+        expiresAtUtc: new Date(claims.exp * 1000).toISOString(),
         requestBudget: claims.bud,
         pivotAllowance: claims.piv,
         filterMinStem: claims.stem,

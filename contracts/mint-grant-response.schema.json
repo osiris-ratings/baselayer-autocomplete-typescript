@@ -22,6 +22,11 @@
       "minimum": 1,
       "description": "Seconds until the tier stops honouring the grant; refresh at about 80 %."
     },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "The same instant as a UTC timestamp (the token's exp), for display and logs; time refreshes from expires_in. Optional here so a body from an API that predates it still parses."
+    },
     "request_budget": {
       "type": "integer",
       "minimum": 1,

@@ -27,6 +27,14 @@ export interface MintedGrant {
   sessionToken: string;
   /** Seconds until the tier stops honoring the grant. */
   expiresIn: number;
+  /**
+   * The API's `expires_at`, as sent: when the tier stops honoring the grant, a
+   * UTC timestamp for display and logs. Absent when the API does not send it.
+   * Refresh is timed from `expiresIn`, which is right however far the local
+   * clock is off. Not `expiresAt`, which on a `Grant` is the same instant in
+   * epoch ms by the local clock.
+   */
+  expiresAtUtc?: string;
   /** Requests the grant is good for, per route. */
   requestBudget: number;
   /** Changes of query the tier allows before it refuses the session. */
@@ -83,6 +91,10 @@ function nonNegativeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0;
 }
 
+function timestamp(value: unknown): value is string {
+  return typeof value === "string" && Number.isFinite(Date.parse(value));
+}
+
 function grantFrom(body: unknown): MintedGrant | null {
   if (typeof body !== "object" || body === null) {
     return null;
@@ -90,6 +102,7 @@ function grantFrom(body: unknown): MintedGrant | null {
   const b = body as Record<string, unknown>;
   const token = b.session_token ?? b.sessionToken;
   const expiresIn = b.expires_in ?? b.expiresIn;
+  const expiresAt = b.expires_at ?? b.expiresAt;
   const requestBudget = b.request_budget ?? b.requestBudget;
   const pivotAllowance = b.pivot_allowance ?? b.pivotAllowance;
   const filterMinStem = b.filter_min_stem ?? b.filterMinStem;
@@ -106,6 +119,9 @@ function grantFrom(body: unknown): MintedGrant | null {
   return {
     sessionToken: token,
     expiresIn,
+    // For display only, so one missing or unparseable is dropped rather than
+    // refusing a grant that is otherwise good.
+    ...(timestamp(expiresAt) ? { expiresAtUtc: expiresAt } : {}),
     requestBudget,
     pivotAllowance,
     filterMinStem,

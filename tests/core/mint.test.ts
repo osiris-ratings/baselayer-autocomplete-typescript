@@ -21,6 +21,7 @@ const CAMEL_GRANT = {
   pivotAllowance: 5,
   filterMinStem: 5,
 };
+const EXPIRES_AT = "2026-09-23T12:03:00Z";
 const TOO_MANY = { code: 429, message: "too many" };
 
 describe("parseMintResponse", () => {
@@ -37,6 +38,45 @@ describe("parseMintResponse", () => {
       grant: CAMEL_GRANT,
     });
   });
+
+  it("reads the expiry the API states as a UTC timestamp", () => {
+    expect(
+      parseMintResponse(201, null, { ...SNAKE_GRANT, expires_at: EXPIRES_AT }),
+    ).toEqual({
+      kind: "granted",
+      grant: { ...CAMEL_GRANT, expiresAtUtc: EXPIRES_AT },
+    });
+  });
+
+  it("reads a camelCased expiry", () => {
+    expect(
+      parseMintResponse(201, null, { ...CAMEL_GRANT, expiresAt: EXPIRES_AT }),
+    ).toEqual({
+      kind: "granted",
+      grant: { ...CAMEL_GRANT, expiresAtUtc: EXPIRES_AT },
+    });
+  });
+
+  it("grants a body without the expiry, from an API that does not send it", () => {
+    expect(parseMintResponse(201, null, SNAKE_GRANT)).toStrictEqual({
+      kind: "granted",
+      grant: CAMEL_GRANT,
+    });
+  });
+
+  it.each<[string, unknown]>([
+    ["a word", "soon"],
+    ["an empty string", ""],
+    ["a number", 123],
+    ["null", null],
+  ])(
+    "grants a body whose expiry is %s, leaving the expiry out",
+    (_name, expiresAt) => {
+      expect(
+        parseMintResponse(201, null, { ...SNAKE_GRANT, expires_at: expiresAt }),
+      ).toStrictEqual({ kind: "granted", grant: CAMEL_GRANT });
+    },
+  );
 
   it("accepts a pivot allowance of zero", () => {
     expect(

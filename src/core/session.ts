@@ -16,7 +16,10 @@ export interface Grant extends MintedGrant {
   mintedAt: number;
   /** Epoch ms after which the grant is refreshed before use. */
   refreshAt: number;
-  /** Epoch ms at which the tier stops honoring the grant. */
+  /**
+   * Epoch ms at which the tier stops honoring the grant, by the local clock:
+   * the mint plus `expiresIn`, whatever `expiresAtUtc` says.
+   */
   expiresAt: number;
 }
 

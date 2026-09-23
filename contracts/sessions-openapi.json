@@ -13,7 +13,7 @@
     "/autocomplete/sessions": {
       "post": {
         "summary": "Mint an autocomplete session",
-        "description": "Mints the grant every request to the autocomplete tier carries in ``X-Autocomplete-Session``. Minting writes one Order and is rate limited per organization, per ten-minute window and per rolling day, one pool drawn from by every caller in it; the keystrokes it admits write nothing. The grant is bound to the ``Origin`` it was minted with, expires after ``expires_in`` seconds (refresh at about 80% of it) and admits ``request_budget`` requests per route. A caller whose ``autocomplete.enabled`` override is off is answered 403; a locked organization is answered 402; a sandbox application is answered 422, since sandbox searches resolve against fixtures.",
+        "description": "Mints the grant every request to the autocomplete tier carries in ``X-Autocomplete-Session``. Minting writes one Order and is rate limited per organization, per ten-minute window and per rolling day, one pool drawn from by every caller in it; the keystrokes it admits write nothing. The grant is bound to the ``Origin`` it was minted with, expires after ``expires_in`` seconds (refresh at about 80% of it; ``expires_at`` is the same instant as a UTC timestamp, for display) and admits ``request_budget`` requests per route. A caller whose ``autocomplete.enabled`` override is off is answered 403; a locked organization is answered 402; a sandbox application is answered 422, since sandbox searches resolve against fixtures.",
         "operationId": "mint_autocomplete_session_autocomplete_sessions_post",
         "responses": {
           "201": {
@@ -77,12 +77,21 @@
             "type": "string"
           },
           "expires_in": {
-            "description": "Seconds until the grant expires. Mint the next one at about 80% of this so expiry never lands on the typing path.",
+            "description": "Seconds until the grant expires, counted from this response. Time the refresh from this, not from ``expires_at``: it is right however far the caller's clock is off. Mint the next grant at about 80% of it so expiry never lands on the typing path.",
             "examples": [
               180
             ],
             "title": "Expires In",
             "type": "integer"
+          },
+          "expires_at": {
+            "description": "When the grant stops working, in UTC: the token's own expiry, for display and logs. Time refreshes from ``expires_in``.",
+            "examples": [
+              "2026-09-23T12:03:00Z"
+            ],
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
           },
           "request_budget": {
             "description": "Requests this session may make per autocomplete route. Past it the tier answers 429 with ``session_budget_spent``; the remedy is a new session, not a retry.",
@@ -112,6 +121,7 @@
         "required": [
           "session_token",
           "expires_in",
+          "expires_at",
           "request_budget",
           "pivot_allowance",
           "filter_min_stem"

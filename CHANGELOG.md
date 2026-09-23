@@ -29,6 +29,12 @@ breaking change bumps the minor version.
   Each shows unless set to `false`; without the subtitle, the secondary
   subtitle is promoted to its place. The title always shows: a row is the
   entity it names.
+- `MintedGrant.expiresAtUtc`, the API's `expires_at`: when the grant stops
+  working, as a UTC timestamp, for display and logs. It is optional, absent
+  from an API that does not send it, and a value that does not parse is left
+  out rather than refusing the grant. Refresh stays timed from `expiresIn`.
+  Not `expiresAt`, which on a `Grant` is the same instant in epoch ms by the
+  local clock.
 
 ### Changed
 

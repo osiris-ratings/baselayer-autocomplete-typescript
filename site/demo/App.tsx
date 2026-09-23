@@ -151,7 +151,7 @@ function useLog(client: AutocompleteClient | null): [LogLine[], () => void] {
         ok: outcome.kind === "granted",
         text:
           outcome.kind === "granted"
-            ? `${event.reason} mint: ${outcome.grant.expiresIn} s, ${outcome.grant.requestBudget} requests, ${event.durationMs} ms`
+            ? `${event.reason} mint: ${outcome.grant.expiresIn} s${outcome.grant.expiresAtUtc !== undefined ? ` (until ${new Date(outcome.grant.expiresAtUtc).toLocaleTimeString()})` : ""}, ${outcome.grant.requestBudget} requests, ${event.durationMs} ms`
             : `${event.reason} mint refused: HTTP ${outcome.status}${outcome.code !== null ? ` code ${outcome.code}` : ""}${outcome.message ? `, ${outcome.message}` : ""}`,
       });
     });
@@ -202,6 +202,9 @@ function SessionMeters({
       : facts !== null
         ? facts.exp * 1000
         : null;
+  // The held grant's expiry as the API stated it, when it did.
+  const expiresAtUtc =
+    session.phase === "ready" ? session.grant.expiresAtUtc : undefined;
   return (
     <>
       <dl className="meters">
@@ -226,6 +229,11 @@ function SessionMeters({
               : expiresAt !== null
                 ? formatRemaining(expiresAt - now)
                 : "–"}
+            {expiresAtUtc !== undefined && (
+              <span className="meter-note">
+                at {new Date(expiresAtUtc).toLocaleTimeString()}
+              </span>
+            )}
           </dd>
         </div>
         <div>

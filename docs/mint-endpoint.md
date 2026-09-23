@@ -32,6 +32,7 @@ curl -s -X POST https://api.baselayer.com/autocomplete/sessions \
 {
   "session_token": "eyJhbGciOiJFZERTQSIsInR5cCI6ImFjczEi…",
   "expires_in": 180,
+  "expires_at": "2026-09-23T12:03:00Z",
   "request_budget": 30,
   "pivot_allowance": 5,
   "filter_min_stem": 5

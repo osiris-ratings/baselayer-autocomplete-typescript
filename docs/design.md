@@ -122,6 +122,7 @@ curl -s -X POST https://api.baselayer.com/autocomplete/sessions \
   -H "X-API-Key: $BASELAYER_API_KEY" \
   -H "Origin: https://app.customer.com"
 # 201 {"session_token": "...", "expires_in": 180,
+#      "expires_at": "2026-09-23T12:03:00Z",
 #      "request_budget": 30, "pivot_allowance": 5,
 #      "filter_min_stem": 5}
 ```
@@ -448,6 +449,7 @@ export type MintOutcome =
 export interface MintedGrant {
   sessionToken: string;
   expiresIn: number;
+  expiresAtUtc?: string; // the API's expires_at, for display
   requestBudget: number;
   pivotAllowance: number;
   filterMinStem: number;
