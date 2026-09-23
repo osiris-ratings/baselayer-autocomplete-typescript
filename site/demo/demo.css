@@ -2,29 +2,74 @@
    on the right, one above the other on a narrow screen. Scoped under
    `.demo`, so the component's own stylesheet draws the typeahead. */
 
-.demo {
-  padding: 36px 0 64px;
+/* The page is the window's height and never scrolls itself: its three panes
+   (the introduction, the controls, and Debug or Styling) each scroll on
+   their own. A folded pane is a tab in its column. */
+.demo-panes {
+  --intro-col: 280px;
+  --controls-col: minmax(0, 760px);
+  --side-col: minmax(48px, 1fr);
+  display: grid;
+  grid-template-columns: var(--intro-col) var(--controls-col) var(--side-col);
+  gap: 24px;
+  height: calc(100vh - var(--header-h) - 1px);
+  height: calc(100dvh - var(--header-h) - 1px);
 }
 
-.demo-intro {
-  margin-bottom: 24px;
+.demo-panes[data-intro="folded"] {
+  --intro-col: 48px;
+}
+
+/* An open side pane keeps room for its tables; the controls give way first. */
+.demo-panes[data-side="open"] {
+  --controls-col: minmax(0, 640px);
+  --side-col: minmax(360px, 1fr);
+}
+
+/* A pane is its own scroller. The 6px inset keeps the focus rings of what
+   sits flush with its edges inside what it clips. */
+.demo-pane {
+  min-width: 0;
+  min-height: 0;
+  margin: 0 -6px;
+  padding: 24px 6px 32px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.pane-rail,
+.side-rail {
+  align-self: start;
+  padding-top: 24px;
+}
+
+.demo-intro-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.demo-intro-head .eyebrow {
+  margin: 0;
+}
+
+.demo-intro .side-hide {
+  margin-right: -8px;
+}
+
+.demo-intro h1 {
+  margin-top: 18px;
 }
 
 .demo-intro .lede {
   font-size: 17px;
 }
 
-.demo-split {
-  display: grid;
-  grid-template-columns: minmax(0, 640px) minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
-}
-
 .demo-controls {
   display: grid;
+  align-content: start;
   gap: 16px;
-  min-width: 0;
 }
 
 /* A long line inside (the curl command, a payload) scrolls; it never widens the column. */
@@ -35,25 +80,47 @@
 }
 
 .demo-activity {
-  position: sticky;
-  top: calc(var(--header-h) + 16px);
   display: grid;
+  align-content: start;
   gap: 16px;
-  max-height: calc(100vh - var(--header-h) - 32px);
-  min-width: 0;
-  overflow: auto;
-  overscroll-behavior: contain;
+  padding-top: 0;
 }
 
+/* The pane's top spacing sits on its head, not the pane: a sticky head keeps
+   clear of the scroller's padding, and the rows would scroll by above it. */
+.demo-activity > .side-head {
+  margin-top: 24px;
+}
+
+/* A narrow screen has no room for panes side by side: they stack, and the
+   page scrolls as any other does. */
 @media (max-width: 1100px) {
-  .demo-split {
+  .demo-panes {
     grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+    height: auto;
+    padding-bottom: 40px;
   }
 
-  .demo-activity {
-    position: static;
-    max-height: none;
+  .demo-pane {
+    margin: 0;
+    padding: 0;
     overflow: visible;
+  }
+
+  .demo-panes > :first-child {
+    padding-top: 24px;
+  }
+
+  .pane-rail,
+  .side-rail {
+    padding-top: 0;
+  }
+
+  /* The page scrolls here, under the site's own sticky header. */
+  .demo-activity > .side-head {
+    top: calc(var(--header-h) + 1px);
+    margin-top: 0;
   }
 }
 
@@ -1207,13 +1274,7 @@
 
 /* Folded, the page is as narrow as every other and the rail sits beside the
    controls; opened, only the page below the header widens, to make room. */
-.demo-split[data-side="closed"] {
-  grid-template-columns: minmax(0, 760px) minmax(0, 1fr);
-}
-
 .side-rail {
-  position: sticky;
-  top: calc(var(--header-h) + 16px);
   display: grid;
   gap: 8px;
   justify-self: start;
@@ -1333,14 +1394,13 @@
 /* On a narrow screen the rail lies flat under the controls, the two tabs side
    by side, and opening one stacks its panel below them. */
 @media (max-width: 1100px) {
-  .demo-split[data-side="closed"] {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .side-rail {
-    position: static;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     justify-self: stretch;
+  }
+
+  .pane-rail .side-tab {
+    width: 100%;
   }
 
   .side-tab {

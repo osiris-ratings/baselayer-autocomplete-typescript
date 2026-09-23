@@ -329,9 +329,12 @@ export function App() {
   const connectToggle = useRef<HTMLButtonElement>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [panel, setPanelState] = useState<Panel | null>(null);
-  // Opening Styling folds Connect, so the eye goes to the component.
+  const [introOpen, setIntroOpen] = useState(true);
+  // Opening either side pane folds the introduction, to give the pane room;
+  // opening Styling folds Connect too, so the eye goes to the component.
   const setPanel = (next: Panel | null) => {
     setPanelState(next);
+    if (next !== null) setIntroOpen(false);
     if (next === "styling") setConnectOpen(false);
   };
   const debugOpen = panel === "debug";
@@ -461,23 +464,66 @@ export function App() {
 
   return (
     <main className="demo">
-      <div className={`demo-intro ${panel !== null ? "wrap-wide" : "wrap"}`}>
-        <p className="eyebrow">Live demo</p>
-        <h1 className="display-sm">
-          The typeahead, against your own organization
-        </h1>
-        <p className="lede">
-          Configure the component and watch every request it makes, as it makes
-          it. Every session this page mints is a real, billable session on your
-          organization&apos;s pool.
-        </p>
-      </div>
-
+      {/* Three panes, each scrolling on its own: the introduction, which folds
+          to a tab; the controls; and Debug or Styling, or their tabs. */}
       <div
-        className={`demo-split ${panel !== null ? "wrap-wide" : "wrap"}`}
+        className={`demo-panes ${panel !== null ? "wrap-wide" : "wrap"}`}
+        data-intro={introOpen ? "open" : "folded"}
         data-side={panel !== null ? "open" : "closed"}
       >
-        <div className="demo-controls">
+        {introOpen ? (
+          <section
+            className="demo-pane demo-intro"
+            id="demo-intro"
+            aria-labelledby="demo-title"
+          >
+            <div className="demo-intro-head">
+              <p className="eyebrow">Live demo</p>
+              <button
+                type="button"
+                className="side-hide"
+                aria-expanded="true"
+                aria-controls="demo-intro"
+                onClick={() => setIntroOpen(false)}
+                data-testid="demo-intro-close"
+              >
+                Hide
+                <span
+                  className="fold-chevron"
+                  data-open="true"
+                  aria-hidden="true"
+                />
+              </button>
+            </div>
+            <h1 className="display-sm" id="demo-title">
+              The typeahead, against your own organization
+            </h1>
+            <p className="lede">
+              Configure the component and watch every request it makes, as it
+              makes it. Every session this page mints is a real, billable
+              session on your organization&apos;s pool.
+            </p>
+          </section>
+        ) : (
+          <div className="pane-rail">
+            <h1 className="visually-hidden">
+              The typeahead, against your own organization
+            </h1>
+            <button
+              type="button"
+              className="side-tab"
+              aria-expanded="false"
+              aria-controls="demo-intro"
+              onClick={() => setIntroOpen(true)}
+              data-testid="demo-intro-open"
+            >
+              <Icon name="info" />
+              <span className="side-tab-label">Live demo</span>
+            </button>
+          </div>
+        )}
+
+        <div className="demo-pane demo-controls">
           <Collapsible
             num="01"
             title="Connect"
@@ -831,7 +877,7 @@ export function App() {
           </div>
         ) : (
           <aside
-            className="demo-activity"
+            className="demo-pane demo-activity"
             id="demo-side"
             aria-label={debugOpen ? "Debug" : "Styling"}
           >

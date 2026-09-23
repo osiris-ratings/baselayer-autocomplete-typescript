@@ -22,6 +22,16 @@ locally, the demo needs neither (see
 [Running it locally](#running-it-locally)), and the screenshots below are
 production answers to a local run.
 
+## The layout
+
+The page is the window's height and never scrolls itself. It has three
+panes, side by side, each scrolling on its own: the introduction, the
+controls (01 Connect and 02 Live UI Component Test Form), and Debug or
+Styling. The introduction folds to a **Live demo** tab with its **Hide**;
+opening Debug or Styling folds it too, to give that pane room, and the tab
+brings it back. On a narrow screen the panes stack and the page scrolls as
+any other does.
+
 ## Connecting
 
 Pick the environment, then one of two ways in, and press **Apply**. The
