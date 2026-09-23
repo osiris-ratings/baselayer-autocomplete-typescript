@@ -59,11 +59,12 @@ pnpm install
 pnpm demo        # http://localhost:3000
 ```
 
-Locally the page runs on `http://localhost:3000`. Production accepts a
-session token from there once the tier answers CORS for every origin
-(ENG-7947); the API-key mode needs the API to list the page's origin, which
-production does for the hosted demo only. For another environment, pick
-**Custom URL** and give its API host.
+Locally the page runs on `http://localhost:3000`. Once osiris-app ENG-7947
+is in production, the tier answers CORS for every origin, so a session
+token works from there; the API-key mode also needs the API to list the
+page's origin, and ENG-7947 lists only the hosted demo's. Until then
+production admits browser calls from the Baselayer console alone. For
+another environment, pick **Custom URL** and give its API host.
 
 ## What it shows
 

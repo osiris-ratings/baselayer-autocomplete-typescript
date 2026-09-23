@@ -6,8 +6,8 @@ get its canonical name, the states it is registered in, its lead address and
 officers, and a `business_token` that pins your Baselayer search to exactly
 that business.
 
-> **Pre-release.** 0.x is in use by the Baselayer console and changes on
-> minor versions. 1.0 freezes the API.
+> **Pre-release.** 0.x is being adopted by the Baselayer console and
+> changes on minor versions. 1.0 freezes the API.
 
 ![The typeahead for "how con pum"](docs/images/typeahead-how-con-pum.png)
 
@@ -136,7 +136,7 @@ pnpm test          # vitest: core and server in node, react in jsdom
 pnpm typecheck
 pnpm lint
 pnpm build         # dist/ with ESM, CJS and type declarations
-pnpm demo          # the demo app on http://localhost:5173
+pnpm demo          # the demo app on http://localhost:3000
 ```
 
 Releases are tags; see [CONTRIBUTING.md](CONTRIBUTING.md).

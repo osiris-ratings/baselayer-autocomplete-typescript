@@ -2,7 +2,7 @@
 
 Status: Implemented in this repository (ENG-7943; design ENG-7954)
 Author: Klemen Verdnik (with Claude Code)
-Last updated: 2026-09-22
+Last updated: 2026-09-23
 
 This is the design record. The customer documentation is the
 [README](../README.md) and the other pages in this directory.
