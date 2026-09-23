@@ -25,7 +25,9 @@ export function keyMint(baseUrl: string, apiKey: string): MintFunction {
         throw error;
       }
       throw new Error(
-        "The API did not answer this page (most likely CORS: this origin is not allowed to mint). Use a session token instead.",
+        import.meta.env.DEV
+          ? "The API did not answer this page (most likely CORS: it does not admit this origin). Pick “Production, through this dev server”."
+          : "The API did not answer this page (most likely CORS: this origin is not allowed to mint). Use a session token instead.",
       );
     }
     let body: unknown = null;

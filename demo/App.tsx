@@ -16,10 +16,13 @@ import { useEffect, useMemo, useState } from "react";
 
 import { keyMint, readClaims, tokenMint } from "./credentials";
 
-const ENVIRONMENTS = {
-  production: "https://api.baselayer.com",
-} as const;
-type Environment = keyof typeof ENVIRONMENTS | "custom";
+const PRODUCTION = "https://api.baselayer.com";
+/**
+ * `pnpm demo` forwards this path to production (demo/vite.config.ts). The
+ * published page is static, so it has no server to forward through.
+ */
+const DEV_SERVER_PATH = import.meta.env.DEV ? "/_baselayer" : null;
+type Environment = "dev-server" | "production" | "custom";
 type Mode = "token" | "key";
 
 interface LogLine {
@@ -126,7 +129,9 @@ function SessionMeters({ client }: { client: AutocompleteClient }) {
 }
 
 export function App() {
-  const [environment, setEnvironment] = useState<Environment>("production");
+  const [environment, setEnvironment] = useState<Environment>(
+    DEV_SERVER_PATH === null ? "production" : "dev-server",
+  );
   const [customUrl, setCustomUrl] = useState("");
   const [mode, setMode] = useState<Mode>("token");
   const [secret, setSecret] = useState("");
@@ -141,13 +146,19 @@ export function App() {
   const [person, setPerson] = useState("");
   const [state, setState] = useState("");
 
+  const origin = typeof location === "undefined" ? "" : location.origin;
+  const customBase = customUrl.replace(/\/+$/, "");
+  // Where the page's calls go, and the API they reach (the two differ only
+  // when the dev server forwards them).
   const baseUrl =
-    environment === "custom"
-      ? customUrl.replace(/\/+$/, "")
-      : ENVIRONMENTS[environment];
+    environment === "dev-server"
+      ? `${origin}${DEV_SERVER_PATH ?? ""}`
+      : environment === "custom"
+        ? customBase
+        : PRODUCTION;
+  const apiHost = environment === "custom" ? customBase : PRODUCTION;
   const client = useClient(baseUrl, mode, secret);
   const log = useLog(client);
-  const origin = typeof location === "undefined" ? "" : location.origin;
   const claims = mode === "token" ? readClaims(secret) : null;
 
   const filters: Filters | undefined = useMemo(() => {
@@ -167,7 +178,7 @@ export function App() {
     showDebugInfo: debug,
   };
 
-  const curl = `curl -s -X POST ${baseUrl || "https://api.baselayer.com"}/autocomplete/sessions \\
+  const curl = `curl -s -X POST ${apiHost || PRODUCTION}/autocomplete/sessions \\
   -H "X-API-Key: $BASELAYER_API_KEY" \\
   -H "Origin: ${origin}" | jq -r .session_token`;
 
@@ -191,6 +202,11 @@ export function App() {
               value={environment}
               onChange={e => setEnvironment(e.target.value as Environment)}
             >
+              {DEV_SERVER_PATH !== null && (
+                <option value="dev-server">
+                  Production, through this dev server
+                </option>
+              )}
               <option value="production">Production (api.baselayer.com)</option>
               <option value="custom">Custom URL</option>
             </select>
@@ -259,9 +275,17 @@ export function App() {
           <>
             <p className="warning">
               Your key stays in this tab&apos;s memory and is sent only to{" "}
-              <code>{baseUrl || "the API"}</code>. It is not stored, and this
-              page loads no third-party code. In your product, the key belongs
-              on your backend (<code>@baselayer/autocomplete/server</code>).
+              {environment === "dev-server" ? (
+                <>
+                  this dev server, which forwards it to{" "}
+                  <code>{PRODUCTION}</code>
+                </>
+              ) : (
+                <code>{apiHost || "the API"}</code>
+              )}
+              . It is not stored, and this page loads no third-party code. In
+              your product, the key belongs on your backend (
+              <code>@baselayer/autocomplete/server</code>).
             </p>
             <label>
               API key
@@ -372,7 +396,7 @@ export function App() {
             Send the token with your search; it is good until{" "}
             {new Date(picked.pick.expiresAt).toLocaleTimeString()}.
           </p>
-          <pre className="code">{`POST ${baseUrl}/searches
+          <pre className="code">{`POST ${apiHost}/searches
 {
   "name": ${JSON.stringify(picked.suggestion.label)},
   "address": ${JSON.stringify(picked.suggestion.related.addresses.items[0]?.label ?? "")},

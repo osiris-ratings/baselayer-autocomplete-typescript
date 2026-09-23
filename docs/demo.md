@@ -13,16 +13,18 @@ While the repository is private, so is the site: open it signed in to
 GitHub as a member of the osiris-ratings organization. The address changes
 when the site goes public.
 
-The page talks to the production API, `https://api.baselayer.com`, from
-the browser. That needs the autocomplete tier to answer CORS for the demo's
-origin and the API to accept its mint, which osiris-app ENG-7947 deploys;
-until it is in production the browser refuses both calls. The screenshots
-below are production answers, taken while the calls were relayed by the
-test browser's harness rather than made by the page.
+The published page talks to the production API, `https://api.baselayer.com`,
+from the browser. That needs the autocomplete tier to answer CORS for the
+demo's origin and the API to accept its mint, which osiris-app ENG-7947
+deploys; until it is in production the browser refuses both calls. Run
+locally, the demo needs neither (see
+[Running it locally](#running-it-locally)), and the screenshots below are
+production answers to a local run.
 
 ## Connecting
 
-Pick the environment, then one of two ways in.
+Pick the environment, then one of two ways in. Run locally, the page
+starts on **Production, through this dev server**.
 
 **A session token (recommended).** Mint a session from your terminal, bound
 to the demo's origin, and paste the token. Your API key never reaches the
@@ -41,10 +43,11 @@ new one when it runs out. The page reads the token's terms and shows them:
 ![Connecting with a session token](images/demo-connect-token.png)
 
 **An API key.** The page mints for itself, the way your backend would. The
-key stays in the tab's memory, is sent only to the API host you picked, and
-is never stored; the page loads no third-party code and ships a
-Content-Security-Policy that allows none. This mode needs the API to accept
-requests from the demo's origin.
+key stays in the tab's memory, is sent only to the API host you picked (or
+to the local dev server, which forwards it there), and is never stored; the
+page loads no third-party code and ships a Content-Security-Policy that
+allows none. On the published page this mode needs the API to accept the
+demo's origin.
 
 ![Connecting with an API key, with substring marks](images/demo-key-mode-how-con-pum.png)
 
@@ -59,12 +62,23 @@ pnpm install
 pnpm demo        # http://localhost:3000
 ```
 
-Locally the page runs on `http://localhost:3000`. Once osiris-app ENG-7947
-is in production, the tier answers CORS for every origin, so a session
-token works from there; the API-key mode also needs the API to list the
-page's origin, and ENG-7947 lists only the hosted demo's. Until then
-production admits browser calls from the Baselayer console alone. For
-another environment, pick **Custom URL** and give its API host.
+The page runs on `http://localhost:3000` and starts on **Production,
+through this dev server**: it calls `/_baselayer/autocomplete/…` on its own
+origin, and the dev server forwards those calls to production. That is the
+shape of a real integration, the dev server standing in for your backend,
+and it is why both modes work locally while production's CORS lists admit
+neither localhost nor the published page. The browser makes no cross-origin
+call at all.
+
+The session stays bound to the page. The mint's POST carries the page's
+`Origin`; the tier's GET, which a browser sends to its own origin without
+one, is given the origin it came to. Point the forwarding at another API
+with `DEMO_API=https://… pnpm demo`.
+
+**Production (api.baselayer.com)** makes the calls from the browser, as the
+published page does, and works once ENG-7947 is in production: a session
+token from any origin, the API-key mode only from the published page's.
+For another environment, pick **Custom URL** and give its API host.
 
 ## What it shows
 
