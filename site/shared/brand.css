@@ -120,7 +120,7 @@ kbd {
 .site-header .wrap {
   display: flex;
   align-items: center;
-  gap: 36px;
+  gap: 32px;
   height: var(--header-h);
 }
 
@@ -159,7 +159,7 @@ kbd {
 .site-nav {
   display: flex;
   flex: 1;
-  gap: 28px;
+  gap: 24px;
 }
 
 .site-nav a {
@@ -210,7 +210,10 @@ kbd {
   gap: 8px;
 }
 
-@media (max-width: 1080px) {
+/* The full header (brand, five links, three buttons) needs about 1150px, so
+   below 1240px the links fold behind Menu rather than push the buttons off
+   the edge. */
+@media (max-width: 1240px) {
   .site-header .wrap {
     gap: 16px;
   }
