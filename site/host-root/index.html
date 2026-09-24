@@ -1,0 +1,43 @@
+<!doctype html>
+<!--
+  The page at the root of the site's host (sdk.baselayer.com/). The SDK's site
+  lives under /autocomplete/, so this sends a visitor straight on to it. It is
+  not part of the Vite build: the Site workflow puts it at the root of the
+  Pages artifact, beside autocomplete/. Relative, so it holds under any base.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self'"
+    />
+    <meta http-equiv="refresh" content="0; url=autocomplete/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Baselayer SDKs</title>
+    <link rel="canonical" href="autocomplete/" />
+    <link rel="icon" href="autocomplete/favicon.svg" type="image/svg+xml" />
+    <style>
+      body {
+        margin: 0;
+        padding: 48px 16px;
+        color: #1c1b1c;
+        font:
+          16px/1.5 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          Helvetica,
+          Arial,
+          sans-serif;
+        text-align: center;
+      }
+
+      a {
+        color: #384ce3;
+      }
+    </style>
+  </head>
+  <body>
+    <p>On to the <a href="autocomplete/">Autocomplete SDK</a>.</p>
+  </body>
+</html>

@@ -1,0 +1,1012 @@
+/* ---- Hero: two columns split by a hairline, as on baselayer.com --------- */
+
+.hero {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+}
+
+.hero-copy {
+  padding: clamp(48px, 8vw, 104px) clamp(0px, 4vw, 56px) 56px 0;
+  border-right: 1px solid var(--line);
+}
+
+.hero-aside {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: clamp(48px, 8vw, 104px) 0 56px clamp(24px, 5vw, 72px);
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 8px 0 24px;
+}
+
+.install .code-head {
+  min-height: 38px;
+}
+
+.install pre {
+  padding: 12px 16px 14px;
+}
+
+.hero-note {
+  margin: 14px 0 0;
+}
+
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-copy {
+    padding: 48px 0 8px;
+    border-right: 0;
+  }
+
+  .hero-aside {
+    padding: 0 0 40px;
+  }
+}
+
+/* ---- Specimen: the live answer with the fields it carries --------------- */
+
+.specimen {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 540px) minmax(0, 1fr);
+  gap: 0 clamp(20px, 3vw, 44px);
+  align-items: center;
+  padding: clamp(32px, 6vw, 80px) clamp(16px, 3vw, 44px);
+  background: var(--dusk);
+  border-radius: 2px;
+}
+
+.specimen-side {
+  display: grid;
+  gap: 28px;
+}
+
+.field-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.35);
+  border: 1px solid var(--dusk-line);
+  border-radius: 2px;
+}
+
+/* A connector from each card to the answer, as the KYB rating panel draws. */
+.field-card::after {
+  position: absolute;
+  top: 50%;
+  width: clamp(20px, 3vw, 44px);
+  border-top: 1px solid var(--dusk-line);
+  content: "";
+}
+
+.field-card-left::after {
+  left: 100%;
+}
+
+.field-card-right::after {
+  right: 100%;
+}
+
+.field-card-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  color: var(--ink);
+  font-size: 17px;
+}
+
+.field-card-title .icon {
+  flex: none;
+  color: var(--blue);
+}
+
+.field-card-field {
+  padding: 9px 16px;
+  background: rgba(9, 35, 79, 0.06);
+  border-top: 1px solid var(--dusk-line);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+}
+
+.field-card-field span {
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.field-card-field code {
+  padding: 0;
+  background: none;
+  color: var(--navy);
+  font-size: 12px;
+}
+
+.specimen-card {
+  position: relative;
+  margin: 0;
+  padding: 18px 18px 14px;
+  background: var(--paper);
+  border: 1px solid var(--dusk-line);
+  border-top: 2px solid var(--blue);
+  border-radius: 2px;
+  box-shadow: 0 24px 48px rgba(9, 35, 79, 0.12);
+}
+
+.specimen-label {
+  margin: 0 0 12px;
+  text-align: center;
+}
+
+.specimen-card > .motion-toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}
+
+.specimen-card figcaption {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 13px;
+  text-align: center;
+}
+
+@media (max-width: 1080px) {
+  .specimen {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+
+  .specimen-card {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    justify-self: center;
+    width: 100%;
+    max-width: 600px;
+  }
+
+  .specimen-side {
+    gap: 16px;
+  }
+
+  .field-card::after {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .specimen {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ---- The specimen's reel: the component, playing ------------------------ */
+
+/* The canvas: the pointer is clipped at its edges, with room inside the clip
+   for the field's focus ring. */
+.reel {
+  position: relative;
+  margin: 0 -4px;
+  overflow: hidden;
+  text-align: left;
+}
+
+/* What plays, under the pointer. Tall enough for five rows and the count (in
+   rem, as the component is), so nothing below moves as the rows come and go.
+   At the end of a name it swipes away to the left as it fades, and then
+   snaps back empty for the next. */
+.reel-stage {
+  position: relative;
+  min-height: 26.75rem;
+  padding: 0 4px;
+}
+
+/* The pan sets off slowly and accelerates (an ease-in), and the fade takes
+   the second half of it, so the pan's fast end is already fading away. */
+.reel-stage[data-leaving] {
+  opacity: 0;
+  transform: translateX(-38%);
+  transition:
+    transform 750ms cubic-bezier(0.32, 0, 0.67, 0),
+    opacity 375ms linear 375ms;
+}
+
+/* The pointer on the first row, drawn by the reel rather than the combobox. */
+.reel[data-hover] .bl-ac-row:first-child {
+  background: var(--bl-ac-highlight-bg);
+}
+
+/* The menu takes its place in the card rather than lying over the page, and
+   under the pointer rather than over it. */
+.reel .bl-ac-menu {
+  position: relative;
+  z-index: auto;
+}
+
+/* The field, drawn: a real input would take focus from the page. */
+.reel-field {
+  display: flex;
+  align-items: center;
+  min-height: calc(1.5em + 1rem + 2px);
+  overflow: hidden;
+  white-space: pre;
+}
+
+/* A value wider than the field keeps its end, and the caret, in view, as an
+   input scrolls; a short one sits at the start. */
+.reel-text {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.reel-field[data-focused] {
+  outline: 2px solid #3182ce;
+  outline-offset: 1px;
+}
+
+.reel-caret {
+  flex: none;
+  width: 1.5px;
+  height: 1.2em;
+  margin-left: 1px;
+  background: currentColor;
+  animation: reel-blink 1.06s steps(1) infinite;
+}
+
+/* Held while keys land, as a caret is. */
+.reel-caret[data-typing] {
+  animation: none;
+}
+
+@keyframes reel-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Every name's caption in one place: the card keeps one height. */
+.reel-caption {
+  display: grid;
+}
+
+.reel-caption > span {
+  grid-area: 1 / 1;
+}
+
+.reel-caption > span:not([data-current]) {
+  visibility: hidden;
+}
+
+.reel-pointer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  overflow: visible;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 1.5px rgba(9, 35, 79, 0.3));
+  /* Each move sets its own duration (--move); the fade has one of its own. */
+  transition:
+    transform var(--move, 0ms) cubic-bezier(0.33, 0.1, 0.2, 1),
+    opacity 450ms ease;
+}
+
+/* The canvas pans away without it: the pointer stays where it is and fades
+   with the canvas, over the second half of the pan. */
+.reel-pointer[data-leaving] {
+  opacity: 0;
+  transition: opacity 375ms linear 375ms;
+}
+
+/* A click: the arrow dips, and a ring spreads from its tip and fades. */
+.reel-pointer path {
+  transform-origin: 1px 1px;
+  transition: transform 120ms ease-out;
+}
+
+.reel-pointer[data-pressed] path {
+  transform: scale(0.88);
+}
+
+.reel-press {
+  fill: rgba(56, 76, 227, 0.28);
+  transform-origin: 1px 1px;
+  transform: scale(1.9);
+  opacity: 0;
+  transition:
+    transform 380ms ease-out,
+    opacity 380ms ease-out;
+}
+
+.reel-pointer[data-pressed] .reel-press {
+  transform: scale(0.5);
+  opacity: 1;
+  transition: none;
+}
+
+/* ---- Numbered sections ---------------------------------------------- */
+
+.sections {
+  margin-top: 56px;
+}
+
+.layers,
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  margin-top: 36px;
+  background: var(--line-soft);
+  border: 1px solid var(--line-soft);
+}
+
+.facts {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.layer,
+.fact {
+  padding: 28px 24px 30px;
+  background: var(--paper);
+}
+
+.layer h3,
+.fact h3,
+.step h3 {
+  margin: 14px 0 8px;
+  font-family: var(--serif);
+  font-size: 23px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.layer p,
+.fact p {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.layer-path {
+  color: var(--blue);
+  font-size: 13px;
+}
+
+.fact .icon {
+  color: var(--blue);
+}
+
+@media (max-width: 1000px) {
+  .facts {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .layers,
+  .facts {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- Diagrams --------------------------------------------------------- */
+
+.diagram-frame {
+  margin: 36px 0 0;
+  background: var(--paper);
+  border: 1px solid var(--line-soft);
+}
+
+.diagram-scroll {
+  overflow-x: auto;
+}
+
+.diagram {
+  display: block;
+  width: 100%;
+  min-width: 860px;
+  height: auto;
+}
+
+/* Under a diagram: the hint to scroll (narrow screens only), and, for the
+   one that plays, its toggle at the right. */
+.diagram-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.diagram-foot:has(> .motion-toggle) {
+  padding: 6px 8px 6px 0;
+}
+
+.diagram-foot .diagram-hint {
+  flex: 1;
+  border-top: 0;
+}
+
+/* The architecture diagram's field, playing: the caret blinks, and holds
+   while keys land. */
+.diagram-caret {
+  animation: reel-blink 1.06s steps(1) infinite;
+}
+
+.diagram-caret[data-typing] {
+  animation: none;
+}
+
+.diagram-hint {
+  display: none;
+  margin: 0;
+  padding: 10px 16px;
+  border-top: 1px solid var(--line-soft);
+}
+
+@media (max-width: 900px) {
+  .diagram-hint {
+    display: block;
+  }
+}
+
+.hops {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px 32px;
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: hop;
+}
+
+.hops li {
+  position: relative;
+  padding-left: 42px;
+  color: var(--ink-soft);
+  counter-increment: hop;
+}
+
+.hops li::before {
+  position: absolute;
+  top: -1px;
+  left: 0;
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  background: var(--blue);
+  border-radius: 50%;
+  color: #ffffff;
+  content: counter(hop);
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+
+/* ---- Quick start ------------------------------------------------------ */
+
+.steps {
+  display: grid;
+  gap: 48px;
+  margin-top: 36px;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr);
+  gap: 20px clamp(24px, 4vw, 56px);
+  align-items: start;
+}
+
+.step-copy h3 {
+  margin-top: 6px;
+}
+
+.step-copy p {
+  margin: 0 0 12px;
+  color: var(--ink-soft);
+}
+
+.step-copy .mono-label {
+  margin: 0;
+  color: var(--blue);
+}
+
+@media (max-width: 900px) {
+  .step {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- Styling ---------------------------------------------------------- */
+
+.styling {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 32px clamp(24px, 4vw, 64px);
+  align-items: center;
+}
+
+.styling-shot {
+  margin: 0;
+  padding: 16px;
+  background: var(--paper);
+  border: 1px solid var(--line-soft);
+}
+
+.styling-shot figcaption {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.styling-shot figcaption code {
+  font-size: 12.5px;
+}
+
+@media (max-width: 900px) {
+  .styling {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- The navy band ---------------------------------------------------- */
+
+.cta {
+  margin-top: 24px;
+  padding: clamp(56px, 9vw, 120px) 0;
+  background: var(--navy);
+  color: #ffffff;
+}
+
+.cta-inner {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px clamp(24px, 6vw, 96px);
+  align-items: start;
+}
+
+.cta .display {
+  margin: 0;
+}
+
+.cta p {
+  max-width: 52ch;
+  margin: 0 0 20px;
+  color: #d3dcf1;
+  font-size: 19px;
+}
+
+@media (max-width: 800px) {
+  .cta-inner {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- What it searches: the hero's chips ---------------------------------- */
+
+/* The chips, and the toggle that stops the lane. */
+.entity-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 22px;
+}
+
+.entity-chips {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entity-chips li[data-live] {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--dusk-line);
+  border-radius: 2px;
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.entity-chips li[data-live="true"] {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #ffffff;
+}
+
+/* Not served yet: muted, and dashed like the graph's coming-soon branch. */
+.entity-chips li[data-live="false"] {
+  border: 1px dashed #c9ced8;
+  color: var(--muted);
+}
+
+/* "soon" in a light blue: the brand blue toward --dusk-line, as light as
+   it goes while small text still reads (4.5:1 on white). */
+.entity-chips li span {
+  color: color-mix(in srgb, var(--blue), var(--dusk-line) 29%);
+  font-size: 10.5px;
+}
+
+/* The ones coming soon run past on one line, copies end to end so the loop
+   has no seam, fading out toward the right edge. */
+/* No width of its own (the two copies are far wider than the column), so the
+   hero's columns size as if the lane were not there; it takes what is left. */
+.entity-lane {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 12px,
+    #000 55%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 12px,
+    #000 55%,
+    transparent
+  );
+}
+
+.entity-lane-track {
+  display: flex;
+  width: max-content;
+  animation: entity-lane 18s linear infinite;
+}
+
+.entity-lane:hover .entity-lane-track {
+  animation-play-state: paused;
+}
+
+.entity-lane-set {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+  padding: 0 8px 0 0;
+  list-style: none;
+}
+
+/* Along by one of the four copies. */
+@keyframes entity-lane {
+  to {
+    transform: translateX(-25%);
+  }
+}
+
+/* With reduced motion the lane never moves, so it shows every chip instead:
+   no fade, one copy, wrapping if the column is narrow. */
+@media (prefers-reduced-motion: reduce) {
+  .entity-lane {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+
+  .entity-lane-track {
+    width: auto;
+    animation: none;
+  }
+
+  .entity-lane-set {
+    flex-wrap: wrap;
+    row-gap: 8px;
+    padding-right: 0;
+  }
+
+  .entity-lane-set[aria-hidden] {
+    display: none;
+  }
+}
+
+/* Paused: the lane stops where it is, on its one line, so nothing on the
+   page moves when it is paused or played again. */
+main[data-motion="paused"] .entity-lane-track {
+  animation-play-state: paused;
+}
+
+/* ---- The toggle that stops the page's moving parts ---------------------- */
+
+.motion-toggle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: var(--paper);
+  border: 1px solid var(--dusk-line);
+  border-radius: 2px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.motion-toggle:hover {
+  border-color: var(--blue);
+  color: var(--ink);
+}
+
+.motion-toggle:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+/* Nothing moves with reduced motion, so there is nothing to stop. */
+@media (prefers-reduced-motion: reduce) {
+  .motion-toggle {
+    display: none;
+  }
+}
+
+/* ---- Every entity, linked ---------------------------------------------- */
+
+.entities {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 40px clamp(24px, 4vw, 64px);
+  align-items: start;
+}
+
+@media (max-width: 1000px) {
+  .entities {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.entity-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  margin-top: 28px;
+  background: var(--line-soft);
+  border: 1px solid var(--line-soft);
+}
+
+@media (max-width: 560px) {
+  .entity-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.entity-card {
+  padding: 20px 20px 22px;
+  background: var(--paper);
+}
+
+.entity-card[data-live="false"] {
+  background: #f7f8fa;
+}
+
+.entity-card[data-live="false"] h3,
+.entity-card[data-live="false"] p {
+  color: var(--muted);
+}
+
+/* The pill drops below a title too long to share the line with it. */
+.entity-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.entity-card-head .icon {
+  flex: none;
+  color: var(--blue);
+}
+
+.entity-card[data-live="false"] .entity-card-head .icon {
+  color: #a3a8b3;
+}
+
+.entity-card h3 {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 21px;
+  font-weight: 400;
+}
+
+.entity-card .pill {
+  margin-left: auto;
+}
+
+.entity-card[data-live="false"] .pill {
+  border: 1px dashed #c9ced8;
+  color: var(--muted);
+}
+
+.entity-card p {
+  margin: 10px 0 0;
+  color: var(--ink-soft);
+  font-size: 15px;
+}
+
+/* The graph: one suggestion as a tree of what it links to. */
+.graph {
+  margin: 0;
+  padding: 22px 24px 18px;
+  background: var(--paper);
+  border: 1px solid var(--line-soft);
+  border-top: 2px solid var(--blue);
+  box-shadow: 0 18px 36px rgba(9, 35, 79, 0.08);
+}
+
+.graph figcaption {
+  margin-bottom: 16px;
+}
+
+.graph-root {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  background: var(--faded);
+  border: 1px solid var(--dusk-line);
+}
+
+.graph-root .icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--blue);
+}
+
+.graph-root-label {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.graph-states {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0 0;
+}
+
+.graph-states span {
+  padding: 0 5px;
+  background: #c6f6d5;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  color: #22543d;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+}
+
+.graph-states span[data-domicile="true"] {
+  border-color: #48bb78;
+}
+
+.graph-states span[data-more="true"] {
+  background: #edf2f7;
+  color: var(--ink);
+}
+
+.graph-branches,
+.graph-branches ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The tree's lines: a trunk down the left, a branch to each item. Each
+   branch draws its own stretch of trunk; the last one's stops at its elbow,
+   so the trunk ends where the last branch leaves it. */
+.graph-branches {
+  margin-left: 26px;
+}
+
+.graph-branches > li {
+  position: relative;
+  padding: 14px 0 0 22px;
+}
+
+.graph-branches > li::before {
+  position: absolute;
+  top: 26px;
+  left: 0;
+  width: 16px;
+  border-top: 1px solid var(--dusk-line);
+  content: "";
+}
+
+.graph-branches > li::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  border-left: 1px solid var(--dusk-line);
+  content: "";
+}
+
+.graph-branches > li:last-child::after {
+  bottom: auto;
+  height: 27px;
+}
+
+.graph-branch {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 6px;
+}
+
+.graph-branch code {
+  padding: 0;
+  background: none;
+  color: var(--blue);
+  font-size: 12.5px;
+}
+
+.graph-branch span {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.graph-branches ul li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.graph-branches ul li .icon {
+  flex: none;
+  color: var(--muted);
+}
+
+.graph-role {
+  margin-left: auto;
+  padding-left: 12px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.graph-branches > li[data-soon="true"] .graph-branch {
+  padding: 8px 10px;
+  border: 1px dashed #c9d2e4;
+}
+
+.graph-source {
+  margin: 16px 0 0;
+  text-align: right;
+}
+
+.graph-source code {
+  padding: 0;
+  background: none;
+  color: var(--ink);
+  font-size: 12.5px;
+}

@@ -1,0 +1,669 @@
+{
+  "components": {
+    "schemas": {
+      "BusinessSuggestion": {
+        "properties": {
+          "domicile_state": {
+            "type": "string"
+          },
+          "highlight": {
+            "items": {
+              "$ref": "#/components/schemas/HighlightPart"
+            },
+            "type": "array"
+          },
+          "label": {
+            "description": "Display-cased, rendered verbatim.",
+            "type": "string"
+          },
+          "match": {
+            "$ref": "#/components/schemas/MatchGrade"
+          },
+          "matched_name": {
+            "description": "The indexed name that matched when it is not `label`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "related": {
+            "$ref": "#/components/schemas/Related"
+          },
+          "states": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "token": {
+            "description": "Opaque handle for the family: pass it back verbatim as `business_token` on\n`POST /searches` to pre-identify the business the search resolves to.\nSealed by the tier, so a client cannot read the id inside, and the same\nfamily gets a different token every time. Bound to the session's\norganization and good for fifteen minutes; `POST /searches` refuses it\nfrom another organization (422, code 3040) or past its expiry (422, code\n3042).",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/EntityType"
+          }
+        },
+        "required": [
+          "type",
+          "token",
+          "label",
+          "match",
+          "domicile_state",
+          "states",
+          "related",
+          "highlight"
+        ],
+        "type": "object"
+      },
+      "BusinessesResponse": {
+        "properties": {
+          "found": {
+            "description": "Matches before `limit`; a floor when `found_capped`.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "found_capped": {
+            "description": "`found` is a floor rather than an exact count \u2014 it hit the disclosure\nthreshold, or the scan stopped once the head was provably settled.\n\nThis says nothing about whether the SUGGESTIONS are complete; read\n`truncated` for that. The two were one flag, and a caller could not tell\n\"there are more than this many\" from \"I did not finish looking\".",
+            "type": "boolean"
+          },
+          "query": {
+            "description": "The `q` this answers.",
+            "type": "string"
+          },
+          "sources": {
+            "$ref": "#/components/schemas/Sources"
+          },
+          "suggestions": {
+            "description": "Ordered best-first, at most `limit`.",
+            "items": {
+              "$ref": "#/components/schemas/BusinessSuggestion"
+            },
+            "type": "array"
+          },
+          "truncated": {
+            "description": "The search did not finish: a deadline fired or a scan budget was spent, so\na business that matches may be missing from `suggestions` entirely.\n\nThe distinction that matters to a client is that `found: 0` with this set\nis NOT evidence of absence \u2014 it means the tier stopped looking, usually\nbecause the pages it needed were cold. Rendered as a count (\"0 matches\")\nit tells the caller their business does not exist, which is a lie the UI\nused to tell. A complete answer, however few rows it has, leaves it false.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "query",
+          "found",
+          "found_capped",
+          "truncated",
+          "sources",
+          "suggestions"
+        ],
+        "type": "object"
+      },
+      "EntityType": {
+        "enum": [
+          "business",
+          "person",
+          "address",
+          "lien"
+        ],
+        "type": "string"
+      },
+      "ErrorEnvelope": {
+        "description": "The API's catalog error envelope.",
+        "properties": {
+          "code": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "metadata": {},
+          "uri": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "metadata"
+        ],
+        "type": "object"
+      },
+      "HighlightPart": {
+        "properties": {
+          "matched": {
+            "type": "boolean"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "text",
+          "matched"
+        ],
+        "type": "object"
+      },
+      "MatchGrade": {
+        "enum": [
+          "exact",
+          "strong",
+          "partial"
+        ],
+        "type": "string"
+      },
+      "Related": {
+        "properties": {
+          "addresses": {
+            "$ref": "#/components/schemas/RelatedSet"
+          },
+          "liens": {
+            "$ref": "#/components/schemas/RelatedSet"
+          },
+          "people": {
+            "$ref": "#/components/schemas/RelatedSet"
+          }
+        },
+        "required": [
+          "people",
+          "addresses",
+          "liens"
+        ],
+        "type": "object"
+      },
+      "RelatedItem": {
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "matched": {
+            "description": "This item is why the row is here.",
+            "type": "boolean"
+          },
+          "role": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "token": {
+            "description": "Opaque handle for this person or address, sealed the same way the\nsuggestion's own `token` is and bound to the same organization and\ndeadline. Nothing redeems one yet \u2014 the route that resolves a person or an\naddress is still to come. The subject sealed inside names the corpus it\nwill be resolved from, so that route can be written against the handles\nthis build already mints \u2014 what survives is the FORMAT, not any handle:\nevery one of these expires a quarter of an hour after it is sealed.\nNull when the tier cannot name the row: its id was unreadable, or it\nbelongs to a corpus this build has no `Subject` for \u2014 a `people.anchor_kind`\na newer builder writes reaches an older tier as an unsealed item rather\nthan as a person resolved in the wrong table.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "type": {
+            "$ref": "#/components/schemas/EntityType"
+          }
+        },
+        "required": [
+          "type",
+          "label",
+          "matched"
+        ],
+        "type": "object"
+      },
+      "RelatedSet": {
+        "properties": {
+          "count": {
+            "description": "Total before the head cap; null when the relation's status is not ok. For\naddresses it counts the business's own filings: the head also ranks in the\naddresses of its officers and agents, so `items` can outnumber it.",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RelatedItem"
+            },
+            "type": "array"
+          },
+          "matched": {
+            "description": "How many satisfied a relation filter; null when none applies.",
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "truncated",
+          "items"
+        ],
+        "type": "object"
+      },
+      "Source": {
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/SourceStatus"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "type": "object"
+      },
+      "SourceStatus": {
+        "enum": [
+          "ok",
+          "not_requested",
+          "unavailable"
+        ],
+        "type": "string"
+      },
+      "Sources": {
+        "properties": {
+          "addresses": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "liens": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "people": {
+            "$ref": "#/components/schemas/Source"
+          }
+        },
+        "required": [
+          "people",
+          "addresses",
+          "liens"
+        ],
+        "type": "object"
+      },
+      "ValidationEnvelope": {
+        "description": "The API's request validation envelope (`{\"detail\": [...]}`).",
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationItem"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "type": "object"
+      },
+      "ValidationItem": {
+        "properties": {
+          "ctx": {},
+          "loc": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "msg": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "loc",
+          "msg"
+        ],
+        "type": "object"
+      },
+      "VersionResponse": {
+        "properties": {
+          "built_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "image_digest": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "index": {
+            "description": "`v<schema>-<recipe>-<ingestion id>`, the `X-Autocomplete-Index` header.",
+            "type": "string"
+          },
+          "ingestion_id": {
+            "type": "string"
+          },
+          "recipe_sha256": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "recipe_version": {
+            "description": "The rules that built the content; reported, never pinned.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "schema_sha256": {
+            "type": "string"
+          },
+          "schema_version": {
+            "description": "The DDL the artifact is built on; the number this service pins.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "service_version": {
+            "description": "`<crate version>+<commit>` of the binary that answered, e.g. `0.3.0+7c3d1ab9e`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "service_version",
+          "index",
+          "schema_version",
+          "recipe_version",
+          "schema_sha256",
+          "ingestion_id"
+        ],
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "autocomplete_session": {
+        "description": "The session grant from POST /autocomplete/sessions",
+        "in": "header",
+        "name": "X-Autocomplete-Session",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "description": "Keystroke typeahead over businesses, served from the read-only SQLite index. Every request carries a session grant minted by `POST /autocomplete/sessions`.",
+    "license": {
+      "name": ""
+    },
+    "title": "Baselayer Autocomplete",
+    "version": "1"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/autocomplete/businesses": {
+      "get": {
+        "operationId": "get_businesses",
+        "parameters": [
+          {
+            "description": "Business name text, two or more characters once `% _ * ?` are stripped,\nat most 256.",
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma list of state codes; keeps rows whose footprint touches any of them.",
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The root registration's state.",
+            "in": "query",
+            "name": "domicile_state",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "1\u201320, default 10.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Comma list of `people`, `addresses`, `liens`; default `people,addresses`.",
+            "in": "query",
+            "name": "include",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Officer or agent name text (prefix tokens), at most 256 characters.",
+            "in": "query",
+            "name": "person.name",
+            "required": false,
+            "schema": {
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "description": "`officer` or `agent`.",
+            "in": "query",
+            "name": "person.role",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Address text (prefix tokens), at most 256 characters.",
+            "in": "query",
+            "name": "address.text",
+            "required": false,
+            "schema": {
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "description": "City name, at most 256 characters.",
+            "in": "query",
+            "name": "address.city",
+            "required": false,
+            "schema": {
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "address.postal_code",
+            "required": false,
+            "schema": {
+              "maxLength": 16,
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "address.state",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BusinessesResponse"
+                }
+              }
+            },
+            "description": "Suggestions, best first",
+            "headers": {
+              "Server-Timing": {
+                "description": "total, sqlite, page-cache misses, plan",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Autocomplete-Index": {
+                "description": "`v<schema>-<recipe>-<ingestion id>`, the artifact that answered",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Session missing, invalid or expired: mint one"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationEnvelope"
+                }
+              }
+            },
+            "description": "A parameter is unknown, repeated or invalid, or a filter was sent with a query too short to narrow"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Rate limited, the session's request budget is spent, or the session changed its query too many times"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No index is being served yet"
+          }
+        },
+        "security": [
+          {
+            "autocomplete_session": []
+          }
+        ],
+        "summary": "Autocomplete a business name, narrowed by the officer and address typed so far.",
+        "tags": [
+          "Autocomplete"
+        ]
+      }
+    },
+    "/autocomplete/version": {
+      "get": {
+        "operationId": "get_version",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VersionResponse"
+                }
+              }
+            },
+            "description": "The served artifact"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Session missing, invalid or expired"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No index is being served yet"
+          }
+        },
+        "security": [
+          {
+            "autocomplete_session": []
+          }
+        ],
+        "summary": "The binary this replica runs and the artifact it serves.",
+        "tags": [
+          "Autocomplete"
+        ]
+      }
+    },
+    "/health": {
+      "get": {
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "Up"
+          }
+        },
+        "summary": "The process is up.",
+        "tags": [
+          "Health"
+        ]
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "ready",
+        "responses": {
+          "200": {
+            "description": "Ready"
+          },
+          "503": {
+            "description": "Draining, still warming up, or no supported index"
+          }
+        },
+        "summary": "A verified set is serving, its warm-up has run, and the replica is not draining.",
+        "tags": [
+          "Health"
+        ]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Autocomplete"
+    },
+    {
+      "name": "Health"
+    }
+  ]
+}

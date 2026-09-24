@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://api.baselayer.com/schemas/AutocompleteSessionGrantResponse.json",
+  "title": "AutocompleteSessionGrantResponse",
+  "description": "201 body of POST /autocomplete/sessions.",
+  "type": "object",
+  "required": [
+    "session_token",
+    "expires_in",
+    "request_budget",
+    "pivot_allowance",
+    "filter_min_stem"
+  ],
+  "properties": {
+    "session_token": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Compact EdDSA JWS; send verbatim as X-Autocomplete-Session."
+    },
+    "expires_in": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Seconds until the tier stops honouring the grant; refresh at about 80 %."
+    },
+    "expires_at": {
+      "type": "string",
+      "format": "date-time",
+      "description": "The same instant as a UTC timestamp (the token's exp), for display and logs; time refreshes from expires_in. Optional here so a body from an API that predates it still parses."
+    },
+    "request_budget": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Requests per route per session."
+    },
+    "pivot_allowance": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Query changes allowed before 429 code 482."
+    },
+    "filter_min_stem": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Characters of q the narrowing filters wait for."
+    }
+  }
+}

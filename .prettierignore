@@ -1,0 +1,6 @@
+dist
+coverage
+pnpm-lock.yaml
+contracts
+docs/images
+site-dist

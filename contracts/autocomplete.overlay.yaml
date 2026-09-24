@@ -1,0 +1,354 @@
+# OpenAPI Overlay 1.0.0 for the API reference the site publishes.
+#
+# The reference is generated from contracts/sessions-openapi.json and
+# contracts/tier-openapi.json, the specs the API publishes. This overlay
+# carries what those specs do not say yet. Every action says where upstream
+# its text belongs; once it is there, the action goes, and when this file is
+# empty the reference is the upstream specs alone.
+#
+# A target that matches nothing fails the build (site/api/spec/assemble.ts),
+# so a route renamed upstream cannot leave stale text behind.
+overlay: 1.0.0
+info:
+  title: Autocomplete API reference documentation
+  version: 1.0.0
+actions:
+  - target: $
+    description: >-
+      The overview and the sections that are not routes. No upstream home:
+      this is the reference's own framing.
+    update:
+      info:
+        description: |
+          Your backend mints a session with your API key. The browser uses the session to ask for businesses. The [SDK](../) does all of this for you; this is the contract underneath, for building your own client or checking what crosses the wire.
+
+          | Route | Called from | Credential |
+          | --- | --- | --- |
+          | [`POST /autocomplete/sessions`](#create-a-session) | Your backend | `X-API-Key` |
+          | [`GET /autocomplete/businesses`](#search-businesses) | The browser | `X-Autocomplete-Session` |
+
+          Both routes answer JSON, and neither takes a request body. Your API key is a production application's key from Baselayer, with the `autocomplete.read` permission.
+      tags:
+        - name: Sessions
+        - name: Businesses
+        - name: Errors
+          x-traitTag: true
+          description: |
+            Every refusal carries a `code`, a `message` a person can read, and `metadata` a program can act on. On the tier, `metadata.reason` names the refusal and `metadata.action` says whether to `mint` or `retry`. A 422 carries `{ "detail": [{ "type", "loc", "msg", "ctx" }] }` instead.
+
+            | Status | Code | Reason | What to do |
+            | --- | --- | --- | --- |
+            | 401 | 27 | `session_missing` | Mint, then replay. |
+            | 401 | 28 | `session_invalid` | Mint, then replay. `metadata.detail` says why: `malformed`, `wrong_type`, `unknown_key`, `bad_signature`, `not_yet_valid` or `origin_mismatch`, which means your backend did not forward the page's `Origin`. |
+            | 401 | 29 | `session_expired` | Mint, then replay. |
+            | 429 | 480 | `session_budget_spent` | Mint, then replay. |
+            | 429 | 482 | `session_pivots_exceeded` | Mint, then replay. |
+            | 429 | 429 | `rate_limited` | Wait `Retry-After` seconds, then replay. |
+            | 422 | | | Fix the request; retrying will not help. |
+            | 503 | 503 | | Wait `Retry-After` (30 s while no index is served, 1 s when the workers are busy), then try again. |
+            | 504 | | | The request took longer than 10 seconds; let the next keystroke try again. |
+
+            One recovery per request is enough. The SDK mints and replays once, and stops minting for a minute when a fresh session is refused twice in a row, so a disagreement never turns into a mint per keystroke.
+        - name: The business token
+          x-traitTag: true
+          description: |
+            Each suggestion's `token` pins a Baselayer search to exactly that business. Send it verbatim as `business_token` on `POST /searches`, from your backend, with your API key. It is sealed, bound to your organization, and good for 15 minutes.
+
+            If the search refuses it, drop the token and submit the name as typed: 422 with code 3040 (not Baselayer's, or another organization's), 3042 (expired), 3023 (the business is gone) or 3043 (a sandbox application), or 503 with code 3041. The SDK's `refusedThePin(status, code)` is true for all of them, as for any other status under 500, and false for any other 5xx and a network failure.
+
+  - target: $.components.securitySchemes.APIKeyHeader
+    description: >-
+      Belongs upstream, in the API key's security scheme.
+    update:
+      description: >-
+        An API key of a production application in your organization, from
+        your backend only. A sandbox application's key is refused.
+
+  - target: $.paths['/autocomplete/sessions'].post.responses['422']
+    description: >-
+      The framework's default validation answer; the route takes no input,
+      and its real 422 is the sandbox refusal below. Belongs upstream, in the
+      route's declared responses.
+    remove: true
+
+  - target: $.paths['/autocomplete/sessions'].post
+    description: >-
+      Belongs upstream, in the route's declaration: a public description, the
+      Origin header, a declared response for each refusal, and examples.
+    update:
+      tags: [Sessions]
+      summary: Create a session
+      description: |
+        Mints a session for your organization, bound to the page that will use it. Call it from your backend, never from a browser: it takes your API key.
+
+        Every session counts against your organization's pools, one per ten minutes and one per rolling day, shared by every user and key in the organization. Put the endpoint that calls this behind your own authentication.
+      parameters:
+        - name: Origin
+          in: header
+          required: true
+          description: >-
+            The origin of the page that will use the session, forwarded from
+            the browser's request to your backend. The tier refuses the
+            session from any other origin. Without it the session is unbound
+            and works from anywhere, so never mint one of those for a browser.
+          schema:
+            type: string
+            examples: ["https://app.example.com"]
+      responses:
+        "201":
+          description: >-
+            A session. Pass the status, the body and any `Retry-After` back to
+            the browser unchanged: the SDK reads all three.
+          content:
+            application/json:
+              examples:
+                session:
+                  summary: A session, as production mints it
+                  value:
+                    session_token: eyJhbGciOiJFZERTQSIsInR5cCI6ImFjczEi…
+                    expires_in: 180
+                    expires_at: "2026-09-23T12:03:00Z"
+                    request_budget: 30
+                    pivot_allowance: 5
+                    filter_min_stem: 5
+        "401":
+          description: >-
+            The key is not recognized (codes 20 to 24). Check the key;
+            retrying will not help.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "402":
+          description: The organization is locked (code 3004). Contact Baselayer.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "403":
+          description: >-
+            Code 30: the key lacks the `autocomplete.read` permission. Code
+            37: autocomplete is not enabled for the organization; contact
+            Baselayer to enable it.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "422":
+          description: >-
+            The key belongs to a sandbox application (code 483). Use a
+            production application's key.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+        "429":
+          description: >-
+            A session pool is spent (code 429). `metadata.scope` names it:
+            `autocomplete_session_mint:organization` for the ten minutes,
+            `autocomplete_session_mint_day:organization` for the day, with
+            `metadata.limit` and `metadata.window_seconds`. Wait out
+            `Retry-After`, and pass it to the browser unchanged.
+          headers:
+            Retry-After:
+              description: Seconds until the pool admits another session.
+              schema: { type: integer }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+              examples:
+                window:
+                  summary: The ten-minute pool is spent
+                  value:
+                    code: 429
+                    message: …
+                    uri: null
+                    metadata:
+                      scope: autocomplete_session_mint:organization
+                      window_seconds: 600
+                      limit: …
+        "503":
+          description: >-
+            The deployment cannot mint sessions right now (code 481). Fall
+            back to a plain input and try again in a few minutes.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+      x-codeSamples:
+        - lang: shell
+          label: curl
+          source: |-
+            curl -s -X POST https://api.baselayer.com/autocomplete/sessions \
+              -H "X-API-Key: $BASELAYER_API_KEY" \
+              -H "Origin: https://app.example.com"
+        - lang: typescript
+          label: Node
+          source: |-
+            import { mintForOrigin } from "@baselayer/autocomplete/server";
+
+            const out = await mintForOrigin({
+              apiKey: process.env.BASELAYER_API_KEY!,
+              origin: "https://app.example.com",
+            });
+            // out.status, out.headers (Retry-After) and out.body, to pass through
+
+  - target: $.paths['/autocomplete/businesses'].get.parameters[?(@.name=='address.postal_code')]
+    description: Belongs upstream, in the tier's parameter docs.
+    update:
+      description: Postal code prefix, at most 16 characters.
+
+  - target: $.paths['/autocomplete/businesses'].get.parameters[?(@.name=='address.state')]
+    description: Belongs upstream, in the tier's parameter docs.
+    update:
+      description: The address's state code.
+
+  - target: $.paths['/autocomplete/businesses'].get
+    description: >-
+      Belongs upstream, in the tier's OpenAPI annotations: the public
+      description, the Origin header, per-status detail, the 504, and
+      examples.
+    update:
+      tags: [Businesses]
+      summary: Search businesses
+      description: |
+        Suggestions for a business name as someone types it, best first, narrowed by an officer or an address when you have one. Call it from the browser with the session; it never sees your API key.
+
+        The route answers CORS for any origin: the session is the only credential it reads. Credentials are never allowed, so fetch with `credentials: "omit"`. It accepts `X-Autocomplete-Session`, `Accept`, `Content-Type` and `X-Request-ID`, and exposes `Server-Timing`, `X-Autocomplete-Index`, `X-Request-ID` and `Retry-After`.
+
+        Each parameter may appear once; an unknown or repeated one is a 422. Every filter (all but `q`, `limit` and `include`) waits until `q`, stripped of punctuation, reaches the session's `filter_min_stem` characters. Before that the request is a 422 on `q`, and the SDK holds the filters back instead.
+
+        A session answers at most `request_budget` requests (then 429 code 480) and changes its query at most `pivot_allowance` times (then 429 code 482). Typing on, backspacing and fixing a typo are not changes; replacing the name with another one is. Both answers mean the same thing: mint a new session and replay once.
+      parameters:
+        - name: Origin
+          in: header
+          description: >-
+            Set by the browser. It must equal the origin the session was
+            minted for, or the session is refused with 401 code 28.
+          schema: { type: string }
+      responses:
+        "200":
+          headers:
+            X-Request-ID:
+              description: This request's id. Quote it when you report a problem.
+              schema: { type: string }
+          content:
+            application/json:
+              examples:
+                harbor:
+                  summary: "`harbor concrete`, one suggestion kept"
+                  value:
+                    query: harbor concrete
+                    found: 27
+                    found_capped: false
+                    truncated: false
+                    sources:
+                      people: { status: ok }
+                      addresses: { status: ok }
+                      liens: { status: unavailable }
+                    suggestions:
+                      - type: business
+                        token: A4uYMdTtN1PuVsmNF8…
+                        label: HARBOR CONCRETE PUMPING CO., INC.
+                        matched_name: null
+                        match: strong
+                        domicile_state: PA
+                        states: [MD, NY, OH, PA, WV]
+                        related:
+                          people:
+                            count: 4
+                            matched: null
+                            truncated: true
+                            items:
+                              - type: person
+                                token: AwGCjUrMDqXaypeR5o…
+                                label: DANA WHITFIELD
+                                role: officer
+                                matched: false
+                          addresses:
+                            count: 3
+                            matched: null
+                            truncated: true
+                            items:
+                              - type: address
+                                token: A2leF7_gomJWvMMtp4…
+                                label: 1200 River Rd, Pittsburgh, PA 15212
+                                role: principal
+                                matched: false
+                          liens: { count: null, matched: null, truncated: false, items: [] }
+                        highlight:
+                          - { text: HARBOR CONCRETE, matched: true }
+                          - { text: " PUMPING CO., INC.", matched: false }
+        "401":
+          description: >-
+            Code 27, no session header (`session_missing`); code 28, the
+            session is invalid (`session_invalid`, with `metadata.detail`);
+            code 29, it expired (`session_expired`). Mint, then replay.
+          content:
+            application/json:
+              examples:
+                origin:
+                  summary: A session used from another origin
+                  value:
+                    code: 28
+                    message: Autocomplete session invalid. Mint a new one.
+                    uri: null
+                    metadata:
+                      reason: session_invalid
+                      detail: origin_mismatch
+                      action: mint
+        "422":
+          content:
+            application/json:
+              examples:
+                filters:
+                  summary: A filter before `filter_min_stem`
+                  value:
+                    detail:
+                      - type: string_too_short
+                        loc: [query, q]
+                        msg: Filters need a query of at least 5 characters
+                        ctx: { min_length: 5, with: filters }
+        "429":
+          description: >-
+            Code 480, the session's request budget is spent; code 482, it
+            changed its query too many times: mint, then replay. Code 429
+            (`rate_limited`), too many requests in a burst: wait `Retry-After`
+            seconds, then replay.
+          headers:
+            Retry-After:
+              description: On `rate_limited`, seconds to wait.
+              schema: { type: integer }
+        "503":
+          description: >-
+            No index is being served yet (`Retry-After: 30`), or the query
+            workers are busy (`Retry-After: 1`). Wait, then try again.
+          headers:
+            Retry-After:
+              description: Seconds to wait.
+              schema: { type: integer }
+        "504":
+          description: >-
+            The request took longer than 10 seconds. Let the next keystroke
+            try again.
+      x-codeSamples:
+        - lang: typescript
+          label: fetch
+          source: |-
+            const url = new URL("https://api.baselayer.com/autocomplete/businesses");
+            url.searchParams.set("q", "harbor concrete");
+            url.searchParams.set("limit", "5");
+
+            const response = await fetch(url, {
+              headers: { "X-Autocomplete-Session": sessionToken },
+              credentials: "omit",
+              signal,
+            });
+        - lang: shell
+          label: curl
+          source: |-
+            curl -s "https://api.baselayer.com/autocomplete/businesses?q=harbor%20concrete&limit=5" \
+              -H "X-Autocomplete-Session: $SESSION" \
+              -H "Origin: https://app.example.com"
+        - lang: typescript
+          label: SDK
+          source: |-
+            const { response, indexTag, roundTripMs } = await client.suggest(
+              { q: "harbor concrete", limit: 5 },
+              { signal },
+            );

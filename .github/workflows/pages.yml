@@ -1,0 +1,58 @@
+# Build the site (site/: the overview, the API reference and the demo) against
+# the SDK's source and deploy it to GitHub Pages, at sdk.baselayer.com. The
+# host is for SDKs and the path for the product: the site lives under
+# /autocomplete/, and the host's root sends a visitor on to it. While the
+# repository is private the site is private too: only members of the
+# organization can open it.
+name: Site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/configure-pages@v5
+        id: pages
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm site:build
+        env:
+          SITE_BASE: ${{ steps.pages.outputs.base_path }}/autocomplete/
+      # The site under autocomplete/, and at the root the page that sends a
+      # visitor on to it.
+      - run: |
+          mkdir pages
+          mv site-dist pages/autocomplete
+          cp site/host-root/index.html pages/index.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment

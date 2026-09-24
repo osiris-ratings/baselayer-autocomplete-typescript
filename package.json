@@ -1,0 +1,138 @@
+{
+  "name": "@baselayer/autocomplete",
+  "version": "0.1.0",
+  "description": "Baselayer business autocomplete for the browser: a framework-free client, React hooks and a styled typeahead, and a server-side session mint helper",
+  "license": "Apache-2.0",
+  "author": "Baselayer <support@baselayer.com>",
+  "homepage": "https://github.com/osiris-ratings/baselayer-autocomplete-typescript#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/osiris-ratings/baselayer-autocomplete-typescript.git"
+  },
+  "bugs": "https://github.com/osiris-ratings/baselayer-autocomplete-typescript/issues",
+  "keywords": [
+    "baselayer",
+    "autocomplete",
+    "typeahead",
+    "kyb",
+    "react"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "CHANGELOG.md",
+    "LICENSE"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./react": {
+      "import": {
+        "types": "./dist/react/index.d.ts",
+        "default": "./dist/react/index.js"
+      },
+      "require": {
+        "types": "./dist/react/index.d.cts",
+        "default": "./dist/react/index.cjs"
+      }
+    },
+    "./react/styles.css": "./dist/react/styles.css",
+    "./server": {
+      "import": {
+        "types": "./dist/server/index.d.ts",
+        "default": "./dist/server/index.js"
+      },
+      "require": {
+        "types": "./dist/server/index.d.cts",
+        "default": "./dist/server/index.cjs"
+      }
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint --max-warnings=0 .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check:package": "publint && attw --pack . --profile node16 --exclude-entrypoints ./react/styles.css",
+    "site": "vite --config site/vite.config.ts",
+    "site:build": "tsc --noEmit -p site && vite build --config site/vite.config.ts",
+    "demo": "vite --config site/vite.config.ts --open /demo/",
+    "demo:turns": "node scripts/turn-keyframes.ts",
+    "contracts:sessions": "node scripts/vendor-sessions-spec.ts",
+    "release": "node scripts/release.ts",
+    "diagrams": "UPDATE_DIAGRAMS=1 vitest run --project site tests/site/diagrams.test.tsx"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0 || ^19.0.0",
+    "react-dom": "^18.2.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "downshift": "^8.2.3"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.5",
+    "@eslint/js": "^9.39.5",
+    "@fontsource-variable/newsreader": "^5.3.0",
+    "@fontsource/geist-mono": "^5.3.0",
+    "@fontsource/uncut-sans": "^5.3.0",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
+    "@types/node": "^22.20.4",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "@vitest/coverage-v8": "^4.1.11",
+    "eslint": "^9.39.5",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "jsdom": "^26.1.0",
+    "marked": "^18.0.14",
+    "prettier": "^3.9.8",
+    "publint": "^0.3.24",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "sugar-high": "^2.4.1",
+    "tsup": "^8.5.1",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.70.1",
+    "vite": "^7.3.6",
+    "vitest": "^4.1.11",
+    "yaml": "^2.9.1"
+  },
+  "packageManager": "pnpm@12.4.2"
+}
