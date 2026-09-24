@@ -1,5 +1,5 @@
 /*
- * @baselayer/autocomplete: the styled typeahead.
+ * @baselayer-sdk/autocomplete: the styled typeahead.
  *
  * Every rule is one class deep, so a host's global reset (a design system's,
  * Tailwind's preflight, a `* { … }`) never outranks it, and a host class loaded

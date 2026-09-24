@@ -10,7 +10,7 @@ import {
   type Filters,
   type SessionPhase,
   type SuggestResult,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 
 import {
   AutocompleteClientProvider,

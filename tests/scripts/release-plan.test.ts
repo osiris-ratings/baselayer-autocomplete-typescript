@@ -16,7 +16,7 @@ import {
 
 const HEAD = `# Changelog
 
-All notable changes to \`@baselayer/autocomplete\`.
+All notable changes to \`@baselayer-sdk/autocomplete\`.
 `;
 
 function changelog(...sections: string[]): string {
@@ -299,7 +299,7 @@ describe("forwardPort", () => {
 
 describe("setPackageVersion", () => {
   const pkg = `{
-  "name": "@baselayer/autocomplete",
+  "name": "@baselayer-sdk/autocomplete",
   "version": "0.1.0",
   "dependencies": {
     "downshift": { "version": "9.0.0" }

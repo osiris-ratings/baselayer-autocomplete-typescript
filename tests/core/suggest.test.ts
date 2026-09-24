@@ -20,7 +20,7 @@ import {
   type Query,
   type RequestEvent,
   type ResponseLike,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 
 const {
   authBrakeMs: AUTH_BRAKE_MS,

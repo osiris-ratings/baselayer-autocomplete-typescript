@@ -2,13 +2,13 @@
 // stem with: three made-up businesses, typed a letter at a time and never
 // finished. None of these businesses, people or addresses is real.
 
-import { queryTokens } from "@baselayer/autocomplete";
+import { queryTokens } from "@baselayer-sdk/autocomplete";
 import type {
   BusinessSuggestion,
   HighlightPart,
   RelatedSet,
-} from "@baselayer/autocomplete";
-import { MIN_QUERY_CHARS } from "@baselayer/autocomplete/react";
+} from "@baselayer-sdk/autocomplete";
+import { MIN_QUERY_CHARS } from "@baselayer-sdk/autocomplete/react";
 
 import { SAMPLE_SUGGESTIONS, address, person, set } from "../demo/sample";
 

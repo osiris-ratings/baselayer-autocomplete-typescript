@@ -3,7 +3,7 @@
 Import the stylesheet once:
 
 ```ts
-import "@baselayer/autocomplete/react/styles.css";
+import "@baselayer-sdk/autocomplete/react/styles.css";
 ```
 
 Out of the box the component looks like the Baselayer console. Four levers
@@ -212,7 +212,7 @@ component without its data) with rows of your own, the way the live demo
 does:
 
 ```tsx
-import { BusinessAutocompleteView } from "@baselayer/autocomplete/react";
+import { BusinessAutocompleteView } from "@baselayer-sdk/autocomplete/react";
 
 <BusinessAutocompleteView
   id="preview"

@@ -28,7 +28,7 @@ export default defineConfig([
       "react-dom",
       "react/jsx-runtime",
       "downshift",
-      "@baselayer/autocomplete",
+      "@baselayer-sdk/autocomplete",
     ],
     // Next.js App Router: the hooks and the component are client code.
     banner: { js: '"use client";' },

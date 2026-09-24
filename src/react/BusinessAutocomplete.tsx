@@ -7,13 +7,13 @@ import {
   type Ref,
 } from "react";
 
-import type { Filters } from "@baselayer/autocomplete";
-import type { AutocompleteClient } from "@baselayer/autocomplete";
-import type { LookInput, RowParts } from "@baselayer/autocomplete";
-import { defaultMint, type MintFunction } from "@baselayer/autocomplete";
-import { BUSINESS_TOKEN_TTL_SECONDS } from "@baselayer/autocomplete";
-import { includeForParts, resolveParts } from "@baselayer/autocomplete";
-import type { BusinessSuggestion } from "@baselayer/autocomplete";
+import type { Filters } from "@baselayer-sdk/autocomplete";
+import type { AutocompleteClient } from "@baselayer-sdk/autocomplete";
+import type { LookInput, RowParts } from "@baselayer-sdk/autocomplete";
+import { defaultMint, type MintFunction } from "@baselayer-sdk/autocomplete";
+import { BUSINESS_TOKEN_TTL_SECONDS } from "@baselayer-sdk/autocomplete";
+import { includeForParts, resolveParts } from "@baselayer-sdk/autocomplete";
+import type { BusinessSuggestion } from "@baselayer-sdk/autocomplete";
 
 import {
   BusinessAutocompleteView,

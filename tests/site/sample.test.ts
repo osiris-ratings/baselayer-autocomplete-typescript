@@ -1,5 +1,5 @@
-import { includeForParts, partsFor } from "@baselayer/autocomplete";
-import { queryTokens } from "@baselayer/autocomplete";
+import { includeForParts, partsFor } from "@baselayer-sdk/autocomplete";
+import { queryTokens } from "@baselayer-sdk/autocomplete";
 import { describe, expect, it } from "vitest";
 
 import {

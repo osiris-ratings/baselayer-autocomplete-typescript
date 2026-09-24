@@ -4,8 +4,8 @@
     "types": ["vite/client"],
     "resolveJsonModule": true,
     "paths": {
-      "@baselayer/autocomplete": ["./src/index.ts"],
-      "@baselayer/autocomplete/react": ["./src/react/index.ts"]
+      "@baselayer-sdk/autocomplete": ["./src/index.ts"],
+      "@baselayer-sdk/autocomplete/react": ["./src/react/index.ts"]
     }
   },
   "include": [".", "../src"]

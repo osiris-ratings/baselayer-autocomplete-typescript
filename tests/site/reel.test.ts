@@ -1,4 +1,4 @@
-import { queryTokens } from "@baselayer/autocomplete";
+import { queryTokens } from "@baselayer-sdk/autocomplete";
 import { describe, expect, it } from "vitest";
 
 import { REEL, answerFor, highlightFor } from "../../site/home/reel";

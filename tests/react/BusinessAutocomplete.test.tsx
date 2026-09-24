@@ -12,7 +12,7 @@ import {
   type MintOutcome,
   type MintedGrant,
   type ResponseLike,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 
 import {
   BusinessAutocomplete,

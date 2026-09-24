@@ -1,8 +1,11 @@
 // Every knob the styled component has, grouped the way a designer would reach
 // for them, and at the end the code that reproduces the result.
 
-import { ROW_PARTS, type RowPart } from "@baselayer/autocomplete";
-import { MINT_TIMINGS, type MintTiming } from "@baselayer/autocomplete/react";
+import { ROW_PARTS, type RowPart } from "@baselayer-sdk/autocomplete";
+import {
+  MINT_TIMINGS,
+  type MintTiming,
+} from "@baselayer-sdk/autocomplete/react";
 
 import { Code } from "../shared/Code";
 import { ColorInput, Field, Fold, Select, Toggle } from "./controls";

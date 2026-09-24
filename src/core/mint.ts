@@ -6,7 +6,7 @@ import { parseErrorEnvelope } from "./wire";
  * `MintFunction` whenever it needs a grant, and treats every host alike from
  * there on. A page's is usually `defaultMint(url)` against an endpoint on its
  * own backend, which mints with the API key (see
- * `@baselayer/autocomplete/server`); a host with an authenticated API client of
+ * `@baselayer-sdk/autocomplete/server`); a host with an authenticated API client of
  * its own wraps that client instead.
  */
 

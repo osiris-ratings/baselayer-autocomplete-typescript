@@ -19,7 +19,7 @@ that the autocomplete tier accepts in the `X-Autocomplete-Session` header.
 ## What never leaves your backend
 
 Your **API key**. The SDK has no way to take one in the browser; the key is
-only ever read by `@baselayer/autocomplete/server`, or by your own mint
+only ever read by `@baselayer-sdk/autocomplete/server`, or by your own mint
 endpoint, on your server. It is sent to Baselayer and nowhere else, and the
 server helper never logs it.
 

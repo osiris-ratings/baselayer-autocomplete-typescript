@@ -12,7 +12,7 @@ import {
   type MintFunction,
   type MintOutcome,
   type MintedGrant,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 
 import { keyMint, readClaims } from "./credentials";
 

@@ -9,10 +9,10 @@ const src = (path: string) =>
 // root does not take the react one as a path inside itself.
 const alias = [
   {
-    find: /^@baselayer\/autocomplete\/react$/,
+    find: /^@baselayer-sdk\/autocomplete\/react$/,
     replacement: src("react/index.ts"),
   },
-  { find: /^@baselayer\/autocomplete$/, replacement: src("index.ts") },
+  { find: /^@baselayer-sdk\/autocomplete$/, replacement: src("index.ts") },
 ];
 
 export default defineConfig({

@@ -5,7 +5,7 @@ import {
   defaultMint,
   parseMintResponse,
   type MintContext,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 
 const SNAKE_GRANT = {
   session_token: "grant-1",

@@ -1,5 +1,5 @@
 /**
- * `@baselayer/autocomplete/server`: the one piece of the SDK that runs on a
+ * `@baselayer-sdk/autocomplete/server`: the one piece of the SDK that runs on a
  * customer's backend.
  *
  * A browser must never hold an API key, so the grant the page needs is minted

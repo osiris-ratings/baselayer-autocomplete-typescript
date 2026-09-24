@@ -26,7 +26,7 @@ pnpm check:package   # publint and are-the-types-wrong on the packed tarball
 The core (`src/core`, `src/index.ts`) and the server helper (`src/server`)
 must not import React, React DOM or downshift; ESLint enforces it and a test
 asserts it on the built bundle. The React entry imports the core through the
-package's own name (`@baselayer/autocomplete`), which the build keeps
+package's own name (`@baselayer-sdk/autocomplete`), which the build keeps
 external so an application loads one copy of the core.
 
 ## Contracts

@@ -1,7 +1,10 @@
 import { useCombobox, type UseComboboxReturnValue } from "downshift";
 import type { ChangeEvent, FocusEventHandler, Ref } from "react";
 
-import type { BusinessSuggestion, Suggestion } from "@baselayer/autocomplete";
+import type {
+  BusinessSuggestion,
+  Suggestion,
+} from "@baselayer-sdk/autocomplete";
 
 export interface UseSuggestionComboboxOptions<T extends Suggestion> {
   id: string;

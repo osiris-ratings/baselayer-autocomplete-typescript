@@ -1,4 +1,4 @@
-import type { SessionPhase } from "@baselayer/autocomplete";
+import type { SessionPhase } from "@baselayer-sdk/autocomplete";
 import { describe, expect, it } from "vitest";
 
 import { connectionStatus, formatRemaining } from "../../site/demo/connection";

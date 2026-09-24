@@ -2,7 +2,10 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
-import { DEFAULT_LOOK, type BusinessSuggestion } from "@baselayer/autocomplete";
+import {
+  DEFAULT_LOOK,
+  type BusinessSuggestion,
+} from "@baselayer-sdk/autocomplete";
 
 import {
   BusinessAutocompleteView,

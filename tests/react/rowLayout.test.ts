@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ROW_PARTS, type RowParts } from "@baselayer/autocomplete";
+import { ROW_PARTS, type RowParts } from "@baselayer-sdk/autocomplete";
 
 import { rowLayout } from "../../src/react/rowLayout";
 

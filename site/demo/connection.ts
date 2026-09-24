@@ -1,7 +1,7 @@
 // What folded Connect says about the connection: a dot and a few words, from
 // the session the SDK holds. Pure, for the timer that re-renders it.
 
-import type { SessionPhase } from "@baselayer/autocomplete";
+import type { SessionPhase } from "@baselayer-sdk/autocomplete";
 
 export type ConnectionState = "ok" | "pending" | "error";
 

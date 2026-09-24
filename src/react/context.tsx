@@ -10,7 +10,7 @@ import {
   createAutocompleteClient,
   type AutocompleteClient,
   type AutocompleteClientConfig,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 
 const ClientContext = createContext<AutocompleteClient | null>(null);
 

@@ -68,7 +68,7 @@ export function SiteFooter() {
         </div>
         <div className="footer-base">
           <span>© {new Date().getFullYear()} Baselayer</span>
-          <span>@baselayer/autocomplete · pre-release 0.x</span>
+          <span>@baselayer-sdk/autocomplete · pre-release 0.x</span>
         </div>
       </div>
     </footer>

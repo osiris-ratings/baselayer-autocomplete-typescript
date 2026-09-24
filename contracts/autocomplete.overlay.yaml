@@ -180,7 +180,7 @@ actions:
         - lang: typescript
           label: Node
           source: |-
-            import { mintForOrigin } from "@baselayer/autocomplete/server";
+            import { mintForOrigin } from "@baselayer-sdk/autocomplete/server";
 
             const out = await mintForOrigin({
               apiKey: process.env.BASELAYER_API_KEY!,

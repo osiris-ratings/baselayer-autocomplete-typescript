@@ -15,7 +15,7 @@ import {
   type MintFunction,
   type RequestEvent,
   type ResponseLike,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 
 // Rows for the routes the working specification lays out beside businesses.
 // Only businesses is served today; these are the shapes the others will take.

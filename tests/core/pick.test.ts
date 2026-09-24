@@ -4,7 +4,7 @@ import {
   BUSINESS_TOKEN_TTL_SECONDS,
   TOKENS_NOT_CONFIGURED_CODE,
   refusedThePin,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 
 /**
  * Which refusals of a tokened `POST /searches` retire the pin. The SDK takes

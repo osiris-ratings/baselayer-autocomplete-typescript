@@ -7,7 +7,7 @@ import {
   MATCH_REGIONS,
   resolveLook,
   type Look,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 
 // `resolveLook` takes a look as a host stages it, where any knob may be
 // absent, null or unusable, and validates it knob by knob.

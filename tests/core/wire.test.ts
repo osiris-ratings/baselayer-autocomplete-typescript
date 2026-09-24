@@ -5,7 +5,7 @@ import {
   parseBusinessesResponse,
   parseErrorEnvelope,
   type BusinessSuggestion,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 
 import { firstValidationMessage } from "../../src/core/wire";
 
