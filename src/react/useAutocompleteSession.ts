@@ -3,7 +3,7 @@ import { useCallback, useSyncExternalStore } from "react";
 import type {
   AutocompleteClient,
   ClientSnapshot,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 
 import { useResolvedClient } from "./context";
 

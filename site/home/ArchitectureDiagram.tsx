@@ -16,7 +16,7 @@ import {
   type RefObject,
 } from "react";
 
-import type { HighlightPart } from "@baselayer/autocomplete";
+import type { HighlightPart } from "@baselayer-sdk/autocomplete";
 
 import { useInView, usePrefersStill, waiter } from "./motion";
 import { REEL, answerFor } from "./reel";
@@ -599,7 +599,7 @@ export function ArchitectureDiagram({ paused = false }: { paused?: boolean }) {
         {"<BusinessAutocomplete />"}
       </text>
       <text x={52} y={144} fontFamily="var(--sans)" fontSize={12} fill={MUTED}>
-        @baselayer/autocomplete/react
+        @baselayer-sdk/autocomplete/react
       </text>
       <rect
         x={52}

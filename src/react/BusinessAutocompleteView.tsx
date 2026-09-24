@@ -13,7 +13,7 @@ import {
   type Look,
   type LookInput,
   type RowParts,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 import {
   formatFound,
   leadAddressOf,
@@ -21,11 +21,11 @@ import {
   partsFor,
   peopleLineOf,
   queryTokens,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 import type {
   BusinessSuggestion,
   HighlightPart,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 
 import { resolveMessages, type AutocompleteMessages } from "./messages";
 import { rowLayout, type RowPlace } from "./rowLayout";

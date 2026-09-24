@@ -2,7 +2,7 @@ import {
   parseMintResponse,
   type MintFunction,
   type MintOutcome,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 
 /**
  * API-key mode: the page mints for itself, the way a customer's backend

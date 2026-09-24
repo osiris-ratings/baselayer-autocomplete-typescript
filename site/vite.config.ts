@@ -77,14 +77,14 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: "@baselayer/autocomplete/react/styles.css",
+        find: "@baselayer-sdk/autocomplete/react/styles.css",
         replacement: src("react/styles.css"),
       },
       {
-        find: "@baselayer/autocomplete/react",
+        find: "@baselayer-sdk/autocomplete/react",
         replacement: src("react/index.ts"),
       },
-      { find: /^@baselayer\/autocomplete$/, replacement: src("index.ts") },
+      { find: /^@baselayer-sdk\/autocomplete$/, replacement: src("index.ts") },
     ],
   },
   server: {

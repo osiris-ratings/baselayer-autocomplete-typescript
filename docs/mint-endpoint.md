@@ -54,7 +54,7 @@ A 429's `metadata.scope` names the pool:
 `autocomplete_session_mint:organization` is the ten-minute window,
 `autocomplete_session_mint_day:organization` the rolling day.
 
-## Node: `@baselayer/autocomplete/server`
+## Node: `@baselayer-sdk/autocomplete/server`
 
 `createMintHandler` returns a fetch-style handler,
 `(request: Request) => Promise<Response>`. It refuses a request with no
@@ -77,7 +77,7 @@ Next.js App Router:
 
 ```ts
 // app/api/ac-session/route.ts
-import { createMintHandler } from "@baselayer/autocomplete/server";
+import { createMintHandler } from "@baselayer-sdk/autocomplete/server";
 
 export const POST = createMintHandler({
   apiKey: process.env.BASELAYER_API_KEY!,
@@ -94,7 +94,7 @@ a Remix action is `({ request }) => handler(request)`.
 Express, with `mintForOrigin`, which returns `{ status, headers, body }`:
 
 ```ts
-import { mintForOrigin } from "@baselayer/autocomplete/server";
+import { mintForOrigin } from "@baselayer-sdk/autocomplete/server";
 
 app.post("/api/ac-session", requireLogin, async (req, res) => {
   const origin = req.get("Origin");
@@ -153,7 +153,7 @@ cookie reaches your endpoint. For a CSRF token or a bearer, build the mint
 yourself:
 
 ```ts
-import { defaultMint } from "@baselayer/autocomplete";
+import { defaultMint } from "@baselayer-sdk/autocomplete";
 
 const mint = defaultMint("/api/ac-session", {
   headers: () => ({ "X-CSRF-Token": readCsrfToken() }),

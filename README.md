@@ -1,4 +1,4 @@
-# @baselayer/autocomplete
+# @baselayer-sdk/autocomplete
 
 Autocomplete for your own product, backed by Baselayer's registry, that
 helps the person typing pick the right business. Every suggestion is a
@@ -14,18 +14,18 @@ linked to the rest.
 
 ![The typeahead for "harbor concrete pum"](docs/images/typeahead-harbor-concrete-pum.png)
 
-- **Framework-free core** (`@baselayer/autocomplete`): sessions, refresh,
+- **Framework-free core** (`@baselayer-sdk/autocomplete`): sessions, refresh,
   backoff, and every refusal the API can answer, handled for you.
-- **React** (`@baselayer/autocomplete/react`): headless hooks, and a styled
+- **React** (`@baselayer-sdk/autocomplete/react`): headless hooks, and a styled
   component that looks like the Baselayer console out of the box and can be
   restyled end to end.
-- **Server helper** (`@baselayer/autocomplete/server`): the one endpoint
+- **Server helper** (`@baselayer-sdk/autocomplete/server`): the one endpoint
   your backend adds, so your API key never reaches a browser.
 
 ## Install
 
 ```sh
-npm install @baselayer/autocomplete
+npm install @baselayer-sdk/autocomplete
 ```
 
 React 18 or 19 is an optional peer; the core and the server helper need
@@ -61,7 +61,7 @@ test fails when a file falls behind its component.
 Next.js (App Router), in `app/api/ac-session/route.ts`:
 
 ```ts
-import { createMintHandler } from "@baselayer/autocomplete/server";
+import { createMintHandler } from "@baselayer-sdk/autocomplete/server";
 
 export const POST = createMintHandler({
   apiKey: process.env.BASELAYER_API_KEY!,
@@ -72,7 +72,7 @@ export const POST = createMintHandler({
 Express:
 
 ```ts
-import { mintForOrigin } from "@baselayer/autocomplete/server";
+import { mintForOrigin } from "@baselayer-sdk/autocomplete/server";
 
 app.post("/api/ac-session", requireLogin, async (req, res) => {
   const origin = req.get("Origin");
@@ -95,8 +95,8 @@ every session your endpoint mints counts against your organization's pool.
 
 ```tsx
 import { useState } from "react";
-import { BusinessAutocomplete } from "@baselayer/autocomplete/react";
-import "@baselayer/autocomplete/react/styles.css";
+import { BusinessAutocomplete } from "@baselayer-sdk/autocomplete/react";
+import "@baselayer-sdk/autocomplete/react/styles.css";
 
 export function LegalNameField() {
   const [name, setName] = useState("");

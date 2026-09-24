@@ -1,4 +1,4 @@
-// Cuts a release of @baselayer/autocomplete, or a hotfix to one; the Release
+// Cuts a release of @baselayer-sdk/autocomplete, or a hotfix to one; the Release
 // workflow publishes what it tags. See CONTRIBUTING.md, "Releasing".
 //
 //   pnpm release patch|minor|major|<x.y.z>   the release, as a PR from main
@@ -400,7 +400,7 @@ function tag(): void {
     name,
     commit,
     "-m",
-    `@baselayer/autocomplete ${version}`,
+    `@baselayer-sdk/autocomplete ${version}`,
   ]);
   change("git", ["push", "--quiet", "origin", name]);
   console.log(

@@ -22,7 +22,10 @@ and may still move; businesses is the shipped contract.
 `suggest` is the businesses route. `search` takes the route:
 
 ```ts
-import { createAutocompleteClient, defaultMint } from "@baselayer/autocomplete";
+import {
+  createAutocompleteClient,
+  defaultMint,
+} from "@baselayer-sdk/autocomplete";
 
 const client = createAutocompleteClient({
   baseUrl: "https://api.baselayer.com",

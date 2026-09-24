@@ -1,16 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import type { AutocompleteClient } from "@baselayer/autocomplete";
+import type { AutocompleteClient } from "@baselayer-sdk/autocomplete";
 import {
   isAutocompleteError,
   type AutocompleteErrorKind,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 import type {
   FiltersByRelation,
   IncludeOf,
   Relation,
   SuggestionByRelation,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 
 import { useResolvedClient } from "./context";
 import { resolveMessages, type AutocompleteMessages } from "./messages";

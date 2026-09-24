@@ -1,4 +1,4 @@
-import type { RowPart, RowParts } from "@baselayer/autocomplete";
+import type { RowPart, RowParts } from "@baselayer-sdk/autocomplete";
 
 /** A place in a row: the title, which always shows, or a part a host may leave out. */
 export type RowPlace = "title" | RowPart;

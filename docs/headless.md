@@ -7,7 +7,10 @@ all. Stop at whichever layer your design system wants.
 ## The client
 
 ```ts
-import { createAutocompleteClient, defaultMint } from "@baselayer/autocomplete";
+import {
+  createAutocompleteClient,
+  defaultMint,
+} from "@baselayer-sdk/autocomplete";
 
 const client = createAutocompleteClient({
   baseUrl: "https://api.baselayer.com",
@@ -119,12 +122,12 @@ it plugs into `useSyncExternalStore` or any store.
 
 ```tsx
 import { useState } from "react";
-import { formatFound } from "@baselayer/autocomplete";
+import { formatFound } from "@baselayer-sdk/autocomplete";
 import {
   AutocompleteClientProvider,
   useBusinessAutocomplete,
   useBusinessCombobox,
-} from "@baselayer/autocomplete/react";
+} from "@baselayer-sdk/autocomplete/react";
 
 function Field() {
   const [value, setValue] = useState("");

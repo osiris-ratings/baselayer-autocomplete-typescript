@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to `@baselayer/autocomplete`. The format follows
+All notable changes to `@baselayer-sdk/autocomplete`. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Before 1.0 a
 breaking change bumps the minor version.
 
@@ -12,7 +12,7 @@ The first release.
 
 ### Added
 
-- Framework-free client (`@baselayer/autocomplete`): session minting through
+- Framework-free client (`@baselayer-sdk/autocomplete`): session minting through
   a host-provided `mint`, lazy refresh at 80 % of the session's life,
   single-flighted mints, the refresh fallback, cold-mint backoff honoring
   `Retry-After`, the day and window pools, the step-aside on 503 code 481,
@@ -32,7 +32,7 @@ The first release.
   working, as a UTC timestamp, for display and logs. It is optional, absent
   from an API that does not send it, and a value that does not parse is left
   out rather than refusing the grant. Refresh is timed from `expiresIn`.
-- React binding (`@baselayer/autocomplete/react`): `useBusinessAutocomplete`
+- React binding (`@baselayer-sdk/autocomplete/react`): `useBusinessAutocomplete`
   and `useEntityAutocomplete`, `useBusinessCombobox` and
   `useSuggestionCombobox`, `useAutocompleteSession`,
   `AutocompleteClientProvider`, `BusinessAutocompleteView` and the connected
@@ -48,5 +48,5 @@ The first release.
   whatever focus and Escape do, for a style preview or a design tool.
 - The stylesheet's custom properties (`--bl-ac-*`), class names, render
   props and `unstyled`.
-- Server helper (`@baselayer/autocomplete/server`): `mintForOrigin`,
+- Server helper (`@baselayer-sdk/autocomplete/server`): `mintForOrigin`,
   `createMintHandler` and `toResponse`.

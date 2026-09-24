@@ -5,13 +5,13 @@ import {
   type BusinessSuggestion,
   type Filters,
   type SessionPhase,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 import {
   BusinessAutocomplete,
   BusinessAutocompleteView,
   useAutocompleteSession,
   type Pick,
-} from "@baselayer/autocomplete/react";
+} from "@baselayer-sdk/autocomplete/react";
 import {
   useEffect,
   useId,
@@ -692,7 +692,7 @@ export function App() {
                   )}
                   . It is not stored, and this page loads no third-party code.
                   In your product, the key belongs on your backend (
-                  <code>@baselayer/autocomplete/server</code>).
+                  <code>@baselayer-sdk/autocomplete/server</code>).
                 </p>
                 <Field label="API key">
                   <input

@@ -17,7 +17,7 @@ import {
   type AutocompleteClient,
   type MintFunction,
   type MintOutcome,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 
 /**
  * The session manager keeps one grant per client and mints through the

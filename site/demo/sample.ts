@@ -3,14 +3,14 @@
 // domicile square and the overflow, an address, officers with a +N, and a
 // registered agent. None of these businesses is real.
 
-import { queryTokens } from "@baselayer/autocomplete";
+import { queryTokens } from "@baselayer-sdk/autocomplete";
 import type {
   BusinessSuggestion,
   HighlightPart,
   Include,
   RelatedItem,
   RelatedSet,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 
 /**
  * What the rows pretend was typed: one word in full and the next only begun,

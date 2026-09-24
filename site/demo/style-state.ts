@@ -11,7 +11,7 @@ import {
   type MatchEmphasis,
   type MatchRegion,
   type RowParts,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 import {
   DEBOUNCE_MS,
   DEFAULT_LIMIT,
@@ -19,7 +19,7 @@ import {
   MIN_QUERY_CHARS,
   type AutocompleteMessages,
   type MintTiming,
-} from "@baselayer/autocomplete/react";
+} from "@baselayer-sdk/autocomplete/react";
 
 /** The variables in react/styles.css that `look` does not set. */
 export const CSS_VARIABLES = {

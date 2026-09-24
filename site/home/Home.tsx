@@ -10,7 +10,7 @@ import { Icon, type IconName } from "../shared/icons";
 import { RequestFlow } from "./RequestFlow";
 import { TypeaheadReel } from "./TypeaheadReel";
 
-const INSTALL = "npm install @baselayer/autocomplete";
+const INSTALL = "npm install @baselayer-sdk/autocomplete";
 
 const ENTITIES: {
   name: string;
@@ -152,7 +152,7 @@ const MINT_SNIPPETS: Snippet[] = [
     label: "Next.js",
     lang: "typescript",
     code: `// app/api/ac-session/route.ts
-import { createMintHandler } from "@baselayer/autocomplete/server";
+import { createMintHandler } from "@baselayer-sdk/autocomplete/server";
 
 export const POST = createMintHandler({
   apiKey: process.env.BASELAYER_API_KEY!,
@@ -162,7 +162,7 @@ export const POST = createMintHandler({
   {
     label: "Express",
     lang: "typescript",
-    code: `import { mintForOrigin } from "@baselayer/autocomplete/server";
+    code: `import { mintForOrigin } from "@baselayer-sdk/autocomplete/server";
 
 app.post("/api/ac-session", requireLogin, async (req, res) => {
   const origin = req.get("Origin");
@@ -207,8 +207,8 @@ const PAGE_SNIPPETS: Snippet[] = [
     label: "React component",
     lang: "typescript",
     code: `import { useState } from "react";
-import { BusinessAutocomplete } from "@baselayer/autocomplete/react";
-import "@baselayer/autocomplete/react/styles.css";
+import { BusinessAutocomplete } from "@baselayer-sdk/autocomplete/react";
+import "@baselayer-sdk/autocomplete/react/styles.css";
 
 export function LegalNameField() {
   const [name, setName] = useState("");
@@ -235,7 +235,7 @@ export function LegalNameField() {
     code: `import {
   useBusinessAutocomplete,
   useBusinessCombobox,
-} from "@baselayer/autocomplete/react";
+} from "@baselayer-sdk/autocomplete/react";
 
 function Field() {
   const [value, setValue] = useState("");
@@ -255,7 +255,7 @@ function Field() {
   {
     label: "No framework",
     lang: "typescript",
-    code: `import { createAutocompleteClient, defaultMint } from "@baselayer/autocomplete";
+    code: `import { createAutocompleteClient, defaultMint } from "@baselayer-sdk/autocomplete";
 
 const client = createAutocompleteClient({
   baseUrl: "https://api.baselayer.com",
@@ -543,7 +543,7 @@ export function Home() {
             </p>
             <div className="layers">
               <article className="layer">
-                <code className="layer-path">@baselayer/autocomplete</code>
+                <code className="layer-path">@baselayer-sdk/autocomplete</code>
                 <h3>A framework-free core</h3>
                 <p>
                   Sessions, refresh, backoff, and every refusal the API can
@@ -553,7 +553,7 @@ export function Home() {
               </article>
               <article className="layer">
                 <code className="layer-path">
-                  @baselayer/autocomplete/react
+                  @baselayer-sdk/autocomplete/react
                 </code>
                 <h3>Hooks and a styled component</h3>
                 <p>
@@ -564,7 +564,7 @@ export function Home() {
               </article>
               <article className="layer">
                 <code className="layer-path">
-                  @baselayer/autocomplete/server
+                  @baselayer-sdk/autocomplete/server
                 </code>
                 <h3>The one endpoint your backend adds</h3>
                 <p>

@@ -10,7 +10,7 @@ import {
   queryTokens,
   typedPrefixLength,
   type BusinessSuggestion,
-} from "@baselayer/autocomplete";
+} from "@baselayer-sdk/autocomplete";
 
 const cinder: BusinessSuggestion = {
   type: "business",

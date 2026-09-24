@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, type Mock } from "vitest";
 
-import { MINT_DAY_SCOPE } from "@baselayer/autocomplete";
+import { MINT_DAY_SCOPE } from "@baselayer-sdk/autocomplete";
 
 import {
   DEFAULT_API_BASE_URL,

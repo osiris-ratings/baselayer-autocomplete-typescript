@@ -1,4 +1,4 @@
-# Publish @baselayer/autocomplete to npm when a version tag is pushed.
+# Publish @baselayer-sdk/autocomplete to npm when a version tag is pushed.
 #
 # Auth is npm trusted publishing (OIDC): no long-lived token in the repo.
 # While the repository is private npm refuses provenance, so `--provenance`
@@ -67,7 +67,7 @@ jobs:
           # `latest`; `next` for a prerelease; `release-X.Y` for a hotfix to an
           # older line, so that `npm install` never goes back a minor.
           version="$(node -p "require('./package.json').version")"
-          latest="$(npm view @baselayer/autocomplete dist-tags.latest 2>/dev/null || true)"
+          latest="$(npm view @baselayer-sdk/autocomplete dist-tags.latest 2>/dev/null || true)"
           tag="${DIST_TAG:-$(node scripts/release.ts dist-tag "$version" "$latest")}"
           echo "Publishing $version under the $tag dist-tag"
           npm publish --access public --tag "$tag" $PROVENANCE

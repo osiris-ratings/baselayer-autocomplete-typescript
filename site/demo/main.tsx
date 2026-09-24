@@ -1,4 +1,4 @@
-import "@baselayer/autocomplete/react/styles.css";
+import "@baselayer-sdk/autocomplete/react/styles.css";
 
 import "../shared/fonts";
 import "../shared/brand.css";

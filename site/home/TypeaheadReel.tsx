@@ -5,8 +5,8 @@
 // screen reader gets the sentence under it, nothing in it takes focus, it can
 // be paused, and with reduced motion it holds still on the first name's answer.
 
-import { BusinessAutocompleteView } from "@baselayer/autocomplete/react";
-import "@baselayer/autocomplete/react/styles.css";
+import { BusinessAutocompleteView } from "@baselayer-sdk/autocomplete/react";
+import "@baselayer-sdk/autocomplete/react/styles.css";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 
 import { useInView, usePrefersStill, waiter } from "./motion";
