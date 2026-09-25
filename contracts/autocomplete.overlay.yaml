@@ -52,9 +52,9 @@ actions:
         - name: The business token
           x-traitTag: true
           description: |
-            Each suggestion's `token` pins a Baselayer search to exactly that business. Send it verbatim as `business_token` on `POST /searches`, from your backend, with your API key. It is sealed, bound to your organization, and good for 15 minutes.
+            Each suggestion's `token` pins a Baselayer search to exactly that business. Send it verbatim as `business_token` on `POST /searches`, from your backend, with your API key, and on its own: it stands in for `name` and `address`, and the search refuses a body that carries it beside either one. It is sealed, bound to your organization, and good for 15 minutes.
 
-            If the search refuses it, drop the token and submit the name as typed: 422 with code 3040 (not Baselayer's, or another organization's), 3042 (expired), 3023 (the business is gone) or 3043 (a sandbox application), or 503 with code 3041. The SDK's `refusedThePin(status, code)` is true for all of them, as for any other status under 500, and false for any other 5xx and a network failure.
+            If the search refuses it, drop the token and search by the `name` and `address` as typed: 422 with code 3040 (not Baselayer's, or another organization's), 3042 (expired), 3023 (the business is gone) or 3043 (a sandbox application), or 503 with code 3041. The SDK's `refusedThePin(status, code)` is true for all of them, as for any other status under 500, and false for any other 5xx and a network failure.
 
   - target: $.components.securitySchemes.APIKeyHeader
     description: >-

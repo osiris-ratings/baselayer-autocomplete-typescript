@@ -6,6 +6,14 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+### Changed
+
+- The README, the site and the demo show `POST /searches` with the
+  `business_token` alone. The search now takes it in place of `name` and
+  `address` and refuses a body that carries it beside either one (a 422).
+  `refusedThePin` is true for that 422, so a backend built from 0.1.0's
+  example, the name with the token, falls back and never pins a search.
+
 ## [0.1.0] - 2026-09-24
 
 The first release.

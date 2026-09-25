@@ -43,6 +43,7 @@ import {
 } from "./style-state";
 import { morph } from "./morph";
 import { SAMPLE_META, SAMPLE_QUERY, sampleRows } from "./sample";
+import { searchExample } from "./search";
 import { StylingPanel } from "./StylingPanel";
 
 const PRODUCTION = "https://api.baselayer.com";
@@ -918,12 +919,9 @@ export function App() {
                   Send the token with your search; it is good until{" "}
                   {new Date(picked.pick.expiresAt).toLocaleTimeString()}.
                 </p>
-                <pre className="demo-code">{`POST ${apiHost}/searches
-{
-  "name": ${JSON.stringify(picked.suggestion.label)},
-  "address": ${JSON.stringify(picked.suggestion.related.addresses.items[0]?.label ?? "")},
-  "business_token": "${picked.pick.businessToken.slice(0, 24)}…"
-}`}</pre>
+                <pre className="demo-code">
+                  {searchExample(apiHost, picked.pick.businessToken)}
+                </pre>
               </div>
             )}
           </section>

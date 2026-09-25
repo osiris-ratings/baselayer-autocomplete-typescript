@@ -89,14 +89,14 @@ const STEPS: Step[] = [
     kind: "message",
     from: "browser",
     to: "backend",
-    label: "your form: name + business_token",
+    label: "your form: name, address + business_token",
   },
   {
     kind: "message",
     from: "backend",
     to: "baselayer",
     label: "POST /searches",
-    detail: "{ name, business_token } · X-API-Key",
+    detail: "{ business_token } · X-API-Key",
   },
   {
     kind: "message",
