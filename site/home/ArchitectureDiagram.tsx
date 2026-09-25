@@ -349,7 +349,7 @@ function usePlay(
         await wait(700);
 
         // Picked, and submitted: the token rides your form to your backend,
-        // which adds it to its search.
+        // which sends it, and only it, to its search.
         update({ picked: true });
         await wait(800);
         update({ pressed: true });
@@ -537,7 +537,7 @@ export function ArchitectureDiagram({ paused = false }: { paused?: boolean }) {
         the page&apos;s Origin. Keystrokes then go from the browser straight to
         Baselayer&apos;s autocomplete tier with the session in a header,
         bypassing your backend. On pick, your form carries the business token to
-        your backend, which sends it with its search.
+        your backend, which sends it, and only it, to its search.
       </desc>
       <defs>
         <marker
@@ -739,7 +739,7 @@ export function ArchitectureDiagram({ paused = false }: { paused?: boolean }) {
         fontSize={12.5}
         fill={MUTED}
       >
-        the name, plus the row&apos;s business_token
+        the name, address and business_token
       </text>
       <rect
         x={52}
@@ -826,7 +826,7 @@ export function ArchitectureDiagram({ paused = false }: { paused?: boolean }) {
         y={372}
         h={96}
         title="your search handler"
-        lines={["Adds the token to its search call"]}
+        lines={["Sends only the token to its search"]}
         tag="X-API-KEY FROM YOUR SERVER"
       />
 

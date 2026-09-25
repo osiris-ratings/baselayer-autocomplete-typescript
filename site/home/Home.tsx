@@ -8,6 +8,7 @@ import { SiteHeader } from "../shared/SiteHeader";
 import { ArchitectureDiagram } from "./ArchitectureDiagram";
 import { Icon, type IconName } from "../shared/icons";
 import { RequestFlow } from "./RequestFlow";
+import { SEARCH_SNIPPET } from "./search";
 import { TypeaheadReel } from "./TypeaheadReel";
 
 const INSTALL = "npm install @baselayer-sdk/autocomplete";
@@ -268,17 +269,6 @@ const { response, roundTripMs, indexTag } = await client.suggest(
   { signal: controller.signal },
 );
 response.suggestions.forEach(row => console.log(row.label, row.token));`,
-  },
-];
-
-const SEARCH_SNIPPET: Snippet[] = [
-  {
-    label: "POST /searches",
-    lang: "json",
-    code: `{
-  "name": "HARBOR CONCRETE PUMPING CO., INC.",
-  "business_token": "A4uYMdTtN1PuVsmNF8…"
-}`,
   },
 ];
 
@@ -682,13 +672,13 @@ export function Home() {
                   <p className="mono-label">Step 3</p>
                   <h3>Send the pick with your search</h3>
                   <p>
-                    Your backend adds the row&apos;s token to its{" "}
-                    <code>POST /searches</code> call. A token lives 15 minutes.
+                    Your backend sends the row&apos;s token, on its own, as its{" "}
+                    <code>POST /searches</code> body. A token lives 15 minutes.
                   </p>
                   <p>
-                    If the search refuses it, drop the token and submit the name
-                    as typed: <code>refusedThePin(status, code)</code> says
-                    when.
+                    If the search refuses it, drop the token and search by the{" "}
+                    <code>name</code> and <code>address</code> as typed:{" "}
+                    <code>refusedThePin(status, code)</code> says when.
                   </p>
                 </div>
                 <Code

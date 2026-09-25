@@ -163,11 +163,14 @@ The first `mint` or `mintUrl` is kept for the component's life; a new
 
 ## 3. Send the pick with your search
 
-Your backend adds the token to its `POST /searches` call:
+Your backend sends the token as its `POST /searches` body:
 
 ```json
-{ "name": "HARBOR CONCRETE PUMPING CO., INC.", "business_token": "…" }
+{ "business_token": "…" }
 ```
+
+The token stands in for `name` and `address`: send it on its own, since the
+search refuses a body that carries it beside either one.
 
 The search then resolves to exactly the business that was picked. A token
 lives 15 minutes (`BUSINESS_TOKEN_TTL_SECONDS`, 900) from when the row was
@@ -176,8 +179,8 @@ with `pickedAt` and `expiresAt` (epoch ms, `pickedAt` plus those 15
 minutes). `expiresAt` is advisory, and a little late, since the clock started
 before the pick; the API is what refuses a stale token (422 code 3042). If
 the search refuses it (expired, or the business is gone), drop the token and
-submit the name as typed: `refusedThePin(status, code)` tells you when that
-is the right move.
+search by the `name` and `address` as typed: `refusedThePin(status, code)`
+tells you when that is the right move.
 
 ## Documentation
 

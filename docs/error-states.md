@@ -88,9 +88,12 @@ character that folds to `% _ * ?` under NFKC, so `a%%` passes the
 Your search can refuse the `business_token`: 422 with code 3040 (not
 Baselayer's, or another organization's), 3042 (expired, after 15 minutes),
 3023 (the business is gone), 3043 (sandbox application), or 503 code 3041.
-In every one of those cases drop the token and submit the name as typed.
-`refusedThePin(status, code)` is true for all of them, as for any other
-status under 500, and false for any other 5xx and a network failure.
+In every one of those cases drop the token and search by the `name` and
+`address` as typed. `refusedThePin(status, code)` is true for all of them, as
+for any other status under 500, and false for any other 5xx and a network
+failure. It is true, too, for the 422 from a body that carries the token
+beside `name` or `address`: the fallback succeeds, but no search is ever
+pinned. That one is your backend's to fix; send the token on its own.
 
 ## Reading the error
 
