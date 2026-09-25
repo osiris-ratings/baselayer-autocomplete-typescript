@@ -38,6 +38,52 @@ function contentSecurityPolicy(): Plugin {
   };
 }
 
+/** Where the Site workflow publishes the site; link previews need full URLs. */
+const siteOrigin = "https://sdk.baselayer.com";
+
+/**
+ * The preview a link to any page unfurls into, in Slack, iMessage, X and the
+ * like: a screenshot of the dropdown, and a PNG icon beside the SVG favicon,
+ * which most of them do not draw.
+ */
+function linkPreview(): Plugin {
+  let base = "/";
+  return {
+    name: "link-preview",
+    configResolved: config => {
+      base = config.base;
+    },
+    transformIndexHtml: () => {
+      const image = new URL(`${base}og.png`, siteOrigin).href;
+      const meta = (attrs: Record<string, string>) => ({
+        tag: "meta",
+        attrs,
+        injectTo: "head" as const,
+      });
+      return [
+        meta({ property: "og:type", content: "website" }),
+        meta({ property: "og:site_name", content: "Baselayer" }),
+        meta({ property: "og:image", content: image }),
+        meta({ property: "og:image:width", content: "1200" }),
+        meta({ property: "og:image:height", content: "628" }),
+        meta({
+          property: "og:image:alt",
+          content: "The autocomplete dropdown, matching businesses as you type",
+        }),
+        meta({ name: "twitter:card", content: "summary_large_image" }),
+        {
+          tag: "link",
+          attrs: {
+            rel: "apple-touch-icon",
+            href: `${base}apple-touch-icon.png`,
+          },
+          injectTo: "head",
+        },
+      ];
+    },
+  };
+}
+
 /**
  * `pnpm demo` stands in for your backend: the page calls this dev server on
  * its own origin, and the dev server forwards the autocomplete routes to the
@@ -72,6 +118,7 @@ export default defineConfig({
   plugins: [
     react(),
     contentSecurityPolicy(),
+    linkPreview(),
     apiReference(fileURLToPath(new URL("..", import.meta.url))),
   ],
   resolve: {
