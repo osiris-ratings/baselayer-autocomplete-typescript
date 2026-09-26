@@ -548,8 +548,8 @@ export function Home() {
                 <h3>Hooks and a styled component</h3>
                 <p>
                   Headless hooks with the accessibility wired in, and a
-                  component that looks like the Baselayer console out of the box
-                  and restyles end to end.
+                  component that is ready out of the box and restyles end to
+                  end.
                 </p>
               </article>
               <article className="layer">
@@ -733,13 +733,12 @@ export function Home() {
             <div className="styling">
               <div>
                 <h2 className="display-sm" id="styling-title">
-                  Looks like the Baselayer console. Restyles to look like you.
+                  Ready out of the box. Restyles to look like you.
                 </h2>
                 <p className="lede">
-                  Out of the box it is the console&apos;s typeahead, pixel for
-                  pixel. CSS variables, the <code>look</code> prop, class names
-                  and render props take it the rest of the way, down to{" "}
-                  <code>unstyled</code>.
+                  One stylesheet gives it a complete look. CSS variables, the{" "}
+                  <code>look</code> prop, class names and render props take it
+                  the rest of the way, down to <code>unstyled</code>.
                 </p>
                 <Code title="Styling" snippets={STYLE_SNIPPETS} />
               </div>

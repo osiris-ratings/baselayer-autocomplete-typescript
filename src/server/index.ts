@@ -43,8 +43,9 @@ export interface MintPassThrough {
  * Mint one autocomplete session for the page at `origin`.
  *
  * Every answer comes back as it is, success or refusal: a 201 grant, a 429
- * with its `Retry-After` and pool scope, a 403 for an organization that is not
- * enrolled, a 503 when the deployment cannot mint.
+ * with its `Retry-After` and pool scope, a 403 when the key or the
+ * organization is not enabled for autocomplete, a 503 when the deployment
+ * cannot mint.
  */
 export async function mintForOrigin(
   options: MintForOriginOptions,

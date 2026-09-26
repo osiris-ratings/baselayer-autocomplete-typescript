@@ -240,7 +240,7 @@ function StateSquares({
 }
 
 /**
- * The typeahead as the console draws it, with the state supplied by the host
+ * The styled typeahead, with the state supplied by the host
  * (`useBusinessAutocomplete`). Each row is one business family as a two-line
  * cell: the canonical name with the matched words marked (and, fainter, the
  * alternative name when that is what matched), the family's states as squares

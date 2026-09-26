@@ -139,7 +139,7 @@ export function refsIn(value: unknown): string[] {
 /**
  * One operation of a larger document, with the schemas it reaches and the
  * security schemes it names, and without its tags: the reference assigns its
- * own, and a tag flip upstream (Internal to public) is not a contract change.
+ * own, and a tag changed upstream is not a contract change.
  */
 export function extractOperation(
   source: OpenApiDocument,

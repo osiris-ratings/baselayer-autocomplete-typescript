@@ -11,7 +11,7 @@ import type { BusinessSuggestion, HighlightPart } from "./wire";
  * The address the tier ranked first: the family's own filing in its domicile
  * state (principal, then mailing) when it has one, else an officer's or a
  * registered agent's address there, else the same ladder in its other
- * states. The tier owns that order; the console reads the head.
+ * states. The tier owns that order; this reads the head.
  */
 export function leadAddressOf(suggestion: BusinessSuggestion): string | null {
   return suggestion.related.addresses.items[0]?.label ?? null;
