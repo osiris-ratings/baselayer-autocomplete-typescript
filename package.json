@@ -1,6 +1,6 @@
 {
   "name": "@baselayer-sdk/autocomplete",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Baselayer business autocomplete for the browser: a framework-free client, React hooks and a styled typeahead, and a server-side session mint helper",
   "license": "Apache-2.0",
   "author": "Baselayer <support@baselayer.com>",
