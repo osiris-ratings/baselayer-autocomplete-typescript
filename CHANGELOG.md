@@ -6,6 +6,8 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-09-25
+
 ### Changed
 
 - The README, the site and the demo show `POST /searches` with the
