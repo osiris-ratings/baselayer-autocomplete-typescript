@@ -13,6 +13,9 @@ breaking change bumps the minor version.
   `address` and refuses a body that carries it beside either one (a 422).
   `refusedThePin` is true for that 422, so a backend built from 0.1.0's
   example, the name with the token, falls back and never pins a search.
+- The README, the docs, the site and the doc comments describe the styled
+  component's default look on its own terms, and the pre-release note says
+  what 0.x promises: a breaking change bumps the minor version until 1.0.
 
 ## [0.1.0] - 2026-09-24
 

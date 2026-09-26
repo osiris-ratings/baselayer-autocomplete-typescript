@@ -76,9 +76,7 @@ That is how the `Site` workflow publishes it: to GitHub Pages at
 `sdk.baselayer.com`, the repository's custom domain, with the site under
 `/autocomplete/` and `site/host-root/index.html` at the host's root, which
 sends a visitor on to it. The host is for SDKs and the path for the
-product. The DNS is one record in the `baselayer.com` zone, `sdk` as a
-`CNAME` to the organization's GitHub Pages host; `baselayer.com` is verified
-for the organization's Pages, so no other account can claim its subdomains.
+product.
 
 The pages carry their own Content-Security-Policy and load nothing from a
 third party; the fonts are self-hosted. Uncut Sans is baselayer.com's own

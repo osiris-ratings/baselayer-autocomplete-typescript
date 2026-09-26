@@ -6,13 +6,13 @@ Import the stylesheet once:
 import "@baselayer-sdk/autocomplete/react/styles.css";
 ```
 
-Out of the box the component looks like the Baselayer console. Four levers
-change it, from the lightest to the heaviest.
+The stylesheet gives the component a complete look out of the box. Four
+levers change it, from the lightest to the heaviest.
 
 ## 1. `look`
 
-The same knobs the Baselayer console reads, as a prop. Any knob left out
-keeps its default; an unusable value (a color that is not hex, an unknown
+The colors, the match marks and the debug footer, as one prop. Any knob left
+out keeps its default; an unusable value (a color that is not hex, an unknown
 emphasis) keeps its default too.
 
 ```tsx
@@ -105,8 +105,8 @@ not follow `--bl-ac-subtitle`. Restyle them on `.bl-ac-input` and
 `.bl-ac-footer`.
 
 The menu is as wide as the input. `menuFollowsInputWidth={false}` gives it a
-width of its own from 48em up, `--bl-ac-menu-width`, as the console draws it;
-below that it is the input's width either way.
+width of its own from 48em up, `--bl-ac-menu-width`; below that it is the
+input's width either way.
 
 ## 3. Class names and render props
 

@@ -9,16 +9,15 @@ arrives with its registered states, officers, agents and addresses, and a
 It searches businesses today; people, addresses and liens are coming, each
 linked to the rest.
 
-> **Pre-release.** 0.x is being adopted by the Baselayer console and
-> changes on minor versions. 1.0 freezes the API.
+> **Pre-release.** Until 1.0, a breaking change bumps the minor version.
+> 1.0 freezes the API.
 
 ![The typeahead for "harbor concrete pum"](docs/images/typeahead-harbor-concrete-pum.png)
 
 - **Framework-free core** (`@baselayer-sdk/autocomplete`): sessions, refresh,
   backoff, and every refusal the API can answer, handled for you.
 - **React** (`@baselayer-sdk/autocomplete/react`): headless hooks, and a styled
-  component that looks like the Baselayer console out of the box and can be
-  restyled end to end.
+  component that is ready out of the box and can be restyled end to end.
 - **Server helper** (`@baselayer-sdk/autocomplete/server`): the one endpoint
   your backend adds, so your API key never reaches a browser.
 
