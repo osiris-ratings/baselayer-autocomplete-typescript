@@ -166,7 +166,7 @@ describe("the Components fold", () => {
     expect(INITIAL_STYLE.layout).toEqual(DEFAULT_ROW_LAYOUT);
   });
 
-  it("offers every field in every place, and says which one a pick would move", () => {
+  it("offers every field in every place, and says which one a pick would swap", () => {
     const options = placeOptions(DEFAULT_ROW_LAYOUT, "subtitle");
 
     expect(options.map(option => option.value)).toEqual([
@@ -177,8 +177,14 @@ describe("the Components fold", () => {
       "people",
     ]);
     expect(options.find(o => o.value === "states")?.label).toBe(
-      "States, from Title, right",
+      "States, swaps with Title, right",
     );
+    // An empty place has nothing to swap: the field just moves.
+    expect(
+      placeOptions(DEFAULT_ROW_LAYOUT, "subtitleTrailingBadge").find(
+        o => o.value === "states",
+      )?.label,
+    ).toBe("States, from Title, right");
     // Its own field, and a field placed nowhere, are just the field.
     expect(options.find(o => o.value === "address")?.label).toBe("Address");
     expect(
@@ -205,18 +211,46 @@ describe("the Components fold", () => {
     ).toContain("structure");
   });
 
-  it("moves a field picked from another place, and empties the place it left", () => {
+  it("swaps a field picked from another place with the place's own, as a drop does", () => {
     expect(withPlaced(DEFAULT_ROW_LAYOUT, "subtitle", "states")).toEqual({
       ...DEFAULT_ROW_LAYOUT,
-      titleBadge: "structure",
-      titleTrailing: null,
+      titleTrailing: "address",
       subtitle: "states",
-      subtitleTrailing: "people",
+    });
+    expect(withPlaced(DEFAULT_ROW_LAYOUT, "subtitle", "states")).toEqual(
+      moveField(DEFAULT_ROW_LAYOUT, "states", "subtitle"),
+    );
+    // A field from the tray sends the place's own there; empty sends it too.
+    expect(
+      withPlaced(
+        { ...DEFAULT_ROW_LAYOUT, titleBadge: null },
+        "subtitle",
+        "structure",
+      ),
+    ).toEqual({
+      ...DEFAULT_ROW_LAYOUT,
+      titleBadge: null,
+      subtitle: "structure",
     });
     expect(withPlaced(DEFAULT_ROW_LAYOUT, "titleBadge", EMPTY_PLACE)).toEqual({
       ...DEFAULT_ROW_LAYOUT,
       titleBadge: null,
     });
+  });
+
+  it("loses no field while its options are browsed, as arrow keys pick each one on Windows", () => {
+    // Every field but the one picked last stays on the row: each step is a
+    // swap, and stepping back undoes it.
+    let layout: RowLayout = DEFAULT_ROW_LAYOUT;
+    for (const choice of ["people", "structure", "states"] as const) {
+      layout = withPlaced(layout, "subtitle", choice);
+      expect(unplacedFields(layout), choice).toEqual([]);
+    }
+    for (const choice of ["structure", "people", "address"] as const) {
+      layout = withPlaced(layout, "subtitle", choice);
+    }
+    expect(unplacedFields(layout)).toEqual([]);
+    expect(layout.subtitle).toBe("address");
   });
 
   it("can build any layout the SDK draws, and never places a field twice", () => {

@@ -173,20 +173,20 @@ can draw: a drop lands only where the field would stay; a place nothing can go
 in yet, a badge beside an empty field or the second line's right with no lead,
 is hidden, keeping its room; and a field that leaves the lead lets the right
 corner slide into it, as the row does. Each place's chevron is also a dropdown
-of what it can show, and picking a field from another place moves it and leaves
-that place empty), how matched words are highlighted (the emphasis, the region,
-and one color override for every emphasis) and whether the footer shows the
-round trip and the index that answered (`look.showDebugInfo`, a switch in the
-same fold), every color (the `look` prop's and the stylesheet's own variables,
-each with a swatch that opens a color picker), the font (the page's, the
-system's, a serif or a mono this page loads, or a stack of your own; the name's
-weight and the weight emphasis's two; and the HTML or CSS that loads a font of
-your own in the weights picked), shape and size, behavior (rows, 1 to 20; the
-characters typed before it asks, 2 to 10 and 3 by default; the pause before
-asking; when the session is minted: on the first keystroke, as it is by default,
-on focus or with the first request; and whether the menu is as wide as the
-input, as it is by default), the text (the label, and every message that is a
-string: `more` and `httpFallback` are functions, so they keep their defaults;
+of what it can show, and picking a field from another place swaps it with what
+the place held, as a drop does), how matched words are highlighted (the
+emphasis, the region, and one color override for every emphasis) and whether the
+footer shows the round trip and the index that answered (`look.showDebugInfo`, a
+switch in the same fold), every color (the `look` prop's and the stylesheet's
+own variables, each with a swatch that opens a color picker), the font (the
+page's, the system's, a serif or a mono this page loads, or a stack of your own;
+the name's weight and the weight emphasis's two; and the HTML or CSS that loads
+a font of your own in the weights picked), shape and size, behavior (rows, 1 to
+20; the characters typed before it asks, 2 to 10 and 3 by default; the pause
+before asking; when the session is minted: on the first keystroke, as it is by
+default, on focus or with the first request; and whether the menu is as wide as
+the input, as it is by default), the text (the label, and every message that is
+a string: `more` and `httpFallback` are functions, so they keep their defaults;
 and each structure's flag, an empty one drawing none), and the markup switches
 (`classNames`, `unstyled`). Changes apply as you make them. A color changed from
 its preset's carries a reset inside its field, which puts back the value the

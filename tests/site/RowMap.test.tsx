@@ -65,6 +65,17 @@ describe("the Components fold's row", () => {
     expect(lines.flat()).toEqual(ROW_PLACES);
   });
 
+  it("swaps a field picked from a place's dropdown with the place's own", () => {
+    const { onChange, spot } = mount();
+    fireEvent.change(spot("subtitle").querySelector("select")!, {
+      target: { value: "states" },
+    });
+
+    const { layout } = onChange.mock.calls[0]![0];
+    expect(layout.subtitle).toBe("states");
+    expect(layout.titleTrailing).toBe("address");
+  });
+
   it("drags a field by its place onto a corner's badge", () => {
     const { onChange, spot } = mount();
     drag(

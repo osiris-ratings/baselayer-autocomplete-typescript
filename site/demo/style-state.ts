@@ -437,8 +437,8 @@ export const CHOICE_LABELS: Record<PlaceChoice, string> = {
 
 /**
  * A place's options: empty, and every field the row would draw there. A
- * field placed elsewhere says where it would move from, since picking it
- * empties that place.
+ * field placed elsewhere says where it comes from, and that it swaps with
+ * the place's own field when the place holds one.
  */
 export function placeOptions(
   layout: RowLayout,
@@ -458,28 +458,28 @@ export function placeOptions(
       label:
         elsewhere === undefined
           ? CHOICE_LABELS[choice]
-          : `${CHOICE_LABELS[choice]}, from ${PLACE_LABELS[elsewhere]}`,
+          : `${CHOICE_LABELS[choice]}, ${layout[place] === null ? "from" : "swaps with"} ${PLACE_LABELS[elsewhere]}`,
     };
   });
 }
 
 /**
- * The layout with a choice made for one place, as the row draws it; a field
- * it takes from another place leaves that place empty.
+ * The layout with a choice made for one place, as the row draws it: a pick
+ * is the drop of that field on that place, so it swaps with what the place
+ * held, and empty sends the place's field out of the row.
  */
 export function withPlaced(
   layout: RowLayout,
   place: RowPlace,
   choice: PlaceChoice,
 ): RowLayout {
-  const next = { ...layout };
   if (choice !== EMPTY_PLACE) {
-    for (const other of ROW_PLACES) {
-      if (next[other] === choice) next[other] = null;
-    }
+    return moveField(layout, choice, place);
   }
-  next[place] = choice === EMPTY_PLACE ? null : choice;
-  return drawnRowLayout(next);
+  const field = layout[place];
+  return field === null
+    ? drawnRowLayout(layout)
+    : moveField(layout, field, TRAY);
 }
 
 /** The places that show another field than the SDK's default, in reading order. */
