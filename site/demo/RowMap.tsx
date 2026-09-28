@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { createPortal } from "react-dom";
@@ -66,7 +67,8 @@ interface Lifted {
 interface Drag {
   field: RowField;
   lifted: Lifted;
-  pointerId: number;
+  /** The pointer that carries it, or null when mouse events do (below). */
+  pointerId: number | null;
   startX: number;
   startY: number;
   x: number;
@@ -85,7 +87,7 @@ function spotAt(x: number, y: number): DropSpot | null {
   return (target?.dataset.drop as DropSpot | undefined) ?? null;
 }
 
-function lift(handle: HTMLElement, x: number, y: number): Lifted {
+function measure(handle: HTMLElement, x: number, y: number): Lifted {
   const cell = handle.closest<HTMLElement>(".row-map-place, .row-map-chip");
   const box = (cell ?? handle).getBoundingClientRect();
   const face = getComputedStyle(
@@ -124,13 +126,17 @@ function useFieldDrag(
   };
 
   // A drag follows its pointer from the window, not from the handle: the
-  // handle's capture can fail, as it does after a native menu closes.
-  const pointerId = drag?.pointerId ?? null;
+  // handle's capture can fail, as it does after a native menu closes. A drag
+  // Safari began with a bare mousedown is followed by mouse events.
+  const tracking = drag === null ? null : (drag.pointerId ?? "mouse");
   useEffect(() => {
-    if (pointerId === null) return;
-    const move = (event: PointerEvent) => {
+    if (tracking === null) return;
+    const byMouse = tracking === "mouse";
+    const carries = (event: MouseEvent) =>
+      byMouse || (event as PointerEvent).pointerId === tracking;
+    const move = (event: MouseEvent) => {
       const now = current.current;
-      if (now === null || now.pointerId !== event.pointerId) return;
+      if (now === null || !carries(event)) return;
       const moving =
         now.moving ||
         Math.hypot(event.clientX - now.startX, event.clientY - now.startY) >
@@ -147,9 +153,9 @@ function useFieldDrag(
             : null,
       });
     };
-    const up = (event: PointerEvent) => {
+    const up = (event: MouseEvent) => {
       const now = current.current;
-      if (now === null || now.pointerId !== event.pointerId) return;
+      if (now === null || !carries(event)) return;
       update(null);
       if (now.moving) {
         if (now.over !== null) latest.current.onDrop(now.field, now.over);
@@ -163,54 +169,71 @@ function useFieldDrag(
         // the chevron is still there.
       }
     };
-    const cancel = (event: PointerEvent) => {
-      if (current.current?.pointerId === event.pointerId) update(null);
+    const cancel = (event: MouseEvent) => {
+      if (current.current !== null && carries(event)) update(null);
     };
-    window.addEventListener("pointermove", move);
-    window.addEventListener("pointerup", up);
+    const [moveType, upType] = byMouse
+      ? (["mousemove", "mouseup"] as const)
+      : (["pointermove", "pointerup"] as const);
+    window.addEventListener(moveType, move);
+    window.addEventListener(upType, up);
     window.addEventListener("pointercancel", cancel);
     return () => {
-      window.removeEventListener("pointermove", move);
-      window.removeEventListener("pointerup", up);
+      window.removeEventListener(moveType, move);
+      window.removeEventListener(upType, up);
       window.removeEventListener("pointercancel", cancel);
     };
-  }, [pointerId]);
+  }, [tracking]);
+
+  /** Lift a field from where a press landed, unless it landed on the chevron. */
+  const lift = (
+    event: ReactMouseEvent<HTMLElement>,
+    field: RowField,
+    pointerId: number | null,
+  ): boolean => {
+    if (event.button !== 0) return false;
+    const grip = event.currentTarget.querySelector(".row-map-handle");
+    if (grip !== null && event.clientX > grip.getBoundingClientRect().right) {
+      return false; // The chevron: the menu opens as a menu does.
+    }
+    event.preventDefault();
+    // A menu left focused would keep its ring through the drag.
+    if (document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    menu.current = event.currentTarget.querySelector("select");
+    update({
+      field,
+      lifted: measure(event.currentTarget, event.clientX, event.clientY),
+      pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      x: event.clientX,
+      y: event.clientY,
+      moving: false,
+      over: null,
+    });
+    return true;
+  };
 
   /**
    * A place, or a chip on the tray, picks its field up on a press anywhere but
    * the chevron; the window follows the pointer from there. The place listens,
    * not its handle: after a native menu closes, a browser can route the next
-   * press to the menu under the handle until the pointer leaves the place.
+   * press to the menu under the handle. Safari sends that press without a
+   * pointerdown at all, so a mousedown no pointerdown began lifts it too.
    */
   const handle = (field: RowField) => ({
     onPointerDown(event: ReactPointerEvent<HTMLElement>) {
-      if (event.button !== 0) return;
-      const grip = event.currentTarget.querySelector(".row-map-handle");
-      if (grip !== null && event.clientX > grip.getBoundingClientRect().right) {
-        return; // The chevron: the menu opens as a menu does.
-      }
-      event.preventDefault();
-      // A menu left focused would keep its ring through the drag.
-      if (document.activeElement instanceof HTMLElement) {
-        document.activeElement.blur();
-      }
+      if (!lift(event, field, event.pointerId)) return;
       try {
         event.currentTarget.setPointerCapture(event.pointerId);
       } catch {
         // The window's listeners follow the pointer without it.
       }
-      menu.current = event.currentTarget.querySelector("select");
-      update({
-        field,
-        lifted: lift(event.currentTarget, event.clientX, event.clientY),
-        pointerId: event.pointerId,
-        startX: event.clientX,
-        startY: event.clientY,
-        x: event.clientX,
-        y: event.clientY,
-        moving: false,
-        over: null,
-      });
+    },
+    onMouseDown(event: ReactMouseEvent<HTMLElement>) {
+      if (current.current === null) lift(event, field, null);
     },
   });
 

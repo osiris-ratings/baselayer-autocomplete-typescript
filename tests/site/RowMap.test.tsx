@@ -179,6 +179,43 @@ describe("the Components fold's row", () => {
     expect(onChange.mock.calls[0]![0].layout.subtitleTrailing).toBe("states");
   });
 
+  it("drags from a bare mousedown, as Safari sends right after its menu closes", () => {
+    // Safari skips the pointerdown for the first press after a native menu,
+    // and sends the mouse events alone.
+    const { onChange, spot } = mount();
+    vi.spyOn(document, "elementFromPoint").mockReturnValue(
+      spot("subtitleTrailing"),
+    );
+    const place = spot("titleTrailing");
+    fireEvent.mouseDown(place.querySelector(".row-map-handle")!, {
+      button: 0,
+      clientX: 0,
+      clientY: 0,
+    });
+    fireEvent.mouseMove(document.body, { clientX: 40, clientY: 30 });
+    fireEvent.mouseUp(document.body, { clientX: 40, clientY: 30 });
+
+    expect(onChange.mock.calls[0]![0].layout.subtitleTrailing).toBe("states");
+  });
+
+  it("leaves a mousedown on the chevron to the menu too", () => {
+    const { view, onChange, spot } = mount();
+    const place = spot("titleTrailing");
+    vi.spyOn(
+      place.querySelector(".row-map-handle")!,
+      "getBoundingClientRect",
+    ).mockReturnValue(new DOMRect(0, 0, 100, 28));
+    const opened = fireEvent.mouseDown(place.querySelector("select")!, {
+      button: 0,
+      clientX: 110,
+      clientY: 10,
+    });
+    fireEvent.mouseMove(document.body, { clientX: 160, clientY: 40 });
+    expect(opened).toBe(true);
+    expect(view.container.querySelector("[data-accepts]")).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it("leaves a press on the chevron to the menu", () => {
     const { view, onChange, spot } = mount();
     const place = spot("titleTrailing");
