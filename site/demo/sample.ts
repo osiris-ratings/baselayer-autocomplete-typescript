@@ -76,6 +76,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
   row("HARBOR CONCRETE PUMPING CO., INC.", {
     domicile_state: "PA",
     states: ["MD", "NY", "OH", "PA", "WV"],
+    structure: "C_CORPORATION",
     related: {
       people: set(
         [person("Dana Whitfield", "officer"), person("Luis Ortega", "officer")],
@@ -89,6 +90,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     matchedName: "HARBOR CONCRETE PUMPS",
     domicile_state: "OH",
     states: ["OH", "PA"],
+    structure: "LLC",
     related: {
       people: set([person("MERIDIAN REGISTERED AGENTS, LLC", "agent")]),
       addresses: set([address("88 Canal St, Akron, OH 44308")]),
@@ -98,6 +100,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
   row("HARBOR VIEW CONCRETE, INC.", {
     domicile_state: "DE",
     states: ["CA", "DE", "FL", "TX", "WA"],
+    structure: "S_CORPORATION",
     related: {
       people: set([person("Priya Raman", "officer")]),
       addresses: set([address("400 Bayfront Ave, Tampa, FL 33602")]),
@@ -107,15 +110,17 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
   row("HARBOR CONCRETE SUPPLY, INC.", {
     domicile_state: "NJ",
     states: ["NJ"],
+    structure: null,
     related: {
       people: set([]),
       addresses: set([address("15 Ferry St, Newark, NJ 07105")]),
       liens: set([], 0),
     },
   }),
-  row("HARBOR CONCRETE & MASONRY, LLC", {
+  row("HARBOR CONCRETE & MASONRY", {
     domicile_state: "MD",
     states: ["DC", "MD", "VA"],
+    structure: "TRADE_NAME",
     related: {
       people: set([person("Grace Oduya", "officer")], 2),
       addresses: set([address("2210 Key Hwy, Baltimore, MD 21230")]),
@@ -125,6 +130,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
   row("CONCRETE HARBOR PARTNERS, LP", {
     domicile_state: "TX",
     states: ["TX"],
+    structure: "LP",
     related: {
       people: set([person("Silverline Agent Services, Inc.", "agent")]),
       addresses: set([address("700 Harborside Dr, Galveston, TX 77550")]),
@@ -134,6 +140,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
   row("HARBOR CONCRETE FORMING, INC.", {
     domicile_state: "WA",
     states: ["AK", "OR", "WA"],
+    structure: "B_CORPORATION",
     related: {
       people: set([person("Tomas Lindqvist", "officer")]),
       addresses: set([address("3100 Marine View Dr, Tacoma, WA 98422")]),
@@ -143,6 +150,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
   row("BAYSIDE HARBOR CONCRETE, INC.", {
     domicile_state: "CA",
     states: ["AZ", "CA", "NV", "OR"],
+    structure: "C_CORPORATION",
     related: {
       people: set([person("Maya Castellanos", "officer")], 3),
       addresses: set([address("55 Embarcadero W, Oakland, CA 94607")]),

@@ -206,6 +206,17 @@ describe("assembleReference", () => {
     }
   });
 
+  it("shows every field a suggestion has in the route's example", () => {
+    const route = reference.paths["/autocomplete/businesses"]!.get!;
+    const example = route.responses["200"]!.content!["application/json"]!
+      .examples!.harbor!.value as { suggestions: Record<string, unknown>[] };
+    const fields = Object.keys(
+      reference.components!.schemas!.BusinessSuggestion!.properties!,
+    );
+
+    expect(Object.keys(example.suggestions[0]!).sort()).toEqual(fields.sort());
+  });
+
   it("gives every operation a tag the document declares", () => {
     const tags = new Set((reference.tags ?? []).map(t => t.name));
     for (const item of Object.values(reference.paths)) {

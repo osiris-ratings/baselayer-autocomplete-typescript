@@ -1,5 +1,9 @@
 import type { MatchRegion } from "./look";
-import type { BusinessSuggestion, HighlightPart } from "./wire";
+import type {
+  BusinessStructure,
+  BusinessSuggestion,
+  HighlightPart,
+} from "./wire";
 
 /**
  * Readers of a `GET /autocomplete/businesses` suggestion: what the typeahead's
@@ -87,6 +91,58 @@ export function orderedStates(suggestion: BusinessSuggestion): string[] {
     suggestion.domicile_state,
     ...suggestion.states.filter(state => state !== suggestion.domicile_state),
   ];
+}
+
+/** Each structure's flag, short and shaped like the suffix a name carries. */
+const STRUCTURE_LABELS: Partial<Record<BusinessStructure, string>> = {
+  SOLE_PROPRIETORSHIP: "Sole prop.",
+  GENERAL_PARTNERSHIP: "GP",
+  LLC: "LLC",
+  LLP: "LLP",
+  LLLP: "LLLP",
+  LP: "LP",
+  C_CORPORATION: "C-Corp",
+  S_CORPORATION: "S-Corp",
+  B_CORPORATION: "B-Corp",
+  NONPROFIT: "Nonprofit",
+  COOPERATIVE: "Co-op",
+  TRUST: "Trust",
+  // Never `PA`: that is Pennsylvania's state square.
+  PROFESSIONAL_ASSOCIATION: "P.A.",
+  PROFESSIONAL_CORPORATION: "P.C.",
+  TRADE_NAME: "DBA",
+  BANK: "Bank",
+  CREDIT_UNION: "Credit union",
+  INSURANCE: "Insurance",
+};
+
+/** `labels[key]` when it is a string of the object's own, else undefined. */
+function ownLabel(
+  labels: Partial<Record<BusinessStructure, string>>,
+  key: string,
+): string | undefined {
+  // The key comes off the wire, so it may name a member of every object.
+  const label: unknown = Object.prototype.hasOwnProperty.call(labels, key)
+    ? labels[key]
+    : undefined;
+  return typeof label === "string" ? label : undefined;
+}
+
+/**
+ * The flag a business's structure draws, or null for none: `OTHER`, no
+ * structure, and a value this build has no label for draw none. `labels`
+ * relabels any value, one at a time, and `""` hides that value's flag.
+ */
+export function structureLabel(
+  structure: BusinessStructure | null,
+  labels: Partial<Record<BusinessStructure, string>> = {},
+): string | null {
+  if (structure === null) {
+    return null;
+  }
+  const label =
+    ownLabel(labels, structure) ?? ownLabel(STRUCTURE_LABELS, structure);
+  return label === undefined || label === "" ? null : label;
 }
 
 /** `found` is a floor when the tier stopped counting: `500+`. */

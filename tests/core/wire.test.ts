@@ -1,6 +1,10 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
+  BUSINESS_STRUCTURES,
   ContractViolation,
   parseBusinessesResponse,
   parseErrorEnvelope,
@@ -19,6 +23,7 @@ const suggestion = {
   match: "strong",
   domicile_state: "DE",
   states: ["DE", "CA"],
+  structure: "C_CORPORATION",
   related: {
     people: {
       count: 3,
@@ -217,6 +222,61 @@ describe("a business suggestion", () => {
     expect(item).not.toHaveProperty("id");
     expect(item?.token).toBeNull();
     expect(item?.label).toBe("412 Orchard Ln, Springfield, MO 65806");
+  });
+
+  describe("structure", () => {
+    const tier = JSON.parse(
+      readFileSync(
+        join(__dirname, "../../contracts/tier-openapi.json"),
+        "utf8",
+      ),
+    ) as {
+      components: {
+        schemas: Record<string, { enum?: string[]; required?: string[] }>;
+      };
+    };
+
+    it("knows every structure the tier's contract lists, in its order", () => {
+      expect(BUSINESS_STRUCTURES).toEqual(
+        tier.components.schemas.BusinessStructure?.enum,
+      );
+    });
+
+    it("reads the structure the tier sends", () => {
+      expect(parseSuggestion(suggestion).structure).toBe("C_CORPORATION");
+      for (const structure of BUSINESS_STRUCTURES) {
+        expect(parseSuggestion({ ...suggestion, structure }).structure).toBe(
+          structure,
+        );
+      }
+    });
+
+    it("reads an absent or null structure as null, as a tier that predates it sends it", () => {
+      // The contract leaves it out of `required`, and a tier older than 0.8.0
+      // sends no such key at all.
+      expect(
+        tier.components.schemas.BusinessSuggestion?.required,
+      ).not.toContain("structure");
+      const older: Partial<typeof suggestion> = { ...suggestion };
+      delete older.structure;
+
+      expect(parseSuggestion(older).structure).toBeNull();
+      expect(
+        parseSuggestion({ ...suggestion, structure: null }).structure,
+      ).toBe(null);
+    });
+
+    it("keeps a structure this build does not know as the string it is", () => {
+      expect(
+        parseSuggestion({ ...suggestion, structure: "FOUNDATION" }).structure,
+      ).toBe("FOUNDATION");
+    });
+
+    it("still refuses a structure that is not a string", () => {
+      expect(() => parseSuggestion({ ...suggestion, structure: 3 })).toThrow(
+        "response.suggestions[0].structure: expected a string",
+      );
+    });
   });
 
   describe("truncated", () => {

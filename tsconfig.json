@@ -23,6 +23,7 @@
   "include": [
     "src",
     "tests",
+    "site/api/virtual.d.ts",
     "scripts",
     "tsup.config.ts",
     "vitest.config.ts",

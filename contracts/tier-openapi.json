@@ -1,6 +1,31 @@
 {
   "components": {
     "schemas": {
+      "BusinessStructure": {
+        "description": "A business's legal structure.",
+        "enum": [
+          "SOLE_PROPRIETORSHIP",
+          "GENERAL_PARTNERSHIP",
+          "LLC",
+          "LLP",
+          "LLLP",
+          "LP",
+          "C_CORPORATION",
+          "S_CORPORATION",
+          "B_CORPORATION",
+          "NONPROFIT",
+          "COOPERATIVE",
+          "TRUST",
+          "PROFESSIONAL_ASSOCIATION",
+          "PROFESSIONAL_CORPORATION",
+          "TRADE_NAME",
+          "BANK",
+          "CREDIT_UNION",
+          "INSURANCE",
+          "OTHER"
+        ],
+        "type": "string"
+      },
       "BusinessSuggestion": {
         "properties": {
           "domicile_state": {
@@ -34,6 +59,17 @@
               "type": "string"
             },
             "type": "array"
+          },
+          "structure": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BusinessStructure",
+                "description": "The legal structure the domicile registration is filed under, unformatted;\nnull when it is not known."
+              }
+            ]
           },
           "token": {
             "description": "Opaque handle for the family: pass it back verbatim as `business_token` on\n`POST /searches` to pre-identify the business the search resolves to.\nSealed by the tier, so a client cannot read the id inside, and the same\nfamily gets a different token every time. Bound to the session's\norganization and good for fifteen minutes; `POST /searches` refuses it\nfrom another organization (422, code 3040) or past its expiry (422, code\n3042).",
@@ -427,6 +463,21 @@
             }
           },
           {
+            "description": "Comma list of legal structures (`LLC`, `C_CORPORATION`, \u2026, any case); keeps\nrows whose domicile registration is any of them.",
+            "explode": false,
+            "in": "query",
+            "name": "structure",
+            "required": false,
+            "schema": {
+              "items": {
+                "$ref": "#/components/schemas/BusinessStructure"
+              },
+              "minItems": 1,
+              "type": "array"
+            },
+            "style": "form"
+          },
+          {
             "description": "1\u201320, default 10.",
             "in": "query",
             "name": "limit",
@@ -546,7 +597,7 @@
                 }
               }
             },
-            "description": "A parameter is unknown, repeated or invalid, or a filter was sent with a query too short to narrow"
+            "description": "A parameter is unknown, repeated or invalid, a filter was sent with a query too short to narrow, or `structure` was sent before the serving index carries it"
           },
           "429": {
             "content": {

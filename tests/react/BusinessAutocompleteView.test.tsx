@@ -22,6 +22,7 @@ const cinder: BusinessSuggestion = {
   domicile_state: "DE",
   // Sorted, as the tier returns them; the domicile is not first here on purpose.
   states: ["CA", "DE", "FL", "IL", "MA", "MO", "NY"],
+  structure: "C_CORPORATION",
   related: {
     people: {
       count: 4,
@@ -93,6 +94,7 @@ const stable: BusinessSuggestion = {
   matched_name: null,
   domicile_state: "FL",
   states: ["FL"],
+  structure: "LLC",
   related: {
     people: { count: 0, matched: null, truncated: false, items: [] },
     addresses: { count: 0, matched: null, truncated: false, items: [] },

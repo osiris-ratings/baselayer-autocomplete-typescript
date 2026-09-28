@@ -249,6 +249,7 @@ actions:
                         match: strong
                         domicile_state: PA
                         states: [MD, NY, OH, PA, WV]
+                        structure: C_CORPORATION
                         related:
                           people:
                             count: 4
