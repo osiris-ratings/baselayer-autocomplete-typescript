@@ -16,7 +16,10 @@ import {
   type RefObject,
 } from "react";
 
-import type { HighlightPart } from "@baselayer-sdk/autocomplete";
+import {
+  structureLabel,
+  type HighlightPart,
+} from "@baselayer-sdk/autocomplete";
 
 import { useInView, usePrefersStill, waiter } from "./motion";
 import { REEL, answerFor } from "./reel";
@@ -26,6 +29,59 @@ const INK = "#1c1b1c";
 const MUTED = "#676b76";
 const LINE = "#cfd9ee";
 const RETURN = "#7b8db3";
+/** The structure's flag, in the component's own colors. */
+const FLAG_BG = "#edf2f7";
+const FLAG_FG = "#4a5568";
+const FLAG_PAD = 4;
+const FLAG_GAP = 5;
+
+/** A structure's flag after a name, its text's left edge at `x`. */
+function Flag({
+  x,
+  y,
+  width,
+  label,
+  textRef,
+  hidden = false,
+  fixed = false,
+}: {
+  x: number;
+  /** The name's baseline. */
+  y: number;
+  /** The flag's text width; the box adds its padding. */
+  width: number;
+  label: string;
+  textRef?: (element: SVGTextElement | null) => void;
+  hidden?: boolean;
+  /** Hold the text to `width` in any font, as the still drawing does. */
+  fixed?: boolean;
+}) {
+  return (
+    <g visibility={hidden ? "hidden" : undefined}>
+      <rect
+        x={x - FLAG_PAD}
+        y={y - 9.5}
+        width={width + 2 * FLAG_PAD}
+        height={12}
+        rx={2}
+        fill={FLAG_BG}
+      />
+      <text
+        ref={textRef}
+        x={x}
+        y={y - 1}
+        textLength={fixed ? width : undefined}
+        lengthAdjust={fixed ? "spacingAndGlyphs" : undefined}
+        fontFamily="var(--sans)"
+        fontSize={8.5}
+        fontWeight={600}
+        fill={FLAG_FG}
+      >
+        {label}
+      </text>
+    </g>
+  );
+}
 
 function Badge({ x, y, n }: { x: number; y: number; n: number }) {
   return (
@@ -396,6 +452,11 @@ function fit(parts: HighlightPart[], room = Infinity): HighlightPart[] {
 function PlayingField({ scene }: { scene: Scene }) {
   const field = useRef<SVGTextElement>(null);
   const labels = useRef<(SVGTextElement | null)[]>([]);
+  const flagTexts = useRef<(SVGTextElement | null)[]>([]);
+  // Each row's flag, where its text starts and how wide it is, once measured.
+  const [flags, setFlags] = useState<
+    Record<string, { x: number; width: number }>
+  >({});
   const [caret, setCaret] = useState(66);
   const [marks, setMarks] = useState<{ row: number; x1: number; x2: number }[]>(
     [],
@@ -415,22 +476,38 @@ function PlayingField({ scene }: { scene: Scene }) {
   // the text's drawn width.
   useLayoutEffect(() => {
     const cut: Record<string, number> = {};
+    const placed: Record<string, { x: number; width: number }> = {};
     rows.forEach((row, i) => {
       const label = labels.current[i];
-      if (
-        label === null ||
-        label === undefined ||
-        rooms[row.token] !== undefined
-      )
-        return;
+      if (label === null || label === undefined) return;
+      // A flag takes its room from the name's, as it does in the menu.
+      const flagWidth = flagTexts.current[i]?.getComputedTextLength() ?? 0;
+      const end =
+        flagWidth === 0 ? NAME_END : NAME_END - flagWidth - FLAG_GAP - FLAG_PAD;
       const box = label.getBBox();
-      if (box.x + box.width <= NAME_END) return;
+      if (flagWidth > 0) {
+        placed[row.token] = {
+          x: box.x + box.width + FLAG_GAP + FLAG_PAD,
+          width: flagWidth,
+        };
+      }
+      if (rooms[row.token] !== undefined) return;
+      // A name that fits whole is measured too: it keeps all its room.
       const characters = label.textContent?.length ?? 0;
-      cut[row.token] = Math.floor(
-        (characters * (NAME_END - box.x)) / box.width,
-      );
+      cut[row.token] =
+        box.x + box.width <= end
+          ? Infinity
+          : Math.floor((characters * (end - box.x)) / box.width);
     });
     if (Object.keys(cut).length > 0) setRooms(now => ({ ...now, ...cut }));
+    setFlags(now =>
+      Object.entries(placed).every(
+        ([token, flag]) =>
+          now[token]?.x === flag.x && now[token]?.width === flag.width,
+      )
+        ? now
+        : { ...now, ...placed },
+    );
     const width = field.current?.getComputedTextLength() ?? 0;
     setCaret(64 + width + (scene.typed === "" ? 2 : 3));
     setMarks(
@@ -491,6 +568,21 @@ function PlayingField({ scene }: { scene: Scene }) {
               </tspan>
             ))}
           </text>
+          {structureLabel(row.structure) !== null && (
+            <Flag
+              x={flags[row.token]?.x ?? NAME_END}
+              y={214 + i * 36}
+              width={flags[row.token]?.width ?? 0}
+              label={structureLabel(row.structure)!}
+              textRef={element => {
+                flagTexts.current[i] = element;
+              }}
+              // Measured before it is drawn, so it never lands on the name.
+              hidden={
+                flags[row.token] === undefined || rooms[row.token] === undefined
+              }
+            />
+          )}
           <text
             x={64}
             y={230 + i * 36}
@@ -643,6 +735,10 @@ export function ArchitectureDiagram({ paused = false }: { paused?: boolean }) {
       {scene !== null && <PlayingField scene={scene} />}
       {scene === null && (
         <>
+          {/* The first two rows for "harbor concrete", as the play draws
+              them: the name cut to leave its flag room. Each text is held
+              to its width in Uncut Sans, so the README's copy, drawn in a
+              system font, lays out the same. */}
           <text
             x={64}
             y={214}
@@ -650,17 +746,20 @@ export function ArchitectureDiagram({ paused = false }: { paused?: boolean }) {
             fontSize={11}
             fontWeight={600}
             fill={INK}
+            textLength={166.6}
+            lengthAdjust="spacingAndGlyphs"
           >
-            HARBOR CONCRETE PUMPING CO., INC.
+            HARBOR CONCRETE PUMPING…
           </text>
           <line
             x1={64}
             y1={217}
-            x2={201}
+            x2={196}
             y2={217}
             stroke="#38a169"
             strokeWidth={1.5}
           />
+          <Flag x={240} y={214} width={30.4} label="C-Corp" fixed />
           <text
             x={64}
             y={230}
@@ -677,17 +776,12 @@ export function ArchitectureDiagram({ paused = false }: { paused?: boolean }) {
             fontSize={11}
             fontWeight={600}
             fill={INK}
+            textLength={150.9}
+            lengthAdjust="spacingAndGlyphs"
           >
-            HARBOR CONCRETE SUPPLY, INC.
+            NORTHSHORE PUMPING, LLC
           </text>
-          <line
-            x1={64}
-            y1={253}
-            x2={201}
-            y2={253}
-            stroke="#38a169"
-            strokeWidth={1.5}
-          />
+          <Flag x={224} y={250} width={15} label="LLC" fixed />
           <text
             x={64}
             y={266}
@@ -695,7 +789,7 @@ export function ArchitectureDiagram({ paused = false }: { paused?: boolean }) {
             fontSize={10}
             fill={MUTED}
           >
-            15 Ferry St, Newark, NJ 07105
+            88 Canal St, Akron, OH 44308
           </text>
         </>
       )}
