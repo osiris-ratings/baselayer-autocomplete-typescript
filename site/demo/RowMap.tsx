@@ -141,6 +141,13 @@ function useFieldDrag(
     const move = (event: MouseEvent) => {
       const now = current.current;
       if (now === null || !carries(event)) return;
+      // The button is up: its release went where no listener heard it (a
+      // context menu, another window), so the drag is over. Only a pointer
+      // says so reliably; the mouse events Safari falls back to are left be.
+      if (!byMouse && (event.buttons & 1) === 0) {
+        update(null);
+        return;
+      }
       const moving =
         now.moving ||
         Math.hypot(event.clientX - now.startX, event.clientY - now.startY) >
@@ -162,7 +169,11 @@ function useFieldDrag(
       if (now === null || !carries(event)) return;
       update(null);
       if (now.moving) {
-        if (now.over !== null) latest.current.onDrop(now.field, now.over);
+        // Where it is let go, which a scroll since the last move can change.
+        const spot = spotAt(event.clientX, event.clientY);
+        if (spot !== null && latest.current.accepts(now.field, spot)) {
+          latest.current.onDrop(now.field, spot);
+        }
         return;
       }
       // A press that never moved is a tap: it opens the place's menu.
@@ -176,16 +187,28 @@ function useFieldDrag(
     const cancel = (event: MouseEvent) => {
       if (current.current !== null && carries(event)) update(null);
     };
+    // Escape puts the field back; so does anything that takes the pointer
+    // from the page before it is let go.
+    const abandon = () => update(null);
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") abandon();
+    };
     const [moveType, upType] = byMouse
       ? (["mousemove", "mouseup"] as const)
       : (["pointermove", "pointerup"] as const);
     window.addEventListener(moveType, move);
     window.addEventListener(upType, up);
     window.addEventListener("pointercancel", cancel);
+    window.addEventListener("keydown", escape);
+    window.addEventListener("blur", abandon);
+    window.addEventListener("contextmenu", abandon);
     return () => {
       window.removeEventListener(moveType, move);
       window.removeEventListener(upType, up);
       window.removeEventListener("pointercancel", cancel);
+      window.removeEventListener("keydown", escape);
+      window.removeEventListener("blur", abandon);
+      window.removeEventListener("contextmenu", abandon);
     };
   }, [tracking]);
 

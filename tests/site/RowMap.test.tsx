@@ -40,7 +40,7 @@ function mount(state: StyleState = DEFAULT_STYLE) {
 function drag(handle: Element, target: Element) {
   vi.spyOn(document, "elementFromPoint").mockReturnValue(target);
   fireEvent.pointerDown(handle, { button: 0, clientX: 0, clientY: 0 });
-  fireEvent.pointerMove(handle, { clientX: 40, clientY: 30 });
+  fireEvent.pointerMove(handle, { buttons: 1, clientX: 40, clientY: 30 });
   fireEvent.pointerUp(handle, { clientX: 40, clientY: 30 });
 }
 
@@ -120,7 +120,7 @@ describe("the Components fold's row", () => {
     const handle = spot("subtitle").querySelector(".row-map-handle")!;
     vi.spyOn(document, "elementFromPoint").mockReturnValue(spot("titleBadge"));
     fireEvent.pointerDown(handle, { button: 0, clientX: 0, clientY: 0 });
-    fireEvent.pointerMove(handle, { clientX: 40, clientY: 30 });
+    fireEvent.pointerMove(handle, { buttons: 1, clientX: 40, clientY: 30 });
 
     const accepting = [
       ...view.container.querySelectorAll<HTMLElement>("[data-accepts]"),
@@ -165,7 +165,11 @@ describe("the Components fold's row", () => {
     fireEvent.pointerDown(handle, { button: 0, clientX: 0, clientY: 0 });
     expect(document.activeElement).not.toBe(menu);
     // Off the handle: the window follows the pointer.
-    fireEvent.pointerMove(document.body, { clientX: 40, clientY: 30 });
+    fireEvent.pointerMove(document.body, {
+      buttons: 1,
+      clientX: 40,
+      clientY: 30,
+    });
     fireEvent.pointerUp(document.body, { clientX: 40, clientY: 30 });
 
     const { layout } = onChange.mock.calls[0]![0];
@@ -187,7 +191,11 @@ describe("the Components fold's row", () => {
     // Right after a native menu closes, the press lands on the select.
     const menu = place.querySelector("select")!;
     fireEvent.pointerDown(menu, { button: 0, clientX: 20, clientY: 10 });
-    fireEvent.pointerMove(document.body, { clientX: 60, clientY: 40 });
+    fireEvent.pointerMove(document.body, {
+      buttons: 1,
+      clientX: 60,
+      clientY: 40,
+    });
     fireEvent.pointerUp(document.body, { clientX: 60, clientY: 40 });
 
     expect(onChange.mock.calls[0]![0].layout.subtitleTrailing).toBe("states");
@@ -206,7 +214,11 @@ describe("the Components fold's row", () => {
       clientX: 0,
       clientY: 0,
     });
-    fireEvent.mouseMove(document.body, { clientX: 40, clientY: 30 });
+    fireEvent.mouseMove(document.body, {
+      buttons: 1,
+      clientX: 40,
+      clientY: 30,
+    });
     fireEvent.mouseUp(document.body, { clientX: 40, clientY: 30 });
 
     expect(onChange.mock.calls[0]![0].layout.subtitleTrailing).toBe("states");
@@ -224,7 +236,11 @@ describe("the Components fold's row", () => {
       clientX: 110,
       clientY: 10,
     });
-    fireEvent.mouseMove(document.body, { clientX: 160, clientY: 40 });
+    fireEvent.mouseMove(document.body, {
+      buttons: 1,
+      clientX: 160,
+      clientY: 40,
+    });
     expect(opened).toBe(true);
     expect(view.container.querySelector("[data-accepts]")).toBeNull();
     expect(onChange).not.toHaveBeenCalled();
@@ -244,7 +260,11 @@ describe("the Components fold's row", () => {
       clientX: 110,
       clientY: 10,
     });
-    fireEvent.pointerMove(document.body, { clientX: 160, clientY: 40 });
+    fireEvent.pointerMove(document.body, {
+      buttons: 1,
+      clientX: 160,
+      clientY: 40,
+    });
 
     // Not cancelled, so the select still opens, and nothing is lifted.
     expect(opened).toBe(true);
@@ -252,11 +272,98 @@ describe("the Components fold's row", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it("does not drop a press that never moves", () => {
+  it("opens the menu on a press that never moves, and drops nothing", () => {
     const { onChange, spot } = mount();
-    const handle = spot("titleBadge").querySelector(".row-map-handle")!;
-    fireEvent.pointerDown(handle, { button: 0, clientX: 5, clientY: 5 });
+    const place = spot("titleBadge");
+    const handle = place.querySelector(".row-map-handle")!;
+    // jsdom lays nothing out: without a width, every press is on the chevron.
+    vi.spyOn(handle, "getBoundingClientRect").mockReturnValue(
+      new DOMRect(0, 0, 100, 28),
+    );
+    const showPicker = vi.fn();
+    place.querySelector("select")!.showPicker = showPicker;
+
+    const lifted = !fireEvent.pointerDown(handle, {
+      button: 0,
+      clientX: 5,
+      clientY: 5,
+    });
     fireEvent.pointerUp(handle, { clientX: 6, clientY: 5 });
+
+    expect(lifted).toBe(true);
+    expect(showPicker).toHaveBeenCalledTimes(1);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  /** Lift the states and carry them over the officers' place. */
+  function carry(spot: (name: string) => HTMLElement) {
+    const under = vi
+      .spyOn(document, "elementFromPoint")
+      .mockReturnValue(spot("subtitleTrailing"));
+    const handle = spot("titleTrailing").querySelector(".row-map-handle")!;
+    fireEvent.pointerDown(handle, { button: 0, clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(document.body, {
+      buttons: 1,
+      clientX: 40,
+      clientY: 30,
+    });
+    return under;
+  }
+
+  it("ends a pointer's drag whose button was let go where no listener saw it", () => {
+    const { view, onChange, spot } = mount();
+    carry(spot);
+    expect(view.container.querySelector("[data-accepts]")).not.toBeNull();
+
+    // A context menu or another window took the release: the next move
+    // comes with the button up.
+    fireEvent.pointerMove(document.body, {
+      buttons: 0,
+      clientX: 44,
+      clientY: 30,
+    });
+    expect(view.container.querySelector("[data-accepts]")).toBeNull();
+    expect(document.querySelector(".row-map-ghost")).toBeNull();
+
+    // A later click anywhere drops nothing.
+    fireEvent.pointerUp(document.body, { clientX: 44, clientY: 30 });
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["Escape", () => fireEvent.keyDown(window, { key: "Escape" })],
+    ["the window losing focus", () => fireEvent.blur(window)],
+    ["a context menu", () => fireEvent.contextMenu(window)],
+  ])("ends a drag on %s", (_, end) => {
+    const { view, onChange, spot } = mount();
+    carry(spot);
+    end();
+
+    expect(view.container.querySelector("[data-accepts]")).toBeNull();
+    fireEvent.pointerUp(document.body, { clientX: 40, clientY: 30 });
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("drops where the pointer lets go, which a scroll since the last move can change", () => {
+    const { onChange, spot } = mount();
+    const under = carry(spot);
+
+    // The pane scrolls under the still pointer, onto the tray.
+    under.mockReturnValue(spot("tray"));
+    fireEvent.pointerUp(document.body, { clientX: 40, clientY: 30 });
+
+    const { layout } = onChange.mock.calls[0]![0];
+    expect(layout.titleTrailing).toBeNull();
+    expect(layout.subtitleTrailing).toBe("people");
+  });
+
+  it("drops nothing where the pointer lets go over nothing", () => {
+    const { onChange, spot } = mount();
+    const under = carry(spot);
+
+    under.mockReturnValue(null);
+    fireEvent.pointerUp(document.body, { clientX: 40, clientY: 30 });
+
     expect(onChange).not.toHaveBeenCalled();
   });
 
