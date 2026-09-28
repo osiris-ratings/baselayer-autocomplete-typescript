@@ -211,6 +211,36 @@ describe("the first line's alignment", () => {
   });
 });
 
+describe("the type", () => {
+  it("is the host's font, unless --bl-ac-font names one", () => {
+    expect(rule(".bl-ac")).toMatch(/font-family: var\(--bl-ac-font\);/);
+    // Unset, the declaration falls back to inheriting the page's font.
+    expect(css).not.toMatch(/--bl-ac-font:/);
+  });
+
+  it("draws every weight from a variable, with the weights it always had", () => {
+    const root = rule(".bl-ac");
+    expect(root).toMatch(/--bl-ac-name-weight: 600;/);
+    expect(root).toMatch(/--bl-ac-weight-base: 500;/);
+    expect(root).toMatch(/--bl-ac-weight-mark: 700;/);
+    expect(rule(".bl-ac-name")).toMatch(
+      /font-weight: var\(--bl-ac-name-weight\);/,
+    );
+    expect(rule('.bl-ac-name[data-emphasis="weight"]')).toMatch(
+      /font-weight: var\(--bl-ac-weight-base\);/,
+    );
+    // The matched words, on the name and on the alternative name alike.
+    for (const mark of [
+      '.bl-ac-name[data-emphasis="weight"] > .bl-ac-mark',
+      '.bl-ac-also[data-emphasis="weight"] .bl-ac-mark',
+    ]) {
+      expect(rule(mark), mark).toMatch(
+        /font-weight: var\(--bl-ac-weight-mark\);/,
+      );
+    }
+  });
+});
+
 describe("the stylesheet's colors", () => {
   // Each color knob of `look`, and the variable it sets.
   const VARIABLES: Record<

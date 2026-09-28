@@ -88,6 +88,22 @@ Set them on `.bl-ac` or any ancestor selector more specific than it:
 | `--bl-ac-menu-width`          | `560px`                            | a menu that keeps its own width              |
 | `--bl-ac-list-max-height`     | `24rem`                            | the scrolling list                           |
 | `--bl-ac-line-height`         | `1.5`                              | every line in the menu                       |
+| `--bl-ac-font`                | unset: the page's font             | the component's font family                  |
+| `--bl-ac-name-weight`         | `600`                              | the name, under every emphasis but `weight`  |
+| `--bl-ac-weight-base`         | `500`                              | the name's unmatched text, under `weight`    |
+| `--bl-ac-weight-mark`         | `700`                              | every matched word, under `weight`           |
+
+A weight the font does not have is drawn in the nearest one it does, so a
+heavier `--bl-ac-weight-mark` needs the font loaded in that weight. To use a
+font of your own, load it in the page (a font service's `<link>`, or your
+own `@font-face` rules) and name it in `--bl-ac-font`:
+
+```css
+.my-form .bl-ac {
+  --bl-ac-font: "Inter", system-ui, sans-serif;
+  --bl-ac-weight-mark: 800;
+}
+```
 
 Under the `weight` emphasis, the name's own marks take `--bl-ac-mark` only
 when `look.matchEmphasisColor` sets it; set in your CSS alone, it colors the

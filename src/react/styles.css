@@ -4,7 +4,8 @@
  * Every rule is one class deep, so a host's global reset (a design system's,
  * Tailwind's preflight, a `* { … }`) never outranks it, and a host class loaded
  * after this file wins a tie. Colors are custom properties: set them on
- * `.bl-ac`, or pass `look` to the component.
+ * `.bl-ac`, or pass `look` to the component. So are the weights, and the font:
+ * `--bl-ac-font` is left unset, so the component takes the page's font.
  */
 
 .bl-ac {
@@ -31,8 +32,13 @@
   --bl-ac-menu-width: 560px;
   --bl-ac-list-max-height: 24rem;
   --bl-ac-line-height: 1.5;
+  --bl-ac-name-weight: 600;
+  --bl-ac-weight-base: 500;
+  --bl-ac-weight-mark: 700;
   position: relative;
   box-sizing: border-box;
+  /* Unset, the variable makes this declaration inherit the page's font. */
+  font-family: var(--bl-ac-font);
 }
 
 .bl-ac-label {
@@ -185,7 +191,7 @@
 }
 
 .bl-ac-name {
-  font-weight: 600;
+  font-weight: var(--bl-ac-name-weight);
   color: var(--bl-ac-title);
 }
 
@@ -336,8 +342,8 @@
 /*
  * The marks, one treatment per emphasis, on the name and on the alternative
  * name, each of which carries the emphasis. The name owns its weight; the
- * alternative name stays at the subtitle's color and normal weight, so a mark
- * on it darkens rather than emboldens past the label.
+ * alternative name stays at the subtitle's color and normal weight. With the
+ * weight emphasis, a matched word on either takes `--bl-ac-weight-mark`.
  */
 .bl-ac-name[data-emphasis="underline"] .bl-ac-mark,
 .bl-ac-also[data-emphasis="underline"] .bl-ac-mark {
@@ -356,11 +362,11 @@
 }
 
 .bl-ac-name[data-emphasis="weight"] {
-  font-weight: 500;
+  font-weight: var(--bl-ac-weight-base);
 }
 
 .bl-ac-name[data-emphasis="weight"] > .bl-ac-mark {
-  font-weight: 700;
+  font-weight: var(--bl-ac-weight-mark);
 }
 
 .bl-ac[data-mark-color] .bl-ac-name[data-emphasis="weight"] > .bl-ac-mark {
@@ -368,7 +374,7 @@
 }
 
 .bl-ac-also[data-emphasis="weight"] .bl-ac-mark {
-  font-weight: 600;
+  font-weight: var(--bl-ac-weight-mark);
   color: var(--bl-ac-mark, var(--bl-ac-also-mark));
 }
 

@@ -13,6 +13,11 @@ as a minor release.
 
 ### Added
 
+- `--bl-ac-font`, `--bl-ac-name-weight`, `--bl-ac-weight-base` and
+  `--bl-ac-weight-mark`: the component's font family, left unset so it keeps
+  the page's font, and the weights it used to fix (600, 500 and 700). The
+  `also …` marks under the `weight` emphasis take `--bl-ac-weight-mark`, so
+  they are drawn in 700 rather than 600.
 - `BusinessSuggestion.structure`, the legal structure of the business's
   domicile registration: one of `BUSINESS_STRUCTURES` (`BusinessStructure`),
   or null when it is not known or the API does not send it. A value this
