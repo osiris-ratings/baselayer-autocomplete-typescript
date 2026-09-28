@@ -1,6 +1,8 @@
 // Every knob the styled component has, grouped the way a designer would reach
 // for them, and at the end the code that reproduces the result.
 
+import { useState } from "react";
+
 import { BUSINESS_STRUCTURES } from "@baselayer-sdk/autocomplete";
 import {
   MINT_TIMINGS,
@@ -97,7 +99,17 @@ export function StylingPanel({
     SHAPE_KINDS.has(CSS_VARIABLES[name].kind),
   );
   const font = state.vars["--bl-ac-font"];
-  const fontPick = fontChoice(font);
+  // The stack last typed, so "Your own…" stays picked while it is edited,
+  // even empty or spelled like a choice; a font set anywhere else, by a
+  // preset or a reset, picks afresh.
+  const [typedFont, setTypedFont] = useState<string | null>(() =>
+    fontChoice(font) === CUSTOM_FONT ? font : null,
+  );
+  const fontPick = typedFont === font ? CUSTOM_FONT : fontChoice(font);
+  const setFont = (stack: string, typed: boolean) => {
+    setTypedFont(typed ? stack : null);
+    setVar("--bl-ac-font", stack);
+  };
   const lookChanged = (keys: string[]) =>
     keys.filter(key => key in look).length;
 
@@ -285,12 +297,9 @@ export function StylingPanel({
                 [CUSTOM_FONT]: "Your own…",
               }}
               onChange={value =>
-                setVar(
-                  "--bl-ac-font",
-                  value === CUSTOM_FONT
-                    ? '"Your Font", system-ui, sans-serif'
-                    : value,
-                )
+                value === CUSTOM_FONT
+                  ? setFont('"Your Font", system-ui, sans-serif', true)
+                  : setFont(value, false)
               }
             />
           </Field>
@@ -305,10 +314,7 @@ export function StylingPanel({
                 spellCheck={false}
                 onChange={event =>
                   // A stack is names and commas: nothing that could end the rule.
-                  setVar(
-                    "--bl-ac-font",
-                    event.target.value.replace(/[{};<>]/g, ""),
-                  )
+                  setFont(event.target.value.replace(/[{};<>]/g, ""), true)
                 }
               />
             </Field>
