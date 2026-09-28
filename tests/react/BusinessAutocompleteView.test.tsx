@@ -1061,6 +1061,7 @@ describe("the host's classes", () => {
           name: "host-name",
           structure: "host-structure",
           state: "host-state",
+          corner: "host-corner",
           footer: "host-footer",
         },
       }),
@@ -1068,6 +1069,11 @@ describe("the host's classes", () => {
 
     for (const title of container.querySelectorAll('[data-place="title"]')) {
       expect(title).toHaveClass("bl-ac-title", "host-title");
+    }
+    const corners = container.querySelectorAll("[data-corner]");
+    expect(corners.length).toBeGreaterThan(0);
+    for (const corner of corners) {
+      expect(corner).toHaveClass("bl-ac-corner", "host-corner");
     }
     for (const flag of screen.getAllByTestId("business-suggestion-structure")) {
       expect(flag).toHaveClass("bl-ac-structure", "host-structure");
@@ -1361,15 +1367,18 @@ describe("the row's places and fields", () => {
     ).toHaveTextContent("C-Corp");
   });
 
-  // Where a place puts its field: the line, and the element it sits in.
+  // Where a place puts its field: the line, and the corner it sits in.
+  const TITLE_TRAILING = '.bl-ac-line-title > [data-corner="trailing"]';
+  const SUBTITLE_LEAD = '.bl-ac-line-subtitle > [data-corner="lead"]';
+  const SUBTITLE_TRAILING = '.bl-ac-line-subtitle > [data-corner="trailing"]';
   const WHERE: Record<RowPlace, { line: number; parent: string }> = {
     titleBadge: { line: 0, parent: ".bl-ac-name-group" },
-    titleTrailingBadge: { line: 0, parent: ".bl-ac-line-title" },
-    titleTrailing: { line: 0, parent: ".bl-ac-line-title" },
-    subtitle: { line: 1, parent: ".bl-ac-line-subtitle" },
-    subtitleBadge: { line: 1, parent: ".bl-ac-line-subtitle" },
-    subtitleTrailingBadge: { line: 1, parent: ".bl-ac-line-subtitle" },
-    subtitleTrailing: { line: 1, parent: ".bl-ac-line-subtitle" },
+    titleTrailingBadge: { line: 0, parent: TITLE_TRAILING },
+    titleTrailing: { line: 0, parent: TITLE_TRAILING },
+    subtitle: { line: 1, parent: SUBTITLE_LEAD },
+    subtitleBadge: { line: 1, parent: SUBTITLE_LEAD },
+    subtitleTrailingBadge: { line: 1, parent: SUBTITLE_TRAILING },
+    subtitleTrailing: { line: 1, parent: SUBTITLE_TRAILING },
   };
   // What each field draws on the first row, wherever it sits.
   const DRAWS: Record<RowField, string> = {
@@ -1425,6 +1434,79 @@ describe("the row's places and fields", () => {
         .flat()
         .filter(entry => entry.endsWith(`:${field}`)),
     ).toHaveLength(1);
+  });
+
+  it("draws each line as its lead corner and its trailing corner", () => {
+    const [title, subtitle] = rowOf(undefined).querySelectorAll(".bl-ac-line");
+    const corners = (line: Element) =>
+      [...line.children].map(
+        child =>
+          child.getAttribute("data-corner") ?? child.getAttribute("data-place"),
+      );
+
+    // The first line's lead is the title.
+    expect(corners(title!)).toEqual(["title", "trailing"]);
+    expect(corners(subtitle!)).toEqual(["lead", "trailing"]);
+    expect(
+      subtitle!.querySelector('[data-corner="lead"]')!.className,
+    ).toContain("bl-ac-corner");
+  });
+
+  it("says which corners hold text on the row, so the text at the right leaves the lead's text room", () => {
+    const row = rowOf(undefined);
+    const holdsText = (corner: string) =>
+      row.querySelector(corner)!.getAttribute("data-text");
+
+    // The states are flags; the address and the officers are text.
+    expect(holdsText(TITLE_TRAILING)).toBeNull();
+    expect(holdsText(SUBTITLE_LEAD)).toBe("true");
+    expect(holdsText(SUBTITLE_TRAILING)).toBe("true");
+  });
+
+  it("says which corners hold a flag on the row, so a lead that pins one beside its text shares the line", () => {
+    renderTypeahead({
+      suggestions: [
+        cinder,
+        { ...cinder, token: "tok-no-structure", structure: null },
+      ],
+      layout: { titleBadge: null, subtitleBadge: "structure" },
+    });
+    const [flagged, unflagged] = screen.getAllByTestId("business-suggestion");
+    const lead = (row: HTMLElement) =>
+      row.querySelector(SUBTITLE_LEAD)!.getAttribute("data-flag");
+
+    expect(
+      flagged!.querySelector(TITLE_TRAILING)!.getAttribute("data-flag"),
+    ).toBe("true");
+    expect(lead(flagged!)).toBe("true");
+    // No structure on the row, so no flag in its lead.
+    expect(lead(unflagged!)).toBeNull();
+  });
+
+  it("draws no corner for a row with nothing to put in it", () => {
+    renderTypeahead({
+      suggestions: [
+        stable,
+        { ...cinder, token: "tok-no-structure", structure: null },
+      ],
+      layout: {
+        titleBadge: null,
+        subtitle: "structure",
+        subtitleTrailing: "people",
+      },
+    });
+    const [noPeople, noStructure] = screen.getAllByTestId(
+      "business-suggestion",
+    );
+    const corners = (row: HTMLElement) =>
+      [...row.querySelectorAll(".bl-ac-line-subtitle > [data-corner]")].map(
+        corner => corner.getAttribute("data-corner"),
+      );
+
+    // No officers where only they sit at the right; no structure where only
+    // it leads.
+    expect(corners(noPeople!)).toEqual(["lead"]);
+    expect(corners(noStructure!)).toEqual(["trailing"]);
   });
 
   it("pins a flag to a corner's field on its inner side", () => {

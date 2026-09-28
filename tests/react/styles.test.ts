@@ -33,23 +33,6 @@ function rule(selector: string): string {
   return bodies.map(({ body }) => body).join("\n");
 }
 
-/** How readily an element gives way: the last `flex-shrink` its rules set, else 1. */
-function shrink(selector: string): number {
-  let value = 1;
-  for (const [, property, text] of rule(selector).matchAll(
-    /(flex|flex-shrink): ([^;]+);/g,
-  )) {
-    const [first, second] = text!.trim().split(/\s+/);
-    value =
-      property === "flex-shrink"
-        ? Number(first)
-        : first === "none"
-          ? 0
-          : Number(second ?? 1);
-  }
-  return value;
-}
-
 describe("ink emphasis", () => {
   it("inks a matched word in --bl-ac-ink-mark, else the title's color", () => {
     expect(rule('.bl-ac-name[data-emphasis="ink"] > .bl-ac-mark')).toContain(
@@ -79,25 +62,9 @@ describe("the menu's width", () => {
   });
 });
 
-describe("what gives way when a line runs out of room", () => {
-  it("is the title before the first line's trailing place, and the second line's lead before its trailing place", () => {
-    const trailing = shrink(
-      '.bl-ac-line > .bl-ac-people[data-place="subtitleTrailing"]',
-    );
-
-    expect(shrink(".bl-ac-title")).toBeGreaterThan(trailing);
-    expect(shrink(".bl-ac-people")).toBeGreaterThan(trailing);
-    expect(rule(".bl-ac-title")).toContain("min-width: 0;");
-  });
-
-  it("never spreads a line's fields apart: only a trailing corner keeps to the right", () => {
-    // A lead and its badge sit together, even with nothing trailing.
-    expect(rule(".bl-ac-line")).not.toMatch(/justify-content/);
-    expect(rule('.bl-ac-line > [data-place="subtitleTrailing"]')).toMatch(
-      /margin-left: auto/,
-    );
-  });
-
+// What gives way when a line runs out of room is measured in a browser, in
+// tests/browser/rows.test.tsx: jsdom lays nothing out.
+describe("the title's pieces", () => {
   it("is the alternative name first, and whole: it wraps onto a line the title never shows", () => {
     const title = rule(".bl-ac-title");
 
@@ -122,27 +89,6 @@ describe("what gives way when a line runs out of room", () => {
     );
   });
 
-  it("is never text at the right while its lead can give way, which a flag cannot", () => {
-    // A trailing field that shrinks at all, by a fraction of a pixel, is
-    // ellipsised though it had room.
-    for (const place of ["titleTrailing", "subtitleTrailing"]) {
-      expect(shrink(`.bl-ac-line > .bl-ac-people[data-place="${place}"]`)).toBe(
-        0,
-      );
-    }
-    expect(
-      shrink(
-        '.bl-ac-line > .bl-ac-states[data-place="subtitle"] ~ [data-place="subtitleTrailing"]',
-      ),
-    ).toBe(1);
-  });
-
-  it("is the name next, then text in the badge", () => {
-    expect(shrink(".bl-ac-name")).toBeGreaterThan(
-      shrink(".bl-ac-name-group > .bl-ac-people"),
-    );
-  });
-
   it("ellipsises text where it runs out, so the box ends where the text does", () => {
     for (const text of [".bl-ac-name", ".bl-ac-address", ".bl-ac-people"]) {
       expect(rule(text), text).toContain("white-space: nowrap;");
@@ -150,61 +96,25 @@ describe("what gives way when a line runs out of room", () => {
       expect(rule(text), text).not.toContain("-webkit-line-clamp");
     }
   });
-
-  it("is never a flag: the states and the structure keep their width in any place", () => {
-    expect(shrink(".bl-ac-states")).toBe(0);
-    expect(shrink(".bl-ac-structure")).toBe(0);
-    expect(rule(".bl-ac-structure")).toContain("white-space: nowrap;");
-  });
-
-  it("keeps text at the right of the second line to all but about 5rem, so its lead keeps some room", () => {
-    expect(
-      rule('.bl-ac-line > .bl-ac-people[data-place="subtitleTrailing"]'),
-    ).toContain("max-width: calc(100% - 6rem);");
-  });
-
-  it("lets text at the right take the room a flag or an empty lead leaves it", () => {
-    // A flag keeps its own width and no more, so the text beside it needs no
-    // cap; nor does text with no lead at all (a row with no structure where
-    // only the structure leads).
-    for (const selector of [
-      '.bl-ac-line > .bl-ac-states[data-place="subtitle"] ~ [data-place="subtitleTrailing"]',
-      '.bl-ac-line > .bl-ac-structure[data-place="subtitle"] ~ [data-place="subtitleTrailing"]',
-      '.bl-ac-line > [data-place="subtitleTrailing"]:first-child',
-    ]) {
-      expect(rule(selector), selector).toContain("max-width: none;");
-      expect(shrink(selector), selector).toBe(1);
-    }
-  });
-
-  it("keeps text at the right of the first line to half of it, so the name keeps the rest", () => {
-    expect(
-      rule('.bl-ac-line > .bl-ac-address[data-place="titleTrailing"]'),
-    ).toContain("max-width: 50%;");
-  });
-
-  it("keeps text in the badge to half the name's piece", () => {
-    expect(rule(".bl-ac-name-group > .bl-ac-people")).toContain(
-      "max-width: 50%;",
-    );
-  });
 });
 
-describe("the first line's alignment", () => {
-  it("sits text on the name's baseline: the title, its pieces and text in any place", () => {
+describe("a line's alignment", () => {
+  it("sits text on the line's baseline, in the title, its pieces and every corner", () => {
     for (const container of [
-      ".bl-ac-line-title",
+      ".bl-ac-line",
       ".bl-ac-title",
       ".bl-ac-name-group",
+      ".bl-ac-corner",
     ]) {
       expect(rule(container), container).toMatch(/align-items: baseline/);
     }
   });
 
-  it("keeps a flag centred on the line, wherever it sits", () => {
+  it("keeps a flag, and a corner of flags, centred on the first line", () => {
     for (const flag of [
       ".bl-ac-line-title .bl-ac-states",
       ".bl-ac-line-title .bl-ac-structure",
+      ".bl-ac-line-title > .bl-ac-corner:not([data-text])",
     ]) {
       expect(rule(flag), flag).toMatch(/align-self: center/);
     }

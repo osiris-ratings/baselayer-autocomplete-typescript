@@ -117,37 +117,81 @@
   background: var(--bl-ac-highlight-bg);
 }
 
+/*
+ * A line is its two corners. The lead takes the room the trailing corner
+ * leaves it, and gives way first; the trailing corner keeps to the right at
+ * its own width, so its column lines up down the menu. Text sits on the
+ * line's baseline, whatever its size.
+ */
 .bl-ac-line {
   display: flex;
   gap: 0.75rem;
+  align-items: baseline;
   margin: 0;
 }
 
-/* Text on the first line sits on the name's baseline, whatever its size;
-   a flag is centred on the line instead. */
-.bl-ac-line-title {
+/*
+ * A corner pins a field and its badge together. Its text gives way,
+ * ellipsised down to nothing; a flag keeps its width, so a corner is never
+ * narrower than its flags.
+ */
+.bl-ac-corner {
+  display: grid;
+  grid-auto-columns: minmax(auto, max-content);
+  grid-auto-flow: column;
+  column-gap: 0.5rem;
   align-items: baseline;
 }
 
+.bl-ac-corner[data-corner="lead"] {
+  flex: 1 1 0;
+  justify-content: start;
+}
+
+.bl-ac-corner[data-corner="trailing"] {
+  flex: 0 1 auto;
+  justify-content: end;
+  margin-left: auto;
+}
+
+/*
+ * Text at the right keeps its width while text in the lead can give way, up
+ * to a cap that leaves the lead some room: half the first line, which the
+ * name leads, or all but about 5rem of the second. Beside a lead with no
+ * text, it takes the rest of the line.
+ */
+.bl-ac-title ~ .bl-ac-corner[data-text] {
+  max-width: 50%;
+}
+
+.bl-ac-corner[data-corner="lead"][data-text] ~ .bl-ac-corner[data-text] {
+  max-width: calc(100% - 6rem);
+}
+
+/* A lead pinning a flag beside its text has spent that room on the flag, so
+   it shares the line with the text at the right, each giving way in
+   proportion to its width. */
+.bl-ac-corner[data-corner="lead"][data-text][data-flag] {
+  flex-basis: auto;
+}
+
+/* On the first line a flag, and a corner of flags, is centred on the line. */
 .bl-ac-line-title .bl-ac-states,
-.bl-ac-line-title .bl-ac-structure {
+.bl-ac-line-title .bl-ac-structure,
+.bl-ac-line-title > .bl-ac-corner:not([data-text]) {
   align-self: center;
-}
-
-.bl-ac-line-subtitle {
-  align-items: baseline;
 }
 
 /*
  * The title leads the first line: the name with its badge pinned to the end,
- * then `also …`. Out of room, the title gives way before the trailing place.
+ * then `also …`. Out of room, the title gives way before the trailing corner.
  * Within it `also …` goes first, and whole: it wraps onto a second line the
  * title never shows, rather than shrinking to a stray letter. Then the name
  * is ellipsised, and the badge stays.
  */
 .bl-ac-title {
   display: flex;
-  flex: 0 1 auto;
+  flex: 1 1 0;
   flex-wrap: wrap;
   column-gap: 0.5rem;
   align-content: flex-start;
@@ -164,10 +208,13 @@
   overflow: hidden;
 }
 
+/* The name and its badge, pinned together as a corner's field and badge are. */
 .bl-ac-name-group {
-  display: flex;
+  display: grid;
   flex: 0 1 auto;
-  gap: 0.5rem;
+  grid-auto-columns: minmax(auto, max-content);
+  grid-auto-flow: column;
+  column-gap: 0.5rem;
   align-items: baseline;
   min-width: 0;
   max-width: 100%;
@@ -204,8 +251,8 @@
 }
 
 /*
- * The fields. Each is drawn the same in any place; the place decides where it
- * sits and what gives way first. Text gives way, ellipsised; a flag never
+ * The fields. Each is drawn the same in any place; its corner decides where
+ * it sits and what gives way first. Text gives way, ellipsised; a flag never
  * does.
  */
 .bl-ac-address,
@@ -216,7 +263,6 @@
 
 .bl-ac-states {
   display: flex;
-  flex-shrink: 0;
   gap: 0.25rem;
   align-items: center;
 }
@@ -248,80 +294,11 @@
 }
 
 .bl-ac-structure {
-  flex-shrink: 0;
   padding: 0.125rem 0.375rem;
   color: var(--bl-ac-structure-fg);
   white-space: nowrap;
   background: var(--bl-ac-structure-bg);
   border: 1px solid transparent;
-}
-
-/* A trailing corner keeps to the right, whatever leads its line or is
-   missing from it, so the column lines up down the menu. A badge and its
-   field are one corner, pinned together closer than the line's gap. */
-.bl-ac-line > [data-place="titleTrailingBadge"],
-.bl-ac-line > [data-place="titleTrailing"],
-.bl-ac-line > [data-place="subtitleTrailingBadge"],
-.bl-ac-line > [data-place="subtitleTrailing"] {
-  margin-left: auto;
-}
-
-.bl-ac-line > [data-place="titleTrailingBadge"] + [data-place="titleTrailing"],
-.bl-ac-line
-  > [data-place="subtitleTrailingBadge"]
-  + [data-place="subtitleTrailing"],
-.bl-ac-line > [data-place="subtitle"] + [data-place="subtitleBadge"] {
-  margin-left: -0.25rem;
-}
-
-/* Text in a corner's badge keeps its width, up to a share of the line. */
-.bl-ac-line > .bl-ac-address[data-place$="Badge"],
-.bl-ac-line > .bl-ac-people[data-place$="Badge"] {
-  flex-shrink: 0;
-  max-width: 40%;
-}
-
-/*
- * Text in a place that stays keeps its width, up to a cap, and the lead beside
- * it gives way instead: a long agent's name on a narrow menu is ellipsised
- * rather than pushing the lead out. It must not shrink at all, since a
- * fraction of a pixel ellipsises it. On the second line the lead keeps about
- * 5rem; on the first, which the name leads, half the line.
- */
-.bl-ac-line > .bl-ac-address[data-place="titleTrailing"],
-.bl-ac-line > .bl-ac-people[data-place="titleTrailing"] {
-  flex-shrink: 0;
-  max-width: 50%;
-}
-
-.bl-ac-line > .bl-ac-address[data-place="subtitleTrailing"],
-.bl-ac-line > .bl-ac-people[data-place="subtitleTrailing"] {
-  flex-shrink: 0;
-  max-width: calc(100% - 6rem);
-}
-
-/* A flag cannot give way and needs no more than its own width, so text
-   beside one takes the rest, and gives way itself; so does text with no lead
-   at all (a row with no structure where only the structure leads). */
-.bl-ac-line
-  > .bl-ac-states[data-place="subtitle"]
-  ~ [data-place="subtitleTrailing"],
-.bl-ac-line
-  > .bl-ac-structure[data-place="subtitle"]
-  ~ [data-place="subtitleTrailing"],
-.bl-ac-line > [data-place="subtitleTrailing"]:first-child,
-.bl-ac-line
-  > [data-place="subtitleTrailingBadge"]:first-child
-  + [data-place="subtitleTrailing"] {
-  flex-shrink: 1;
-  max-width: none;
-}
-
-/* Text in the badge keeps its width too, up to half the name's piece. */
-.bl-ac-name-group > .bl-ac-address,
-.bl-ac-name-group > .bl-ac-people {
-  flex-shrink: 0;
-  max-width: 50%;
 }
 
 .bl-ac-footer {

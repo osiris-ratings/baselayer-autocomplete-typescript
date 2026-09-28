@@ -44,7 +44,8 @@ as a minor release.
 - `look.structurePillBackgroundColor` and `look.structurePillForegroundColor`
   (`--bl-ac-structure-bg`, `--bl-ac-structure-fg`), a neutral grey by default.
 - The slots `title` (the name group and `also …`), `nameGroup` (the name and
-  its badge) and `structure` (the flag, `bl-ac-structure`).
+  its badge), `structure` (the flag, `bl-ac-structure`) and `corner` (a
+  line's lead or trailing corner, `bl-ac-corner`).
 
 ### Changed
 
@@ -62,7 +63,10 @@ as a minor release.
 - **Breaking:** every field's element carries `data-place` with its place, in
   place of `data-slot="left"` or `"right"`, and the title carries
   `data-place="title"`. A field drawn in the second line's lead because
-  `subtitle` is empty says `subtitle`.
+  `subtitle` is empty says `subtitle`. A line holds its corners rather than
+  its fields: the title, then `.bl-ac-corner` elements with
+  `data-corner="lead"` or `"trailing"`, marked `data-text` when they hold
+  text on that row and `data-flag` when they hold a flag.
 - A row shows its structure's flag after the name by default.
   `layout={{ titleBadge: null }}` leaves it out, and draws the row as before
   but for the changes below.
@@ -78,12 +82,17 @@ as a minor release.
 - The address and the people carry their own size and color
   (`--bl-ac-subtitle`), so they look the same on either line;
   `.bl-ac-line-subtitle` no longer sets them.
-- Text at the first line's right keeps to half the line, so the name keeps the
-  rest. Text at the second line's right takes all the room a flag or an empty
-  lead leaves it.
+- Each line is two corners: the lead takes the room the trailing corner
+  leaves it and gives way first, and in either one, text gives way while a
+  flag keeps its width, so no layout draws a line wider than the menu. Text
+  at the right keeps to half the first line, so the name keeps the rest, or
+  all but about 5rem of the second, and takes the rest of the line beside a
+  lead with no text. A second-line lead that pins a flag beside its text
+  shares the line with the text at the right, each giving way in
+  proportion.
 - `BusinessSuggestion` requires `structure`: a row built by hand, for a
   preview or a test, gives it one or `null`. `Look` gains its two structure
-  colors, `AutocompleteMessages` its `structures` and `SlotName` its three
+  colors, `AutocompleteMessages` its `structures` and `SlotName` its four
   slots, so a complete literal of any of them needs them too.
 - The vendored tier contract carries `structure`, and the API reference shows
   a suggestion's `structure` with its values.

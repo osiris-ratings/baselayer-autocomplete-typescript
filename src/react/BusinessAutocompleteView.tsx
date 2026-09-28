@@ -58,6 +58,7 @@ export type SlotName =
   | "state"
   | "moreStates"
   | "subtitleLine"
+  | "corner"
   | "address"
   | "people"
   | "footer"
@@ -283,9 +284,9 @@ interface DefaultRowProps {
 }
 
 /**
- * One business as the component draws it: each line of `ROW_LINES`, its lead
- * corner then its trailing corner, with every place's field. The first line's
- * lead is the title: the name with its badge, then `also …`.
+ * One business as the component draws it: each line of `ROW_LINES` as its
+ * lead corner and its trailing corner, each holding its places' fields. The
+ * first line's lead is the title: the name with its badge, then `also …`.
  */
 function DefaultRow({ item, layout, look, tokens, text, cx }: DefaultRowProps) {
   const region = look.matchEmphasisRegion;
@@ -338,6 +339,41 @@ function DefaultRow({ item, layout, look, tokens, text, cx }: DefaultRowProps) {
     const field = layout[place];
     return field === null ? null : fieldNode[field](place);
   };
+  /** Whether a place draws text on this row, rather than a flag or nothing. */
+  const drawsText = (place: RowPlace) =>
+    layout[place] === "address" ||
+    (layout[place] === "people" && people !== null);
+  /** Whether a place draws a flag on this row. */
+  const drawsFlag = (place: RowPlace) =>
+    layout[place] === "states" ||
+    (layout[place] === "structure" && structure !== null);
+  /**
+   * A corner: the two places it pins together, in the order they sit, or
+   * nothing when neither draws anything on this row. It says whether it holds
+   * text and whether a flag, which decide how it shares its line.
+   */
+  const corner = (
+    kind: "lead" | "trailing",
+    first: RowPlace,
+    second: RowPlace,
+  ) => {
+    const drawnFirst = draw(first);
+    const drawnSecond = draw(second);
+    if (!drawnFirst && !drawnSecond) {
+      return null;
+    }
+    return (
+      <span
+        className={cx("corner", "bl-ac-corner")}
+        data-corner={kind}
+        data-text={drawsText(first) || drawsText(second) ? "true" : undefined}
+        data-flag={drawsFlag(first) || drawsFlag(second) ? "true" : undefined}
+      >
+        {drawnFirst}
+        {drawnSecond}
+      </span>
+    );
+  };
   const title = (badge: RowPlace) => (
     <span className={cx("title", "bl-ac-title")} data-place="title">
       {/* One piece, so `also …` leaves the line whole rather than splitting
@@ -376,23 +412,25 @@ function DefaultRow({ item, layout, look, tokens, text, cx }: DefaultRowProps) {
   return (
     <>
       {ROW_LINES.map(({ line, lead, trailing }) => {
-        const leadField =
-          lead.field === null ? title(lead.badge) : draw(lead.field);
-        const leadBadge = lead.field === null ? null : draw(lead.badge);
-        const trailingBadge = draw(trailing.badge);
-        const trailingField = draw(trailing.field);
+        const leadCorner =
+          lead.field === null
+            ? title(lead.badge)
+            : corner("lead", lead.field, lead.badge);
+        const trailingCorner = corner(
+          "trailing",
+          trailing.badge,
+          trailing.field,
+        );
         // A line with nothing on it for this row (no officers where only
         // they are placed) is dropped; the title's never is.
-        if (!(leadField || leadBadge || trailingBadge || trailingField)) {
+        if (!leadCorner && !trailingCorner) {
           return null;
         }
         const { slot, className } = LINE_CLASSES[line];
         return (
           <div key={line} className={cx(slot, className)}>
-            {leadField}
-            {leadBadge}
-            {trailingBadge}
-            {trailingField}
+            {leadCorner}
+            {trailingCorner}
           </div>
         );
       })}

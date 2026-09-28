@@ -2,10 +2,16 @@ import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import type {
-  BusinessSuggestion,
-  RelatedItem,
-  RowLayoutInput,
+import {
+  DEFAULT_ROW_LAYOUT,
+  ROW_FIELDS,
+  ROW_PLACES,
+  drawnRowLayout,
+  resolveRowLayout,
+  type BusinessSuggestion,
+  type RelatedItem,
+  type RowLayout,
+  type RowLayoutInput,
 } from "@baselayer-sdk/autocomplete";
 import { BusinessAutocompleteView } from "@baselayer-sdk/autocomplete/react";
 
@@ -13,6 +19,42 @@ import "../../src/react/styles.css";
 
 /** The menu widths the rows must hold at: a wide form, a narrow one, a phone. */
 const WIDTHS = [560, 400, 320] as const;
+
+/**
+ * How wide the name stays, whatever else its line holds: 4em on a wide menu,
+ * 1.5em on a narrow one, and on a phone never nothing.
+ */
+const NAME_KEEPS: Record<(typeof WIDTHS)[number], number> = {
+  560: 64,
+  400: 24,
+  320: 1,
+};
+
+/** Every layout a row can draw: each one a host could stage, as drawn, once. */
+const DRAWN_LAYOUTS: RowLayout[] = (() => {
+  const values = [undefined, null, ...ROW_FIELDS];
+  let stagings: RowLayoutInput[] = [{}];
+  for (const place of ROW_PLACES) {
+    stagings = stagings.flatMap(staged =>
+      values.map(value => ({ ...staged, [place]: value })),
+    );
+  }
+  const drawn = new Map<string, RowLayout>();
+  for (const staged of stagings) {
+    const layout = drawnRowLayout(resolveRowLayout(staged));
+    drawn.set(JSON.stringify(layout), layout);
+  }
+  return [...drawn.values()];
+})();
+
+/** The places a layout sets otherwise than the default, to name it by. */
+function changes(layout: RowLayout): Partial<RowLayout> {
+  return Object.fromEntries(
+    ROW_PLACES.filter(place => layout[place] !== DEFAULT_ROW_LAYOUT[place]).map(
+      place => [place, layout[place]],
+    ),
+  );
+}
 
 function related(type: string, items: Omit<RelatedItem, "type">[]) {
   return {
@@ -152,6 +194,8 @@ afterAll(() => {
 
 function draw(layout: RowLayoutInput, width: number) {
   host.style.width = `${width}px`;
+  // A menu the viewport caps would be measured at the wrong width.
+  expect(window.innerWidth).toBeGreaterThan(width + 32);
   flushSync(() =>
     root.render(
       <BusinessAutocompleteView
@@ -183,7 +227,7 @@ function within(inner: DOMRect, outer: DOMRect): boolean {
  * What is wrong with the rows as drawn, one entry a fault: a line or the list
  * wider than the menu, a flag cut or squeezed, a name squeezed to nothing.
  */
-function faults(): string[] {
+function faults(nameKeeps = 1): string[] {
   const found: string[] = [];
   const list = host.querySelector<HTMLElement>(".bl-ac-list")!;
   if (list.scrollWidth > list.clientWidth) {
@@ -224,18 +268,94 @@ function faults(): string[] {
             found.push(`${at}: the ${flag.dataset.place} flag leaves the line`);
           }
         });
+      // A name shorter than what it keeps is simply its own width.
       const name = line.querySelector<HTMLElement>(".bl-ac-name");
-      if (name !== null && name.getBoundingClientRect().width < 1) {
-        found.push(`${at}: the name is squeezed to nothing`);
+      if (
+        name !== null &&
+        name.getBoundingClientRect().width <
+          Math.min(nameKeeps, name.scrollWidth)
+      ) {
+        found.push(
+          `${at}: the name is squeezed to ${Math.round(name.getBoundingClientRect().width)}px`,
+        );
       }
     });
   });
   return found;
 }
 
+/** The box of the first element under `selector` in row `index`. */
+function boxOf(index: number, selector: string): DOMRect {
+  const row = host.querySelectorAll(".bl-ac-row")[index]!;
+  return row.querySelector(selector)!.getBoundingClientRect();
+}
+
+function ellipsised(index: number, selector: string): boolean {
+  const row = host.querySelectorAll(".bl-ac-row")[index]!;
+  const element = row.querySelector<HTMLElement>(selector)!;
+  return element.scrollWidth > element.clientWidth;
+}
+
 describe("the rows, laid out", () => {
   it.each(WIDTHS)("draws the default rows within a %ipx menu", width => {
     draw({}, width);
-    expect(faults()).toEqual([]);
+    expect(faults(NAME_KEEPS[width])).toEqual([]);
+  });
+
+  it.each(WIDTHS)(
+    "draws every layout a row can draw within a %ipx menu",
+    width => {
+      const wrong: string[] = [];
+      for (const layout of DRAWN_LAYOUTS) {
+        draw(layout, width);
+        for (const fault of faults(NAME_KEEPS[width])) {
+          wrong.push(`${JSON.stringify(changes(layout))}: ${fault}`);
+        }
+      }
+      expect(wrong.slice(0, 8)).toEqual([]);
+      expect(DRAWN_LAYOUTS).toHaveLength(541);
+    },
+  );
+
+  it("pins the name's badge to the end of the name", () => {
+    draw({}, 560);
+    for (const index of [0, 2, 3]) {
+      const gap =
+        boxOf(index, ".bl-ac-structure").left -
+        boxOf(index, ".bl-ac-name").right;
+      expect(gap, `row ${index}`).toBeGreaterThan(7);
+      expect(gap, `row ${index}`).toBeLessThan(9);
+    }
+  });
+
+  it("keeps the text at the right whole while the lead's text can give way", () => {
+    draw({}, 320);
+    expect(ellipsised(0, ".bl-ac-address")).toBe(true);
+    expect(ellipsised(0, ".bl-ac-people")).toBe(false);
+  });
+
+  it("leaves the second line's lead about 5rem beside a long name at the right", () => {
+    draw({}, 320);
+    expect(ellipsised(1, ".bl-ac-people")).toBe(true);
+    expect(boxOf(1, ".bl-ac-address").width).toBeGreaterThanOrEqual(80);
+  });
+
+  it("shares the second line in proportion when its lead pins a flag beside its text", () => {
+    for (const width of [560, 400] as const) {
+      draw({ subtitle: "structure", subtitleBadge: "address" }, width);
+      // The first row has a structure, so its flag leads the line.
+      expect(boxOf(0, ".bl-ac-address").width).toBeGreaterThanOrEqual(64);
+      expect(boxOf(0, ".bl-ac-people").width).toBeGreaterThanOrEqual(64);
+    }
+  });
+
+  it("keeps text at the right of the first line to half of it", () => {
+    for (const width of WIDTHS) {
+      draw({ titleTrailing: "address", subtitle: "states" }, width);
+      const line = boxOf(0, ".bl-ac-line-title");
+      expect(boxOf(0, ".bl-ac-address").width).toBeLessThanOrEqual(
+        line.width / 2 + 0.5,
+      );
+    }
   });
 });

@@ -134,9 +134,9 @@ input's width either way.
 Every element has a `bl-ac-*` class, and `classNames` adds yours per slot:
 `root`, `label`, `input`, `menu`, `list`, `row`, `titleLine`, `title`,
 `nameGroup`, `name`, `also`, `mark`, `structure`, `states`, `state`,
-`moreStates`, `subtitleLine`, `address`, `people`, `footer`, `count`,
-`debug`. The title holds the name group (the name and the badge pinned to
-its end) and `also …`.
+`moreStates`, `subtitleLine`, `corner`, `address`, `people`, `footer`,
+`count`, `debug`. The title holds the name group (the name and the badge
+pinned to its end) and `also …`; each line's other corners are `corner`.
 
 Each slot's class is `bl-ac-` and the slot's name in kebab case (`moreStates`
 is `bl-ac-more-states`), except `root`, which is `bl-ac`, and the two lines:
@@ -182,7 +182,8 @@ selector at least as specific as theirs, loaded after the stylesheet.
 on the domicile's square; `data-emphasis` and `data-region` on the root and
 the name, `data-emphasis` on the alternative name, and `data-mark-color` on
 the root when `look.matchEmphasisColor` is set; `data-place` on the title
-and on every field, naming the place it is drawn in (see
+and on every field, naming the place it is drawn in, and `data-corner`,
+`data-text` and `data-flag` on the corners (see
 [A row's places and fields](#5-a-rows-places-and-fields)), and
 `data-role="officer"` or `"agent"` on the people; `data-rows` on the footer
 when rows sit above it), and `classNames` still applies, so you can style
@@ -247,31 +248,43 @@ row draws them (below); `DEFAULT_ROW_LAYOUT` is the default;
 `ROW_PLACES` (in reading order) and `ROW_FIELDS` list the places and the
 fields, and `ROW_LINES` groups the places into each line's two corners.
 
-A field looks the same in any place; the place decides where it sits and
-what gives way first:
+A field looks the same in any place; its corner decides where it sits and
+what gives way first. Each line is two corners, its lead and its trailing
+corner, each a field with its badge pinned to the side facing the middle of
+the row; the first line's lead is the title.
 
+- The lead takes the room the trailing corner leaves it, and gives way
+  first. The trailing corner keeps to the right at its own width, so its
+  column lines up down the menu.
+- In a corner, text gives way, ellipsised down to nothing, and a flag keeps
+  its width: a corner is never narrower than its flags, and no line is
+  wider than the menu, whatever the layout.
+- Text at the right keeps its width while text in the lead can give way, up
+  to a cap that leaves the lead some room: half the first line, so the name
+  keeps the rest, or all but about 5rem of the second. Beside a lead with no
+  text, a flag or nothing, it takes the rest of the line. A second-line lead
+  that pins a flag beside its text has spent that room on the flag, so it
+  shares the line with the text at the right, each giving way in proportion.
 - The badge sits at the end of the name, before `also …`. When the first
   line runs out of room, `also …` gives way first: it is ellipsised down to
   6em, then leaves the line whole rather than shrinking to a stray letter.
-  Then the name is ellipsised; the badge and the trailing place stay.
-- Text on the first line, the name, `also …` and an address or the people
-  in any of its places, sits on the name's baseline; a flag is centred on
-  the line.
-- A corner's badge keeps beside its field, on the side facing the middle
-  of the row; text in a badge place keeps its width, up to 40% of the line.
-- A trailing place keeps to the right. Text there keeps its width, up to
-  half the first line, so the name keeps the rest, or all but about 5rem of
-  the second. Beside a flag, which needs only its own width, or with no lead
-  at all, it takes the rest of the line and gives way itself.
+  Then the name is ellipsised; the badge and the trailing corner stay.
+- Text sits on the line's baseline, whatever its size; on the first line, a
+  flag, and a corner of flags, is centred on the line.
 - Every row of a menu shares one layout, so its columns line up; a row
-  without a field (no officers) leaves that field's place empty.
+  without a field (no officers) leaves that field's place empty, and draws
+  no corner where it has nothing to put.
 - A badge beside an empty field is drawn as that field, so no badge is
   pinned beside nothing. With `subtitle` empty, the second line's right
   corner, its badge and all, is drawn in its place, so the line never starts
   with a gap. A line with nothing in any of its places is dropped.
 
-Each field's element says where it is drawn, `data-place="titleBadge"` and
-so on, and the title's says `data-place="title"`.
+Each line holds its corners: the title, then `.bl-ac-corner` elements with
+`data-corner="lead"` or `"trailing"`, marked `data-text` when they hold text
+on that row and `data-flag` when they hold a flag. Each field's element says
+where it is drawn,
+`data-place="titleBadge"` and so on, and the title's says
+`data-place="title"`.
 
 The placed fields also decide what is fetched: `address` asks for the
 addresses and `people` for the people (officers and registered agents),

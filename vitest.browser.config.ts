@@ -15,6 +15,9 @@ export default defineConfig({
       provider: playwright(),
       headless: true,
       screenshotFailures: false,
+      // Wider than the widest menu: the menu is never wider than the viewport
+      // allows (`100vw - 2rem`), and the default iframe is a phone's width.
+      viewport: { width: 1280, height: 900 },
       instances: [{ browser: "chromium" }],
     },
   },
