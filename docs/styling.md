@@ -33,7 +33,7 @@ emphasis) keeps its default too.
 | Knob                           | Default       | Sets                                   |
 | ------------------------------ | ------------- | -------------------------------------- |
 | `matchEmphasis`                | `"underline"` | how the marks are drawn                |
-| `matchEmphasisRegion`          | `"token"`     | whole words, or the typed characters   |
+| `matchEmphasisRegion`          | `"substring"` | the typed characters, or whole words   |
 | `matchEmphasisColor`           | `null`        | `--bl-ac-mark`                         |
 | `backgroundColor`              | `#FFFFFF`     | `--bl-ac-bg`                           |
 | `titleColor`                   | `#1A202C`     | `--bl-ac-title`                        |
@@ -53,9 +53,10 @@ darker, `underline` underlines them and `background` fills behind them.
 staged look over them as the component does, and `MATCH_EMPHASES` and
 `MATCH_REGIONS` list the accepted values.
 
-`substring` marks only the typed characters of each word:
+`substring`, the default, marks only the characters typed of each word;
+`token` marks the whole word a typed token begins, as the tier sends it:
 
-![Substring marks](images/typeahead-har-con-pum-substring.png)
+![Whole-word marks](images/typeahead-har-con-pum-token.png)
 
 ## 2. CSS variables
 

@@ -17,6 +17,9 @@ import {
 } from "react";
 
 import {
+  DEFAULT_LOOK,
+  partsFor,
+  queryTokens,
   structureLabel,
   type HighlightPart,
 } from "@baselayer-sdk/autocomplete";
@@ -426,6 +429,22 @@ function usePlay(
   return { scene, travels };
 }
 
+/**
+ * A row's name as the component marks it by default: under the substring
+ * region, only the characters typed into the field.
+ */
+function marked(parts: HighlightPart[], typed: string): HighlightPart[] {
+  const text = parts.map(part => part.text).join("");
+  return (
+    partsFor(
+      text,
+      parts,
+      DEFAULT_LOOK.matchEmphasisRegion,
+      queryTokens(typed),
+    ) ?? parts
+  );
+}
+
 /** Where a row's name must end, inside the rows' box. */
 const NAME_END = 280;
 
@@ -562,11 +581,13 @@ function PlayingField({ scene }: { scene: Scene }) {
             fontWeight={600}
             fill={INK}
           >
-            {fit(row.highlight, rooms[row.token]).map((part, j) => (
-              <tspan key={j} data-mark={part.matched ? "true" : undefined}>
-                {part.text}
-              </tspan>
-            ))}
+            {fit(marked(row.highlight, scene.typed), rooms[row.token]).map(
+              (part, j) => (
+                <tspan key={j} data-mark={part.matched ? "true" : undefined}>
+                  {part.text}
+                </tspan>
+              ),
+            )}
           </text>
           {structureLabel(row.structure) !== null && (
             <Flag

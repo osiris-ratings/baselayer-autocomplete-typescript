@@ -694,7 +694,7 @@ function marksOf(row: HTMLElement | undefined): (string | null)[] {
 }
 
 describe("the match marks", () => {
-  it("marks the words the typed tokens start and keeps the name whole, underlined by default", () => {
+  it("marks the typed characters of the words the tokens start, and keeps the name whole, underlined by default", () => {
     const { root } = renderTypeahead({ suggestions: [stableMarked], found: 1 });
 
     const [row] = screen.getAllByTestId("business-suggestion");
@@ -702,11 +702,26 @@ describe("the match marks", () => {
     expect(name).toHaveTextContent("CINDER RACING STABLES, LLC");
     expect(name).toHaveAttribute("data-emphasis", "underline");
     expect(root).toHaveAttribute("data-emphasis", "underline");
-    expect(marksOf(row)).toEqual(["CINDER"]);
+    expect(root).toHaveAttribute("data-region", "substring");
+    // "cind" typed: its characters, not the whole word the tier marked.
+    expect(marksOf(row)).toEqual(["CIND"]);
     // The underline is the stylesheet's, keyed on the mark's class.
     expect(screen.getByTestId("business-suggestion-match")).toHaveClass(
       "bl-ac-mark",
     );
+  });
+
+  it("marks the whole word a token starts under the token region", () => {
+    const { root } = renderTypeahead({
+      suggestions: [stableMarked],
+      found: 1,
+      look: { ...DEFAULT_LOOK, matchEmphasisRegion: "token" },
+    });
+
+    expect(root).toHaveAttribute("data-region", "token");
+    expect(marksOf(screen.getAllByTestId("business-suggestion")[0])).toEqual([
+      "CINDER",
+    ]);
   });
 
   it("marks the alternative name when that is what matched, and leaves the label alone", () => {
@@ -799,7 +814,12 @@ describe("the match marks", () => {
     ]);
     unmount();
 
-    renderTypeahead({ suggestions: [harbor], found: 1, value: "har conc" });
+    renderTypeahead({
+      suggestions: [harbor],
+      found: 1,
+      value: "har conc",
+      look: { ...DEFAULT_LOOK, matchEmphasisRegion: "token" },
+    });
     expect(marksOf(screen.getByTestId("business-suggestion"))).toEqual([
       "HARBOR CONCRETE",
     ]);
@@ -819,7 +839,7 @@ describe("the match marks", () => {
     });
 
     const [mark] = screen.getAllByTestId("business-suggestion-match");
-    expect(mark).toHaveTextContent("CINDER");
+    expect(mark).toHaveTextContent("CIND");
     expect(mark).toHaveClass("bl-ac-mark");
     expect(screen.getByTestId("business-suggestion-name")).toHaveAttribute(
       "data-emphasis",
@@ -916,7 +936,7 @@ describe("the match marks", () => {
 
     expect(root.getAttribute("style") ?? "").toBe("");
     expect(root).toHaveAttribute("data-emphasis", "underline");
-    expect(root).toHaveAttribute("data-region", "token");
+    expect(root).toHaveAttribute("data-region", "substring");
   });
 
   it.each(["weight", "ink", "underline", "background"] as const)(
@@ -929,7 +949,7 @@ describe("the match marks", () => {
       });
 
       const [row] = screen.getAllByTestId("business-suggestion");
-      expect(marksOf(row)).toEqual(["CINDER"]);
+      expect(marksOf(row)).toEqual(["CIND"]);
       expect(screen.getByTestId("business-suggestion-name")).toHaveAttribute(
         "data-emphasis",
         emphasis,
@@ -1105,7 +1125,7 @@ describe("the host's classes", () => {
       "true",
     );
     const [marked, other] = screen.getAllByTestId("business-suggestion");
-    expect(marksOf(marked)).toEqual(["CINDER"]);
+    expect(marksOf(marked)).toEqual(["CIND"]);
     expect(
       screen.getAllByTestId("business-suggestion-name")[0],
     ).toHaveAttribute("data-emphasis", "background");

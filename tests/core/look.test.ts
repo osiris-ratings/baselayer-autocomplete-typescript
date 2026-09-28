@@ -46,7 +46,7 @@ describe("resolveLook", () => {
     const look = resolveLook({});
     expect(look).toEqual(DEFAULT_LOOK);
     expect(look.matchEmphasis).toBe("underline");
-    expect(look.matchEmphasisRegion).toBe("token");
+    expect(look.matchEmphasisRegion).toBe("substring");
 
     expect(resolveLook()).toEqual(DEFAULT_LOOK);
   });

@@ -50,7 +50,7 @@ export const DEFAULT_LOOK: Readonly<Look> = Object.freeze({
   showDebugInfo: false,
   matchEmphasis: "underline",
   matchEmphasisColor: null,
-  matchEmphasisRegion: "token",
+  matchEmphasisRegion: "substring",
   backgroundColor: "#FFFFFF", // white
   titleColor: "#1A202C", // gray.800
   subtitleColor: "#718096", // gray.500

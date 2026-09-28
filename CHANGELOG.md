@@ -47,6 +47,9 @@ as a minor release.
 
 ### Changed
 
+- `look.matchEmphasisRegion` defaults to `"substring"`: a match marks the
+  characters typed, not the whole word they begin. `"token"` keeps the
+  whole-word marks.
 - `mintOn` defaults to `"keystroke"`: the session is minted on the first
   keystroke rather than as the field takes focus, so a click into the field
   that types nothing spends no mint. `mintOn="focus"` keeps the old timing.
