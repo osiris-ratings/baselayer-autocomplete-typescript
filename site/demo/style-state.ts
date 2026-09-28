@@ -311,7 +311,7 @@ export function exportCode(state: StyleState): { tsx: string; css: string } {
   const layout = Object.entries(changedLayout(state));
   if (layout.length > 0) {
     props.push(
-      `layout={{ ${layout.map(([place, field]) => `${place}: ${field === null ? "null" : JSON.stringify(field)}`).join(", ")} }}`,
+      `layout={{\n${layout.map(([place, field]) => `    ${place}: ${field === null ? "null" : JSON.stringify(field)},`).join("\n")}\n  }}`,
     );
   }
   if (state.limit !== DEFAULT_STYLE.limit) props.push(`limit={${state.limit}}`);

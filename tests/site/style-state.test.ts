@@ -32,7 +32,9 @@ function exportedLayout(tsx: string): Partial<RowLayout> | null {
   const written = /layout=\{(\{[^}]*\})\}/.exec(tsx)?.[1];
   return written === undefined
     ? null
-    : (JSON.parse(written.replace(/(\w+):/g, '"$1":')) as Partial<RowLayout>);
+    : (JSON.parse(
+        written.replace(/(\w+):/g, '"$1":').replace(/,(\s*\})/, "$1"),
+      ) as Partial<RowLayout>);
 }
 
 /** Every layout the SDK draws: each place a field or empty, no field twice. */
@@ -73,7 +75,12 @@ describe("the Styling panel's exported configuration", () => {
     });
 
     expect(tsx).toContain(
-      'layout={{ titleBadge: null, titleTrailing: null, subtitle: "people", subtitleTrailing: "states" }}',
+      `layout={{
+    titleBadge: null,
+    titleTrailing: null,
+    subtitle: "people",
+    subtitleTrailing: "states",
+  }}`,
     );
   });
 
