@@ -67,7 +67,7 @@ function count(n: number): string | undefined {
 
 const MINT_TIMING_LABELS: Record<MintTiming, string> = {
   focus: "On focus (eager prewarm)",
-  keystroke: "On first keystroke (prewarm)",
+  keystroke: "On first keystroke (prewarm, the default)",
   request: "On first request (lazy)",
 };
 

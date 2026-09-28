@@ -56,7 +56,7 @@ interface CommonProps {
   inputRef?: Ref<HTMLInputElement>;
   /** Off, the field is a plain input and nothing is asked. Default on. */
   enabled?: boolean;
-  /** When the session is minted: on focus (the default), keystroke or request. */
+  /** When the session is minted: on focus, on the first keystroke (the default), or with the first request. */
   mintOn?: MintTiming;
   filters?: Filters;
   limit?: number;
@@ -146,7 +146,7 @@ function Connected({
   name,
   inputRef,
   enabled = true,
-  mintOn = "focus",
+  mintOn = "keystroke",
   filters,
   limit,
   minChars,

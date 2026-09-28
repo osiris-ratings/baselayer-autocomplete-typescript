@@ -29,10 +29,11 @@ Create one client per page, or per signed-in identity, and call `reset()`
 on sign-out: it disowns a mint in flight and forgets the session and every
 cooldown.
 
-`prewarm()` gets a session ahead of the first keystroke, as the component
-does on focus, and swallows a failure (a `mint` event still reports the
-refusal). `getSession({ force })` resolves to the current grant, minting or
-refreshing it when needed; `force: true` discards the cached grant first.
+`prewarm()` gets a session ahead of the first request, as the component
+does on the first keystroke, and swallows a failure (a `mint` event still
+reports the refusal). `getSession({ force })` resolves to the current grant,
+minting or refreshing it when needed; `force: true` discards the cached
+grant first.
 `client.baseUrl` is the host it asks, trailing slashes stripped.
 
 `suggest` recovers at most once per call: a missing, invalid or expired

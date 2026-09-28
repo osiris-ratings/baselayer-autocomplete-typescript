@@ -30,10 +30,10 @@ it; keystrokes inside the floor after it are answered `mint_backoff` and
 are silent. A prewarm's refusal reaches the field only when a request is
 already waiting on that mint. Otherwise it is not shown: the field stays
 silent until the floor has passed and the next mint is refused. The
-component prewarms on focus by default (`mintOn: "focus"`), or on the first
-character with `"keystroke"`; with `"request"` the first request's mint is
-the one refused, and it is shown. A 403 with code 37 means autocomplete is
-not enabled for your organization.
+component prewarms on the first character by default
+(`mintOn: "keystroke"`), or on focus with `"focus"`; with `"request"` the
+first request's mint is the one refused, and it is shown. A 403 with code 37
+means autocomplete is not enabled for your organization.
 
 ## Asking the tier
 

@@ -285,7 +285,7 @@ export const DEFAULT_STYLE: StyleState = {
   limit: DEFAULT_LIMIT,
   minChars: MIN_QUERY_CHARS,
   debounceMs: DEBOUNCE_MS,
-  mintOn: "focus",
+  mintOn: "keystroke",
   menuFollowsInputWidth: true,
   label: DEFAULT_LABEL,
   messages: Object.fromEntries(

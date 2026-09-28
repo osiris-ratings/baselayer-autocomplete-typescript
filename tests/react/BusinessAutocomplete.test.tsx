@@ -361,12 +361,12 @@ describe("BusinessAutocomplete", () => {
     expect(mint).toHaveBeenCalledTimes(1);
   });
 
-  it("mints when the field takes focus, and the first keystroke uses that grant", async () => {
+  it("mints when the field takes focus under mintOn focus, and the first keystroke uses that grant", async () => {
     const fetch = tierFetch();
     const mint = grantingMint();
     const client = createAutocompleteClient({ baseUrl: BASE_URL, mint, fetch });
     const user = userEvent.setup();
-    render(<Host source={{ client }} />);
+    render(<Host source={{ client }} mintOn="focus" />);
 
     await user.click(input());
 
@@ -379,12 +379,12 @@ describe("BusinessAutocomplete", () => {
     expect(mint).toHaveBeenCalledTimes(1);
   });
 
-  it("mints on the first keystroke, not on focus, under mintOn keystroke", async () => {
+  it("mints on the first keystroke by default, not on focus", async () => {
     const fetch = tierFetch();
     const mint = grantingMint();
     const client = createAutocompleteClient({ baseUrl: BASE_URL, mint, fetch });
     const user = userEvent.setup();
-    render(<Host source={{ client }} mintOn="keystroke" />);
+    render(<Host source={{ client }} />);
 
     await user.click(input());
     await aMoment();

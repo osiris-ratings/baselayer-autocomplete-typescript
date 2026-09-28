@@ -658,8 +658,8 @@ export function Home() {
                   <p>
                     Point it at your endpoint with <code>mintUrl</code> and at
                     Baselayer with <code>baseUrl</code>. It warms a session up
-                    on focus, asks as the user types, and handles every refusal
-                    itself.
+                    on the first keystroke, asks as the user types, and handles
+                    every refusal itself.
                   </p>
                   <p>
                     Prefer your own markup? Use the hooks, or the core alone.

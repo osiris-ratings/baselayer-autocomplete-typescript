@@ -114,13 +114,14 @@ describe("the Styling panel's exported configuration", () => {
     ).toContain("menuFollowsInputWidth={false}");
   });
 
-  it("says nothing of when to mint while it mints on focus", () => {
+  it("says nothing of when to mint while it mints on the first keystroke", () => {
+    expect(DEFAULT_STYLE.mintOn).toBe("keystroke");
     expect(exportCode(DEFAULT_STYLE).tsx).not.toContain("mintOn");
   });
 
-  it("names when to mint when it is not on focus", () => {
-    expect(exportCode({ ...DEFAULT_STYLE, mintOn: "keystroke" }).tsx).toContain(
-      'mintOn="keystroke"',
+  it("names when to mint when it is not on the first keystroke", () => {
+    expect(exportCode({ ...DEFAULT_STYLE, mintOn: "focus" }).tsx).toContain(
+      'mintOn="focus"',
     );
     expect(exportCode({ ...DEFAULT_STYLE, mintOn: "request" }).tsx).toContain(
       'mintOn="request"',

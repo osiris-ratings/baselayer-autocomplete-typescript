@@ -134,11 +134,12 @@ Exactly one of these connects it:
 The first `mint` or `mintUrl` is kept for the component's life; a new
 `baseUrl` re-creates its client. The rest is optional:
 
-- `mintOn` (`"focus"`): when the session is minted, one of `MINT_TIMINGS`
-  (type `MintTiming`). `focus` mints as the field takes focus, so the first
-  answer pays only for its suggestions, and a focus that types nothing still
-  spends a mint; `keystroke` mints on the first keystroke, overlapping the
-  typing; `request` mints with the first request, and that answer waits.
+- `mintOn` (`"keystroke"`): when the session is minted, one of
+  `MINT_TIMINGS` (type `MintTiming`). `keystroke` mints on the first
+  keystroke, overlapping the rest of the typing, so a click that types
+  nothing spends no mint; `focus` mints as the field takes focus, so the
+  first answer pays only for its suggestions; `request` mints with the first
+  request, and that answer waits.
 - `enabled` (`true`): off, the field is a plain input; nothing is minted
   and nothing is asked.
 - `limit` (`5`): rows per keystroke, an integer from 1 to 20; anything else

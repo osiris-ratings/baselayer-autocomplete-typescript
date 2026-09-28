@@ -47,6 +47,9 @@ as a minor release.
 
 ### Changed
 
+- `mintOn` defaults to `"keystroke"`: the session is minted on the first
+  keystroke rather than as the field takes focus, so a click into the field
+  that types nothing spends no mint. `mintOn="focus"` keeps the old timing.
 - **Breaking:** `parts` is now `layout`. `parts={{ flags: false }}` is
   `layout={{ titleTrailing: null }}`, `{ subtitle: false }` is
   `{ subtitle: null }`, and `{ secondarySubtitle: false }` is
