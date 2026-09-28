@@ -17,7 +17,7 @@ type Step =
   | { kind: "ref"; label: string; detail: string };
 
 const STEPS: Step[] = [
-  { kind: "phase", label: "The field gets focus: prewarm" },
+  { kind: "phase", label: "The first keystroke: prewarm" },
   {
     kind: "message",
     from: "browser",

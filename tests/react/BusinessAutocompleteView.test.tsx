@@ -4,7 +4,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   DEFAULT_LOOK,
+  ROW_FIELDS,
+  ROW_PLACES,
   type BusinessSuggestion,
+  type RowField,
+  type RowLayoutInput,
+  type RowPlace,
 } from "@baselayer-sdk/autocomplete";
 
 import {
@@ -22,6 +27,7 @@ const cinder: BusinessSuggestion = {
   domicile_state: "DE",
   // Sorted, as the tier returns them; the domicile is not first here on purpose.
   states: ["CA", "DE", "FL", "IL", "MA", "MO", "NY"],
+  structure: "C_CORPORATION",
   related: {
     people: {
       count: 4,
@@ -93,6 +99,7 @@ const stable: BusinessSuggestion = {
   matched_name: null,
   domicile_state: "FL",
   states: ["FL"],
+  structure: "LLC",
   related: {
     people: { count: 0, matched: null, truncated: false, items: [] },
     addresses: { count: 0, matched: null, truncated: false, items: [] },
@@ -687,7 +694,7 @@ function marksOf(row: HTMLElement | undefined): (string | null)[] {
 }
 
 describe("the match marks", () => {
-  it("marks the words the typed tokens start and keeps the name whole, underlined by default", () => {
+  it("marks the typed characters of the words the tokens start, and keeps the name whole, underlined by default", () => {
     const { root } = renderTypeahead({ suggestions: [stableMarked], found: 1 });
 
     const [row] = screen.getAllByTestId("business-suggestion");
@@ -695,11 +702,26 @@ describe("the match marks", () => {
     expect(name).toHaveTextContent("CINDER RACING STABLES, LLC");
     expect(name).toHaveAttribute("data-emphasis", "underline");
     expect(root).toHaveAttribute("data-emphasis", "underline");
-    expect(marksOf(row)).toEqual(["CINDER"]);
+    expect(root).toHaveAttribute("data-region", "substring");
+    // "cind" typed: its characters, not the whole word the tier marked.
+    expect(marksOf(row)).toEqual(["CIND"]);
     // The underline is the stylesheet's, keyed on the mark's class.
     expect(screen.getByTestId("business-suggestion-match")).toHaveClass(
       "bl-ac-mark",
     );
+  });
+
+  it("marks the whole word a token starts under the token region", () => {
+    const { root } = renderTypeahead({
+      suggestions: [stableMarked],
+      found: 1,
+      look: { ...DEFAULT_LOOK, matchEmphasisRegion: "token" },
+    });
+
+    expect(root).toHaveAttribute("data-region", "token");
+    expect(marksOf(screen.getAllByTestId("business-suggestion")[0])).toEqual([
+      "CINDER",
+    ]);
   });
 
   it("marks the alternative name when that is what matched, and leaves the label alone", () => {
@@ -710,12 +732,16 @@ describe("the match marks", () => {
     const [mark] = row!.querySelectorAll(
       '[data-testid="business-suggestion-match"]',
     );
-    expect(
-      mark!.closest('[data-testid="business-suggestion-also"]'),
-    ).not.toBeNull();
-    const name = screen.getByTestId("business-suggestion-name");
-    expect(name).toHaveTextContent("CINDER RIGGING, INC.");
-    expect(name).toHaveTextContent("also EMBERLINE");
+    const also = mark!.closest('[data-testid="business-suggestion-also"]');
+    expect(also).not.toBeNull();
+    // The alternative name carries the emphasis its marks are drawn in.
+    expect(also).toHaveAttribute("data-emphasis", "underline");
+    expect(screen.getByTestId("business-suggestion-name")).toHaveTextContent(
+      "CINDER RIGGING, INC.",
+    );
+    const title = row!.querySelector('[data-place="title"]');
+    expect(title).toHaveTextContent("CINDER RIGGING, INC.");
+    expect(title).toHaveTextContent("also EMBERLINE");
   });
 
   it("marks nothing on a row the query reached some other way", () => {
@@ -788,7 +814,12 @@ describe("the match marks", () => {
     ]);
     unmount();
 
-    renderTypeahead({ suggestions: [harbor], found: 1, value: "har conc" });
+    renderTypeahead({
+      suggestions: [harbor],
+      found: 1,
+      value: "har conc",
+      look: { ...DEFAULT_LOOK, matchEmphasisRegion: "token" },
+    });
     expect(marksOf(screen.getByTestId("business-suggestion"))).toEqual([
       "HARBOR CONCRETE",
     ]);
@@ -808,7 +839,7 @@ describe("the match marks", () => {
     });
 
     const [mark] = screen.getAllByTestId("business-suggestion-match");
-    expect(mark).toHaveTextContent("CINDER");
+    expect(mark).toHaveTextContent("CIND");
     expect(mark).toHaveClass("bl-ac-mark");
     expect(screen.getByTestId("business-suggestion-name")).toHaveAttribute(
       "data-emphasis",
@@ -846,6 +877,8 @@ describe("the match marks", () => {
         pillForegroundColor: "#c6f6d5",
         primaryPillBorderColor: "#68d391",
         secondaryPillBackgroundColor: "#2d3748",
+        structurePillBackgroundColor: "#1a365d",
+        structurePillForegroundColor: "#bee3f8",
       },
     });
 
@@ -858,7 +891,12 @@ describe("the match marks", () => {
     expect(variable("--bl-ac-pill-fg")).toBe("#c6f6d5");
     expect(variable("--bl-ac-pill-primary-border")).toBe("#68d391");
     expect(variable("--bl-ac-pill-secondary-bg")).toBe("#2d3748");
+    expect(variable("--bl-ac-structure-bg")).toBe("#1a365d");
+    expect(variable("--bl-ac-structure-fg")).toBe("#bee3f8");
     // And the elements carry the classes that read them.
+    expect(screen.getByTestId("business-suggestion-structure")).toHaveClass(
+      "bl-ac-structure",
+    );
     expect(screen.getByTestId("autocomplete-menu")).toHaveClass("bl-ac-menu");
     expect(screen.getByTestId("business-suggestion-name")).toHaveClass(
       "bl-ac-name",
@@ -898,7 +936,7 @@ describe("the match marks", () => {
 
     expect(root.getAttribute("style") ?? "").toBe("");
     expect(root).toHaveAttribute("data-emphasis", "underline");
-    expect(root).toHaveAttribute("data-region", "token");
+    expect(root).toHaveAttribute("data-region", "substring");
   });
 
   it.each(["weight", "ink", "underline", "background"] as const)(
@@ -911,7 +949,7 @@ describe("the match marks", () => {
       });
 
       const [row] = screen.getAllByTestId("business-suggestion");
-      expect(marksOf(row)).toEqual(["CINDER"]);
+      expect(marksOf(row)).toEqual(["CIND"]);
       expect(screen.getByTestId("business-suggestion-name")).toHaveAttribute(
         "data-emphasis",
         emphasis,
@@ -1019,12 +1057,27 @@ describe("the host's classes", () => {
           label: "host-label",
           menu: "host-menu",
           row: "host-row",
+          title: "host-title",
           name: "host-name",
+          structure: "host-structure",
           state: "host-state",
+          corner: "host-corner",
           footer: "host-footer",
         },
       }),
     );
+
+    for (const title of container.querySelectorAll('[data-place="title"]')) {
+      expect(title).toHaveClass("bl-ac-title", "host-title");
+    }
+    const corners = container.querySelectorAll("[data-corner]");
+    expect(corners.length).toBeGreaterThan(0);
+    for (const corner of corners) {
+      expect(corner).toHaveClass("bl-ac-corner", "host-corner");
+    }
+    for (const flag of screen.getAllByTestId("business-suggestion-structure")) {
+      expect(flag).toHaveClass("bl-ac-structure", "host-structure");
+    }
 
     expect(container.firstElementChild).toHaveClass("bl-ac", "host-root");
     expect(screen.getByRole("combobox")).toHaveClass(
@@ -1078,7 +1131,7 @@ describe("the host's classes", () => {
       "true",
     );
     const [marked, other] = screen.getAllByTestId("business-suggestion");
-    expect(marksOf(marked)).toEqual(["CINDER"]);
+    expect(marksOf(marked)).toEqual(["CIND"]);
     expect(
       screen.getAllByTestId("business-suggestion-name")[0],
     ).toHaveAttribute("data-emphasis", "background");
@@ -1088,6 +1141,18 @@ describe("the host's classes", () => {
     expect(
       other!.querySelector('[data-testid="business-suggestion-officers"]'),
     ).toHaveAttribute("data-role", "officer");
+    // Every place says which it is, so a host can lay the row out itself.
+    expect(
+      [...other!.querySelectorAll("[data-place]")].map(node =>
+        node.getAttribute("data-place"),
+      ),
+    ).toEqual([
+      "title",
+      "titleBadge",
+      "titleTrailing",
+      "subtitle",
+      "subtitleTrailing",
+    ]);
     expect(screen.getByTestId("business-suggestions-footer")).toHaveAttribute(
       "role",
       "status",
@@ -1235,111 +1300,332 @@ describe("messages", () => {
   });
 });
 
-describe("the row's parts", () => {
-  function rowOf(parts: BusinessAutocompleteViewProps["parts"]) {
-    renderTypeahead(parts === undefined ? {} : { parts });
+describe("the row's places and fields", () => {
+  function rowOf(layout: BusinessAutocompleteViewProps["layout"]) {
+    renderTypeahead(layout === undefined ? {} : { layout });
     return screen.getAllByTestId("business-suggestion")[0]!;
   }
-  const within = (row: HTMLElement, id: string) =>
-    row.querySelectorAll(`[data-testid="${id}"]`).length;
 
-  it("shows the title, the flags, the subtitle and the secondary subtitle by default", () => {
-    const row = rowOf(undefined);
+  /** The field an element draws, or `name` for the title's own. */
+  function fieldOf(element: Element): string {
+    switch (element.getAttribute("data-testid")) {
+      case "business-suggestion-structure":
+        return "structure";
+      case "business-suggestion-address":
+        return "address";
+      case "business-suggestion-officers":
+        return "people";
+      default:
+        return element.classList.contains("bl-ac-states") ? "states" : "name";
+    }
+  }
 
-    expect(within(row, "business-suggestion-name")).toBe(1);
-    expect(within(row, "business-suggestion-state")).toBeGreaterThan(0);
-    expect(within(row, "business-suggestion-address")).toBe(1);
-    expect(within(row, "business-suggestion-officers")).toBe(1);
-  });
-
-  it.each([
-    ["flags", "business-suggestion-state"],
-    ["subtitle", "business-suggestion-address"],
-    ["secondarySubtitle", "business-suggestion-officers"],
-  ] as const)(
-    "leaves out the %s when told to, and nothing else",
-    (part, id) => {
-      const row = rowOf({ [part]: false });
-
-      expect(within(row, id)).toBe(0);
-      const others = [
-        "business-suggestion-name",
-        "business-suggestion-address",
-        "business-suggestion-officers",
-      ].filter(other => other !== id);
-      for (const other of others) {
-        expect(within(row, other)).toBe(1);
-      }
-    },
-  );
-
-  it("always shows the title: a row is the entity it names", () => {
-    const row = rowOf({
-      flags: false,
-      subtitle: false,
-      secondarySubtitle: false,
-    });
-
-    expect(within(row, "business-suggestion-name")).toBe(1);
-    expect(row.querySelectorAll(".bl-ac-line")).toHaveLength(1);
-  });
-
-  /** Each line of a row, as the test ids of what it holds, in order. */
+  /** Each line of a row, as `place:field` for what it draws, in order. */
   function lines(row: HTMLElement): string[][] {
     return [...row.querySelectorAll(".bl-ac-line")].map(line =>
-      [
-        ...line.querySelectorAll(
-          ":scope > [data-testid], :scope > .bl-ac-states",
-        ),
-      ].map(part => part.getAttribute("data-testid") ?? "flags"),
+      [...line.querySelectorAll("[data-place]")].map(
+        element => `${element.getAttribute("data-place")}:${fieldOf(element)}`,
+      ),
     );
   }
 
-  it("keeps the two lines as ever with every part shown", () => {
+  const TITLE_LINE = [
+    "title:name",
+    "titleBadge:structure",
+    "titleTrailing:states",
+  ];
+
+  it("draws the name and its structure, the states, then the address and the people, by default", () => {
     expect(lines(rowOf(undefined))).toEqual([
-      ["business-suggestion-name", "flags"],
-      ["business-suggestion-address", "business-suggestion-officers"],
+      TITLE_LINE,
+      ["subtitle:address", "subtitleTrailing:people"],
     ]);
   });
 
-  it.each([
-    // Without the subtitle, the officers are promoted to subtitle.
-    [
-      { subtitle: false },
-      [["business-suggestion-name", "flags"], ["business-suggestion-officers"]],
-    ],
-    [
-      { flags: false, subtitle: false },
-      [["business-suggestion-name"], ["business-suggestion-officers"]],
-    ],
-    // Without the flags, every other part keeps its place.
-    [
-      { flags: false },
-      [
-        ["business-suggestion-name"],
-        ["business-suggestion-address", "business-suggestion-officers"],
-      ],
-    ],
-    // Without both subtitles, the title's line is the row.
-    [
-      { subtitle: false, secondarySubtitle: false },
-      [["business-suggestion-name", "flags"]],
-    ],
-  ])("places what %j leaves, so no line starts with a gap", (parts, drawn) => {
-    expect(lines(rowOf(parts))).toEqual(drawn);
+  it("pins the structure's flag to the end of the name, before the alternative name", () => {
+    const title = rowOf(undefined).querySelector('[data-place="title"]')!;
+
+    expect(
+      [...title.querySelectorAll("[data-testid]")].map(node =>
+        node.getAttribute("data-testid"),
+      ),
+    ).toEqual([
+      "business-suggestion-name",
+      "business-suggestion-structure",
+      "business-suggestion-also",
+    ]);
+    // The name and its flag are one piece, which `also …` never splits.
+    const flag = title.querySelector(
+      '[data-testid="business-suggestion-structure"]',
+    )!;
+    expect(flag.parentElement).toBe(
+      title.querySelector('[data-testid="business-suggestion-name"]')!
+        .parentElement,
+    );
+    expect(
+      title.querySelector('[data-testid="business-suggestion-structure"]'),
+    ).toHaveTextContent("C-Corp");
   });
 
-  it("leaves a row with no officers to promote at its title line", () => {
-    renderTypeahead({ parts: { subtitle: false } });
+  // Where a place puts its field: the line, and the corner it sits in.
+  const TITLE_TRAILING = '.bl-ac-line-title > [data-corner="trailing"]';
+  const SUBTITLE_LEAD = '.bl-ac-line-subtitle > [data-corner="lead"]';
+  const SUBTITLE_TRAILING = '.bl-ac-line-subtitle > [data-corner="trailing"]';
+  const WHERE: Record<RowPlace, { line: number; parent: string }> = {
+    titleBadge: { line: 0, parent: ".bl-ac-name-group" },
+    titleTrailingBadge: { line: 0, parent: TITLE_TRAILING },
+    titleTrailing: { line: 0, parent: TITLE_TRAILING },
+    subtitle: { line: 1, parent: SUBTITLE_LEAD },
+    subtitleBadge: { line: 1, parent: SUBTITLE_LEAD },
+    subtitleTrailingBadge: { line: 1, parent: SUBTITLE_TRAILING },
+    subtitleTrailing: { line: 1, parent: SUBTITLE_TRAILING },
+  };
+  // What each field draws on the first row, wherever it sits.
+  const DRAWS: Record<RowField, string> = {
+    states: "DECAFL+4",
+    structure: "C-Corp",
+    address: "412 Orchard Ln, Springfield, MO 65806",
+    people: "Wesley Crane +1",
+  };
+
+  // What a place needs placed for its field to be drawn there: a badge its
+  // corner's field, and the second line's right corner a lead.
+  const NEEDS: Partial<Record<RowPlace, RowPlace[]>> = {
+    titleTrailingBadge: ["titleTrailing"],
+    subtitleBadge: ["subtitle"],
+    subtitleTrailingBadge: ["subtitle", "subtitleTrailing"],
+    subtitleTrailing: ["subtitle"],
+  };
+
+  /** The one field in the one place, and other fields where it needs them. */
+  function only(field: RowField, place: RowPlace): RowLayoutInput {
+    const others = ROW_FIELDS.filter(other => other !== field);
+    const beside = Object.fromEntries(
+      (NEEDS[place] ?? []).map((needed, i) => [needed, others[i]]),
+    );
+    return {
+      titleBadge: null,
+      titleTrailing: null,
+      subtitle: null,
+      subtitleTrailing: null,
+      ...beside,
+      [place]: field,
+    };
+  }
+
+  it.each(
+    ROW_PLACES.flatMap(place =>
+      ROW_FIELDS.map(field => [field, place] as const),
+    ),
+  )("draws the %s in the %s as it draws it anywhere", (field, place) => {
+    const row = rowOf(only(field, place));
+    const drawn = row.querySelectorAll(`[data-place="${place}"]`);
+
+    expect(drawn).toHaveLength(1);
+    const element = drawn[0]!;
+    expect(fieldOf(element)).toBe(field);
+    expect(element).toHaveTextContent(DRAWS[field]);
+    expect(element.parentElement!.matches(WHERE[place].parent)).toBe(true);
+    expect(row.querySelectorAll(".bl-ac-line")[WHERE[place].line]).toBe(
+      element.closest(".bl-ac-line"),
+    );
+    expect(
+      lines(row)
+        .flat()
+        .filter(entry => entry.endsWith(`:${field}`)),
+    ).toHaveLength(1);
+  });
+
+  it("draws each line as its lead corner and its trailing corner", () => {
+    const [title, subtitle] = rowOf(undefined).querySelectorAll(".bl-ac-line");
+    const corners = (line: Element) =>
+      [...line.children].map(
+        child =>
+          child.getAttribute("data-corner") ?? child.getAttribute("data-place"),
+      );
+
+    // The first line's lead is the title.
+    expect(corners(title!)).toEqual(["title", "trailing"]);
+    expect(corners(subtitle!)).toEqual(["lead", "trailing"]);
+    expect(
+      subtitle!.querySelector('[data-corner="lead"]')!.className,
+    ).toContain("bl-ac-corner");
+  });
+
+  it("says which corners hold text on the row, so the text at the right leaves the lead's text room", () => {
+    const row = rowOf(undefined);
+    const holdsText = (corner: string) =>
+      row.querySelector(corner)!.getAttribute("data-text");
+
+    // The states are flags; the address and the officers are text.
+    expect(holdsText(TITLE_TRAILING)).toBeNull();
+    expect(holdsText(SUBTITLE_LEAD)).toBe("true");
+    expect(holdsText(SUBTITLE_TRAILING)).toBe("true");
+  });
+
+  it("says which corners hold a flag on the row, so a lead that pins one beside its text shares the line", () => {
+    renderTypeahead({
+      suggestions: [
+        cinder,
+        { ...cinder, token: "tok-no-structure", structure: null },
+      ],
+      layout: { titleBadge: null, subtitleBadge: "structure" },
+    });
+    const [flagged, unflagged] = screen.getAllByTestId("business-suggestion");
+    const lead = (row: HTMLElement) =>
+      row.querySelector(SUBTITLE_LEAD)!.getAttribute("data-flag");
+
+    expect(
+      flagged!.querySelector(TITLE_TRAILING)!.getAttribute("data-flag"),
+    ).toBe("true");
+    expect(lead(flagged!)).toBe("true");
+    // No structure on the row, so no flag in its lead.
+    expect(lead(unflagged!)).toBeNull();
+  });
+
+  it("draws no corner for a row with nothing to put in it", () => {
+    renderTypeahead({
+      suggestions: [
+        stable,
+        { ...cinder, token: "tok-no-structure", structure: null },
+      ],
+      layout: {
+        titleBadge: null,
+        subtitle: "structure",
+        subtitleTrailing: "people",
+      },
+    });
+    const [noPeople, noStructure] = screen.getAllByTestId(
+      "business-suggestion",
+    );
+    const corners = (row: HTMLElement) =>
+      [...row.querySelectorAll(".bl-ac-line-subtitle > [data-corner]")].map(
+        corner => corner.getAttribute("data-corner"),
+      );
+
+    // No officers where only they sit at the right; no structure where only
+    // it leads.
+    expect(corners(noPeople!)).toEqual(["lead"]);
+    expect(corners(noStructure!)).toEqual(["trailing"]);
+  });
+
+  it("pins a flag to a corner's field on its inner side", () => {
+    const row = rowOf({ titleBadge: null, subtitleTrailingBadge: "structure" });
+
+    expect(lines(row)).toEqual([
+      ["title:name", "titleTrailing:states"],
+      [
+        "subtitle:address",
+        "subtitleTrailingBadge:structure",
+        "subtitleTrailing:people",
+      ],
+    ]);
+  });
+
+  it("draws the trailing corner in the lead's place, badge and all, when the lead is empty", () => {
+    const row = rowOf({
+      titleBadge: null,
+      subtitle: null,
+      subtitleTrailingBadge: "structure",
+    });
+
+    expect(lines(row)[1]).toEqual([
+      "subtitle:people",
+      "subtitleBadge:structure",
+    ]);
+  });
+
+  it("draws the second line's trailing field in the lead's place when the lead is empty", () => {
+    expect(lines(rowOf({ subtitle: null }))).toEqual([
+      TITLE_LINE,
+      ["subtitle:people"],
+    ]);
+  });
+
+  it("never draws a field twice, whatever the layout says", () => {
+    const row = rowOf({ titleTrailing: "people", subtitleTrailing: "people" });
+
+    expect(
+      row.querySelectorAll('[data-testid="business-suggestion-officers"]'),
+    ).toHaveLength(1);
+    expect(lines(row)).toEqual([
+      ["title:name", "titleBadge:structure", "titleTrailing:people"],
+      ["subtitle:address"],
+    ]);
+  });
+
+  it("keeps one layout for every row: a field a row lacks leaves its place empty", () => {
+    renderTypeahead({
+      layout: { subtitle: "people", subtitleTrailing: "address" },
+    });
+    const [first, second] = screen.getAllByTestId("business-suggestion");
+
+    expect(lines(first!)[1]).toEqual([
+      "subtitle:people",
+      "subtitleTrailing:address",
+    ]);
+    // The second row has no officers: its address keeps to the right rather
+    // than taking the lead, so the column lines up down the menu.
+    expect(lines(second!)[1]).toEqual(["subtitleTrailing:address"]);
+  });
+
+  it("drops a line nothing is placed on", () => {
+    expect(lines(rowOf({ subtitle: null, subtitleTrailing: null }))).toEqual([
+      TITLE_LINE,
+    ]);
+  });
+
+  it("drops a row's second line when the row has nothing for it", () => {
+    renderTypeahead({ layout: { subtitle: null } });
     const [first, second] = screen.getAllByTestId("business-suggestion");
 
     expect(first!.querySelectorAll(".bl-ac-line")).toHaveLength(2);
-    // The second row has no officers: nothing is promoted, and no empty line
-    // is drawn where they would have been.
+    // The second row has no officers, and no empty line stands in for them.
     expect(second!.querySelectorAll(".bl-ac-line")).toHaveLength(1);
     expect(second!.querySelector(".bl-ac-states")).toHaveAttribute(
-      "data-slot",
-      "right",
+      "data-place",
+      "titleTrailing",
     );
+  });
+
+  it("always shows the title: a row is the entity it names", () => {
+    const row = rowOf({
+      titleBadge: null,
+      titleTrailing: null,
+      subtitle: null,
+      subtitleTrailing: null,
+    });
+
+    expect(lines(row)).toEqual([["title:name"]]);
+  });
+
+  it("draws no flag for a structure it has no label for", () => {
+    renderTypeahead({
+      suggestions: [
+        { ...cinder, token: "tok-other", structure: "OTHER" },
+        { ...cinder, token: "tok-unknown", structure: "FOUNDATION" },
+        { ...cinder, token: "tok-none", structure: null },
+      ],
+      found: 3,
+    });
+
+    expect(screen.getAllByTestId("business-suggestion")).toHaveLength(3);
+    expect(
+      screen.queryAllByTestId("business-suggestion-structure"),
+    ).toHaveLength(0);
+  });
+
+  it("draws the host's structure labels over its own, and no flag for one set empty", () => {
+    renderTypeahead({
+      messages: { structures: { C_CORPORATION: "Corporation", LLC: "" } },
+    });
+    const [first, second] = screen.getAllByTestId("business-suggestion");
+
+    expect(
+      first!.querySelector('[data-testid="business-suggestion-structure"]'),
+    ).toHaveTextContent("Corporation");
+    expect(
+      second!.querySelector('[data-testid="business-suggestion-structure"]'),
+    ).toBeNull();
   });
 });

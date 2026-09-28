@@ -30,10 +30,10 @@ it; keystrokes inside the floor after it are answered `mint_backoff` and
 are silent. A prewarm's refusal reaches the field only when a request is
 already waiting on that mint. Otherwise it is not shown: the field stays
 silent until the floor has passed and the next mint is refused. The
-component prewarms on focus by default (`mintOn: "focus"`), or on the first
-character with `"keystroke"`; with `"request"` the first request's mint is
-the one refused, and it is shown. A 403 with code 37 means autocomplete is
-not enabled for your organization.
+component prewarms on the first character by default
+(`mintOn: "keystroke"`), or on focus with `"focus"`; with `"request"` the
+first request's mint is the one refused, and it is shown. A 403 with code 37
+means autocomplete is not enabled for your organization.
 
 ## Asking the tier
 
@@ -117,16 +117,17 @@ A field that does not apply is `null`.
 
 All of them are overridable through `messages`:
 
-| Key                    | Default                                                                       |
-| ---------------------- | ----------------------------------------------------------------------------- |
-| `searching`            | Searching…                                                                    |
-| `truncatedNoRows`      | Still searching — add a word to narrow it down                                |
-| `truncatedRows`        | Showing partial results — add a word to narrow it down                        |
-| `match`, `matches`     | match, matches                                                                |
-| `noAddress`            | No address on file                                                            |
-| `agentSuffix`          | a space, then `· agent`                                                       |
-| `more(n)`              | `+n`                                                                          |
-| `dayLimit`             | Your plan's daily autocomplete limit is reached; suggestions return tomorrow. |
-| `unavailable`          | Autocomplete unavailable                                                      |
-| `authUnavailable`      | Autocomplete unavailable: the session could not be verified                   |
-| `httpFallback(status)` | Autocomplete unavailable (HTTP status)                                        |
+| Key                    | Default                                                                                  |
+| ---------------------- | ---------------------------------------------------------------------------------------- |
+| `searching`            | Searching…                                                                               |
+| `truncatedNoRows`      | Still searching — add a word to narrow it down                                           |
+| `truncatedRows`        | Showing partial results — add a word to narrow it down                                   |
+| `match`, `matches`     | match, matches                                                                           |
+| `noAddress`            | No address on file                                                                       |
+| `agentSuffix`          | a space, then `· agent`                                                                  |
+| `more(n)`              | `+n`                                                                                     |
+| `structures`           | each structure's flag, one value at a time ([the flags](styling.md#the-structures-flag)) |
+| `dayLimit`             | Your plan's daily autocomplete limit is reached; suggestions return tomorrow.            |
+| `unavailable`          | Autocomplete unavailable                                                                 |
+| `authUnavailable`      | Autocomplete unavailable: the session could not be verified                              |
+| `httpFallback(status)` | Autocomplete unavailable (HTTP status)                                                   |

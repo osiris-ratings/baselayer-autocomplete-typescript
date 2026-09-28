@@ -8,11 +8,17 @@ import {
 
 import {
   DEFAULT_LOOK,
+  ROW_LINES,
+  drawnRowLayout,
   resolveLook,
-  resolveParts,
+  resolveRowLayout,
   type Look,
   type LookInput,
-  type RowParts,
+  type RowField,
+  type RowLayout,
+  type RowLayoutInput,
+  type RowLine,
+  type RowPlace,
 } from "@baselayer-sdk/autocomplete";
 import {
   formatFound,
@@ -21,6 +27,7 @@ import {
   partsFor,
   peopleLineOf,
   queryTokens,
+  structureLabel,
 } from "@baselayer-sdk/autocomplete";
 import type {
   BusinessSuggestion,
@@ -28,7 +35,6 @@ import type {
 } from "@baselayer-sdk/autocomplete";
 
 import { resolveMessages, type AutocompleteMessages } from "./messages";
-import { rowLayout, type RowPlace } from "./rowLayout";
 import { useBusinessCombobox } from "./useBusinessCombobox";
 
 /** Squares shown before the `+N` overflow: the domicile and two more. */
@@ -42,13 +48,17 @@ export type SlotName =
   | "list"
   | "row"
   | "titleLine"
+  | "title"
+  | "nameGroup"
   | "name"
   | "also"
   | "mark"
+  | "structure"
   | "states"
   | "state"
   | "moreStates"
   | "subtitleLine"
+  | "corner"
   | "address"
   | "people"
   | "footer"
@@ -89,11 +99,12 @@ export interface BusinessAutocompleteViewProps {
    */
   open?: boolean | undefined;
   /**
-   * Which parts of a row show besides its title, which always does: the flags,
-   * the subtitle and the secondary subtitle. Each shows unless set to
-   * `false`; without the subtitle, the secondary subtitle takes its place.
+   * The field each place of a row shows (`ROW_PLACES`, `ROW_FIELDS`); the
+   * title always shows the name. A place left out keeps its default field
+   * unless it is placed elsewhere, and null leaves a place empty. With
+   * `subtitle` empty, the field in `subtitleTrailing` takes its place.
    */
-  parts?: Partial<RowParts> | undefined;
+  layout?: RowLayoutInput | undefined;
   /**
    * The menu as wide as the input (the default), or, `false`, as wide as
    * `--bl-ac-menu-width` from 48em up.
@@ -167,6 +178,16 @@ function lookVariables(look: Look): CSSProperties {
     look.secondaryPillBackgroundColor,
     DEFAULT_LOOK.secondaryPillBackgroundColor,
   );
+  set(
+    "--bl-ac-structure-bg",
+    look.structurePillBackgroundColor,
+    DEFAULT_LOOK.structurePillBackgroundColor,
+  );
+  set(
+    "--bl-ac-structure-fg",
+    look.structurePillForegroundColor,
+    DEFAULT_LOOK.structurePillForegroundColor,
+  );
   if (look.matchEmphasisColor !== null) {
     vars["--bl-ac-mark"] = look.matchEmphasisColor;
   }
@@ -205,18 +226,18 @@ function StateSquares({
   suggestion,
   cx,
   more,
-  slot,
+  place,
 }: {
   suggestion: BusinessSuggestion;
   cx: ClassFor;
   more: (count: number) => string;
-  slot: "left" | "right";
+  place: RowPlace;
 }) {
   const states = orderedStates(suggestion);
   const shown = states.slice(0, STATE_SQUARES);
   const hidden = states.length - shown.length;
   return (
-    <span className={cx("states", "bl-ac-states")} data-slot={slot}>
+    <span className={cx("states", "bl-ac-states")} data-place={place}>
       {shown.map((state, index) => (
         <span
           key={state}
@@ -239,13 +260,192 @@ function StateSquares({
   );
 }
 
+/** Each line's slot and classes. */
+const LINE_CLASSES: Record<
+  RowLine["line"],
+  { slot: SlotName; className: string }
+> = {
+  title: { slot: "titleLine", className: "bl-ac-line bl-ac-line-title" },
+  subtitle: {
+    slot: "subtitleLine",
+    className: "bl-ac-line bl-ac-line-subtitle",
+  },
+};
+
+interface DefaultRowProps {
+  item: BusinessSuggestion;
+  /** The layout as the row draws it (`drawnRowLayout`), one for every row. */
+  layout: RowLayout;
+  look: Look;
+  /** What was typed, as the tier tokenizes it (`queryTokens`). */
+  tokens: string[];
+  text: AutocompleteMessages;
+  cx: ClassFor;
+}
+
+/**
+ * One business as the component draws it: each line of `ROW_LINES` as its
+ * lead corner and its trailing corner, each holding its places' fields. The
+ * first line's lead is the title: the name with its badge, then `also …`.
+ */
+function DefaultRow({ item, layout, look, tokens, text, cx }: DefaultRowProps) {
+  const region = look.matchEmphasisRegion;
+  // Plain draws none of the marks, which is no parts at all.
+  const parts = look.matchEmphasis !== "plain" ? item.highlight : [];
+  const markClass = cx("mark", "bl-ac-mark");
+  const address = leadAddressOf(item);
+  const people = peopleLineOf(item);
+  const structure = structureLabel(item.structure, text.structures);
+  // Each field as drawn in a place: the same in any, the place deciding
+  // where it sits and what gives way first.
+  const fieldNode: Record<RowField, (place: RowPlace) => ReactNode> = {
+    states: place => (
+      <StateSquares suggestion={item} cx={cx} more={text.more} place={place} />
+    ),
+    structure: place =>
+      structure !== null && (
+        <span
+          className={cx("structure", "bl-ac-structure")}
+          data-place={place}
+          data-testid="business-suggestion-structure"
+        >
+          {structure}
+        </span>
+      ),
+    address: place => (
+      <span
+        className={cx("address", "bl-ac-address")}
+        data-place={place}
+        data-testid="business-suggestion-address"
+      >
+        {address ?? text.noAddress}
+      </span>
+    ),
+    people: place =>
+      people !== null && (
+        <span
+          className={cx("people", "bl-ac-people")}
+          data-place={place}
+          data-testid="business-suggestion-officers"
+          data-role={people.role}
+        >
+          {people.names[0]}
+          {people.more > 0 ? ` ${text.more(people.more)}` : ""}
+          {people.role === "agent" ? text.agentSuffix : ""}
+        </span>
+      ),
+  };
+  const draw = (place: RowPlace): ReactNode => {
+    const field = layout[place];
+    return field === null ? null : fieldNode[field](place);
+  };
+  /** Whether a place draws text on this row, rather than a flag or nothing. */
+  const drawsText = (place: RowPlace) =>
+    layout[place] === "address" ||
+    (layout[place] === "people" && people !== null);
+  /** Whether a place draws a flag on this row. */
+  const drawsFlag = (place: RowPlace) =>
+    layout[place] === "states" ||
+    (layout[place] === "structure" && structure !== null);
+  /**
+   * A corner: the two places it pins together, in the order they sit, or
+   * nothing when neither draws anything on this row. It says whether it holds
+   * text and whether a flag, which decide how it shares its line.
+   */
+  const corner = (
+    kind: "lead" | "trailing",
+    first: RowPlace,
+    second: RowPlace,
+  ) => {
+    const drawnFirst = draw(first);
+    const drawnSecond = draw(second);
+    if (!drawnFirst && !drawnSecond) {
+      return null;
+    }
+    return (
+      <span
+        className={cx("corner", "bl-ac-corner")}
+        data-corner={kind}
+        data-text={drawsText(first) || drawsText(second) ? "true" : undefined}
+        data-flag={drawsFlag(first) || drawsFlag(second) ? "true" : undefined}
+      >
+        {drawnFirst}
+        {drawnSecond}
+      </span>
+    );
+  };
+  const title = (badge: RowPlace) => (
+    <span className={cx("title", "bl-ac-title")} data-place="title">
+      {/* One piece, so `also …` leaves the line whole rather than splitting
+          the name from its badge. */}
+      <span className={cx("nameGroup", "bl-ac-name-group")}>
+        <span
+          className={cx("name", "bl-ac-name")}
+          data-testid="business-suggestion-name"
+          data-emphasis={look.matchEmphasis}
+          data-region={region}
+        >
+          {marked(
+            item.label,
+            partsFor(item.label, parts, region, tokens),
+            markClass,
+          )}
+        </span>
+        {draw(badge)}
+      </span>
+      {item.matched_name !== null && (
+        <span
+          className={cx("also", "bl-ac-also")}
+          data-testid="business-suggestion-also"
+          data-emphasis={look.matchEmphasis}
+        >
+          also{" "}
+          {marked(
+            item.matched_name,
+            partsFor(item.matched_name, parts, region, tokens),
+            markClass,
+          )}
+        </span>
+      )}
+    </span>
+  );
+  return (
+    <>
+      {ROW_LINES.map(({ line, lead, trailing }) => {
+        const leadCorner =
+          lead.field === null
+            ? title(lead.badge)
+            : corner("lead", lead.field, lead.badge);
+        const trailingCorner = corner(
+          "trailing",
+          trailing.badge,
+          trailing.field,
+        );
+        // A line with nothing on it for this row (no officers where only
+        // they are placed) is dropped; the title's never is.
+        if (!leadCorner && !trailingCorner) {
+          return null;
+        }
+        const { slot, className } = LINE_CLASSES[line];
+        return (
+          <div key={line} className={cx(slot, className)}>
+            {leadCorner}
+            {trailingCorner}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 /**
  * The styled typeahead, with the state supplied by the host
- * (`useBusinessAutocomplete`). Each row is one business family as a two-line
- * cell: the canonical name with the matched words marked (and, fainter, the
- * alternative name when that is what matched), the family's states as squares
- * at the right, domicile first; then the lead address and the lead officer.
- * Below the rows, outside the listbox, the count row.
+ * (`useBusinessAutocomplete`). Each row is one business family, drawn in the
+ * places `layout` fills; by default a two-line cell: the canonical name with
+ * the matched words marked, its structure's flag, and, fainter, the
+ * alternative name when that is what matched, with the family's states as
+ * squares at the right, domicile first; then the lead address and the lead
+ * officer. Below the rows, outside the listbox, the count row.
  */
 export function BusinessAutocompleteView({
   id,
@@ -265,7 +465,7 @@ export function BusinessAutocompleteView({
   isSearching,
   error,
   open = false,
-  parts,
+  layout: layoutInput,
   menuFollowsInputWidth = true,
   look: lookInput,
   messages: messageOverrides,
@@ -277,8 +477,8 @@ export function BusinessAutocompleteView({
   unstyled = false,
 }: BusinessAutocompleteViewProps) {
   const look = resolveLook(lookInput ?? {});
-  // One layout for every row, from the parts asked for.
-  const layout = rowLayout(resolveParts(parts));
+  // One layout for every row, from the places the host filled, as drawn.
+  const layout = drawnRowLayout(resolveRowLayout(layoutInput));
   const text = resolveMessages(messageOverrides);
   const cx = classes(unstyled, classNames);
   const hasFooter = isSearching || error !== null || roundTripMs !== null;
@@ -322,8 +522,6 @@ export function BusinessAutocompleteView({
   });
 
   const region = look.matchEmphasisRegion;
-  // Plain draws none of the marks, which is no parts at all.
-  const drawMarks = look.matchEmphasis !== "plain";
 
   return (
     <div
@@ -357,110 +555,16 @@ export function BusinessAutocompleteView({
         <div className={cx("list", "bl-ac-list")} {...combobox.getMenuProps()}>
           {hasRows &&
             suggestions.map((item, index) => {
-              const address = leadAddressOf(item);
-              const people = peopleLineOf(item);
-              const parts = drawMarks ? item.highlight : [];
               const highlighted = highlightedIndex === index;
-              const markClass = cx("mark", "bl-ac-mark");
-              // Each part as drawn in a slot: a right-hand one keeps right.
-              const partNode: Record<
-                RowPlace,
-                (slot: "left" | "right") => ReactNode
-              > = {
-                title: slot => (
-                  <span
-                    className={cx("name", "bl-ac-name")}
-                    data-slot={slot}
-                    data-testid="business-suggestion-name"
-                    data-emphasis={look.matchEmphasis}
-                    data-region={region}
-                  >
-                    {marked(
-                      item.label,
-                      partsFor(item.label, parts, region, tokens),
-                      markClass,
-                    )}
-                    {item.matched_name !== null && (
-                      <span
-                        className={cx("also", "bl-ac-also")}
-                        data-testid="business-suggestion-also"
-                      >
-                        also{" "}
-                        {marked(
-                          item.matched_name,
-                          partsFor(item.matched_name, parts, region, tokens),
-                          markClass,
-                        )}
-                      </span>
-                    )}
-                  </span>
-                ),
-                flags: slot => (
-                  <StateSquares
-                    suggestion={item}
-                    cx={cx}
-                    more={text.more}
-                    slot={slot}
-                  />
-                ),
-                subtitle: slot => (
-                  <span
-                    className={cx("address", "bl-ac-address")}
-                    data-slot={slot}
-                    data-testid="business-suggestion-address"
-                  >
-                    {address ?? text.noAddress}
-                  </span>
-                ),
-                secondarySubtitle: slot =>
-                  people !== null && (
-                    <span
-                      className={cx("people", "bl-ac-people")}
-                      data-slot={slot}
-                      data-testid="business-suggestion-officers"
-                      data-role={people.role}
-                    >
-                      {people.names[0]}
-                      {people.more > 0 ? ` ${text.more(people.more)}` : ""}
-                      {people.role === "agent" ? text.agentSuffix : ""}
-                    </span>
-                  ),
-              };
-              // A line led by the title or the flags is a title line; one led
-              // by the subtitle or the secondary subtitle, a subtitle line.
               const defaultRow = (
-                <>
-                  {layout.map(line => {
-                    const titled =
-                      line.left === "title" || line.left === "flags";
-                    const left = partNode[line.left]("left");
-                    const right =
-                      line.right === null
-                        ? null
-                        : partNode[line.right]("right");
-                    // A row without the part a line leads with (no officers)
-                    // keeps the line for the other; with neither, drops it.
-                    if (!left && !right) {
-                      return null;
-                    }
-                    return (
-                      <div
-                        key={line.left}
-                        className={
-                          titled
-                            ? cx("titleLine", "bl-ac-line bl-ac-line-title")
-                            : cx(
-                                "subtitleLine",
-                                "bl-ac-line bl-ac-line-subtitle",
-                              )
-                        }
-                      >
-                        {left}
-                        {right}
-                      </div>
-                    );
-                  })}
-                </>
+                <DefaultRow
+                  item={item}
+                  layout={layout}
+                  look={look}
+                  tokens={tokens}
+                  text={text}
+                  cx={cx}
+                />
               );
               return (
                 <div

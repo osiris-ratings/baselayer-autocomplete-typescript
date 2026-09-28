@@ -25,7 +25,10 @@ const NO_LIENS: RelatedSet = set([], 0);
 
 function business(
   label: string,
-  fields: Pick<BusinessSuggestion, "domicile_state" | "states"> & {
+  fields: Pick<
+    BusinessSuggestion,
+    "domicile_state" | "states" | "structure"
+  > & {
     people: RelatedSet;
     address: string;
   },
@@ -39,6 +42,7 @@ function business(
     highlight: [],
     domicile_state: fields.domicile_state,
     states: fields.states,
+    structure: fields.structure,
     related: {
       people: fields.people,
       addresses: set([address(fields.address)]),
@@ -56,6 +60,7 @@ export const REEL: ReelCompany[] = [
       business("BLUESTEM BAKERY & CAFE, LLC", {
         domicile_state: "MN",
         states: ["IA", "MN", "WI"],
+        structure: "LLC",
         people: set(
           [
             person("Mara Lindqvist", "officer"),
@@ -68,24 +73,28 @@ export const REEL: ReelCompany[] = [
       business("BLUESTEM BAKEHOUSE, INC.", {
         domicile_state: "NE",
         states: ["IA", "KS", "NE"],
+        structure: "S_CORPORATION",
         people: set([person("Rosa Delgado", "officer")]),
         address: "118 Maple Ave, Lincoln, NE 68508",
       }),
       business("BLUESTEM BAKING CO.", {
         domicile_state: "KS",
         states: ["KS"],
+        structure: "GENERAL_PARTNERSHIP",
         people: set([person("PRAIRIE STATE AGENTS, LLC", "agent")]),
         address: "44 Mill Rd, Emporia, KS 66801",
       }),
       business("BLUESTEM BANK & TRUST", {
         domicile_state: "OK",
         states: ["KS", "OK"],
+        structure: "BANK",
         people: set([person("Walter Ames", "officer")], 6),
         address: "310 Oak St, Bartlesville, OK 74003",
       }),
       business("BLUESTEM BARN EVENTS, LLC", {
         domicile_state: "IA",
         states: ["IA"],
+        structure: "LLC",
         people: set([person("Jenna Price", "officer")]),
         address: "7 County Rd, Ames, IA 50010",
       }),
@@ -98,6 +107,7 @@ export const REEL: ReelCompany[] = [
       business("COPPERLINE ELECTRIC, INC.", {
         domicile_state: "AZ",
         states: ["AZ", "NM", "NV", "UT"],
+        structure: "C_CORPORATION",
         people: set(
           [person("Sam Okafor", "officer"), person("Lena Hart", "officer")],
           3,
@@ -107,24 +117,28 @@ export const REEL: ReelCompany[] = [
       business("COPPERLINE ELECTRICAL CONTRACTORS, LLC", {
         domicile_state: "TX",
         states: ["OK", "TX"],
+        structure: "LLC",
         people: set([person("LONE PEAK REGISTERED AGENTS, INC.", "agent")]),
         address: "900 Elm St, Fort Worth, TX 76102",
       }),
       business("COPPERLINE ELEVATOR SERVICES, LLC", {
         domicile_state: "CO",
         states: ["CO", "WY"],
+        structure: "LLC",
         people: set([person("Nadia Petrov", "officer")]),
         address: "1600 Lake Dr, Denver, CO 80202",
       }),
       business("COPPERLINE ENERGY, LLC", {
         domicile_state: "NM",
         states: ["NM", "TX"],
+        structure: "LLC",
         people: set([person("Carlos Mena", "officer")], 2),
         address: "501 Pine St, Albuquerque, NM 87102",
       }),
       business("COPPERLINE ENGINEERING GROUP, INC.", {
         domicile_state: "AZ",
         states: ["AZ"],
+        structure: "C_CORPORATION",
         people: set([person("Beth Lorne", "officer")]),
         address: "88 Birch Ave, Tucson, AZ 85701",
       }),

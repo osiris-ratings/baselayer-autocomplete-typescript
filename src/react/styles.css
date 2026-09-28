@@ -4,7 +4,8 @@
  * Every rule is one class deep, so a host's global reset (a design system's,
  * Tailwind's preflight, a `* { … }`) never outranks it, and a host class loaded
  * after this file wins a tie. Colors are custom properties: set them on
- * `.bl-ac`, or pass `look` to the component.
+ * `.bl-ac`, or pass `look` to the component. So are the weights, and the font:
+ * `--bl-ac-font` is left unset, so the component takes the page's font.
  */
 
 .bl-ac {
@@ -15,6 +16,8 @@
   --bl-ac-pill-fg: #22543d;
   --bl-ac-pill-primary-border: #48bb78;
   --bl-ac-pill-secondary-bg: #edf2f7;
+  --bl-ac-structure-bg: #edf2f7;
+  --bl-ac-structure-fg: #4a5568;
   --bl-ac-more-fg: #2d3748;
   --bl-ac-highlight-bg: #edf2f7;
   --bl-ac-border: #edf2f7;
@@ -29,8 +32,13 @@
   --bl-ac-menu-width: 560px;
   --bl-ac-list-max-height: 24rem;
   --bl-ac-line-height: 1.5;
+  --bl-ac-name-weight: 600;
+  --bl-ac-weight-base: 500;
+  --bl-ac-weight-mark: 700;
   position: relative;
   box-sizing: border-box;
+  /* Unset, the variable makes this declaration inherit the page's font. */
+  font-family: var(--bl-ac-font);
 }
 
 .bl-ac-label {
@@ -109,88 +117,159 @@
   background: var(--bl-ac-highlight-bg);
 }
 
+/*
+ * A line is its two corners. The lead takes the room the trailing corner
+ * leaves it, and gives way first; the trailing corner keeps to the right at
+ * its own width, so its column lines up down the menu. Text sits on the
+ * line's baseline, whatever its size.
+ */
 .bl-ac-line {
   display: flex;
   gap: 0.75rem;
-  justify-content: space-between;
+  align-items: baseline;
   margin: 0;
 }
 
-.bl-ac-line-title {
-  align-items: center;
+/*
+ * A corner pins a field and its badge together. Its text gives way,
+ * ellipsised down to nothing; a flag keeps its width, so a corner is never
+ * narrower than its flags.
+ */
+.bl-ac-corner {
+  display: grid;
+  grid-auto-columns: minmax(auto, max-content);
+  grid-auto-flow: column;
+  column-gap: 0.5rem;
+  align-items: baseline;
 }
 
-.bl-ac-line-subtitle {
-  align-items: baseline;
-  font-size: 14px;
-  color: var(--bl-ac-subtitle);
+.bl-ac-corner[data-corner="lead"] {
+  flex: 1 1 0;
+  justify-content: start;
+}
+
+.bl-ac-corner[data-corner="trailing"] {
+  flex: 0 1 auto;
+  justify-content: end;
+  margin-left: auto;
 }
 
 /*
- * One line, ellipsised at a word. The menu's
+ * Text at the right keeps its width while text in the lead can give way, up
+ * to a cap that leaves the lead some room: half the first line, which the
+ * name leads, or all but about 5rem of the second. Beside a lead with no
+ * text, it takes the rest of the line.
+ */
+.bl-ac-title ~ .bl-ac-corner[data-text] {
+  max-width: 50%;
+}
+
+.bl-ac-corner[data-corner="lead"][data-text] ~ .bl-ac-corner[data-text] {
+  max-width: calc(100% - 6rem);
+}
+
+/* A lead pinning a flag beside its text has spent that room on the flag, so
+   it shares the line with the text at the right, each giving way in
+   proportion to its width. */
+.bl-ac-corner[data-corner="lead"][data-text][data-flag] {
+  flex-basis: auto;
+}
+
+/* On the first line a flag, and a corner of flags, is centred on the line. */
+.bl-ac-line-title .bl-ac-states,
+.bl-ac-line-title .bl-ac-structure,
+.bl-ac-line-title > .bl-ac-corner:not([data-text]) {
+  align-self: center;
+}
+
+/*
+ * The title leads the first line: the name with its badge pinned to the end,
+ * then `also …`. Out of room, the title gives way before the trailing corner.
+ * Within it `also …` goes first, and whole: it wraps onto a second line the
+ * title never shows, rather than shrinking to a stray letter. Then the name
+ * is ellipsised, and the badge stays.
+ */
+.bl-ac-title {
+  display: flex;
+  flex: 1 1 0;
+  flex-wrap: wrap;
+  column-gap: 0.5rem;
+  align-content: flex-start;
+  align-items: baseline;
+  min-width: 0;
+  /* One line, or, where a tight line-height or a small font leaves it
+     shorter, a flag's height (1rem and 2px) or a text badge's line (14px). */
+  max-height: max(
+    calc(1em * var(--bl-ac-line-height)),
+    calc(1rem + 2px),
+    calc(14px * var(--bl-ac-line-height))
+  );
+  max-height: max(1lh, calc(1rem + 2px), calc(14px * var(--bl-ac-line-height)));
+  overflow: hidden;
+}
+
+/* The name and its badge, pinned together as a corner's field and badge are. */
+.bl-ac-name-group {
+  display: grid;
+  flex: 0 1 auto;
+  grid-auto-columns: minmax(auto, max-content);
+  grid-auto-flow: column;
+  column-gap: 0.5rem;
+  align-items: baseline;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/*
+ * One line, ellipsised where the text runs out of room, so the box ends where
+ * the text does and the next field sits right after it. The menu's
  * line-height (1.5) leaves room below the baseline for the underline mark,
  * which a tight line-height would clip.
  */
 .bl-ac-name,
-.bl-ac-address {
-  display: -webkit-box;
+.bl-ac-address,
+.bl-ac-people,
+.bl-ac-also {
   min-width: 0;
   margin: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
+  white-space: nowrap;
 }
 
 .bl-ac-name {
-  font-weight: 600;
+  font-weight: var(--bl-ac-name-weight);
   color: var(--bl-ac-title);
 }
 
+/* Shown only with 6em to spare, and never wider than it is. */
 .bl-ac-also {
-  margin-left: 0.5rem;
+  flex: 1 1 6em;
+  max-width: max-content;
   font-weight: normal;
   color: var(--bl-ac-subtitle);
 }
 
+/*
+ * The fields. Each is drawn the same in any place; its corner decides where
+ * it sits and what gives way first. Text gives way, ellipsised; a flag never
+ * does.
+ */
+.bl-ac-address,
 .bl-ac-people {
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-/* A part in a line's right-hand slot keeps to the right, whatever leads the
-   line or is missing from it, so the column lines up down the menu. */
-.bl-ac-line > [data-slot="right"] {
-  margin-left: auto;
-}
-
-/* On the right, the people keep their width, but never more than leaves the
-   address about 5rem: a long agent's name on a narrow menu is ellipsised
-   rather than pushing the address out and running past the row. */
-.bl-ac-people[data-slot="right"] {
-  max-width: calc(100% - 6rem);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Promoted to lead its line, the people give way before the flags beside
-   them, ellipsised. */
-.bl-ac-people[data-slot="left"] {
-  flex-shrink: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 14px;
+  color: var(--bl-ac-subtitle);
 }
 
 .bl-ac-states {
   display: flex;
-  flex-shrink: 0;
   gap: 0.25rem;
   align-items: center;
 }
 
 .bl-ac-state,
-.bl-ac-more-states {
+.bl-ac-more-states,
+.bl-ac-structure {
   box-sizing: border-box;
   padding: 0.125rem 0.25rem;
   font-size: 0.75rem;
@@ -214,6 +293,14 @@
   background: var(--bl-ac-pill-secondary-bg);
 }
 
+.bl-ac-structure {
+  padding: 0.125rem 0.375rem;
+  color: var(--bl-ac-structure-fg);
+  white-space: nowrap;
+  background: var(--bl-ac-structure-bg);
+  border: 1px solid transparent;
+}
+
 .bl-ac-footer {
   display: flex;
   gap: 0.5rem;
@@ -230,18 +317,21 @@
 }
 
 /*
- * The marks, one treatment per emphasis. The name owns its weight; the
- * alternative name stays at the subtitle's color and normal weight, so a mark
- * on it darkens rather than emboldens past the label.
+ * The marks, one treatment per emphasis, on the name and on the alternative
+ * name, each of which carries the emphasis. The name owns its weight; the
+ * alternative name stays at the subtitle's color and normal weight. With the
+ * weight emphasis, a matched word on either takes `--bl-ac-weight-mark`.
  */
-.bl-ac-name[data-emphasis="underline"] .bl-ac-mark {
+.bl-ac-name[data-emphasis="underline"] .bl-ac-mark,
+.bl-ac-also[data-emphasis="underline"] .bl-ac-mark {
   text-decoration: underline;
   text-decoration-color: var(--bl-ac-mark, var(--bl-ac-underline));
   text-decoration-thickness: 1.5px;
   text-underline-offset: 3px;
 }
 
-.bl-ac-name[data-emphasis="background"] .bl-ac-mark {
+.bl-ac-name[data-emphasis="background"] .bl-ac-mark,
+.bl-ac-also[data-emphasis="background"] .bl-ac-mark {
   margin: 0 -0.125rem;
   padding: 0 0.125rem;
   background: var(--bl-ac-mark, var(--bl-ac-marker));
@@ -249,19 +339,19 @@
 }
 
 .bl-ac-name[data-emphasis="weight"] {
-  font-weight: 500;
+  font-weight: var(--bl-ac-weight-base);
 }
 
 .bl-ac-name[data-emphasis="weight"] > .bl-ac-mark {
-  font-weight: 700;
+  font-weight: var(--bl-ac-weight-mark);
 }
 
 .bl-ac[data-mark-color] .bl-ac-name[data-emphasis="weight"] > .bl-ac-mark {
   color: var(--bl-ac-mark);
 }
 
-.bl-ac-name[data-emphasis="weight"] .bl-ac-also .bl-ac-mark {
-  font-weight: 600;
+.bl-ac-also[data-emphasis="weight"] .bl-ac-mark {
+  font-weight: var(--bl-ac-weight-mark);
   color: var(--bl-ac-mark, var(--bl-ac-also-mark));
 }
 
@@ -273,6 +363,6 @@
   color: var(--bl-ac-mark, var(--bl-ac-ink-mark, var(--bl-ac-title)));
 }
 
-.bl-ac-name[data-emphasis="ink"] .bl-ac-also .bl-ac-mark {
+.bl-ac-also[data-emphasis="ink"] .bl-ac-mark {
   color: var(--bl-ac-mark, var(--bl-ac-also-mark));
 }

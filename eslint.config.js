@@ -11,6 +11,7 @@ export default tseslint.config(
     files: [
       "src/react/**/*.{ts,tsx}",
       "tests/react/**/*.{ts,tsx}",
+      "tests/browser/**/*.{ts,tsx}",
       "site/**/*.{ts,tsx}",
     ],
     plugins: { "react-hooks": reactHooks, "jsx-a11y": jsxA11y },

@@ -42,30 +42,28 @@ motion, or in a browser without view transitions, the panes change at once.
 
 Pick the environment, then one of two ways in, and press **Apply**. The button
 stays gray until there is something to apply. Apply tests what you gave it
-before the demo uses it, and says what was wrong: a key the API refused, a
-token the tier refused or that is bound to another page, or one that has
-expired (read from the token itself, before any call). Once it passes, Connect
-folds away to one line that says how you are connected and, at its right, a
-dot with how the session stands: pulsing green with the time it has left
-(`valid 2:56`), blue while it is `idle` or `minting`, and red once a pasted
-token has `expired`, while the SDK backs off (`retry in m:ss`) or once it is
-`unavailable`. With a key it reads `idle` until the component takes its first
-session (on focus, by default). A pasted token's connection ends when the
-token expires; a key's does not, since the next search mints a new session,
-and until then the line reads `renews on the next search`. Open Connect again
-to change anything. Run locally, the page starts on **Production, through this
-dev server**.
+before the demo uses it, and says what was wrong: a key the API refused, a token
+the tier refused or that is bound to another page, or one that has expired (read
+from the token itself, before any call). Once it passes, Connect folds away to
+one line that says how you are connected and, at its right, a dot with how the
+session stands: pulsing green with the time it has left (`valid 2:56`), blue
+while it is `idle` or `minting`, and red once a pasted token has `expired`,
+while the SDK backs off (`retry in m:ss`) or once it is `unavailable`. With a
+key it reads `idle` until the component takes its first session (on the first
+keystroke, by default). A pasted token's connection ends when the token expires;
+a key's does not, since the next search mints a new session, and until then the
+line reads `renews on the next search`. Open Connect again to change anything.
+Run locally, the page starts on **Production, through this dev server**.
 
 **An API key.** The page mints for itself, the way your backend would. The key
 stays in the tab's memory, is sent only to the API host you picked (or to the
-local dev server, which forwards it there), and is never stored; the page
-loads no third-party code, and the published page ships a
-Content-Security-Policy that allows none (`pnpm demo` adds none: its hot
-reload needs an inline script). An API key has no test but a mint, so Apply
-mints one session and the demo hands it to the component as its first: the
-test costs nothing the component's own first mint (on focus, by default) would
-not have. On the published page this mode needs the API to accept the demo's
-origin.
+local dev server, which forwards it there), and is never stored; the page loads
+no third-party code, and the published page ships a Content-Security-Policy that
+allows none (`pnpm demo` adds none: its hot reload needs an inline script). An
+API key has no test but a mint, so Apply mints one session and the demo hands it
+to the component as its first: the test costs nothing the component's own first
+mint (on the first keystroke, by default) would not have. On the published page
+this mode needs the API to accept the demo's origin.
 
 **A session token.** Mint a session from your terminal, bound to the demo's
 origin, and paste the token. Your API key never reaches the browser:
@@ -142,9 +140,10 @@ controls, and the panel opens below them.
 Opening Styling folds Connect away, so the component is what you look at. Its
 menu stays open, blur or no blur, and takes its place in the page rather than
 lying over it. With nothing typed it shows made-up rows, as many as Rows asks
-for (five by default, eight at most), that carry every part of a row
+for (five by default, eight at most), that carry every field of a row
 (highlighted words, a matched alternative name, the domicile square and the
-overflow, an address, officers with a +N, a registered agent, the count), so
+overflow, a spread of structures, one on a name with no suffix and one not
+known, an address, officers with a +N, a registered agent, the count), so
 every knob can be judged before a keystroke; type a name and the real rows
 take their place. The rows pretend "harbor concr" was typed, one word in full
 and the next only begun, so the region shows its difference: whole word
@@ -152,36 +151,50 @@ highlights CONCRETE, typed characters only its CONCR.
 
 Behavior acts on the sample rows as it would on real ones: Rows sets how many
 there are, up to the sample's eight. The characters, the pause and the session
-act only as you type. What a row fetches follows from its components: leave
-out the subtitle and the addresses are not asked for, leave out the secondary
-subtitle and the people (officers and agents) are not. Leave out both and no
-`include` is sent, since the tier refuses an empty one, so its default, people
-and addresses, comes back all the same, only not drawn.
+act only as you type. What a row fetches follows from its layout: place the
+address nowhere and the addresses are not asked for, place the people nowhere
+and the people (officers and agents) are not. Place neither and no `include`
+is sent, since the tier refuses an empty one, so its default, people and
+addresses, comes back all the same, only not drawn.
 
 First come six presets, each a color theme drawn as a small row in its own
 colors: Light (the default, with matched ink in green), Baselayer, Midnight,
 Monokai, Sepia and Rosé. A preset sets the colors, the corners and the shadow,
 and leaves your sizes, behavior and text alone. Then every knob the styled
-component has, in sections that start folded: the components a row shows
-(beside its title, which always shows, its flags, subtitle and secondary
-subtitle: on a business, the states, the lead address and the officers or the
-registered agent), how matched words are highlighted (the emphasis, the
-region, and one color override for every emphasis) and whether the footer
-shows the round trip and the index that answered (`look.showDebugInfo`, a
+component has, in sections that start folded: the components a row shows, drawn
+as the row itself (the name, which always shows, then each line's two corners, a
+field and the badge pinned to its inner side; each place drawn as the field it
+holds, and as wide as where it sits, whatever it holds, so the two lines'
+columns line up and a chevron stays put. A field is dragged, by mouse or by
+finger, onto another place, where it swaps with what was there, or onto a tray
+of the fields the row leaves out. While it flies, tilted and drawn as the cell
+it left, every spot that takes it is lit. The fold shows only layouts the row
+can draw: a drop lands only where the field would stay; a place nothing can go
+in yet, a badge beside an empty field or the second line's right with no lead,
+is hidden, keeping its room; and a field that leaves the lead lets the right
+corner slide into it, as the row does. Each place's chevron is also a dropdown
+of what it can show, and picking a field from another place swaps it with what
+the place held, as a drop does), how matched words are highlighted (the
+emphasis, the region, and one color override for every emphasis) and whether the
+footer shows the round trip and the index that answered (`look.showDebugInfo`, a
 switch in the same fold), every color (the `look` prop's and the stylesheet's
-own variables, each with a swatch that opens a color picker), shape and size,
-behavior (rows, 1 to 20; the characters typed before it asks, 2 to 10 and 3 by
-default; the pause before asking; when the session is minted: on focus, on the
-first keystroke or with the first request; and whether the menu is as wide as
-the input, as it is by default), the text (the label, and every message that
-is a string: `more` and `httpFallback` are functions, so they keep their
-defaults), and the structural switches (`classNames`, `unstyled`). Changes
-apply as you make them. A color changed from its preset's carries a reset
-inside its field, which puts back the value the last preset chosen gave it.
-**Your configuration** at the bottom is the code that reproduces the result,
-in a React tab and a CSS tab with a **Copy**: the props that differ from the
-defaults, and the CSS variables to set. Its **Reset** puts the whole panel
-back as it opened: the Light preset and every default.
+own variables, each with a swatch that opens a color picker), the font (the
+page's, the system's, a serif or a mono this page loads, or a stack of your own;
+the name's weight and the weight emphasis's two; and the HTML or CSS that loads
+a font of your own in the weights picked), shape and size, behavior (rows, 1 to
+20; the characters typed before it asks, 2 to 10 and 3 by default; the pause
+before asking; when the session is minted: on the first keystroke, as it is by
+default, on focus or with the first request; and whether the menu is as wide as
+the input, as it is by default), the text (the label, and every message that is
+a string: `more` and `httpFallback` are functions, so they keep their defaults;
+and each structure's flag, an empty one drawing none), and the markup switches
+(`classNames`, `unstyled`). Changes apply as you make them. A color changed from
+its preset's carries a reset inside its field, which puts back the value the
+last preset chosen gave it. **Your configuration** at the bottom is the code
+that reproduces the result, in a React tab and a CSS tab with a **Copy**: the
+props that differ from the defaults (the `layout` names only the places that
+differ from the SDK's), and the CSS variables to set. Its **Reset** puts the
+whole panel back as it opened: the Light preset and every default.
 
 ![The styling panel](images/demo-styling.png)
 

@@ -134,11 +134,12 @@ Exactly one of these connects it:
 The first `mint` or `mintUrl` is kept for the component's life; a new
 `baseUrl` re-creates its client. The rest is optional:
 
-- `mintOn` (`"focus"`): when the session is minted, one of `MINT_TIMINGS`
-  (type `MintTiming`). `focus` mints as the field takes focus, so the first
-  answer pays only for its suggestions, and a focus that types nothing still
-  spends a mint; `keystroke` mints on the first keystroke, overlapping the
-  typing; `request` mints with the first request, and that answer waits.
+- `mintOn` (`"keystroke"`): when the session is minted, one of
+  `MINT_TIMINGS` (type `MintTiming`). `keystroke` mints on the first
+  keystroke, overlapping the rest of the typing, so a click that types
+  nothing spends no mint; `focus` mints as the field takes focus, so the
+  first answer pays only for its suggestions; `request` mints with the first
+  request, and that answer waits.
 - `enabled` (`true`): off, the field is a plain input; nothing is minted
   and nothing is asked.
 - `limit` (`5`): rows per keystroke, an integer from 1 to 20; anything else
@@ -153,12 +154,16 @@ The first `mint` or `mintUrl` is kept for the component's life; a new
 - `onUnavailable({ unavailable })`: called when the deployment stops being
   able to mint (503 code 481), and again when it can; render your plain
   input meanwhile.
+- `include`: the related entities the tier expands for each row, by default
+  what `layout` places (`includeForLayout(layout)`). Rows you draw yourself
+  with `renderRow` name what they read: `include={["people"]}`.
 - `label`: the text of the default `<label>`; without it none is drawn.
 - `name`, `inputRef`, `onFocus` and `onBlur`: the input's, passed through.
-- `look`, `parts`, `menuFollowsInputWidth`, `open`, `classNames`,
+- `look`, `layout`, `menuFollowsInputWidth`, `open`, `classNames`,
   `renderLabel`, `renderInput`, `renderRow` and `unstyled`: see
-  [Styling](docs/styling.md); `messages`: see
-  [Error states](docs/error-states.md).
+  [Styling](docs/styling.md); `layout` is the field each place of a row
+  shows ([A row's places and fields](docs/styling.md#5-a-rows-places-and-fields)).
+  `messages`: see [Error states](docs/error-states.md).
 
 ## 3. Send the pick with your search
 

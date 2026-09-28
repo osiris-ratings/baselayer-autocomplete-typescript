@@ -521,23 +521,404 @@
   gap: 0 16px;
 }
 
-/* One toggle a line, each with what it is on a business. */
-.toggle-list {
-  display: grid;
-}
-
-.toggle-list .toggle {
-  min-height: 34px;
-}
-
-.toggle-list .hint {
-  margin-left: 4px;
-  font-size: 13px;
-}
-
 .fold-note {
   margin: 0 0 12px;
   font-size: 13px;
+}
+
+.fold-subhead {
+  margin: 8px 0 6px;
+}
+
+/* A structure's value as a field's label: the code, not a phrase. */
+.field-code {
+  padding: 0;
+  background: none;
+  font-size: 12px;
+}
+
+/* ---- Components: a row, drawn as its places ------------------------------ */
+
+/* A menu row in outline: the name and the badge, then the first line's
+   right; the second line's lead and its right. Each place is a dropdown drawn
+   the way the field it holds is, so the drawing reads as the row. */
+/* Painted in the look being styled: the menu's background, border and
+   corners, and each field in its own colors (--map-*, set from the state). */
+.row-map {
+  display: grid;
+  gap: 8px;
+  padding: 14px 16px;
+  background: var(--map-bg, var(--paper));
+  border: 1px solid var(--map-border, var(--line-soft));
+  border-radius: var(--map-radius, 4px);
+  box-shadow: 0 2px 6px rgba(9, 35, 79, 0.06);
+}
+
+.row-map-line {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+/* Every place is as wide as what it holds usually is: a name and an address
+   long, the people middling, a flag short. The name is fixed, so it is drawn
+   as a place that cannot be picked. */
+.row-map-name,
+.row-map-place :is(select, .row-map-face) {
+  box-sizing: border-box;
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  padding: 0 24px 0 9px;
+  overflow: hidden;
+  background: transparent;
+  /* A dash in the place's own ink, half faded. */
+  border: 1px dashed color-mix(in srgb, currentColor 45%, transparent);
+  border-radius: var(--map-pill-radius, 3px);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The name's slot shrinks as a place does: no padding of its own. */
+.row-map-slot {
+  display: inline-flex;
+  flex: 0 1 var(--map-lead);
+  min-width: 0;
+}
+
+.row-map-name {
+  background: color-mix(in srgb, var(--map-title, var(--ink)) 6%, transparent);
+  color: color-mix(in srgb, var(--map-title, var(--ink)) 60%, transparent);
+  font-weight: 600;
+  cursor: not-allowed;
+}
+
+.row-map-place {
+  position: relative;
+  display: inline-flex;
+  flex: 0 1 var(--map-trailing);
+  min-width: 0;
+}
+
+/* A place is as wide as where it sits, whatever it holds, so its chevron
+   stays put as its field changes; the two lines' columns line up. */
+.row-map-wrap {
+  --map-lead: 11rem;
+  --map-badge: 6rem;
+  --map-trailing: 7rem;
+}
+
+.row-map-place[data-drop="subtitle"] {
+  flex-basis: var(--map-lead);
+}
+
+.row-map-place[data-badge] {
+  flex-basis: var(--map-badge);
+}
+
+.row-map-place[data-trailing] {
+  margin-left: auto;
+}
+
+.row-map-place :is(select, .row-map-face) {
+  appearance: none;
+  cursor: pointer;
+}
+
+/* The dropdown's chevron, in the field's own ink. */
+.row-map-place::after {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  content: "";
+  pointer-events: none;
+  transform: translateY(-70%) rotate(45deg);
+}
+
+.row-map-place[data-field="states"] {
+  color: var(--map-pill-fg, #22543d);
+}
+
+.row-map-place[data-field="states"] :is(select, .row-map-face) {
+  background: var(--map-pill-bg, #c6f6d5);
+  border-color: var(--map-pill-border, #48bb78);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.row-map-place[data-field="structure"] {
+  color: var(--map-structure-fg, #4a5568);
+}
+
+.row-map-place[data-field="structure"] :is(select, .row-map-face) {
+  background: var(--map-structure-bg, #edf2f7);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.row-map-place[data-field="address"],
+.row-map-place[data-field="people"] {
+  color: var(--map-subtitle, #718096);
+}
+
+.row-map-place[data-field="empty"] {
+  color: color-mix(in srgb, var(--map-subtitle, #718096) 60%, transparent);
+}
+
+/* The dropdown's own list stays legible whatever the look, and whatever
+   size its select draws its own text at (none, in an empty badge). */
+.row-map-place option {
+  font-size: 13px;
+  color: #1c1b1c;
+  background: #ffffff;
+}
+
+/* Over the chevron, or on a place that is all dropdown, the cell's border
+   goes: the dash says a field can be dragged, and a press here opens the
+   menu instead. */
+.row-map:not([data-dragging]) .row-map-place:not([data-closed]) select:hover {
+  border-color: transparent;
+}
+
+/* One ring, over the cell's own border rather than around it. */
+.row-map-place select:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -1px;
+}
+
+/* An empty badge slot shows only a `+`. */
+/* Its menu's text is hidden, not its ink: the dashed border is drawn in it. */
+.row-map-place[data-badge][data-field="empty"] :is(select, .row-map-face) {
+  padding: 0;
+  font-size: 0;
+}
+
+.row-map-place[data-badge][data-field="empty"]::after {
+  top: 50%;
+  right: 50%;
+  width: auto;
+  height: auto;
+  border: 0;
+  content: "+";
+  font-size: 15px;
+  line-height: 1;
+  transform: translate(50%, -55%);
+}
+
+/* A filled place drags by all of it but the chevron, which is its dropdown.
+   It keeps the page from scrolling while a finger drags. */
+.row-map-handle,
+.row-map-chip {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+}
+
+.row-map-handle {
+  position: absolute;
+  z-index: 1;
+  inset: 0 24px 0 0;
+}
+
+/* The chevron is the dropdown: a rounded box comes up under the pointer (or
+   the keyboard's focus) there, so it reads as a button of its own. */
+.row-map-place::before {
+  position: absolute;
+  z-index: 1;
+  top: 4px;
+  right: 4px;
+  bottom: 4px;
+  width: 18px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  border-radius: 4px;
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.row-map-place[data-badge][data-field="empty"]::before {
+  inset: 4px;
+  width: auto;
+}
+
+.row-map-place:has(select:hover)::before {
+  opacity: 1;
+}
+
+.row-map-place::after {
+  z-index: 2;
+}
+
+/* While a field is dragged, every spot that takes it says so, the one under
+   the pointer most; a spot that does not is faded, and so is the field's own. */
+.row-map-place[data-accepts][data-field] select,
+.row-map-tray[data-accepts] {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 14%, transparent);
+}
+
+.row-map-tray[data-accepts] {
+  background: color-mix(in srgb, var(--blue) 5%, transparent);
+}
+
+.row-map-place[data-over][data-field] select,
+.row-map-tray[data-over] {
+  border-style: solid;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 32%, transparent);
+}
+
+.row-map[data-dragging] .row-map-place:not([data-accepts]),
+.row-map-chip[data-dragged] {
+  opacity: 0.4;
+}
+
+/* A place nothing can go in until the one beside it is filled is not drawn,
+   but keeps its room, so the columns and the chevrons stay put. */
+.row-map-place[data-closed] {
+  visibility: hidden;
+}
+
+/* The fields the row leaves out, to drag back in. */
+.row-map-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  min-height: 36px;
+  margin-top: 8px;
+  padding: 4px 8px;
+  border: 1px dashed var(--line);
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.row-map-tray-label {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.row-map-tray-hint {
+  opacity: 0.8;
+}
+
+.row-map-chip {
+  position: relative;
+  display: inline-flex;
+  box-sizing: border-box;
+  align-items: center;
+  height: 26px;
+  padding: 0 9px;
+  background: var(--paper, #ffffff);
+  border: 1px dashed color-mix(in srgb, currentColor 45%, transparent);
+  border-radius: var(--map-pill-radius, 3px);
+  color: var(--map-subtitle, #718096);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.row-map-chip[data-field="states"] {
+  background: var(--map-pill-bg, #c6f6d5);
+  border-color: var(--map-pill-border, #48bb78);
+  color: var(--map-pill-fg, #22543d);
+  font-weight: 600;
+}
+
+.row-map-chip[data-field="structure"] {
+  background: var(--map-structure-bg, #edf2f7);
+  color: var(--map-structure-fg, #4a5568);
+  font-weight: 600;
+}
+
+/* The field in flight: the cell it was lifted from, at its size, held where
+   it was grabbed, and tilted as if picked up. A face over nothing gets the
+   menu's background, since the page shows through it otherwise. */
+.row-map-ghost {
+  position: fixed;
+  z-index: 1000;
+  margin: 0;
+  filter: drop-shadow(0 8px 12px rgba(9, 35, 79, 0.22));
+  pointer-events: none;
+  transform: rotate(-3deg);
+}
+
+/* After the places' shared rule, whose `font` would reset the line. */
+.row-map-place .row-map-face {
+  display: block;
+  line-height: 26px;
+}
+
+.row-map-ghost .row-map-face {
+  background-color: var(--map-bg, var(--paper));
+}
+
+/* On a phone the name is shortened, and every gap and margin tightens. */
+.row-map-wrap {
+  container-type: inline-size;
+}
+
+.row-map-name-short {
+  display: none;
+}
+
+@container (max-width: 420px) {
+  /* Four places to a line: the name is short here, so the lead gives the
+     others its room. */
+  .row-map {
+    --map-lead: 5.5rem;
+    --map-badge: 5rem;
+    --map-trailing: 5.5rem;
+  }
+
+  .row-map {
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .row-map-line {
+    gap: 5px;
+  }
+
+  .row-map-name-long {
+    display: none;
+  }
+
+  .row-map-name-short {
+    display: inline;
+  }
+
+  .row-map-name,
+  .row-map-place :is(select, .row-map-face) {
+    padding-right: 18px;
+    padding-left: 6px;
+    font-size: 11.5px;
+  }
+
+  .row-map-handle {
+    right: 18px;
+  }
+
+  .row-map-place::after {
+    right: 7px;
+  }
+
+  .row-map-place::before {
+    right: 2px;
+    width: 15px;
+  }
 }
 
 /* ---- Connect ------------------------------------------------------------ */

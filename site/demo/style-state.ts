@@ -1,16 +1,23 @@
 // Everything the styled component lets a host change, as one piece of state:
-// the `look` knobs, the CSS variables that are not knobs, the behavior
-// props, the text, and the structural switches. Defaults are the SDK's own,
-// imported rather than copied, except the stylesheet's variables, which the
-// stylesheet declares.
+// the `look` knobs, the CSS variables that are not knobs, the row's layout,
+// the behavior props, the text, and the markup switches. Defaults are the
+// SDK's own, imported rather than copied, except the stylesheet's variables,
+// which the stylesheet declares.
 
 import {
+  BUSINESS_STRUCTURES,
   DEFAULT_LOOK,
-  ROW_PARTS,
+  DEFAULT_ROW_LAYOUT,
+  ROW_FIELDS,
+  ROW_PLACES,
+  drawnRowLayout,
+  structureLabel,
   type Look,
   type MatchEmphasis,
   type MatchRegion,
-  type RowParts,
+  type RowField,
+  type RowLayout,
+  type RowPlace,
 } from "@baselayer-sdk/autocomplete";
 import {
   DEBOUNCE_MS,
@@ -20,6 +27,8 @@ import {
   type AutocompleteMessages,
   type MintTiming,
 } from "@baselayer-sdk/autocomplete/react";
+
+import type { Snippet } from "../shared/Code";
 
 /** The variables in react/styles.css that `look` does not set. */
 export const CSS_VARIABLES = {
@@ -75,9 +84,145 @@ export const CSS_VARIABLES = {
     value: "0 4px 8px rgba(16, 24, 40, 0.08)",
   },
   "--bl-ac-z": { label: "Stacking (z-index)", kind: "number", value: "1000" },
+  // Unset in the stylesheet: the component takes the page's font.
+  "--bl-ac-font": { label: "Font", kind: "font", value: "" },
+  "--bl-ac-name-weight": { label: "Name", kind: "weight", value: "600" },
+  "--bl-ac-weight-base": {
+    label: "Unmatched words",
+    kind: "weight",
+    value: "500",
+  },
+  "--bl-ac-weight-mark": {
+    label: "Matched words",
+    kind: "weight",
+    value: "700",
+  },
 } as const;
 
 export type CssVariable = keyof typeof CSS_VARIABLES;
+
+/** The fonts the Font fold offers: the page's own, and the ones it loads. */
+export const FONT_CHOICES = [
+  { label: "Page font (Uncut Sans)", value: "" },
+  {
+    label: "System UI",
+    value: 'system-ui, -apple-system, "Segoe UI", sans-serif',
+  },
+  {
+    label: "Serif (Newsreader)",
+    value: '"Newsreader Variable", Georgia, serif',
+  },
+  {
+    label: "Mono (Geist Mono)",
+    value: '"Geist Mono", ui-monospace, monospace',
+  },
+] as const;
+
+/** A font stack the fold does not offer: the host's own. */
+export const CUSTOM_FONT = "custom";
+
+/** Which of the fold's fonts a stack is, or the host's own. */
+export function fontChoice(stack: string): string {
+  const trimmed = stack.trim();
+  return (
+    FONT_CHOICES.find(choice => choice.value === trimmed)?.value ?? CUSTOM_FONT
+  );
+}
+
+export const FONT_WEIGHTS = [
+  "100",
+  "200",
+  "300",
+  "400",
+  "500",
+  "600",
+  "700",
+  "800",
+  "900",
+] as const;
+
+export const WEIGHT_LABELS: Record<(typeof FONT_WEIGHTS)[number], string> = {
+  "100": "100 · Thin",
+  "200": "200 · Extra light",
+  "300": "300 · Light",
+  "400": "400 · Regular",
+  "500": "500 · Medium",
+  "600": "600 · Semibold",
+  "700": "700 · Bold",
+  "800": "800 · Extra bold",
+  "900": "900 · Black",
+};
+
+export const WEIGHT_VARIABLES = [
+  "--bl-ac-name-weight",
+  "--bl-ac-weight-base",
+  "--bl-ac-weight-mark",
+] as const satisfies readonly CssVariable[];
+
+/** A variable's value in the state, or its default when it is left empty. */
+function varOrDefault(state: StyleState, name: CssVariable): string {
+  return state.vars[name].trim() || CSS_VARIABLES[name].value;
+}
+
+/**
+ * How to set a font of your own, in the weights the fold picked: load it in
+ * the page, from a font service or from your own files, then name it in
+ * `--bl-ac-font`. A stack of the host's own names its family; one of the
+ * fold's own fonts stands in as "Your Font".
+ */
+export function fontSnippets(state: StyleState): Snippet[] {
+  const stack = state.vars["--bl-ac-font"].trim();
+  const own = fontChoice(stack) === CUSTOM_FONT;
+  const named = own
+    ? stack
+        .split(",")[0]!
+        .trim()
+        .replace(/^["']|["']$/g, "")
+    : "";
+  const family = named === "" ? "Your Font" : named;
+  const fontStack = own ? stack : `"${family}", system-ui, sans-serif`;
+  const weights = [
+    ...new Set(WEIGHT_VARIABLES.map(name => varOrDefault(state, name))),
+  ].sort((a, b) => Number(a) - Number(b));
+  const rule = [
+    ".your-form .bl-ac {",
+    `  --bl-ac-font: ${fontStack};`,
+    ...WEIGHT_VARIABLES.map(name => `  ${name}: ${varOrDefault(state, name)};`),
+    "}",
+  ];
+  const query = `family=${encodeURIComponent(family).replace(/%20/g, "+")}:wght@${weights.join(";")}&display=swap`;
+  const html = [
+    "<!-- 1. Load the font in your <head>; Google Fonts, for one. -->",
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />',
+    "<link",
+    '  rel="stylesheet"',
+    `  href="https://fonts.googleapis.com/css2?${query}"`,
+    "/>",
+    "",
+    "<!-- 2. Point the autocomplete at it, in the weights it draws. -->",
+    "<style>",
+    ...rule.map(line => `  ${line}`),
+    "</style>",
+  ].join("\n");
+  const css = [
+    "/* 1. Or serve the font files yourself: one @font-face per weight. */",
+    ...weights.flatMap(weight => [
+      "@font-face {",
+      `  font-family: "${family}";`,
+      `  src: url("/fonts/${family.toLowerCase().replace(/\s+/g, "-")}-${weight}.woff2") format("woff2");`,
+      `  font-weight: ${weight};`,
+      "  font-display: swap;",
+      "}",
+    ]),
+    "",
+    "/* 2. Point the autocomplete at it, in the weights it draws. */",
+    ...rule,
+  ].join("\n");
+  return [
+    { label: "HTML", lang: "html", code: html },
+    { label: "CSS", lang: "css", code: css },
+  ];
+}
 
 /** The messages that are strings; `more` and `httpFallback` are functions. */
 export const TEXT_MESSAGES = [
@@ -95,10 +240,21 @@ export const TEXT_MESSAGES = [
 
 export type TextMessage = (typeof TEXT_MESSAGES)[number];
 
+/** A structure the tier knows, which the Text fold lists. */
+export type Structure = (typeof BUSINESS_STRUCTURES)[number];
+
+/** Each structure's flag as the SDK draws it; "" for none. */
+export const STRUCTURE_FLAGS = Object.fromEntries(
+  BUSINESS_STRUCTURES.map(structure => [
+    structure,
+    structureLabel(structure) ?? "",
+  ]),
+) as Record<Structure, string>;
+
 export interface StyleState {
   look: Look;
-  /** Which parts of a row show (`parts`). */
-  parts: RowParts;
+  /** The field each place of a row shows (`layout`). */
+  layout: RowLayout;
   vars: Record<CssVariable, string>;
   limit: number;
   minChars: number;
@@ -109,6 +265,8 @@ export interface StyleState {
   menuFollowsInputWidth: boolean;
   label: string;
   messages: Record<TextMessage, string>;
+  /** Each structure's flag (`messages.structures`); "" draws none. */
+  structures: Record<Structure, string>;
   /** Draw the input with this page's own input class (`classNames.input`). */
   pageInput: boolean;
   unstyled: boolean;
@@ -120,19 +278,20 @@ export const DEFAULT_LABEL = "Business name";
 
 export const DEFAULT_STYLE: StyleState = {
   look: { ...DEFAULT_LOOK },
-  parts: Object.fromEntries(ROW_PARTS.map(part => [part, true])) as RowParts,
+  layout: { ...DEFAULT_ROW_LAYOUT },
   vars: Object.fromEntries(
     Object.entries(CSS_VARIABLES).map(([name, spec]) => [name, spec.value]),
   ) as Record<CssVariable, string>,
   limit: DEFAULT_LIMIT,
   minChars: MIN_QUERY_CHARS,
   debounceMs: DEBOUNCE_MS,
-  mintOn: "focus",
+  mintOn: "keystroke",
   menuFollowsInputWidth: true,
   label: DEFAULT_LABEL,
   messages: Object.fromEntries(
     TEXT_MESSAGES.map(key => [key, DEFAULT_MESSAGES[key]]),
   ) as Record<TextMessage, string>,
+  structures: { ...STRUCTURE_FLAGS },
   pageInput: false,
   unstyled: false,
   preset: "Light",
@@ -154,6 +313,8 @@ export const LOOK_COLORS: { key: LookColor; label: string }[] = [
   { key: "pillForegroundColor", label: "Flag text" },
   { key: "primaryPillBorderColor", label: "Domicile flag border" },
   { key: "secondaryPillBackgroundColor", label: "+N flag" },
+  { key: "structurePillBackgroundColor", label: "Structure flag" },
+  { key: "structurePillForegroundColor", label: "Structure flag text" },
 ];
 
 export const EMPHASES: MatchEmphasis[] = [
@@ -193,6 +354,143 @@ export function changedMessages(state: StyleState): [TextMessage, string][] {
   ).map(key => [key, state.messages[key]]);
 }
 
+/** The structure flags relabeled, in the tier's order. */
+export function changedStructures(state: StyleState): [Structure, string][] {
+  return BUSINESS_STRUCTURES.filter(
+    structure => state.structures[structure] !== STRUCTURE_FLAGS[structure],
+  ).map(structure => [structure, state.structures[structure]]);
+}
+
+/** Each place a host fills, named for where it sits. */
+export const PLACE_LABELS: Record<RowPlace, string> = {
+  titleBadge: "Beside the name",
+  titleTrailingBadge: "Beside title, right",
+  titleTrailing: "Title, right",
+  subtitle: "Subtitle",
+  subtitleBadge: "Beside subtitle",
+  subtitleTrailingBadge: "Beside subtitle, right",
+  subtitleTrailing: "Subtitle, right",
+};
+
+/** Where a dragged field can land besides a place: out of the row. */
+export const TRAY = "tray";
+export type DropSpot = RowPlace | typeof TRAY;
+
+/**
+ * Whether a field can be dropped on a spot: on a place other than its own
+ * where the row would draw it, and on the tray when the row shows it. A
+ * badge beside nothing, the badge beside the field itself included, or the
+ * second line's right with no lead, is drawn elsewhere, so it takes nothing.
+ */
+export function canDrop(
+  layout: RowLayout,
+  field: RowField,
+  to: DropSpot,
+): boolean {
+  const from = ROW_PLACES.find(place => layout[place] === field);
+  if (to === TRAY) return from !== undefined;
+  return to !== from && moveField(layout, field, to)[to] === field;
+}
+
+/** The fields the layout places nowhere, in their own order. */
+export function unplacedFields(layout: RowLayout): RowField[] {
+  const placed = new Set(ROW_PLACES.map(place => layout[place]));
+  return ROW_FIELDS.filter(field => !placed.has(field));
+}
+
+/**
+ * The layout with a field dropped somewhere, as the row draws it. On a place,
+ * the field takes it and whatever the place held goes where the field came
+ * from (a swap, or out of the row when the field came from the tray); on the
+ * tray, the field leaves the row.
+ */
+export function moveField(
+  layout: RowLayout,
+  field: RowField,
+  to: DropSpot,
+): RowLayout {
+  const from = ROW_PLACES.find(place => layout[place] === field);
+  const next = { ...layout };
+  if (to === TRAY) {
+    if (from !== undefined) next[from] = null;
+    return drawnRowLayout(next);
+  }
+  const displaced = next[to];
+  if (from !== undefined) next[from] = displaced;
+  next[to] = field;
+  return drawnRowLayout(next);
+}
+
+/** The choice that leaves a place empty. */
+export const EMPTY_PLACE = "empty";
+export type PlaceChoice = RowField | typeof EMPTY_PLACE;
+
+const CHOICES: readonly PlaceChoice[] = [EMPTY_PLACE, ...ROW_FIELDS];
+
+export const CHOICE_LABELS: Record<PlaceChoice, string> = {
+  [EMPTY_PLACE]: "Empty",
+  states: "States",
+  structure: "Structure",
+  address: "Address",
+  people: "People",
+};
+
+/**
+ * A place's options: empty, and every field the row would draw there. A
+ * field placed elsewhere says where it comes from, and that it swaps with
+ * the place's own field when the place holds one.
+ */
+export function placeOptions(
+  layout: RowLayout,
+  place: RowPlace,
+): { value: PlaceChoice; label: string }[] {
+  const drawnHere = CHOICES.filter(
+    choice =>
+      choice === EMPTY_PLACE ||
+      withPlaced(layout, place, choice)[place] === choice,
+  );
+  return drawnHere.map(choice => {
+    const elsewhere = ROW_PLACES.find(
+      other => other !== place && layout[other] === choice,
+    );
+    return {
+      value: choice,
+      label:
+        elsewhere === undefined
+          ? CHOICE_LABELS[choice]
+          : `${CHOICE_LABELS[choice]}, ${layout[place] === null ? "from" : "swaps with"} ${PLACE_LABELS[elsewhere]}`,
+    };
+  });
+}
+
+/**
+ * The layout with a choice made for one place, as the row draws it: a pick
+ * is the drop of that field on that place, so it swaps with what the place
+ * held, and empty sends the place's field out of the row.
+ */
+export function withPlaced(
+  layout: RowLayout,
+  place: RowPlace,
+  choice: PlaceChoice,
+): RowLayout {
+  if (choice !== EMPTY_PLACE) {
+    return moveField(layout, choice, place);
+  }
+  const field = layout[place];
+  return field === null
+    ? drawnRowLayout(layout)
+    : moveField(layout, field, TRAY);
+}
+
+/** The places that show another field than the SDK's default, in reading order. */
+export function changedLayout(state: StyleState): Partial<RowLayout> {
+  return Object.fromEntries(
+    ROW_PLACES.filter(
+      place => state.layout[place] !== DEFAULT_ROW_LAYOUT[place],
+    ).map(place => [place, state.layout[place]]),
+  );
+}
+
 /** The preview's stylesheet: the changed variables, on the demo's component only. */
 export function previewCss(state: StyleState): string {
   const vars = changedVars(state);
@@ -213,10 +511,10 @@ export function exportCode(state: StyleState): { tsx: string; css: string } {
       `look={{\n${look.map(([key, value]) => `    ${key}: ${literal(value)},`).join("\n")}\n  }}`,
     );
   }
-  const hidden = ROW_PARTS.filter(part => !state.parts[part]);
-  if (hidden.length > 0) {
+  const layout = Object.entries(changedLayout(state));
+  if (layout.length > 0) {
     props.push(
-      `parts={{ ${hidden.map(part => `${part}: false`).join(", ")} }}`,
+      `layout={{\n${layout.map(([place, field]) => `    ${place}: ${field === null ? "null" : JSON.stringify(field)},`).join("\n")}\n  }}`,
     );
   }
   if (state.limit !== DEFAULT_STYLE.limit) props.push(`limit={${state.limit}}`);
@@ -229,11 +527,17 @@ export function exportCode(state: StyleState): { tsx: string; css: string } {
   if (!state.menuFollowsInputWidth) props.push("menuFollowsInputWidth={false}");
   if (state.label !== DEFAULT_LABEL)
     props.push(`label=${JSON.stringify(state.label)}`);
-  const messages = changedMessages(state);
-  if (messages.length > 0) {
-    props.push(
-      `messages={{\n${messages.map(([key, value]) => `    ${key}: ${JSON.stringify(value)},`).join("\n")}\n  }}`,
+  const messages = changedMessages(state).map(
+    ([key, value]) => `    ${key}: ${JSON.stringify(value)},`,
+  );
+  const structures = changedStructures(state);
+  if (structures.length > 0) {
+    messages.push(
+      `    structures: { ${structures.map(([structure, flag]) => `${structure}: ${JSON.stringify(flag)}`).join(", ")} },`,
     );
+  }
+  if (messages.length > 0) {
+    props.push(`messages={{\n${messages.join("\n")}\n  }}`);
   }
   if (state.pageInput) props.push('classNames={{ input: "your-input" }}');
   if (state.unstyled) props.push("unstyled");
@@ -283,6 +587,8 @@ export const PRESETS: Preset[] = [
       pillForegroundColor: "#09234f",
       primaryPillBorderColor: "#384ce3",
       secondaryPillBackgroundColor: "#f1f6fd",
+      structurePillBackgroundColor: "#eef0f3",
+      structurePillForegroundColor: "#4b4f58",
     },
     vars: {
       "--bl-ac-highlight-bg": "#f1f6fd",
@@ -308,6 +614,8 @@ export const PRESETS: Preset[] = [
       pillForegroundColor: "#a5b4fc",
       primaryPillBorderColor: "#6366f1",
       secondaryPillBackgroundColor: "#182033",
+      structurePillBackgroundColor: "#1c2230",
+      structurePillForegroundColor: "#aeb6c4",
     },
     vars: {
       "--bl-ac-highlight-bg": "#172036",
@@ -331,6 +639,8 @@ export const PRESETS: Preset[] = [
       pillForegroundColor: "#a6e22e",
       primaryPillBorderColor: "#a6e22e",
       secondaryPillBackgroundColor: "#3e3d32",
+      structurePillBackgroundColor: "#3e3d32",
+      structurePillForegroundColor: "#66d9ef",
     },
     vars: {
       "--bl-ac-highlight-bg": "#3e3d32",
@@ -355,6 +665,8 @@ export const PRESETS: Preset[] = [
       pillForegroundColor: "#6b4a24",
       primaryPillBorderColor: "#b0793a",
       secondaryPillBackgroundColor: "#f3ead9",
+      structurePillBackgroundColor: "#ede7dd",
+      structurePillForegroundColor: "#6e6358",
     },
     vars: {
       "--bl-ac-highlight-bg": "#f3ead9",
@@ -376,6 +688,8 @@ export const PRESETS: Preset[] = [
       pillForegroundColor: "#9d174d",
       primaryPillBorderColor: "#db2777",
       secondaryPillBackgroundColor: "#fdf2f6",
+      structurePillBackgroundColor: "#f2ebee",
+      structurePillForegroundColor: "#6f5a63",
     },
     vars: {
       "--bl-ac-highlight-bg": "#fdf2f6",
@@ -424,9 +738,22 @@ export function presetVar(state: StyleState, name: CssVariable): string {
 }
 
 /** How many colors, and shapes and sizes, differ from the preset last applied. */
+type VariableKind = (typeof CSS_VARIABLES)[CssVariable]["kind"];
+/** The variables the Shape and size fold holds, and the ones the Font fold does. */
+export const SHAPE_KINDS: ReadonlySet<VariableKind> = new Set([
+  "length",
+  "number",
+  "text",
+]);
+export const FONT_KINDS: ReadonlySet<VariableKind> = new Set([
+  "font",
+  "weight",
+]);
+
 export function presetChanges(state: StyleState): {
   colors: number;
   shape: number;
+  font: number;
 } {
   const differs = (a: string, b: string) =>
     a.trim().toLowerCase() !== b.trim().toLowerCase();
@@ -439,7 +766,9 @@ export function presetChanges(state: StyleState): {
         differs(state.look[key], presetColor(state, key)),
       ).length +
       vars.filter(name => CSS_VARIABLES[name].kind === "color").length,
-    shape: vars.filter(name => CSS_VARIABLES[name].kind !== "color").length,
+    shape: vars.filter(name => SHAPE_KINDS.has(CSS_VARIABLES[name].kind))
+      .length,
+    font: vars.filter(name => FONT_KINDS.has(CSS_VARIABLES[name].kind)).length,
   };
 }
 

@@ -7,9 +7,6 @@
  * design system on the page.
  */
 
-import { ROUTES } from "./entities";
-import type { Include } from "./wire";
-
 export const MATCH_EMPHASES = [
   "plain",
   "weight",
@@ -33,9 +30,9 @@ export interface Look {
   matchEmphasisRegion: MatchRegion;
   /** Behind the suggestion menu. */
   backgroundColor: string;
-  /** A row's first line, the name. */
+  /** The name, which leads every row. */
   titleColor: string;
-  /** A row's second line, and the fainter alternative name on the first. */
+  /** The address and the people, wherever they sit, and the fainter alternative name. */
   subtitleColor: string;
   /** The state squares. */
   pillBackgroundColor: string;
@@ -44,50 +41,16 @@ export interface Look {
   primaryPillBorderColor: string;
   /** The `+N` square that counts the states not shown. */
   secondaryPillBackgroundColor: string;
-}
-
-/**
- * The parts of a suggestion row a host may leave out, named for what they are
- * on any entity: its flags (a business's states), the subtitle (its lead
- * address) and the secondary subtitle (its officers, or its agent). The title
- * (a business's name, with an alternative name that matched) always shows: a
- * row is the entity it names.
- */
-export const ROW_PARTS = ["flags", "subtitle", "secondarySubtitle"] as const;
-export type RowPart = (typeof ROW_PARTS)[number];
-/** Which parts a row shows; a part left out, or anything but `false`, shows. */
-export type RowParts = Record<RowPart, boolean>;
-
-/** Which parts show, of those asked for: every part not set to `false`. */
-export function resolveParts(parts: Partial<RowParts> = {}): RowParts {
-  return Object.fromEntries(
-    ROW_PARTS.map(part => [part, parts[part] !== false]),
-  ) as RowParts;
-}
-
-/** The related entity each part of a business row is drawn from; its flags are its own. */
-const PART_SOURCES: Partial<Record<RowPart, Include>> = {
-  subtitle: "addresses",
-  secondarySubtitle: "people",
-};
-
-/**
- * What the tier is to expand for a business row showing these parts, in the
- * tier's own order: the rows' parts decide what is fetched, as well as what
- * is drawn. Empty when no part needs a related entity.
- */
-export function includeForParts(parts: RowParts): Include[] {
-  const needed = new Set(
-    ROW_PARTS.filter(part => parts[part]).map(part => PART_SOURCES[part]),
-  );
-  return ROUTES.businesses.includes.filter(relation => needed.has(relation));
+  /** The structure's flag. */
+  structurePillBackgroundColor: string;
+  structurePillForegroundColor: string;
 }
 
 export const DEFAULT_LOOK: Readonly<Look> = Object.freeze({
   showDebugInfo: false,
   matchEmphasis: "underline",
   matchEmphasisColor: null,
-  matchEmphasisRegion: "token",
+  matchEmphasisRegion: "substring",
   backgroundColor: "#FFFFFF", // white
   titleColor: "#1A202C", // gray.800
   subtitleColor: "#718096", // gray.500
@@ -95,6 +58,9 @@ export const DEFAULT_LOOK: Readonly<Look> = Object.freeze({
   pillForegroundColor: "#22543D", // green.800
   primaryPillBorderColor: "#48BB78", // green.400
   secondaryPillBackgroundColor: "#EDF2F7", // gray.100
+  // Neutral, so the flag does not read as a state square.
+  structurePillBackgroundColor: "#EDF2F7", // gray.100
+  structurePillForegroundColor: "#4A5568", // gray.600
 });
 
 const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
@@ -162,6 +128,14 @@ export function resolveLook(staged: LookInput = {}): Look {
     secondaryPillBackgroundColor: color(
       staged.secondaryPillBackgroundColor,
       base.secondaryPillBackgroundColor,
+    ),
+    structurePillBackgroundColor: color(
+      staged.structurePillBackgroundColor,
+      base.structurePillBackgroundColor,
+    ),
+    structurePillForegroundColor: color(
+      staged.structurePillForegroundColor,
+      base.structurePillForegroundColor,
     ),
   };
 }

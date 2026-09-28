@@ -1,7 +1,8 @@
-// Made-up rows for the Styling preview, so every part of a row can be styled
+// Made-up rows for the Styling preview, so every field of a row can be styled
 // before anything is typed: highlights, an alternative name that matched, the
-// domicile square and the overflow, an address, officers with a +N, and a
-// registered agent. None of these businesses is real.
+// domicile square and the overflow, a spread of structures (one on a name
+// that carries no suffix, and one not known), an address, officers with a +N,
+// and a registered agent. None of these businesses is real.
 
 import { queryTokens } from "@baselayer-sdk/autocomplete";
 import type {
@@ -76,6 +77,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
   row("HARBOR CONCRETE PUMPING CO., INC.", {
     domicile_state: "PA",
     states: ["MD", "NY", "OH", "PA", "WV"],
+    structure: "C_CORPORATION",
     related: {
       people: set(
         [person("Dana Whitfield", "officer"), person("Luis Ortega", "officer")],
@@ -89,6 +91,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     matchedName: "HARBOR CONCRETE PUMPS",
     domicile_state: "OH",
     states: ["OH", "PA"],
+    structure: "LLC",
     related: {
       people: set([person("MERIDIAN REGISTERED AGENTS, LLC", "agent")]),
       addresses: set([address("88 Canal St, Akron, OH 44308")]),
@@ -98,6 +101,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
   row("HARBOR VIEW CONCRETE, INC.", {
     domicile_state: "DE",
     states: ["CA", "DE", "FL", "TX", "WA"],
+    structure: "S_CORPORATION",
     related: {
       people: set([person("Priya Raman", "officer")]),
       addresses: set([address("400 Bayfront Ave, Tampa, FL 33602")]),
@@ -107,15 +111,17 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
   row("HARBOR CONCRETE SUPPLY, INC.", {
     domicile_state: "NJ",
     states: ["NJ"],
+    structure: null,
     related: {
       people: set([]),
       addresses: set([address("15 Ferry St, Newark, NJ 07105")]),
       liens: set([], 0),
     },
   }),
-  row("HARBOR CONCRETE & MASONRY, LLC", {
+  row("HARBOR CONCRETE & MASONRY", {
     domicile_state: "MD",
     states: ["DC", "MD", "VA"],
+    structure: "TRADE_NAME",
     related: {
       people: set([person("Grace Oduya", "officer")], 2),
       addresses: set([address("2210 Key Hwy, Baltimore, MD 21230")]),
@@ -125,6 +131,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
   row("CONCRETE HARBOR PARTNERS, LP", {
     domicile_state: "TX",
     states: ["TX"],
+    structure: "LP",
     related: {
       people: set([person("Silverline Agent Services, Inc.", "agent")]),
       addresses: set([address("700 Harborside Dr, Galveston, TX 77550")]),
@@ -134,6 +141,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
   row("HARBOR CONCRETE FORMING, INC.", {
     domicile_state: "WA",
     states: ["AK", "OR", "WA"],
+    structure: "B_CORPORATION",
     related: {
       people: set([person("Tomas Lindqvist", "officer")]),
       addresses: set([address("3100 Marine View Dr, Tacoma, WA 98422")]),
@@ -143,6 +151,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
   row("BAYSIDE HARBOR CONCRETE, INC.", {
     domicile_state: "CA",
     states: ["AZ", "CA", "NV", "OR"],
+    structure: "C_CORPORATION",
     related: {
       people: set([person("Maya Castellanos", "officer")], 3),
       addresses: set([address("55 Embarcadero W, Oakland, CA 94607")]),
@@ -160,9 +169,9 @@ const NOT_REQUESTED: RelatedSet = {
 
 /**
  * The sample rows as the knobs would have them come back: no more than
- * `limit`, and a relation the row's parts do not ask for (`include`, from
- * `includeForParts`) not sent, as the tier leaves it out. The other knobs act
- * on typing, which the sample has none of.
+ * `limit`, and a relation no placed field asks for (`include`, from
+ * `includeForLayout`) not sent, as the tier leaves it out. The other knobs
+ * act on typing, which the sample has none of.
  */
 export function sampleRows({
   limit,

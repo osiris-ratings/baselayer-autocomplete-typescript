@@ -68,6 +68,7 @@ const suggestion: BusinessSuggestion = {
   match: "strong",
   domicile_state: "DE",
   states: ["DE"],
+  structure: "C_CORPORATION",
   related: {
     people: { count: 1, matched: 0, truncated: false, items: [] },
     addresses: { count: 1, matched: 0, truncated: false, items: [] },

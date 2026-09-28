@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  BUSINESS_STRUCTURES,
   formatFound,
   leadAddressOf,
   officersOf,
@@ -8,7 +9,9 @@ import {
   partsFor,
   peopleLineOf,
   queryTokens,
+  structureLabel,
   typedPrefixLength,
+  type BusinessStructure,
   type BusinessSuggestion,
 } from "@baselayer-sdk/autocomplete";
 
@@ -21,6 +24,7 @@ const cinder: BusinessSuggestion = {
   domicile_state: "DE",
   // Sorted, as the tier returns them; the domicile is not first here on purpose.
   states: ["CA", "DE", "FL", "IL", "MA", "MO", "NY"],
+  structure: "C_CORPORATION",
   related: {
     people: {
       count: 4,
@@ -251,6 +255,89 @@ describe("orderedStates", () => {
       "MO",
       "NY",
     ]);
+  });
+});
+
+describe("structureLabel", () => {
+  it("draws each structure the tier knows as a short flag, and OTHER as none", () => {
+    const flags: Record<(typeof BUSINESS_STRUCTURES)[number], string | null> = {
+      SOLE_PROPRIETORSHIP: "Sole prop.",
+      GENERAL_PARTNERSHIP: "GP",
+      LLC: "LLC",
+      LLP: "LLP",
+      LLLP: "LLLP",
+      LP: "LP",
+      C_CORPORATION: "C-Corp",
+      S_CORPORATION: "S-Corp",
+      B_CORPORATION: "B-Corp",
+      NONPROFIT: "Nonprofit",
+      COOPERATIVE: "Co-op",
+      TRUST: "Trust",
+      PROFESSIONAL_ASSOCIATION: "P.A.",
+      PROFESSIONAL_CORPORATION: "P.C.",
+      TRADE_NAME: "DBA",
+      BANK: "Bank",
+      CREDIT_UNION: "Credit union",
+      INSURANCE: "Insurance",
+      OTHER: null,
+    };
+
+    expect(
+      Object.fromEntries(BUSINESS_STRUCTURES.map(s => [s, structureLabel(s)])),
+    ).toEqual(flags);
+  });
+
+  it("never draws a professional association as PA, Pennsylvania's square", () => {
+    expect(structureLabel("PROFESSIONAL_ASSOCIATION")).not.toBe("PA");
+  });
+
+  it("draws no flag for no structure, or for one this build has no label for", () => {
+    // `structure` is open: a newer tier's value is kept, and draws nothing
+    // until a build labels it. So does a value that happens to name a member
+    // of every object.
+    for (const structure of [
+      null,
+      "FOUNDATION",
+      "",
+      "constructor",
+      "toString",
+      "__proto__",
+    ]) {
+      expect(structureLabel(structure), String(structure)).toBeNull();
+    }
+  });
+
+  it("takes a host's label for any value, one at a time, and hides one set to empty", () => {
+    const labels: Partial<Record<BusinessStructure, string>> = {
+      LLC: "L.L.C.",
+      C_CORPORATION: "",
+      OTHER: "Other",
+      FOUNDATION: "Foundation",
+    };
+
+    expect(structureLabel("LLC", labels)).toBe("L.L.C.");
+    expect(structureLabel("S_CORPORATION", labels)).toBe("S-Corp");
+    expect(structureLabel("C_CORPORATION", labels)).toBeNull();
+    expect(structureLabel("OTHER", labels)).toBe("Other");
+    expect(structureLabel("FOUNDATION", labels)).toBe("Foundation");
+    expect(structureLabel(null, labels)).toBeNull();
+  });
+
+  it("keeps the default for a host's label it cannot use", () => {
+    // Staged from an untyped config: anything but a string is no label.
+    const labels = { LLC: 3, LP: null } as unknown as Partial<
+      Record<BusinessStructure, string>
+    >;
+
+    expect(structureLabel("LLC", labels)).toBe("LLC");
+    expect(structureLabel("LP", labels)).toBe("LP");
+    // A null in place of the labels, from plain JavaScript, is no labels.
+    expect(
+      structureLabel(
+        "LLC",
+        null as unknown as Partial<Record<BusinessStructure, string>>,
+      ),
+    ).toBe("LLC");
   });
 });
 

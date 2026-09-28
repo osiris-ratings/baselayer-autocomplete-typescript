@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_LOOK,
-  includeForParts,
   MATCH_EMPHASES,
   MATCH_REGIONS,
   resolveLook,
@@ -47,7 +46,7 @@ describe("resolveLook", () => {
     const look = resolveLook({});
     expect(look).toEqual(DEFAULT_LOOK);
     expect(look.matchEmphasis).toBe("underline");
-    expect(look.matchEmphasisRegion).toBe("token");
+    expect(look.matchEmphasisRegion).toBe("substring");
 
     expect(resolveLook()).toEqual(DEFAULT_LOOK);
   });
@@ -119,9 +118,26 @@ describe("resolveLook", () => {
       pillForegroundColor: "#555555",
       primaryPillBorderColor: "#666666",
       secondaryPillBackgroundColor: "#777777",
+      structurePillBackgroundColor: "#888888",
+      structurePillForegroundColor: "#999999",
     } satisfies Partial<Look>;
 
     expect(resolveLook(colors)).toEqual({ ...DEFAULT_LOOK, ...colors });
+  });
+
+  it("draws the structure flag in a neutral grey, so it does not read as a state square", () => {
+    const background = DEFAULT_LOOK.structurePillBackgroundColor;
+    const foreground = DEFAULT_LOOK.structurePillForegroundColor;
+    // A grey: its three channels within a few steps of one another.
+    const spread = (hex: string) => {
+      const channels = [1, 3, 5].map(at => parseInt(hex.slice(at, at + 2), 16));
+      return Math.max(...channels) - Math.min(...channels);
+    };
+
+    expect(spread(background)).toBeLessThanOrEqual(32);
+    expect(spread(foreground)).toBeLessThanOrEqual(32);
+    expect(background).not.toBe(DEFAULT_LOOK.pillBackgroundColor);
+    expect(foreground).not.toBe(DEFAULT_LOOK.pillForegroundColor);
   });
 
   it("defaults to hex colors, and hands back a look of its own", () => {
@@ -133,33 +149,5 @@ describe("resolveLook", () => {
     }
     expect(Object.isFrozen(DEFAULT_LOOK)).toBe(true);
     expect(resolveLook()).not.toBe(DEFAULT_LOOK);
-  });
-});
-
-describe("includeForParts", () => {
-  const all = { flags: true, subtitle: true, secondarySubtitle: true };
-
-  it("asks for the officers and the addresses while both lines show", () => {
-    expect(includeForParts(all)).toEqual(["people", "addresses"]);
-  });
-
-  it("asks for no addresses without the subtitle, the lead address", () => {
-    expect(includeForParts({ ...all, subtitle: false })).toEqual(["people"]);
-  });
-
-  it("asks for no officers without the secondary subtitle", () => {
-    expect(includeForParts({ ...all, secondarySubtitle: false })).toEqual([
-      "addresses",
-    ]);
-  });
-
-  it("asks for nothing related when only the title and flags show", () => {
-    expect(
-      includeForParts({
-        flags: true,
-        subtitle: false,
-        secondarySubtitle: false,
-      }),
-    ).toEqual([]);
   });
 });

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 
-import substringShot from "../../docs/images/typeahead-har-con-pum-substring.png";
+import tokenShot from "../../docs/images/typeahead-har-con-pum-token.png";
 import { Code, type Snippet } from "../shared/Code";
 import { links } from "../shared/links";
 import { SiteFooter } from "../shared/SiteFooter";
@@ -290,7 +290,7 @@ const STYLE_SNIPPETS: Snippet[] = [
     code: `<BusinessAutocomplete
   look={{
     matchEmphasis: "background", // plain | weight | ink | underline | background
-    matchEmphasisRegion: "substring", // token | substring
+    matchEmphasisRegion: "token", // substring | token
     pillBackgroundColor: "#DBEAFE",
     pillForegroundColor: "#1E3A8A",
   }}
@@ -658,8 +658,8 @@ export function Home() {
                   <p>
                     Point it at your endpoint with <code>mintUrl</code> and at
                     Baselayer with <code>baseUrl</code>. It warms a session up
-                    on focus, asks as the user types, and handles every refusal
-                    itself.
+                    on the first keystroke, asks as the user types, and handles
+                    every refusal itself.
                   </p>
                   <p>
                     Prefer your own markup? Use the hooks, or the core alone.
@@ -744,11 +744,11 @@ export function Home() {
               </div>
               <figure className="styling-shot">
                 <img
-                  src={substringShot}
-                  alt="The typeahead for “har con pum” with only the typed characters of each word underlined."
+                  src={tokenShot}
+                  alt="The typeahead for “har con pum” with each matched word underlined whole."
                 />
                 <figcaption>
-                  <code>matchEmphasisRegion: &quot;substring&quot;</code>
+                  <code>matchEmphasisRegion: &quot;token&quot;</code>
                 </figcaption>
               </figure>
             </div>

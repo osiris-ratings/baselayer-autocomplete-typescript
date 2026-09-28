@@ -10,11 +10,12 @@
  * its version.
  *
  * Two liberties, both so a tier release never turns every keystroke into a
- * contract error over a field nothing displays. Closed enums nothing branches
- * on (`RelatedItem.type`, `match`, `sources.*.status`) are read as strings.
- * And the keys the tier's OpenAPI leaves out of `required` (`matched_name`,
- * `RelatedItem.token`, `role`, `RelatedSet.count`, `RelatedSet.matched`) may
- * be absent as well as null; either reads as null.
+ * contract error over a new value or a field it adds. Closed enums
+ * (`RelatedItem.type`, `match`, `sources.*.status`, `structure`) are read as
+ * strings, so a value this build does not know is kept. And the keys the
+ * tier's OpenAPI leaves out of `required` (`matched_name`,
+ * `RelatedItem.token`, `role`, `RelatedSet.count`, `RelatedSet.matched`,
+ * `structure`) may be absent as well as null; either reads as null.
  */
 
 import {
@@ -78,12 +79,48 @@ export interface SuggestionBase<T extends EntityType, R extends Relation> {
   highlight: HighlightPart[];
 }
 
+/** The legal structures the tier knows, in the order its contract lists them. */
+export const BUSINESS_STRUCTURES = [
+  "SOLE_PROPRIETORSHIP",
+  "GENERAL_PARTNERSHIP",
+  "LLC",
+  "LLP",
+  "LLLP",
+  "LP",
+  "C_CORPORATION",
+  "S_CORPORATION",
+  "B_CORPORATION",
+  "NONPROFIT",
+  "COOPERATIVE",
+  "TRUST",
+  "PROFESSIONAL_ASSOCIATION",
+  "PROFESSIONAL_CORPORATION",
+  "TRADE_NAME",
+  "BANK",
+  "CREDIT_UNION",
+  "INSURANCE",
+  "OTHER",
+] as const;
+
+/**
+ * A business's legal structure: one of `BUSINESS_STRUCTURES`, or a value a
+ * newer tier sends, kept as the string it is.
+ */
+// `string & {}` admits any string and keeps the known values' completions.
+export type BusinessStructure =
+  (typeof BUSINESS_STRUCTURES)[number] | (string & {});
+
 export interface BusinessSuggestion extends SuggestionBase<
   "business",
   "businesses"
 > {
   domicile_state: string;
   states: string[];
+  /**
+   * The legal structure the domicile registration is filed under, as the
+   * tier spells it (`structureLabel` draws it); null when it is not known.
+   */
+  structure: BusinessStructure | null;
 }
 
 /** Not served yet: the working specification's row. A person has no jurisdiction of its own. */
@@ -284,7 +321,7 @@ function addressComponents(value: Json, path: string): AddressComponents {
 }
 
 /** The fields each entity type adds to the row. */
-const ROW_FIELDS: {
+const OWN_FIELDS: {
   [R in Relation]: (
     o: Record<string, unknown>,
     path: string,
@@ -293,6 +330,7 @@ const ROW_FIELDS: {
   businesses: (o, path) => ({
     domicile_state: string(o.domicile_state, `${path}.domicile_state`),
     states: array(o.states, `${path}.states`, string),
+    structure: nullable(o.structure, `${path}.structure`, string),
   }),
   people: () => ({}),
   addresses: (o, path) => ({
@@ -322,7 +360,7 @@ function suggestion<R extends Relation>(
     label: string(o.label, `${path}.label`),
     matched_name: nullable(o.matched_name, `${path}.matched_name`, string),
     match: string(o.match, `${path}.match`),
-    ...ROW_FIELDS[relation](o, path),
+    ...OWN_FIELDS[relation](o, path),
     related: relations(
       ROUTES[relation].includes,
       o.related,

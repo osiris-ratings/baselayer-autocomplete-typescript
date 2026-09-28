@@ -23,6 +23,14 @@ pnpm build
 pnpm check:package   # publint and are-the-types-wrong on the packed tarball
 ```
 
+The rows' layout is tested in Chromium, since jsdom lays nothing out. CI
+runs it in a job of its own; locally, install the browser once:
+
+```sh
+pnpm exec playwright install --only-shell chromium
+pnpm test:browser
+```
+
 The core (`src/core`, `src/index.ts`) and the server helper (`src/server`)
 must not import React, React DOM or downshift; ESLint enforces it and a test
 asserts it on the built bundle. The React entry imports the core through the

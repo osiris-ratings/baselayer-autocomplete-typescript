@@ -148,13 +148,18 @@ export interface FieldRow {
   sameAs: string | null;
 }
 
+/** What a property holds, past a `T | null` written as `anyOf` or `oneOf`. */
+function held(property: JsonSchema): JsonSchema {
+  return nonNull(resolve(property))[0] ?? property;
+}
+
 /** The object a property holds, directly or as its array's element. */
 function nestedObject(
   property: JsonSchema,
 ): { schema: JsonSchema; array: boolean } | null {
-  const target = resolve(nonNull(resolve(property))[0] ?? property);
+  const target = resolve(held(property));
   if (target.properties !== undefined) {
-    return { schema: nonNull(resolve(property))[0] ?? property, array: false };
+    return { schema: held(property), array: false };
   }
   if (
     target.items !== undefined &&
@@ -181,6 +186,7 @@ export function fieldRows(
   for (const [key, property] of Object.entries(resolved.properties ?? {})) {
     const path = prefix === "" ? key : `${prefix}.${key}`;
     const target = resolve(property);
+    const inner = held(property);
     const nested = nestedObject(property);
     const shape = nested !== null ? refName(nested.schema) : null;
     const repeat = shape !== null ? (seen.get(shape) ?? null) : null;
@@ -190,8 +196,14 @@ export function fieldRows(
       depth,
       type: describeType(property),
       required: resolved.required?.includes(key) ?? false,
-      description: property.description ?? target.description,
-      values: (target.enum ?? []).map(String),
+      // A nullable field's description may sit on its non-null variant, and
+      // its values on the schema that variant points at.
+      description:
+        property.description ??
+        target.description ??
+        inner.description ??
+        resolve(inner).description,
+      values: (resolve(inner).enum ?? []).map(String),
       sameAs: repeat,
     });
     if (nested === null || repeat !== null) {
