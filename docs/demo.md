@@ -164,13 +164,10 @@ colors: Light (the default, with matched ink in green), Baselayer, Midnight,
 Monokai, Sepia and Rosé. A preset sets the colors, the corners and the shadow,
 and leaves your sizes, behavior and text alone. Then every knob the styled
 component has, in sections that start folded: the components a row shows,
-as the field each place holds (beside the title, the name, which always
-shows: the badge after the name, the right of the title, the subtitle and
-the right of the subtitle, each a row of choices, none or one of the states,
-the structure, the address and the people; a field placed elsewhere is
-disabled, with a tooltip naming its place, so each field is lit once down
-the fold, and moving one means emptying its place first), how matched words
-are highlighted (the emphasis, the
+drawn as the row itself (the name, which always shows, with the badge after
+it and the first line's right, then the second line's lead and its right;
+each place a dropdown of what it can show, drawn as the field it holds, and
+picking a field from another place moves it and leaves that place empty), how matched words are highlighted (the emphasis, the
 region, and one color override for every emphasis) and whether the footer
 shows the round trip and the index that answered (`look.showDebugInfo`, a
 switch in the same fold), every color (the `look` prop's and the stylesheet's

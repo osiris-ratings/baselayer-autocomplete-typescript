@@ -19,7 +19,7 @@ import {
   changedVars,
   exportCode,
   INITIAL_STYLE,
-  placeChoices,
+  placeOptions,
   presetChanges,
   presetColor,
   presetVar,
@@ -159,22 +159,39 @@ describe("the Components fold", () => {
     expect(INITIAL_STYLE.layout).toEqual(DEFAULT_ROW_LAYOUT);
   });
 
-  it("disables a field in every place but the one it is in, and says where it is", () => {
-    const states = placeChoices(DEFAULT_ROW_LAYOUT, "subtitle").find(
-      choice => choice.value === "states",
+  it("offers every field in every place, and says which one a pick would move", () => {
+    const options = placeOptions(DEFAULT_ROW_LAYOUT, "subtitle");
+
+    expect(options.map(option => option.value)).toEqual([
+      EMPTY_PLACE,
+      "states",
+      "structure",
+      "address",
+      "people",
+    ]);
+    expect(options.find(o => o.value === "states")?.label).toBe(
+      "States, from Title, right",
     );
-    expect(states?.disabledReason).toMatch(/Title, right/);
+    // Its own field, and a field placed nowhere, are just the field.
+    expect(options.find(o => o.value === "address")?.label).toBe("Address");
     expect(
-      placeChoices(DEFAULT_ROW_LAYOUT, "titleTrailing").find(
-        choice => choice.value === "states",
-      )?.disabledReason,
-    ).toBeUndefined();
-    // Emptying a place is always a choice.
-    for (const place of ROW_PLACES) {
-      expect(
-        placeChoices(DEFAULT_ROW_LAYOUT, place)[0]?.disabledReason,
-      ).toBeUndefined();
-    }
+      placeOptions({ ...DEFAULT_ROW_LAYOUT, subtitle: null }, "subtitle").find(
+        o => o.value === "address",
+      )?.label,
+    ).toBe("Address");
+  });
+
+  it("moves a field picked from another place, and empties the place it left", () => {
+    expect(withPlaced(DEFAULT_ROW_LAYOUT, "subtitle", "states")).toEqual({
+      titleBadge: "structure",
+      titleTrailing: null,
+      subtitle: "states",
+      subtitleTrailing: "people",
+    });
+    expect(withPlaced(DEFAULT_ROW_LAYOUT, "titleBadge", EMPTY_PLACE)).toEqual({
+      ...DEFAULT_ROW_LAYOUT,
+      titleBadge: null,
+    });
   });
 
   it("can build any layout the SDK draws, and never places a field twice", () => {
@@ -183,9 +200,8 @@ describe("the Components fold", () => {
     const queue: RowLayout[] = [DEFAULT_ROW_LAYOUT];
     for (let layout = queue.shift(); layout; layout = queue.shift()) {
       for (const place of ROW_PLACES) {
-        for (const choice of placeChoices(layout, place)) {
-          if (choice.disabledReason !== undefined) continue;
-          const next = withPlaced(layout, place, choice.value);
+        for (const option of placeOptions(layout, place)) {
+          const next = withPlaced(layout, place, option.value);
           if (!seen.has(key(next))) {
             seen.set(key(next), next);
             queue.push(next);
@@ -196,10 +212,6 @@ describe("the Components fold", () => {
 
     const every = everyLayout();
     expect([...seen.keys()].sort()).toEqual(every.map(key).sort());
-    expect(withPlaced(DEFAULT_ROW_LAYOUT, "titleBadge", EMPTY_PLACE)).toEqual({
-      ...DEFAULT_ROW_LAYOUT,
-      titleBadge: null,
-    });
   });
 });
 

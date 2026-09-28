@@ -27,8 +27,6 @@ import {
   type MintTiming,
 } from "@baselayer-sdk/autocomplete/react";
 
-import type { Segment } from "./controls";
-
 /** The variables in react/styles.css that `look` does not set. */
 export const CSS_VARIABLES = {
   "--bl-ac-highlight-bg": {
@@ -238,8 +236,8 @@ export type PlaceChoice = RowField | typeof EMPTY_PLACE;
 
 const CHOICES: readonly PlaceChoice[] = [EMPTY_PLACE, ...ROW_FIELDS];
 
-const CHOICE_LABELS: Record<PlaceChoice, string> = {
-  [EMPTY_PLACE]: "—",
+export const CHOICE_LABELS: Record<PlaceChoice, string> = {
+  [EMPTY_PLACE]: "Empty",
   states: "States",
   structure: "Structure",
   address: "Address",
@@ -247,37 +245,41 @@ const CHOICE_LABELS: Record<PlaceChoice, string> = {
 };
 
 /**
- * A place's choices: none, and every field. A field placed elsewhere is
- * shown but disabled, naming where it is, so each field is lit once down the
- * fold and none can be placed twice.
+ * A place's options: empty, and every field. A field placed elsewhere says
+ * where it would move from, since picking it empties that place.
  */
-export function placeChoices(
+export function placeOptions(
   layout: RowLayout,
   place: RowPlace,
-): Segment<PlaceChoice>[] {
+): { value: PlaceChoice; label: string }[] {
   return CHOICES.map(choice => {
     const elsewhere = ROW_PLACES.find(
       other => other !== place && layout[other] === choice,
     );
     return {
       value: choice,
-      label: CHOICE_LABELS[choice],
-      name: choice === EMPTY_PLACE ? "Empty" : undefined,
-      disabledReason:
+      label:
         elsewhere === undefined
-          ? undefined
-          : `In ${PLACE_LABELS[elsewhere]}; empty that place to move it here`,
+          ? CHOICE_LABELS[choice]
+          : `${CHOICE_LABELS[choice]}, from ${PLACE_LABELS[elsewhere]}`,
     };
   });
 }
 
-/** The layout with a choice made for one place. */
+/** The layout with a choice made for one place; a field it takes from another place leaves that place empty. */
 export function withPlaced(
   layout: RowLayout,
   place: RowPlace,
   choice: PlaceChoice,
 ): RowLayout {
-  return { ...layout, [place]: choice === EMPTY_PLACE ? null : choice };
+  const next = { ...layout };
+  if (choice !== EMPTY_PLACE) {
+    for (const other of ROW_PLACES) {
+      if (next[other] === choice) next[other] = null;
+    }
+  }
+  next[place] = choice === EMPTY_PLACE ? null : choice;
+  return next;
 }
 
 /** The places that show another field than the SDK's default, in reading order. */

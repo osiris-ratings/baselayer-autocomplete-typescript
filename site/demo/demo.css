@@ -537,83 +537,131 @@
   font-size: 12px;
 }
 
-/* ---- Segmented: a row of cells, one of which is picked ------------------ */
+/* ---- Components: a row, drawn as its places ------------------------------ */
 
-/* Framed as a text input is, cells of equal width, so the controls stacked
-   in a fold read as a grid in which each field is lit once. */
-.demo .segmented {
+/* A menu row in outline: the name and the badge, then the first line's
+   right; the second line's lead and its right. Each place is a dropdown drawn
+   the way the field it holds is, so the drawing reads as the row. */
+.row-map {
   display: grid;
-  grid-auto-columns: minmax(0, 1fr);
-  grid-auto-flow: column;
-  gap: 1px;
-  overflow: hidden;
-  background: #cfd0d6;
-  border: 1px solid #cfd0d6;
-  border-radius: 2px;
-}
-
-.demo .segmented button {
-  position: relative;
-  min-width: 0;
-  height: 36px;
-  margin: 0;
-  padding: 0 4px;
-  overflow: hidden;
+  gap: 8px;
+  padding: 14px 16px;
   background: var(--paper);
-  border: 0;
-  color: var(--ink-soft);
-  font-family: var(--mono);
-  font-size: 11.5px;
-  letter-spacing: 0.04em;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
-  cursor: pointer;
-  transition:
-    background-color 120ms ease,
-    color 120ms ease;
-}
-
-.demo .segmented button:hover {
-  background: var(--faded);
-  color: var(--ink);
-}
-
-.demo .segmented button[aria-checked="true"] {
-  background: var(--blue);
-  color: #ffffff;
-}
-
-/* Placed elsewhere: shown, so the grid reads whole, but struck through with
-   a hatch, as a cell that is taken. */
-.demo .segmented button[aria-disabled="true"] {
-  background: repeating-linear-gradient(135deg, #f4f4f6 0 4px, #ececf0 4px 8px);
-  color: #a4a7b0;
-  cursor: not-allowed;
-}
-
-.demo .segmented button:focus-visible {
-  z-index: 1;
-  outline: 2px solid var(--blue);
-  outline-offset: -2px;
-}
-
-.demo .segmented button[aria-checked="true"]:focus-visible {
-  outline-color: var(--navy);
-}
-
-/* The title's place, which is fixed: a line where the others have a control. */
-.place-fixed {
-  display: flex;
-  align-items: center;
-  box-sizing: border-box;
-  height: 38px;
-  padding: 0 12px;
-  background: var(--faded);
   border: 1px solid var(--line-soft);
-  border-radius: 2px;
-  color: var(--muted);
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(9, 35, 79, 0.06);
+}
+
+.row-map-line {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+.row-map-name {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row-map-place {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  min-width: 0;
+}
+
+.row-map-place[data-trailing] {
+  margin-left: auto;
+}
+
+.row-map-place select {
+  box-sizing: border-box;
+  height: 28px;
+  margin: 0;
+  padding: 0 24px 0 9px;
+  appearance: none;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  color: var(--ink);
+  font: inherit;
   font-size: 13px;
+  cursor: pointer;
+  /* As wide as the pick, not the longest option, where the browser can. */
+  field-sizing: content;
+}
+
+/* The dropdown's chevron, in the field's own ink. */
+.row-map-place::after {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  color: inherit;
+  content: "";
+  pointer-events: none;
+  transform: translateY(-70%) rotate(45deg);
+}
+
+.row-map-place[data-field="states"] {
+  color: #22543d;
+}
+
+.row-map-place[data-field="states"] select {
+  background: #c6f6d5;
+  border-color: #48bb78;
+  color: #22543d;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.row-map-place[data-field="structure"] {
+  color: #4a5568;
+}
+
+.row-map-place[data-field="structure"] select {
+  background: #edf2f7;
+  color: #4a5568;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.row-map-place[data-field="address"],
+.row-map-place[data-field="people"] {
+  color: #718096;
+}
+
+.row-map-place[data-field="address"] select,
+.row-map-place[data-field="people"] select {
+  border-color: var(--line);
+  color: #718096;
+}
+
+/* An empty place is a gap with a dashed edge, still there to be filled. */
+.row-map-place[data-field="empty"] {
+  color: #a4a7b0;
+}
+
+.row-map-place[data-field="empty"] select {
+  border: 1px dashed #c3c6cf;
+  color: #a4a7b0;
+}
+
+.row-map-place select:hover {
+  border-color: var(--blue);
+}
+
+.row-map-place select:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
 }
 
 /* ---- Connect ------------------------------------------------------------ */

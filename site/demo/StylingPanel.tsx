@@ -1,14 +1,17 @@
 // Every knob the styled component has, grouped the way a designer would reach
 // for them, and at the end the code that reproduces the result.
 
-import { BUSINESS_STRUCTURES, ROW_PLACES } from "@baselayer-sdk/autocomplete";
+import {
+  BUSINESS_STRUCTURES,
+  type RowPlace,
+} from "@baselayer-sdk/autocomplete";
 import {
   MINT_TIMINGS,
   type MintTiming,
 } from "@baselayer-sdk/autocomplete/react";
 
 import { Code } from "../shared/Code";
-import { ColorInput, Field, Fold, Segmented, Select, Toggle } from "./controls";
+import { ColorInput, Field, Fold, Select, Toggle } from "./controls";
 import {
   CSS_VARIABLES,
   DEFAULT_STYLE,
@@ -31,8 +34,9 @@ import {
   changedMessages,
   changedStructures,
   exportCode,
-  placeChoices,
+  placeOptions,
   withPlaced,
+  type PlaceChoice,
   type CssVariable,
   type StyleState,
   type TextMessage,
@@ -65,6 +69,53 @@ const MINT_TIMING_LABELS: Record<MintTiming, string> = {
   keystroke: "On first keystroke (prewarm)",
   request: "On first request (lazy)",
 };
+
+/**
+ * One place of the drawn row: a dropdown of what it can show, drawn the way
+ * the field it holds is (a flag as a flag, text as text), empty as a gap.
+ */
+function PlaceSelect({
+  place,
+  state,
+  onChange,
+  trailing = false,
+}: {
+  place: RowPlace;
+  state: StyleState;
+  onChange(state: StyleState): void;
+  trailing?: boolean;
+}) {
+  const choice: PlaceChoice = state.layout[place] ?? EMPTY_PLACE;
+  return (
+    <span
+      className="row-map-place"
+      data-field={choice}
+      data-trailing={trailing || undefined}
+      title={`${PLACE_LABELS[place]} · layout.${place}`}
+    >
+      <select
+        aria-label={PLACE_LABELS[place]}
+        value={choice}
+        onChange={event =>
+          onChange({
+            ...state,
+            layout: withPlaced(
+              state.layout,
+              place,
+              event.target.value as PlaceChoice,
+            ),
+          })
+        }
+      >
+        {placeOptions(state.layout, place).map(option => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </span>
+  );
+}
 
 export function StylingPanel({
   state,
@@ -158,33 +209,33 @@ export function StylingPanel({
         summary={count(Object.keys(changedLayout(state)).length)}
       >
         <p className="hint fold-note">
-          The field each place of a row shows (<code>layout</code>). A field
-          sits in one place at most: empty its place to move it.
+          A row, drawn as its places (<code>layout</code>). Pick what each one
+          shows; a field taken from another place leaves that one empty.
         </p>
-        {/* A row is the entity it names, so its title always shows. */}
-        <Field label="Title" group>
-          <span className="place-fixed">The name, always shown</span>
-        </Field>
-        {ROW_PLACES.map(place => (
-          <Field
-            key={place}
-            label={PLACE_LABELS[place]}
-            group
-            hint={<code>layout.{place}</code>}
-          >
-            <Segmented
-              label={PLACE_LABELS[place]}
-              value={state.layout[place] ?? EMPTY_PLACE}
-              options={placeChoices(state.layout, place)}
-              onChange={choice =>
-                onChange({
-                  ...state,
-                  layout: withPlaced(state.layout, place, choice),
-                })
-              }
+        <div className="row-map" role="group" aria-label="A row's places">
+          <div className="row-map-line">
+            {/* A row is the entity it names, so its title always shows. */}
+            <span className="row-map-name" title="The name, always shown">
+              Business name
+            </span>
+            <PlaceSelect place="titleBadge" state={state} onChange={onChange} />
+            <PlaceSelect
+              place="titleTrailing"
+              state={state}
+              onChange={onChange}
+              trailing
             />
-          </Field>
-        ))}
+          </div>
+          <div className="row-map-line">
+            <PlaceSelect place="subtitle" state={state} onChange={onChange} />
+            <PlaceSelect
+              place="subtitleTrailing"
+              state={state}
+              onChange={onChange}
+              trailing
+            />
+          </div>
+        </div>
       </Fold>
 
       <Fold
