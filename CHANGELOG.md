@@ -26,7 +26,10 @@ as a minor release.
   places start empty. A place left out keeps its default field unless
   that field is placed elsewhere, and a field placed twice stays in the first
   place, so none is drawn twice. In the core: `ROW_PLACES`, `ROW_FIELDS`,
-  `DEFAULT_ROW_LAYOUT`, `resolveRowLayout`, `includeForLayout`, and the types
+  `DEFAULT_ROW_LAYOUT`, `resolveRowLayout`, `drawnRowLayout` (a layout as
+  the row draws it: a badge beside an empty field is drawn as that field,
+  and an empty second-line lead takes the right corner), `includeForLayout`,
+  and the types
   `RowPlace`, `RowField`, `RowLayout` and `RowLayoutInput`.
 - `structureLabel(structure, labels)`: a structure's flag (`C-Corp`, `LLC`,
   `Sole prop.`, `P.A.`, …), or null for `OTHER`, none, or a value it has no

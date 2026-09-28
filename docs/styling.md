@@ -225,9 +225,10 @@ left out keeps its default field, unless you placed that field elsewhere:
 field is drawn in one place at most; placed twice, it stays in the first
 place in reading order and the later one is left empty. In the core,
 `resolveRowLayout(layout)` returns the complete layout, every place with its
-field or `null` (before the second line's lead is filled from its right
-corner, below), `DEFAULT_ROW_LAYOUT` is the default, and `ROW_PLACES` (in
-reading order) and `ROW_FIELDS` list the places and the fields.
+field or `null`; `drawnRowLayout(resolved)` moves the fields to where the
+row draws them (below); `DEFAULT_ROW_LAYOUT` is the default, and
+`ROW_PLACES` (in reading order) and `ROW_FIELDS` list the places and the
+fields.
 
 A field looks the same in any place; the place decides where it sits and
 what gives way first:
@@ -244,9 +245,10 @@ what gives way first:
   at all, it takes the rest of the line and gives way itself.
 - Every row of a menu shares one layout, so its columns line up; a row
   without a field (no officers) leaves that field's place empty.
-- With `subtitle` and `subtitleBadge` empty, the second line's right
-  corner, its badge and all, is drawn in their place, so the line never
-  starts with a gap. A line with nothing in any of its places is dropped.
+- A badge beside an empty field is drawn as that field, so no badge is
+  pinned beside nothing. With `subtitle` empty, the second line's right
+  corner, its badge and all, is drawn in its place, so the line never starts
+  with a gap. A line with nothing in any of its places is dropped.
 
 Each field's element says where it is drawn, `data-place="titleBadge"` and
 so on, and the title's says `data-place="title"`.

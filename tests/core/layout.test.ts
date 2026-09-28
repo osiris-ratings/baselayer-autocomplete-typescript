@@ -4,6 +4,7 @@ import {
   DEFAULT_ROW_LAYOUT,
   ROW_FIELDS,
   ROW_PLACES,
+  drawnRowLayout,
   includeForLayout,
   resolveRowLayout,
   type RowField,
@@ -211,6 +212,83 @@ describe("resolveRowLayout", () => {
     };
 
     expect(resolveRowLayout(layout)).toEqual(layout);
+  });
+});
+
+describe("drawnRowLayout", () => {
+  it("leaves a layout with every badge beside a field as it is", () => {
+    const layout: RowLayout = {
+      titleBadge: null,
+      titleTrailingBadge: "structure",
+      titleTrailing: "states",
+      subtitle: "address",
+      subtitleBadge: null,
+      subtitleTrailingBadge: null,
+      subtitleTrailing: "people",
+    };
+    expect(drawnRowLayout(DEFAULT_ROW_LAYOUT)).toEqual(DEFAULT_ROW_LAYOUT);
+    expect(drawnRowLayout(layout)).toEqual(layout);
+  });
+
+  it("draws a badge beside an empty field as that field", () => {
+    expect(
+      drawnRowLayout({
+        ...DEFAULT_ROW_LAYOUT,
+        titleTrailingBadge: "states",
+        titleTrailing: null,
+      }),
+    ).toEqual(DEFAULT_ROW_LAYOUT);
+    expect(
+      drawnRowLayout({
+        ...DEFAULT_ROW_LAYOUT,
+        subtitle: null,
+        subtitleBadge: "address",
+      }),
+    ).toEqual(DEFAULT_ROW_LAYOUT);
+  });
+
+  it("draws the second line's right corner, badge and all, in an empty lead", () => {
+    expect(
+      drawnRowLayout({
+        ...DEFAULT_ROW_LAYOUT,
+        subtitle: null,
+        subtitleTrailingBadge: "address",
+      }),
+    ).toEqual({
+      ...DEFAULT_ROW_LAYOUT,
+      subtitle: "people",
+      subtitleBadge: "address",
+      subtitleTrailing: null,
+    });
+    // A lone badge on the right is the field it would be beside.
+    expect(
+      drawnRowLayout({
+        ...DEFAULT_ROW_LAYOUT,
+        subtitle: null,
+        subtitleTrailingBadge: "address",
+        subtitleTrailing: null,
+      }),
+    ).toEqual({ ...DEFAULT_ROW_LAYOUT, subtitleTrailing: null });
+  });
+
+  it("draws every layout as one it leaves as it is", () => {
+    const choices = [null, ...ROW_FIELDS];
+    let layouts: RowLayout[] = [{} as RowLayout];
+    for (const place of ROW_PLACES) {
+      layouts = layouts.flatMap(layout =>
+        choices.map(field => ({ ...layout, [place]: field })),
+      );
+    }
+    for (const layout of layouts) {
+      const drawn = drawnRowLayout(layout);
+      expect(drawnRowLayout(drawn)).toEqual(drawn);
+      // Nothing is lost or doubled: the same fields, in the drawn places.
+      const fields = (l: RowLayout) =>
+        ROW_PLACES.map(place => l[place])
+          .filter(field => field !== null)
+          .sort();
+      expect(fields(drawn)).toEqual(fields(layout));
+    }
   });
 });
 

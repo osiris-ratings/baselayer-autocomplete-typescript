@@ -57,6 +57,7 @@ export {
   DEFAULT_ROW_LAYOUT,
   ROW_FIELDS,
   ROW_PLACES,
+  drawnRowLayout,
   includeForLayout,
   resolveRowLayout,
   type RowField,

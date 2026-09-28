@@ -87,6 +87,36 @@ export function resolveRowLayout(input: RowLayoutInput | null = {}): RowLayout {
   return layout;
 }
 
+/** Each corner with a field of its own, as its badge and its field. */
+const CORNERS = [
+  ["titleTrailingBadge", "titleTrailing"],
+  ["subtitleBadge", "subtitle"],
+  ["subtitleTrailingBadge", "subtitleTrailing"],
+] as const satisfies readonly (readonly [RowPlace, RowPlace])[];
+
+/**
+ * The layout as a row draws it. A badge beside an empty field is drawn as
+ * that field, and with the second line's lead empty, its right corner is
+ * drawn in the lead's place, badge and all: no badge is pinned beside
+ * nothing, and no line starts with a gap. A drawn layout is its own.
+ */
+export function drawnRowLayout(layout: RowLayout): RowLayout {
+  const drawn = { ...layout };
+  for (const [badge, field] of CORNERS) {
+    if (drawn[field] === null) {
+      drawn[field] = drawn[badge];
+      drawn[badge] = null;
+    }
+  }
+  if (drawn.subtitle === null) {
+    drawn.subtitle = drawn.subtitleTrailing;
+    drawn.subtitleBadge = drawn.subtitleTrailingBadge;
+    drawn.subtitleTrailing = null;
+    drawn.subtitleTrailingBadge = null;
+  }
+  return drawn;
+}
+
 /** The related entity a field is drawn from; the states and the structure come on the row. */
 const FIELD_SOURCES: Partial<Record<RowField, Include>> = {
   address: "addresses",

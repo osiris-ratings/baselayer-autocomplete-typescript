@@ -62,10 +62,18 @@ describe("rowLines", () => {
       { subtitle: null, titleBadge: null, subtitleTrailingBadge: "structure" },
       ["name+-|-+states", "people+structure|-+-"],
     ],
-    // A badge alone keeps its corner.
+    // A badge beside nothing is drawn as its corner's field.
     [
       { subtitle: null, titleBadge: null, subtitleBadge: "structure" },
-      ["name+-|-+states", "-+structure|-+people"],
+      ["name+-|-+states", "structure+-|-+people"],
+    ],
+    [
+      {
+        titleTrailing: null,
+        titleTrailingBadge: "people",
+        subtitleTrailing: null,
+      },
+      ["name+structure|-+people", "address+-|-+-"],
     ],
     // Nothing placed on the second line: the first line is the row.
     [{ subtitle: null, subtitleTrailing: null }, ["name+structure|-+states"]],

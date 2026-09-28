@@ -1,4 +1,8 @@
-import type { RowField, RowLayout } from "@baselayer-sdk/autocomplete";
+import {
+  drawnRowLayout,
+  type RowField,
+  type RowLayout,
+} from "@baselayer-sdk/autocomplete";
 
 /** A corner: its field, and the badge pinned to its inner side. */
 export interface Corner {
@@ -13,37 +17,34 @@ export interface RowLines {
   subtitle: { lead: Corner; trailing: Corner } | null;
 }
 
-const EMPTY: Corner = { field: null, badge: null };
-const isEmpty = (corner: Corner) =>
-  corner.field === null && corner.badge === null;
-
 /**
- * What a row draws on each line. With the second line's lead corner empty,
- * its trailing corner is drawn in the lead's place, badge and all, so the
- * line never starts with a gap; with both empty, there is no second line.
+ * What a row draws on each line: the layout as drawn (`drawnRowLayout`), so
+ * no badge sits beside nothing and the second line never starts with a gap;
+ * with nothing placed on it, there is no second line.
  *
  * It follows the layout, not what a row holds, so every row of a menu shares
  * one and its columns line up; a row without a field (no officers) leaves
  * that field's place empty.
  */
 export function rowLines(layout: RowLayout): RowLines {
-  const lead: Corner = { field: layout.subtitle, badge: layout.subtitleBadge };
-  const trailing: Corner = {
-    field: layout.subtitleTrailing,
-    badge: layout.subtitleTrailingBadge,
-  };
+  const drawn = drawnRowLayout(layout);
   return {
     title: {
-      badge: layout.titleBadge,
+      badge: drawn.titleBadge,
       trailing: {
-        field: layout.titleTrailing,
-        badge: layout.titleTrailingBadge,
+        field: drawn.titleTrailing,
+        badge: drawn.titleTrailingBadge,
       },
     },
-    subtitle: isEmpty(lead)
-      ? isEmpty(trailing)
+    subtitle:
+      drawn.subtitle === null
         ? null
-        : { lead: trailing, trailing: EMPTY }
-      : { lead, trailing },
+        : {
+            lead: { field: drawn.subtitle, badge: drawn.subtitleBadge },
+            trailing: {
+              field: drawn.subtitleTrailing,
+              badge: drawn.subtitleTrailingBadge,
+            },
+          },
   };
 }

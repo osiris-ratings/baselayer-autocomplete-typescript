@@ -90,6 +90,14 @@ describe("what gives way when a line runs out of room", () => {
     expect(rule(".bl-ac-title")).toContain("min-width: 0;");
   });
 
+  it("never spreads a line's fields apart: only a trailing corner keeps to the right", () => {
+    // A lead and its badge sit together, even with nothing trailing.
+    expect(rule(".bl-ac-line")).not.toMatch(/justify-content/);
+    expect(rule('.bl-ac-line > [data-place="subtitleTrailing"]')).toMatch(
+      /margin-left: auto/,
+    );
+  });
+
   it("is the alternative name first, and whole: it wraps onto a line the title never shows", () => {
     const title = rule(".bl-ac-title");
 

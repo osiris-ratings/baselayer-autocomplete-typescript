@@ -1359,18 +1359,27 @@ describe("the row's places and fields", () => {
     people: "Wesley Crane +1",
   };
 
-  /** The one field in the one place; the second line's trailing place needs a lead. */
+  // What a place needs placed for its field to be drawn there: a badge its
+  // corner's field, and the second line's right corner a lead.
+  const NEEDS: Partial<Record<RowPlace, RowPlace[]>> = {
+    titleTrailingBadge: ["titleTrailing"],
+    subtitleBadge: ["subtitle"],
+    subtitleTrailingBadge: ["subtitle", "subtitleTrailing"],
+    subtitleTrailing: ["subtitle"],
+  };
+
+  /** The one field in the one place, and other fields where it needs them. */
   function only(field: RowField, place: RowPlace): RowLayoutInput {
-    const lead =
-      place === "subtitleTrailing" || place === "subtitleTrailingBadge"
-        ? { subtitle: ROW_FIELDS.find(other => other !== field)! }
-        : {};
+    const others = ROW_FIELDS.filter(other => other !== field);
+    const beside = Object.fromEntries(
+      (NEEDS[place] ?? []).map((needed, i) => [needed, others[i]]),
+    );
     return {
       titleBadge: null,
       titleTrailing: null,
       subtitle: null,
       subtitleTrailing: null,
-      ...lead,
+      ...beside,
       [place]: field,
     };
   }
