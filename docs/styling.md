@@ -42,6 +42,8 @@ emphasis) keeps its default too.
 | `pillForegroundColor`          | `#22543D`     | `--bl-ac-pill-fg`                      |
 | `primaryPillBorderColor`       | `#48BB78`     | `--bl-ac-pill-primary-border`          |
 | `secondaryPillBackgroundColor` | `#EDF2F7`     | `--bl-ac-pill-secondary-bg`            |
+| `structurePillBackgroundColor` | `#EDF2F7`     | `--bl-ac-structure-bg`                 |
+| `structurePillForegroundColor` | `#4A5568`     | `--bl-ac-structure-fg`                 |
 | `showDebugInfo`                | `false`       | the round trip and index in the footer |
 
 Colors are hex: `#rgb`, `#rrggbb` or `#rrggbbaa`. `plain` draws no marks,
@@ -63,11 +65,13 @@ Set them on `.bl-ac` or any ancestor selector more specific than it:
 | ----------------------------- | ---------------------------------- | -------------------------------------------- |
 | `--bl-ac-bg`                  | `#ffffff`                          | the menu                                     |
 | `--bl-ac-title`               | `#1a202c`                          | a row's name                                 |
-| `--bl-ac-subtitle`            | `#718096`                          | the second line and `also …`                 |
+| `--bl-ac-subtitle`            | `#718096`                          | the address, the people and `also …`         |
 | `--bl-ac-pill-bg`             | `#c6f6d5`                          | the state squares                            |
 | `--bl-ac-pill-fg`             | `#22543d`                          | their letters                                |
 | `--bl-ac-pill-primary-border` | `#48bb78`                          | the domicile's border                        |
 | `--bl-ac-pill-secondary-bg`   | `#edf2f7`                          | the `+N` square                              |
+| `--bl-ac-structure-bg`        | `#edf2f7`                          | the structure's flag                         |
+| `--bl-ac-structure-fg`        | `#4a5568`                          | its letters                                  |
 | `--bl-ac-more-fg`             | `#2d3748`                          | the `+N` square's text                       |
 | `--bl-ac-highlight-bg`        | `#edf2f7`                          | the highlighted row                          |
 | `--bl-ac-border`              | `#edf2f7`                          | the menu border, the footer rule             |
@@ -78,7 +82,7 @@ Set them on `.bl-ac` or any ancestor selector more specific than it:
 | `--bl-ac-ink-base`            | `#4a5568`                          | the name's unmatched text, under `ink`       |
 | `--bl-ac-also-mark`           | `#2d3748`                          | the `also …` marks, under `weight` and `ink` |
 | `--bl-ac-radius`              | `0.5rem`                           | the menu                                     |
-| `--bl-ac-pill-radius`         | `0.25rem`                          | the state and `+N` squares                   |
+| `--bl-ac-pill-radius`         | `0.25rem`                          | the state and `+N` squares, and the flag     |
 | `--bl-ac-shadow`              | `0 4px 8px rgba(16, 24, 40, 0.08)` | the menu                                     |
 | `--bl-ac-z`                   | `1000`                             | the menu's stacking                          |
 | `--bl-ac-menu-width`          | `560px`                            | a menu that keeps its own width              |
@@ -111,9 +115,11 @@ input's width either way.
 ## 3. Class names and render props
 
 Every element has a `bl-ac-*` class, and `classNames` adds yours per slot:
-`root`, `label`, `input`, `menu`, `list`, `row`, `titleLine`, `name`,
-`also`, `mark`, `states`, `state`, `moreStates`, `subtitleLine`, `address`,
-`people`, `footer`, `count`, `debug`.
+`root`, `label`, `input`, `menu`, `list`, `row`, `titleLine`, `title`,
+`nameGroup`, `name`, `also`, `mark`, `structure`, `states`, `state`,
+`moreStates`, `subtitleLine`, `address`, `people`, `footer`, `count`,
+`debug`. The title holds the name group (the name and the badge pinned to
+its end) and `also …`.
 
 Each slot's class is `bl-ac-` and the slot's name in kebab case (`moreStates`
 is `bl-ac-more-states`), except `root`, which is `bl-ac`, and the two lines:
@@ -146,7 +152,8 @@ The stylesheet's base rules are one class deep. A global reset has lower
 specificity and never wins; your class loaded after the stylesheet wins a
 tie; a selector two classes deep wins against a base rule. States and
 variants add an attribute or a pseudo-class (`.bl-ac-row[data-highlighted]`,
-`.bl-ac-input:focus-visible`), and the marks sit under the name's emphasis
+`.bl-ac-input:focus-visible`), and the marks sit under the emphasis of the
+name or the alternative name
 (`.bl-ac-name[data-emphasis="underline"] .bl-ac-mark`): restyle those with a
 selector at least as specific as theirs, loaded after the stylesheet.
 
@@ -156,49 +163,124 @@ selector at least as specific as theirs, loaded after the stylesheet.
 (`data-open` on the menu, and `data-width="fixed"` with
 `menuFollowsInputWidth={false}`; `data-highlighted` on a row; `data-domicile`
 on the domicile's square; `data-emphasis` and `data-region` on the root and
-the name, and `data-mark-color` on the root when `look.matchEmphasisColor` is
-set; `data-slot="left"` or `"right"` on the name, the states, the address and
-the people, and `data-role="officer"` or `"agent"` on the people; `data-rows`
-on the footer when rows sit above it), and `classNames` still applies, so you
-can style every slot yourself. Position the menu yourself too: it is the
+the name, `data-emphasis` on the alternative name, and `data-mark-color` on
+the root when `look.matchEmphasisColor` is set; `data-place` on the title
+and on every field, naming the place it is drawn in (see
+[A row's places and fields](#5-a-rows-places-and-fields)), and
+`data-role="officer"` or `"agent"` on the people; `data-rows` on the footer
+when rows sit above it), and `classNames` still applies, so you can style
+every slot yourself. Position the menu yourself too: it is the
 element with `data-testid="autocomplete-menu"`.
 
 Past that, drop the component and build on the hooks: see
 [Headless use](headless.md).
 
-## 5. A row's parts
+## 5. A row's places and fields
 
-A row has four parts, named for what they are on any entity rather than on
-a business:
+A row has places, named for where they sit, and fields, what a business has
+to show. `layout` picks the field each place shows:
 
-| Part                | On a business                                  |
-| ------------------- | ---------------------------------------------- |
-| `title`             | the name, and an alternative name that matched |
-| `flags`             | the states, the domicile first                 |
-| `subtitle`          | the lead address                               |
-| `secondarySubtitle` | the officers, or the registered agent          |
-
-They sit in four places: the title and the flags on the first line, the
-subtitle and the secondary subtitle on the second. The title always shows: a
-row is the entity it names. `parts` leaves any of the other three out; each
-shows unless set to `false`. With the subtitle left out, the secondary
-subtitle is promoted to its place, so no line starts with a gap. Every row of
-a menu shares one layout, so its columns line up; a row without a part (no
-officers) leaves that part's place empty.
-
-```tsx
-<BusinessAutocomplete parts={{ flags: false, secondarySubtitle: false }} … />
+```text
+┌──────────────────────────────────────────────────────────────────┐
+│ title · titleBadge                                 titleTrailing │
+│ subtitle                                        subtitleTrailing │
+└──────────────────────────────────────────────────────────────────┘
+  HARBOR CONCRETE PUMPING CO., INC. [C-Corp]        PA MD NY +2
+  1200 River Rd, Pittsburgh, PA 15212           Dana Whitfield +3
 ```
 
-The parts also decide what is fetched. Leaving the subtitle out stops the
-addresses being asked for, and leaving the secondary subtitle out the
-people (officers and registered agents), so a row arrives with only what it
-shows (`includeForParts(resolveParts(parts))` in the core says what a set of
-parts asks for: `resolveParts` fills in every part of `ROW_PARTS` not set to
-`false`). Leaving both out is the exception:
-the tier refuses an empty `include`, so none is sent and its default, people
-and addresses, stands. A form that fills an address from the pick keeps the
-subtitle.
+| Place              | Where                                 | Default                              |
+| ------------------ | ------------------------------------- | ------------------------------------ |
+| `title`            | line 1, leading                       | the name, and `also …`; always shown |
+| `titleBadge`       | line 1, pinned to the end of the name | `structure`                          |
+| `titleTrailing`    | line 1, right-aligned                 | `states`                             |
+| `subtitle`         | line 2, leading                       | `address`                            |
+| `subtitleTrailing` | line 2, right-aligned                 | `people`                             |
+
+| Field       | Draws                                                 |
+| ----------- | ----------------------------------------------------- |
+| `states`    | the state squares, the domicile first, then `+N`      |
+| `structure` | the structure's flag (below)                          |
+| `address`   | the lead address, or "No address on file"             |
+| `people`    | the officers, or the registered agent, marked as such |
+
+```tsx
+<BusinessAutocomplete
+  layout={{ titleBadge: null, subtitle: "people", subtitleTrailing: "states" }}
+  …
+/>
+```
+
+`layout` maps a place to a field, or to `null` for an empty place. A place
+left out keeps its default field, unless you placed that field elsewhere:
+`{ subtitle: "states" }` moves the states and leaves `titleTrailing` empty. A
+field is drawn in one place at most; placed twice, it stays in the first
+place in reading order and the later one is left empty. In the core,
+`resolveRowLayout(layout)` returns the complete layout as the component
+draws it, `DEFAULT_ROW_LAYOUT` is the default, and `ROW_PLACES` (in reading
+order) and `ROW_FIELDS` list the places and the fields.
+
+A field looks the same in any place; the place decides where it sits and
+what gives way first:
+
+- The badge sits at the end of the name, before `also …`. When the first
+  line runs out of room, `also …` gives way first, and whole, then the name
+  is ellipsised; the badge and the trailing place stay.
+- A trailing place keeps to the right. Text there keeps its width, up to
+  half the first line, so the name keeps the rest, or all but about 5rem of
+  the second; beside a flag, which cannot give way, it gives way itself.
+- Every row of a menu shares one layout, so its columns line up; a row
+  without a field (no officers) leaves that field's place empty.
+- With `subtitle` empty, the field in `subtitleTrailing` is drawn in its
+  place, so the second line never starts with a gap. A line with nothing in
+  any of its places is dropped.
+
+Each field's element says where it is drawn, `data-place="titleBadge"` and
+so on, and the title's says `data-place="title"`.
+
+The placed fields also decide what is fetched: `address` asks for the
+addresses and `people` for the people (officers and registered agents),
+while the states and the structure come on the row itself.
+`includeForLayout(layout)` in the core says what a layout asks for. With
+neither placed, the tier refuses an empty `include`, so none is sent and its
+default, people and addresses, stands. A form that fills an address from
+the pick keeps the address placed.
+
+### The structure's flag
+
+The flag is short, shaped like the suffix a name carries:
+
+| Structure                                         | Flag                          |
+| ------------------------------------------------- | ----------------------------- |
+| `SOLE_PROPRIETORSHIP`                             | Sole prop.                    |
+| `GENERAL_PARTNERSHIP`                             | GP                            |
+| `LLC`, `LLP`, `LLLP`, `LP`                        | LLC, LLP, LLLP, LP            |
+| `C_CORPORATION`, `S_CORPORATION`, `B_CORPORATION` | C-Corp, S-Corp, B-Corp        |
+| `NONPROFIT`                                       | Nonprofit                     |
+| `COOPERATIVE`                                     | Co-op                         |
+| `TRUST`                                           | Trust                         |
+| `PROFESSIONAL_ASSOCIATION`                        | P.A.                          |
+| `PROFESSIONAL_CORPORATION`                        | P.C.                          |
+| `TRADE_NAME`                                      | DBA                           |
+| `BANK`, `CREDIT_UNION`, `INSURANCE`               | Bank, Credit union, Insurance |
+| `OTHER`, none, a value this SDK has no label for  | no flag                       |
+
+A professional association is `P.A.`, never `PA`, which is Pennsylvania's
+square. `messages.structures` relabels any value, one at a time, and an
+empty label hides that value's flag:
+
+```tsx
+<BusinessAutocomplete
+  messages={{ structures: { LLC: "L.L.C.", OTHER: "Other", TRADE_NAME: "" } }}
+  …
+/>
+```
+
+`structureLabel(structure, labels)` in the core draws a flag the same way,
+for rows of your own. The flag is a neutral grey by default
+(`structurePillBackgroundColor` and `structurePillForegroundColor` in
+`look`), so it does not read as a state square. A row whose structure is not
+known leaves the badge's place empty.
 
 ## 6. Previewing a style
 
@@ -240,7 +322,7 @@ searching with no rows yet, `error`'s text in place of the count, or the
 tier did not finish looking takes the count's place. `onSelect` hands over
 the picked row and leaves the input to you. The view also takes the
 component's `label`, `renderLabel`, `renderInput`, `renderRow`, `classNames`,
-`unstyled`, `parts`, `menuFollowsInputWidth` and `messages`, and `inputName`,
+`unstyled`, `layout`, `menuFollowsInputWidth` and `messages`, and `inputName`,
 `inputRef`, `onInputFocus` and `onInputBlur` for its input.
 
 Give it the query your rows pretend was typed, as the demo gives its sample

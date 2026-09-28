@@ -6,6 +6,69 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+A row's places are named for where they sit, a host picks the field each one
+shows, and the business structure is a new field, drawn by default as a flag
+after the name. `parts` gives way to `layout`, a breaking change: this ships
+as a minor release.
+
+### Added
+
+- `BusinessSuggestion.structure`, the legal structure of the business's
+  domicile registration: one of `BUSINESS_STRUCTURES` (`BusinessStructure`),
+  or null when it is not known or the API does not send it. A value this
+  build does not know is kept as the string it is.
+- `layout` on `BusinessAutocomplete` and `BusinessAutocompleteView`: the
+  field (`states`, `structure`, `address` or `people`) each place of a row
+  shows (`titleBadge`, `titleTrailing`, `subtitle` or `subtitleTrailing`), or
+  `null` for an empty one. A place left out keeps its default field unless
+  that field is placed elsewhere, and a field placed twice stays in the first
+  place, so none is drawn twice. In the core: `ROW_PLACES`, `ROW_FIELDS`,
+  `DEFAULT_ROW_LAYOUT`, `resolveRowLayout`, `includeForLayout`, and the types
+  `RowPlace`, `RowField`, `RowLayout` and `RowLayoutInput`.
+- `structureLabel(structure, labels)`: a structure's flag (`C-Corp`, `LLC`,
+  `Sole prop.`, `P.A.`, …), or null for `OTHER`, none, or a value it has no
+  label for. `messages.structures` relabels any value, and an empty label
+  hides its flag.
+- `look.structurePillBackgroundColor` and `look.structurePillForegroundColor`
+  (`--bl-ac-structure-bg`, `--bl-ac-structure-fg`), a neutral grey by default.
+- The slots `title` (the name group and `also …`), `nameGroup` (the name and
+  its badge) and `structure` (the flag, `bl-ac-structure`).
+
+### Changed
+
+- **Breaking:** `parts` is now `layout`. `parts={{ flags: false }}` is
+  `layout={{ titleTrailing: null }}`, `{ subtitle: false }` is
+  `{ subtitle: null }`, and `{ secondarySubtitle: false }` is
+  `{ subtitleTrailing: null }`; `includeForParts(resolveParts(parts))` is
+  `includeForLayout(layout)`.
+- **Breaking:** every field's element carries `data-place` with its place, in
+  place of `data-slot="left"` or `"right"`, and the title carries
+  `data-place="title"`. A field drawn in the second line's lead because
+  `subtitle` is empty says `subtitle`.
+- A row shows its structure's flag after the name by default.
+  `layout={{ titleBadge: null }}` draws the row as before.
+- `also …` is no longer inside `.bl-ac-name`: the title (`.bl-ac-title`)
+  holds the name group and `also …`, which carries its own `data-emphasis`.
+  When the first line runs out of room, `also …` leaves it whole before the
+  name is ellipsised.
+- The name and the address are ellipsised where the text runs out rather than
+  at a word, so a badge sits right after the name and text at the right is
+  flush right.
+- The address and the people carry their own size and color
+  (`--bl-ac-subtitle`), so they look the same on either line;
+  `.bl-ac-line-subtitle` no longer sets them.
+- Text at the first line's right keeps to half the line, so the name keeps the
+  rest.
+- `BusinessSuggestion` requires `structure`: a row built by hand, for a
+  preview or a test, gives it one or `null`.
+- The tier's contract is 0.8.0's, and the API reference shows a suggestion's
+  `structure` with its values.
+
+### Removed
+
+- `parts`, `ROW_PARTS`, `RowPart`, `RowParts`, `resolveParts` and
+  `includeForParts`.
+
 ## [0.1.1] - 2026-09-25
 
 ### Changed

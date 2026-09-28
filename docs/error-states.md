@@ -117,16 +117,17 @@ A field that does not apply is `null`.
 
 All of them are overridable through `messages`:
 
-| Key                    | Default                                                                       |
-| ---------------------- | ----------------------------------------------------------------------------- |
-| `searching`            | Searching…                                                                    |
-| `truncatedNoRows`      | Still searching — add a word to narrow it down                                |
-| `truncatedRows`        | Showing partial results — add a word to narrow it down                        |
-| `match`, `matches`     | match, matches                                                                |
-| `noAddress`            | No address on file                                                            |
-| `agentSuffix`          | a space, then `· agent`                                                       |
-| `more(n)`              | `+n`                                                                          |
-| `dayLimit`             | Your plan's daily autocomplete limit is reached; suggestions return tomorrow. |
-| `unavailable`          | Autocomplete unavailable                                                      |
-| `authUnavailable`      | Autocomplete unavailable: the session could not be verified                   |
-| `httpFallback(status)` | Autocomplete unavailable (HTTP status)                                        |
+| Key                    | Default                                                                                  |
+| ---------------------- | ---------------------------------------------------------------------------------------- |
+| `searching`            | Searching…                                                                               |
+| `truncatedNoRows`      | Still searching — add a word to narrow it down                                           |
+| `truncatedRows`        | Showing partial results — add a word to narrow it down                                   |
+| `match`, `matches`     | match, matches                                                                           |
+| `noAddress`            | No address on file                                                                       |
+| `agentSuffix`          | a space, then `· agent`                                                                  |
+| `more(n)`              | `+n`                                                                                     |
+| `structures`           | each structure's flag, one value at a time ([the flags](styling.md#the-structures-flag)) |
+| `dayLimit`             | Your plan's daily autocomplete limit is reached; suggestions return tomorrow.            |
+| `unavailable`          | Autocomplete unavailable                                                                 |
+| `authUnavailable`      | Autocomplete unavailable: the session could not be verified                              |
+| `httpFallback(status)` | Autocomplete unavailable (HTTP status)                                                   |

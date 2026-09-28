@@ -155,10 +155,11 @@ The first `mint` or `mintUrl` is kept for the component's life; a new
   input meanwhile.
 - `label`: the text of the default `<label>`; without it none is drawn.
 - `name`, `inputRef`, `onFocus` and `onBlur`: the input's, passed through.
-- `look`, `parts`, `menuFollowsInputWidth`, `open`, `classNames`,
+- `look`, `layout`, `menuFollowsInputWidth`, `open`, `classNames`,
   `renderLabel`, `renderInput`, `renderRow` and `unstyled`: see
-  [Styling](docs/styling.md); `messages`: see
-  [Error states](docs/error-states.md).
+  [Styling](docs/styling.md); `layout` is the field each place of a row
+  shows ([A row's places and fields](docs/styling.md#5-a-rows-places-and-fields)).
+  `messages`: see [Error states](docs/error-states.md).
 
 ## 3. Send the pick with your search
 

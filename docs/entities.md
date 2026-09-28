@@ -55,7 +55,7 @@ and `highlight`. Each type adds its own fields:
 
 | Type       | Adds                                                           |
 | ---------- | -------------------------------------------------------------- |
-| `business` | `domicile_state`, `states`                                     |
+| `business` | `domicile_state`, `states`, `structure`                        |
 | `person`   | nothing: a person has no jurisdiction of its own               |
 | `address`  | `components`: `line1`, `line2`, `city`, `state`, `postal_code` |
 | `lien`     | `filing_type`, `filing_number`, `filing_state`, `status`       |
@@ -64,10 +64,15 @@ and `highlight`. Each type adds its own fields:
 `sources` before an empty `related` entry: an empty list under a source that
 is not `ok` means "not looked", never "none".
 
+A business's `structure` is its legal structure, one of
+`BUSINESS_STRUCTURES` (`LLC`, `C_CORPORATION`, …), or null when it is not
+known or the API does not send it. The styled component draws it as a flag
+beside the name (see [Styling](styling.md#the-structures-flag)).
+
 Unknown fields are dropped and unknown enum values (`match`, `status`,
-`role`, a source's status) are kept as the strings they are, so a tier that
-learns a new value never turns a keystroke into a contract error. A row of
-the wrong type on a route is one.
+`role`, `structure`, a source's status) are kept as the strings they are, so
+a tier that learns a new value never turns a keystroke into a contract
+error. A row of the wrong type on a route is one.
 
 ## Filters
 

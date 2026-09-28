@@ -142,9 +142,10 @@ controls, and the panel opens below them.
 Opening Styling folds Connect away, so the component is what you look at. Its
 menu stays open, blur or no blur, and takes its place in the page rather than
 lying over it. With nothing typed it shows made-up rows, as many as Rows asks
-for (five by default, eight at most), that carry every part of a row
+for (five by default, eight at most), that carry every field of a row
 (highlighted words, a matched alternative name, the domicile square and the
-overflow, an address, officers with a +N, a registered agent, the count), so
+overflow, a spread of structures, one on a name with no suffix and one not
+known, an address, officers with a +N, a registered agent, the count), so
 every knob can be judged before a keystroke; type a name and the real rows
 take their place. The rows pretend "harbor concr" was typed, one word in full
 and the next only begun, so the region shows its difference: whole word
@@ -152,20 +153,24 @@ highlights CONCRETE, typed characters only its CONCR.
 
 Behavior acts on the sample rows as it would on real ones: Rows sets how many
 there are, up to the sample's eight. The characters, the pause and the session
-act only as you type. What a row fetches follows from its components: leave
-out the subtitle and the addresses are not asked for, leave out the secondary
-subtitle and the people (officers and agents) are not. Leave out both and no
-`include` is sent, since the tier refuses an empty one, so its default, people
-and addresses, comes back all the same, only not drawn.
+act only as you type. What a row fetches follows from its layout: place the
+address nowhere and the addresses are not asked for, place the people nowhere
+and the people (officers and agents) are not. Place neither and no `include`
+is sent, since the tier refuses an empty one, so its default, people and
+addresses, comes back all the same, only not drawn.
 
 First come six presets, each a color theme drawn as a small row in its own
 colors: Light (the default, with matched ink in green), Baselayer, Midnight,
 Monokai, Sepia and Rosé. A preset sets the colors, the corners and the shadow,
 and leaves your sizes, behavior and text alone. Then every knob the styled
-component has, in sections that start folded: the components a row shows
-(beside its title, which always shows, its flags, subtitle and secondary
-subtitle: on a business, the states, the lead address and the officers or the
-registered agent), how matched words are highlighted (the emphasis, the
+component has, in sections that start folded: the components a row shows,
+as the field each place holds (beside the title, the name, which always
+shows: the badge after the name, the right of the title, the subtitle and
+the right of the subtitle, each a row of choices, none or one of the states,
+the structure, the address and the people; a field placed elsewhere is
+disabled, with a tooltip naming its place, so each field is lit once down
+the fold, and moving one means emptying its place first), how matched words
+are highlighted (the emphasis, the
 region, and one color override for every emphasis) and whether the footer
 shows the round trip and the index that answered (`look.showDebugInfo`, a
 switch in the same fold), every color (the `look` prop's and the stylesheet's
@@ -175,12 +180,14 @@ default; the pause before asking; when the session is minted: on focus, on the
 first keystroke or with the first request; and whether the menu is as wide as
 the input, as it is by default), the text (the label, and every message that
 is a string: `more` and `httpFallback` are functions, so they keep their
-defaults), and the structural switches (`classNames`, `unstyled`). Changes
+defaults; and each structure's flag, an empty one drawing none), and the
+markup switches (`classNames`, `unstyled`). Changes
 apply as you make them. A color changed from its preset's carries a reset
 inside its field, which puts back the value the last preset chosen gave it.
 **Your configuration** at the bottom is the code that reproduces the result,
 in a React tab and a CSS tab with a **Copy**: the props that differ from the
-defaults, and the CSS variables to set. Its **Reset** puts the whole panel
+defaults (the `layout` names only the places that differ from the SDK's), and
+the CSS variables to set. Its **Reset** puts the whole panel
 back as it opened: the Light preset and every default.
 
 ![The styling panel](images/demo-styling.png)
