@@ -537,26 +537,31 @@
   font-size: 12px;
 }
 
-/* ---- Segmented: a row of choices, drawn as the tabs are ----------------- */
+/* ---- Segmented: a row of cells, one of which is picked ------------------ */
 
-/* Equal columns, so the controls stacked in a fold read as a grid in which
-   each field is lit once. */
+/* Framed as a text input is, cells of equal width, so the controls stacked
+   in a fold read as a grid in which each field is lit once. */
 .demo .segmented {
   display: grid;
   grid-auto-columns: minmax(0, 1fr);
   grid-auto-flow: column;
-  border-bottom: 1px solid var(--line);
+  gap: 1px;
+  overflow: hidden;
+  background: #cfd0d6;
+  border: 1px solid #cfd0d6;
+  border-radius: 2px;
 }
 
 .demo .segmented button {
+  position: relative;
   min-width: 0;
-  margin-bottom: -1px;
-  padding: 10px 2px;
+  height: 36px;
+  margin: 0;
+  padding: 0 4px;
   overflow: hidden;
-  background: none;
+  background: var(--paper);
   border: 0;
-  border-bottom: 2px solid transparent;
-  color: var(--muted);
+  color: var(--ink-soft);
   font-family: var(--mono);
   font-size: 11.5px;
   letter-spacing: 0.04em;
@@ -564,37 +569,49 @@
   text-transform: uppercase;
   white-space: nowrap;
   cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
 }
 
 .demo .segmented button:hover {
+  background: var(--faded);
   color: var(--ink);
 }
 
 .demo .segmented button[aria-checked="true"] {
-  border-bottom-color: var(--blue);
-  color: var(--ink);
+  background: var(--blue);
+  color: #ffffff;
 }
 
-/* Placed elsewhere: shown, so the grid reads whole, but not a choice here. */
+/* Placed elsewhere: shown, so the grid reads whole, but struck through with
+   a hatch, as a cell that is taken. */
 .demo .segmented button[aria-disabled="true"] {
-  opacity: 0.35;
+  background: repeating-linear-gradient(135deg, #f4f4f6 0 4px, #ececf0 4px 8px);
+  color: #a4a7b0;
   cursor: not-allowed;
 }
 
-.demo .segmented button[aria-disabled="true"]:hover {
-  color: var(--muted);
-}
-
 .demo .segmented button:focus-visible {
+  z-index: 1;
   outline: 2px solid var(--blue);
   outline-offset: -2px;
 }
 
+.demo .segmented button[aria-checked="true"]:focus-visible {
+  outline-color: var(--navy);
+}
+
 /* The title's place, which is fixed: a line where the others have a control. */
 .place-fixed {
-  display: block;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  height: 38px;
+  padding: 0 12px;
+  background: var(--faded);
+  border: 1px solid var(--line-soft);
+  border-radius: 2px;
   color: var(--muted);
   font-size: 13px;
 }
