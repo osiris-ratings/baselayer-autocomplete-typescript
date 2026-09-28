@@ -252,8 +252,8 @@ describe("a business suggestion", () => {
     });
 
     it("reads an absent or null structure as null, as a tier that predates it sends it", () => {
-      // The contract leaves it out of `required`, and a tier older than 0.8.0
-      // sends no such key at all.
+      // The contract leaves it out of `required`, and a tier that predates
+      // the field sends no such key at all.
       expect(
         tier.components.schemas.BusinessSuggestion?.required,
       ).not.toContain("structure");

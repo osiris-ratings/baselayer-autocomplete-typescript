@@ -262,6 +262,7 @@ export function placeChoices(
     return {
       value: choice,
       label: CHOICE_LABELS[choice],
+      name: choice === EMPTY_PLACE ? "Empty" : undefined,
       disabledReason:
         elsewhere === undefined
           ? undefined

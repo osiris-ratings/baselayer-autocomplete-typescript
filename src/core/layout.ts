@@ -54,9 +54,10 @@ function isField(value: unknown): value is RowField {
  * field unless the host placed that field somewhere else, and a field placed
  * twice stays in the first place in reading order, leaving the later one
  * empty: no field is drawn twice. A value this build cannot use counts as
- * left out.
+ * left out, and so does a null layout.
  */
-export function resolveRowLayout(staged: RowLayoutInput = {}): RowLayout {
+export function resolveRowLayout(input: RowLayoutInput | null = {}): RowLayout {
+  const staged: RowLayoutInput = input ?? {};
   const placed = new Set(
     ROW_PLACES.map((place): unknown => staged[place]).filter(isField),
   );
@@ -91,7 +92,9 @@ const FIELD_SOURCES: Partial<Record<RowField, Include>> = {
  * Takes a staged layout or a resolved one. Empty when no placed field needs
  * a related entity.
  */
-export function includeForLayout(staged: RowLayoutInput = {}): Include[] {
+export function includeForLayout(
+  staged: RowLayoutInput | null = {},
+): Include[] {
   const layout = resolveRowLayout(staged);
   const needed = new Set(
     ROW_PLACES.map(place => layout[place]).map(field =>

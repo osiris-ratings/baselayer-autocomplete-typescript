@@ -171,6 +171,8 @@ export function Select<T extends string>({
 export interface Segment<T extends string> {
   value: T;
   label: string;
+  /** What a screen reader says, where the label is a sign ("—"). */
+  name?: string | undefined;
   /** Why it cannot be picked, as its tooltip; unset, it can. */
   disabledReason?: string | undefined;
 }
@@ -236,6 +238,7 @@ export function Segmented<T extends string>({
             type="button"
             role="radio"
             aria-checked={checked}
+            aria-label={option.name}
             // Not `disabled`: a disabled button shows no tooltip everywhere.
             aria-disabled={enabled[index] === true ? undefined : true}
             title={option.disabledReason}

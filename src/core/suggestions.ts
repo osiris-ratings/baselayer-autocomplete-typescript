@@ -57,7 +57,7 @@ function moreOf(
 }
 
 /**
- * Who the second line names: the officers when the family has any in the
+ * Who the people field names: the officers when the family has any in the
  * head, otherwise its registered agents, marked as such so a corporation's
  * name is not read as a person's. Nothing when it has neither.
  */
@@ -118,13 +118,14 @@ const STRUCTURE_LABELS: Partial<Record<BusinessStructure, string>> = {
 
 /** `labels[key]` when it is a string of the object's own, else undefined. */
 function ownLabel(
-  labels: Partial<Record<BusinessStructure, string>>,
+  labels: Partial<Record<BusinessStructure, string>> | null,
   key: string,
 ): string | undefined {
   // The key comes off the wire, so it may name a member of every object.
-  const label: unknown = Object.prototype.hasOwnProperty.call(labels, key)
-    ? labels[key]
-    : undefined;
+  const label: unknown =
+    labels !== null && Object.prototype.hasOwnProperty.call(labels, key)
+      ? labels[key]
+      : undefined;
   return typeof label === "string" ? label : undefined;
 }
 
@@ -135,7 +136,7 @@ function ownLabel(
  */
 export function structureLabel(
   structure: BusinessStructure | null,
-  labels: Partial<Record<BusinessStructure, string>> = {},
+  labels: Partial<Record<BusinessStructure, string>> | null = {},
 ): string | null {
   if (structure === null) {
     return null;

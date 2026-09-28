@@ -331,6 +331,13 @@ describe("structureLabel", () => {
 
     expect(structureLabel("LLC", labels)).toBe("LLC");
     expect(structureLabel("LP", labels)).toBe("LP");
+    // A null in place of the labels, from plain JavaScript, is no labels.
+    expect(
+      structureLabel(
+        "LLC",
+        null as unknown as Partial<Record<BusinessStructure, string>>,
+      ),
+    ).toBe("LLC");
   });
 });
 

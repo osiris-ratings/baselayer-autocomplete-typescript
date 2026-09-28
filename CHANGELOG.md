@@ -46,11 +46,14 @@ as a minor release.
   `data-place="title"`. A field drawn in the second line's lead because
   `subtitle` is empty says `subtitle`.
 - A row shows its structure's flag after the name by default.
-  `layout={{ titleBadge: null }}` draws the row as before.
-- `also …` is no longer inside `.bl-ac-name`: the title (`.bl-ac-title`)
-  holds the name group and `also …`, which carries its own `data-emphasis`.
-  When the first line runs out of room, `also …` leaves it whole before the
-  name is ellipsised.
+  `layout={{ titleBadge: null }}` leaves it out, and draws the row as before
+  but for the changes below.
+- `also …` is no longer inside `.bl-ac-name`, so the name's element
+  (`business-suggestion-name`) no longer holds its text: the title
+  (`.bl-ac-title`) holds the name group and `also …`, which carries its own
+  `data-emphasis`. When the first line runs out of room, `also …` is
+  ellipsised down to 6em, then leaves the line whole, before the name is
+  ellipsised.
 - The name and the address are ellipsised where the text runs out rather than
   at a word, so a badge sits right after the name and text at the right is
   flush right.
@@ -58,11 +61,14 @@ as a minor release.
   (`--bl-ac-subtitle`), so they look the same on either line;
   `.bl-ac-line-subtitle` no longer sets them.
 - Text at the first line's right keeps to half the line, so the name keeps the
-  rest.
+  rest. Text at the second line's right takes all the room a flag or an empty
+  lead leaves it.
 - `BusinessSuggestion` requires `structure`: a row built by hand, for a
-  preview or a test, gives it one or `null`.
-- The tier's contract is 0.8.0's, and the API reference shows a suggestion's
-  `structure` with its values.
+  preview or a test, gives it one or `null`. `Look` gains its two structure
+  colors, `AutocompleteMessages` its `structures` and `SlotName` its three
+  slots, so a complete literal of any of them needs them too.
+- The vendored tier contract carries `structure`, and the API reference shows
+  a suggestion's `structure` with its values.
 
 ### Removed
 

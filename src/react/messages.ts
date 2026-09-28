@@ -11,9 +11,9 @@ export interface AutocompleteMessages {
   match: string;
   /** Footer noun for any other count. */
   matches: string;
-  /** The second line when the index holds no address for the family. */
+  /** The address field when the index holds no address for the family. */
   noAddress: string;
-  /** Appended to a registered agent's name on the second line. */
+  /** Appended to a registered agent's name in the people field. */
   agentSuffix: string;
   /** The overflow count beside the first officer or the third state. */
   more: (count: number) => string;

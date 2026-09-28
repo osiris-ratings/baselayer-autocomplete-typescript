@@ -101,14 +101,16 @@ describe("what gives way when a line runs out of room", () => {
     expect(rule(".bl-ac-name-group")).toContain("max-width: 100%;");
   });
 
-  it("keeps the title one line tall, but never shorter than a flag, however tight the line-height", () => {
+  it("keeps the title one line tall, but never shorter than a flag or a text badge, whatever the menu's type", () => {
     // A flag is 0.75rem of text on a line-height of 1, 0.125rem of padding
-    // and a 1px border above and below: 1rem and 2px.
+    // and a 1px border above and below: 1rem and 2px. The address and the
+    // people are 14px on the menu's line-height, whatever its font size.
     const flag = rule(".bl-ac-structure");
     expect(flag).toContain("font-size: 0.75rem;");
     expect(flag).toContain("line-height: 1;");
+    expect(rule(".bl-ac-address")).toContain("font-size: 14px;");
     expect(rule(".bl-ac-title")).toContain(
-      "max-height: max(1lh, calc(1rem + 2px));",
+      "max-height: max(1lh, calc(1rem + 2px), calc(14px * var(--bl-ac-line-height)));",
     );
   });
 
@@ -151,6 +153,20 @@ describe("what gives way when a line runs out of room", () => {
     expect(
       rule('.bl-ac-line > .bl-ac-people[data-place="subtitleTrailing"]'),
     ).toContain("max-width: calc(100% - 6rem);");
+  });
+
+  it("lets text at the right take the room a flag or an empty lead leaves it", () => {
+    // A flag keeps its own width and no more, so the text beside it needs no
+    // cap; nor does text with no lead at all (a row with no structure where
+    // only the structure leads).
+    for (const selector of [
+      '.bl-ac-line > .bl-ac-states[data-place="subtitle"] + [data-place="subtitleTrailing"]',
+      '.bl-ac-line > .bl-ac-structure[data-place="subtitle"] + [data-place="subtitleTrailing"]',
+      '.bl-ac-line > [data-place="subtitleTrailing"]:first-child',
+    ]) {
+      expect(rule(selector), selector).toContain("max-width: none;");
+      expect(shrink(selector), selector).toBe(1);
+    }
   });
 
   it("keeps text at the right of the first line to half of it, so the name keeps the rest", () => {

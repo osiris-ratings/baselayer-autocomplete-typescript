@@ -141,10 +141,14 @@
   align-content: flex-start;
   align-items: center;
   min-width: 0;
-  /* One line, or a flag's height (1rem and 2px) where a tight line-height
-     leaves a line shorter than a flag. */
-  max-height: max(calc(1em * var(--bl-ac-line-height)), calc(1rem + 2px));
-  max-height: max(1lh, calc(1rem + 2px));
+  /* One line, or, where a tight line-height or a small font leaves it
+     shorter, a flag's height (1rem and 2px) or a text badge's line (14px). */
+  max-height: max(
+    calc(1em * var(--bl-ac-line-height)),
+    calc(1rem + 2px),
+    calc(14px * var(--bl-ac-line-height))
+  );
+  max-height: max(1lh, calc(1rem + 2px), calc(14px * var(--bl-ac-line-height)));
   overflow: hidden;
 }
 
@@ -266,14 +270,18 @@
   max-width: calc(100% - 6rem);
 }
 
-/* A flag cannot give way, so text beside one does. */
+/* A flag cannot give way and needs no more than its own width, so text
+   beside one takes the rest, and gives way itself; so does text with no lead
+   at all (a row with no structure where only the structure leads). */
 .bl-ac-line
   > .bl-ac-states[data-place="subtitle"]
   + [data-place="subtitleTrailing"],
 .bl-ac-line
   > .bl-ac-structure[data-place="subtitle"]
-  + [data-place="subtitleTrailing"] {
+  + [data-place="subtitleTrailing"],
+.bl-ac-line > [data-place="subtitleTrailing"]:first-child {
   flex-shrink: 1;
+  max-width: none;
 }
 
 /* Text in the badge keeps its width too, up to half the name's piece. */

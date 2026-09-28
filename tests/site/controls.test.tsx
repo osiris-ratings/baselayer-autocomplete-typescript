@@ -25,7 +25,7 @@ describe("Segmented", () => {
       label="Badge"
       value="structure"
       options={[
-        { value: "empty", label: "—" },
+        { value: "empty", label: "—", name: "Empty" },
         { value: "states", label: "States", disabledReason: "In Title, right" },
         { value: "structure", label: "Structure" },
       ]}
@@ -51,6 +51,12 @@ describe("Segmented", () => {
       "-1",
       "0",
     ]);
+  });
+
+  it("names a choice drawn as a sign by what it means", () => {
+    // "—" reads as nothing, or as "em dash".
+    expect(radios[0]).toContain('aria-label="Empty"');
+    expect(radios[1]).not.toContain("aria-label");
   });
 
   it("shows a choice it cannot take, disabled, with a tooltip saying why", () => {

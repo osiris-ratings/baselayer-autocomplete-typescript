@@ -216,19 +216,22 @@ left out keeps its default field, unless you placed that field elsewhere:
 `{ subtitle: "states" }` moves the states and leaves `titleTrailing` empty. A
 field is drawn in one place at most; placed twice, it stays in the first
 place in reading order and the later one is left empty. In the core,
-`resolveRowLayout(layout)` returns the complete layout as the component
-draws it, `DEFAULT_ROW_LAYOUT` is the default, and `ROW_PLACES` (in reading
-order) and `ROW_FIELDS` list the places and the fields.
+`resolveRowLayout(layout)` returns the complete layout, every place with its
+field or `null` (before the second line's lead is filled from its trailing
+place, below), `DEFAULT_ROW_LAYOUT` is the default, and `ROW_PLACES` (in
+reading order) and `ROW_FIELDS` list the places and the fields.
 
 A field looks the same in any place; the place decides where it sits and
 what gives way first:
 
 - The badge sits at the end of the name, before `also …`. When the first
-  line runs out of room, `also …` gives way first, and whole, then the name
-  is ellipsised; the badge and the trailing place stay.
+  line runs out of room, `also …` gives way first: it is ellipsised down to
+  6em, then leaves the line whole rather than shrinking to a stray letter.
+  Then the name is ellipsised; the badge and the trailing place stay.
 - A trailing place keeps to the right. Text there keeps its width, up to
   half the first line, so the name keeps the rest, or all but about 5rem of
-  the second; beside a flag, which cannot give way, it gives way itself.
+  the second. Beside a flag, which needs only its own width, or with no lead
+  at all, it takes the rest of the line and gives way itself.
 - Every row of a menu shares one layout, so its columns line up; a row
   without a field (no officers) leaves that field's place empty.
 - With `subtitle` empty, the field in `subtitleTrailing` is drawn in its

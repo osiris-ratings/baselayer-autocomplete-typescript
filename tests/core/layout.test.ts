@@ -158,6 +158,16 @@ describe("resolveRowLayout", () => {
     expect(layouts).toBe(6 ** 4);
   });
 
+  it("reads a layout staged as null, from plain JavaScript, as none", () => {
+    expect(resolveRowLayout(null as unknown as RowLayoutInput)).toEqual(
+      DEFAULT_ROW_LAYOUT,
+    );
+    expect(includeForLayout(null as unknown as RowLayoutInput)).toEqual([
+      "people",
+      "addresses",
+    ]);
+  });
+
   it("hands a resolved layout back as it is", () => {
     const layout: RowLayout = {
       titleBadge: null,
