@@ -782,17 +782,10 @@
   opacity: 0.4;
 }
 
-/* A place nothing can go in until the one beside it is filled. */
+/* A place nothing can go in until the one beside it is filled is not drawn,
+   but keeps its room, so the columns and the chevrons stay put. */
 .row-map-place[data-closed] {
-  opacity: 0.35;
-}
-
-.row-map-place[data-closed] select {
-  cursor: not-allowed;
-}
-
-.row-map-place[data-closed]::before {
-  display: none;
+  visibility: hidden;
 }
 
 /* The fields the row leaves out, to drag back in. */

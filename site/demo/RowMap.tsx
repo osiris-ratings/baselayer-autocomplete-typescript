@@ -323,11 +323,7 @@ export function RowMap({
           moving !== null && moving.field === field ? true : undefined
         }
         {...(field === null ? {} : handle(field))}
-        title={
-          closed
-            ? `${PLACE_LABELS[spot]}: fill the place beside it first`
-            : `${PLACE_LABELS[spot]} · layout.${spot}`
-        }
+        title={`${PLACE_LABELS[spot]} · layout.${spot}`}
       >
         {field !== null && (
           <span

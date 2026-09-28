@@ -175,7 +175,7 @@ Each place's chevron is also a dropdown of what it can show,
 and picking a field from another place moves it and leaves that place
 empty. The drawn row is always the row as drawn: a place the row would not
 draw a field in, a badge beside an empty field or the second line's right
-with no lead, is faded and takes nothing, and a field that leaves the lead
+with no lead, is hidden, keeping its room, and takes nothing, and a field that leaves the lead
 lets the right corner slide into it, as the row does),
 how matched words are highlighted (the emphasis, the region, and one color
 override for every emphasis) and whether the footer
