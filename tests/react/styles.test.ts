@@ -124,7 +124,7 @@ describe("what gives way when a line runs out of room", () => {
     }
     expect(
       shrink(
-        '.bl-ac-line > .bl-ac-states[data-place="subtitle"] + [data-place="subtitleTrailing"]',
+        '.bl-ac-line > .bl-ac-states[data-place="subtitle"] ~ [data-place="subtitleTrailing"]',
       ),
     ).toBe(1);
   });
@@ -160,8 +160,8 @@ describe("what gives way when a line runs out of room", () => {
     // cap; nor does text with no lead at all (a row with no structure where
     // only the structure leads).
     for (const selector of [
-      '.bl-ac-line > .bl-ac-states[data-place="subtitle"] + [data-place="subtitleTrailing"]',
-      '.bl-ac-line > .bl-ac-structure[data-place="subtitle"] + [data-place="subtitleTrailing"]',
+      '.bl-ac-line > .bl-ac-states[data-place="subtitle"] ~ [data-place="subtitleTrailing"]',
+      '.bl-ac-line > .bl-ac-structure[data-place="subtitle"] ~ [data-place="subtitleTrailing"]',
       '.bl-ac-line > [data-place="subtitleTrailing"]:first-child',
     ]) {
       expect(rule(selector), selector).toContain("max-width: none;");

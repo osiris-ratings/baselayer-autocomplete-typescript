@@ -9,15 +9,26 @@ import {
   type RowField,
   type RowLayout,
   type RowLayoutInput,
-  type RowPlace,
 } from "@baselayer-sdk/autocomplete";
+
+/** The corners' badges, which a layout leaves empty unless it places them. */
+const NO_BADGES = {
+  titleTrailingBadge: null,
+  subtitleBadge: null,
+  subtitleTrailingBadge: null,
+} as const;
 
 describe("a row's places and fields", () => {
   it("names the places a host fills in reading order, each for where it sits", () => {
+    // Left to right, line by line: each corner's badge sits on its inner
+    // side, after a lead and before a trailing place.
     expect(ROW_PLACES).toEqual([
       "titleBadge",
+      "titleTrailingBadge",
       "titleTrailing",
       "subtitle",
+      "subtitleBadge",
+      "subtitleTrailingBadge",
       "subtitleTrailing",
     ]);
   });
@@ -28,9 +39,13 @@ describe("a row's places and fields", () => {
 
   it("puts the structure after the name, the states at the right, the address and the people below", () => {
     expect(DEFAULT_ROW_LAYOUT).toEqual({
+      ...NO_BADGES,
       titleBadge: "structure",
+      titleTrailingBadge: null,
       titleTrailing: "states",
       subtitle: "address",
+      subtitleBadge: null,
+      subtitleTrailingBadge: null,
       subtitleTrailing: "people",
     });
     expect(Object.isFrozen(DEFAULT_ROW_LAYOUT)).toBe(true);
@@ -52,6 +67,7 @@ describe("resolveRowLayout", () => {
         subtitleTrailing: "states",
       }),
     ).toEqual({
+      ...NO_BADGES,
       titleBadge: null,
       // Its default, the states, is placed elsewhere.
       titleTrailing: null,
@@ -69,6 +85,7 @@ describe("resolveRowLayout", () => {
 
   it("moves a field, and leaves the place it left empty", () => {
     expect(resolveRowLayout({ subtitle: "states" })).toEqual({
+      ...NO_BADGES,
       titleBadge: "structure",
       titleTrailing: null,
       subtitle: "states",
@@ -78,6 +95,7 @@ describe("resolveRowLayout", () => {
 
   it("gives up a default field the host placed later in reading order too", () => {
     expect(resolveRowLayout({ subtitleTrailing: "structure" })).toEqual({
+      ...NO_BADGES,
       titleBadge: null,
       titleTrailing: "states",
       subtitle: "address",
@@ -89,6 +107,7 @@ describe("resolveRowLayout", () => {
     expect(
       resolveRowLayout({ subtitle: "states", titleTrailing: "states" }),
     ).toEqual({
+      ...NO_BADGES,
       titleBadge: "structure",
       titleTrailing: "states",
       subtitle: null,
@@ -97,6 +116,7 @@ describe("resolveRowLayout", () => {
     expect(
       resolveRowLayout({ titleBadge: "people", subtitleTrailing: "people" }),
     ).toEqual({
+      ...NO_BADGES,
       titleBadge: "people",
       titleTrailing: "states",
       subtitle: "address",
@@ -121,41 +141,53 @@ describe("resolveRowLayout", () => {
       null,
       ...ROW_FIELDS,
     ];
-    let layouts = 0;
-    for (const titleBadge of values) {
-      for (const titleTrailing of values) {
-        for (const subtitle of values) {
-          for (const subtitleTrailing of values) {
-            const staged: RowLayoutInput = {
-              titleBadge,
-              titleTrailing,
-              subtitle,
-              subtitleTrailing,
-            };
-            const layout = resolveRowLayout(staged);
-            const drawn = ROW_PLACES.map(place => layout[place]).filter(
-              field => field !== null,
-            );
-            expect(new Set(drawn).size, JSON.stringify(staged)).toBe(
-              drawn.length,
-            );
-            // A field the host placed is drawn where it was placed first.
-            const first = new Map<RowField, RowPlace>();
-            for (const place of ROW_PLACES) {
-              const field = staged[place];
-              if (field === null) {
-                expect(layout[place]).toBeNull();
-              } else if (field !== undefined && !first.has(field)) {
-                first.set(field, place);
-                expect(layout[place], JSON.stringify(staged)).toBe(field);
-              }
-            }
-            layouts += 1;
-          }
+    // Every layout a host could stage, 6 values in each of the 7 places.
+    const stagings: RowLayoutInput[] = ROW_PLACES.reduce<RowLayoutInput[]>(
+      (partial, place) =>
+        partial.flatMap(staged =>
+          values.map(value => ({ ...staged, [place]: value })),
+        ),
+      [{}],
+    );
+    const wrong: string[] = [];
+    for (const staged of stagings) {
+      const layout = resolveRowLayout(staged);
+      const drawn = ROW_PLACES.map(place => layout[place]).filter(
+        field => field !== null,
+      );
+      if (new Set(drawn).size !== drawn.length)
+        wrong.push(JSON.stringify(staged));
+      // A field the host placed is drawn where it was placed first.
+      const first = new Set<RowField>();
+      for (const place of ROW_PLACES) {
+        const field = staged[place];
+        if (field === null && layout[place] !== null)
+          wrong.push(JSON.stringify(staged));
+        if (field !== null && field !== undefined && !first.has(field)) {
+          first.add(field);
+          if (layout[place] !== field) wrong.push(JSON.stringify(staged));
         }
       }
     }
-    expect(layouts).toBe(6 ** 4);
+    expect(wrong.slice(0, 5)).toEqual([]);
+    expect(stagings).toHaveLength(6 ** 7);
+  });
+
+  it("pins a flag to any corner's field, on its inner side", () => {
+    expect(
+      resolveRowLayout({
+        titleBadge: null,
+        subtitleTrailingBadge: "structure",
+      }),
+    ).toEqual({
+      ...DEFAULT_ROW_LAYOUT,
+      titleBadge: null,
+      subtitleTrailingBadge: "structure",
+    });
+    // Its default is placed elsewhere, so the name's badge gives it up.
+    expect(resolveRowLayout({ subtitleBadge: "structure" }).titleBadge).toBe(
+      null,
+    );
   });
 
   it("reads a layout staged as null, from plain JavaScript, as none", () => {
@@ -170,6 +202,8 @@ describe("resolveRowLayout", () => {
 
   it("hands a resolved layout back as it is", () => {
     const layout: RowLayout = {
+      ...NO_BADGES,
+      subtitleTrailingBadge: "structure",
       titleBadge: null,
       titleTrailing: "people",
       subtitle: "states",

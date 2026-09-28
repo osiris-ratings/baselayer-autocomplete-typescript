@@ -244,11 +244,29 @@
   border: 1px solid transparent;
 }
 
-/* A trailing place keeps to the right, whatever leads its line or is missing
-   from it, so the column lines up down the menu. */
+/* A trailing corner keeps to the right, whatever leads its line or is
+   missing from it, so the column lines up down the menu. A badge and its
+   field are one corner, pinned together closer than the line's gap. */
+.bl-ac-line > [data-place="titleTrailingBadge"],
 .bl-ac-line > [data-place="titleTrailing"],
+.bl-ac-line > [data-place="subtitleTrailingBadge"],
 .bl-ac-line > [data-place="subtitleTrailing"] {
   margin-left: auto;
+}
+
+.bl-ac-line > [data-place="titleTrailingBadge"] + [data-place="titleTrailing"],
+.bl-ac-line
+  > [data-place="subtitleTrailingBadge"]
+  + [data-place="subtitleTrailing"],
+.bl-ac-line > [data-place="subtitle"] + [data-place="subtitleBadge"] {
+  margin-left: -0.25rem;
+}
+
+/* Text in a corner's badge keeps its width, up to a share of the line. */
+.bl-ac-line > .bl-ac-address[data-place$="Badge"],
+.bl-ac-line > .bl-ac-people[data-place$="Badge"] {
+  flex-shrink: 0;
+  max-width: 40%;
 }
 
 /*
@@ -275,11 +293,14 @@
    at all (a row with no structure where only the structure leads). */
 .bl-ac-line
   > .bl-ac-states[data-place="subtitle"]
-  + [data-place="subtitleTrailing"],
+  ~ [data-place="subtitleTrailing"],
 .bl-ac-line
   > .bl-ac-structure[data-place="subtitle"]
-  + [data-place="subtitleTrailing"],
-.bl-ac-line > [data-place="subtitleTrailing"]:first-child {
+  ~ [data-place="subtitleTrailing"],
+.bl-ac-line > [data-place="subtitleTrailing"]:first-child,
+.bl-ac-line
+  > [data-place="subtitleTrailingBadge"]:first-child
+  + [data-place="subtitleTrailing"] {
   flex-shrink: 1;
   max-width: none;
 }

@@ -181,21 +181,29 @@ A row has places, named for where they sit, and fields, what a business has
 to show. `layout` picks the field each place shows:
 
 ```text
-┌──────────────────────────────────────────────────────────────────┐
-│ title · titleBadge                                 titleTrailing │
-│ subtitle                                        subtitleTrailing │
-└──────────────────────────────────────────────────────────────────┘
-  HARBOR CONCRETE PUMPING CO., INC. [C-Corp]        PA MD NY +2
-  1200 River Rd, Pittsburgh, PA 15212           Dana Whitfield +3
+┌────────────────────────────────────────────────────────────────────┐
+│ title · titleBadge              titleTrailingBadge · titleTrailing │
+│ subtitle · subtitleBadge  subtitleTrailingBadge · subtitleTrailing │
+└────────────────────────────────────────────────────────────────────┘
+  HARBOR CONCRETE PUMPING CO., INC. [C-Corp]          PA MD NY +2
+  1200 River Rd, Pittsburgh, PA 15212             Dana Whitfield +3
 ```
 
-| Place              | Where                                 | Default                              |
-| ------------------ | ------------------------------------- | ------------------------------------ |
-| `title`            | line 1, leading                       | the name, and `also …`; always shown |
-| `titleBadge`       | line 1, pinned to the end of the name | `structure`                          |
-| `titleTrailing`    | line 1, right-aligned                 | `states`                             |
-| `subtitle`         | line 2, leading                       | `address`                            |
-| `subtitleTrailing` | line 2, right-aligned                 | `people`                             |
+| Place                   | Where                                    | Default                              |
+| ----------------------- | ---------------------------------------- | ------------------------------------ |
+| `title`                 | line 1, leading                          | the name, and `also …`; always shown |
+| `titleBadge`            | line 1, pinned to the end of the name    | `structure`                          |
+| `titleTrailingBadge`    | line 1, pinned before `titleTrailing`    | empty                                |
+| `titleTrailing`         | line 1, right-aligned                    | `states`                             |
+| `subtitle`              | line 2, leading                          | `address`                            |
+| `subtitleBadge`         | line 2, pinned after `subtitle`          | empty                                |
+| `subtitleTrailingBadge` | line 2, pinned before `subtitleTrailing` | empty                                |
+| `subtitleTrailing`      | line 2, right-aligned                    | `people`                             |
+
+Each corner of a row, a line's lead or its right, is a field and a badge
+pinned to its inner side. Any field goes in any place, a badge place
+included: `{ titleBadge: null, subtitleTrailingBadge: "structure" }` draws
+the structure's flag just before the officers.
 
 | Field       | Draws                                                 |
 | ----------- | ----------------------------------------------------- |
@@ -217,8 +225,8 @@ left out keeps its default field, unless you placed that field elsewhere:
 field is drawn in one place at most; placed twice, it stays in the first
 place in reading order and the later one is left empty. In the core,
 `resolveRowLayout(layout)` returns the complete layout, every place with its
-field or `null` (before the second line's lead is filled from its trailing
-place, below), `DEFAULT_ROW_LAYOUT` is the default, and `ROW_PLACES` (in
+field or `null` (before the second line's lead is filled from its right
+corner, below), `DEFAULT_ROW_LAYOUT` is the default, and `ROW_PLACES` (in
 reading order) and `ROW_FIELDS` list the places and the fields.
 
 A field looks the same in any place; the place decides where it sits and
@@ -228,15 +236,17 @@ what gives way first:
   line runs out of room, `also …` gives way first: it is ellipsised down to
   6em, then leaves the line whole rather than shrinking to a stray letter.
   Then the name is ellipsised; the badge and the trailing place stay.
+- A corner's badge keeps beside its field, on the side facing the middle
+  of the row; text in a badge place keeps its width, up to 40% of the line.
 - A trailing place keeps to the right. Text there keeps its width, up to
   half the first line, so the name keeps the rest, or all but about 5rem of
   the second. Beside a flag, which needs only its own width, or with no lead
   at all, it takes the rest of the line and gives way itself.
 - Every row of a menu shares one layout, so its columns line up; a row
   without a field (no officers) leaves that field's place empty.
-- With `subtitle` empty, the field in `subtitleTrailing` is drawn in its
-  place, so the second line never starts with a gap. A line with nothing in
-  any of its places is dropped.
+- With `subtitle` and `subtitleBadge` empty, the second line's right
+  corner, its badge and all, is drawn in their place, so the line never
+  starts with a gap. A line with nothing in any of its places is dropped.
 
 Each field's element says where it is drawn, `data-place="titleBadge"` and
 so on, and the title's says `data-place="title"`.

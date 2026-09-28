@@ -1344,8 +1344,11 @@ describe("the row's places and fields", () => {
   // Where a place puts its field: the line, and the element it sits in.
   const WHERE: Record<RowPlace, { line: number; parent: string }> = {
     titleBadge: { line: 0, parent: ".bl-ac-name-group" },
+    titleTrailingBadge: { line: 0, parent: ".bl-ac-line-title" },
     titleTrailing: { line: 0, parent: ".bl-ac-line-title" },
     subtitle: { line: 1, parent: ".bl-ac-line-subtitle" },
+    subtitleBadge: { line: 1, parent: ".bl-ac-line-subtitle" },
+    subtitleTrailingBadge: { line: 1, parent: ".bl-ac-line-subtitle" },
     subtitleTrailing: { line: 1, parent: ".bl-ac-line-subtitle" },
   };
   // What each field draws on the first row, wherever it sits.
@@ -1359,7 +1362,7 @@ describe("the row's places and fields", () => {
   /** The one field in the one place; the second line's trailing place needs a lead. */
   function only(field: RowField, place: RowPlace): RowLayoutInput {
     const lead =
-      place === "subtitleTrailing"
+      place === "subtitleTrailing" || place === "subtitleTrailingBadge"
         ? { subtitle: ROW_FIELDS.find(other => other !== field)! }
         : {};
     return {
@@ -1393,6 +1396,32 @@ describe("the row's places and fields", () => {
         .flat()
         .filter(entry => entry.endsWith(`:${field}`)),
     ).toHaveLength(1);
+  });
+
+  it("pins a flag to a corner's field on its inner side", () => {
+    const row = rowOf({ titleBadge: null, subtitleTrailingBadge: "structure" });
+
+    expect(lines(row)).toEqual([
+      ["title:name", "titleTrailing:states"],
+      [
+        "subtitle:address",
+        "subtitleTrailingBadge:structure",
+        "subtitleTrailing:people",
+      ],
+    ]);
+  });
+
+  it("draws the trailing corner in the lead's place, badge and all, when the lead is empty", () => {
+    const row = rowOf({
+      titleBadge: null,
+      subtitle: null,
+      subtitleTrailingBadge: "structure",
+    });
+
+    expect(lines(row)[1]).toEqual([
+      "subtitle:people",
+      "subtitleBadge:structure",
+    ]);
   });
 
   it("draws the second line's trailing field in the lead's place when the lead is empty", () => {

@@ -19,8 +19,11 @@ as a minor release.
   build does not know is kept as the string it is.
 - `layout` on `BusinessAutocomplete` and `BusinessAutocompleteView`: the
   field (`states`, `structure`, `address` or `people`) each place of a row
-  shows (`titleBadge`, `titleTrailing`, `subtitle` or `subtitleTrailing`), or
-  `null` for an empty one. A place left out keeps its default field unless
+  shows, or `null` for an empty one. The places are each line's two
+  corners, a field and a badge pinned to its inner side: `titleBadge`,
+  `titleTrailingBadge`, `titleTrailing`, `subtitle`, `subtitleBadge`,
+  `subtitleTrailingBadge` and `subtitleTrailing`. The three new badge
+  places start empty. A place left out keeps its default field unless
   that field is placed elsewhere, and a field placed twice stays in the first
   place, so none is drawn twice. In the core: `ROW_PLACES`, `ROW_FIELDS`,
   `DEFAULT_ROW_LAYOUT`, `resolveRowLayout`, `includeForLayout`, and the types

@@ -6,17 +6,25 @@ import {
   type RowLayoutInput,
 } from "@baselayer-sdk/autocomplete";
 
-import { rowLines, type RowLines } from "../../src/react/rowLayout";
+import {
+  rowLines,
+  type Corner,
+  type RowLines,
+} from "../../src/react/rowLayout";
 
-/**
- * The lines as drawn, a place per slot: `name+badge|trailing` for the first,
- * `lead|trailing` for the second, `-` for an empty place.
- */
+const f = (field: string | null) => field ?? "-";
+/** A lead corner as `field+badge`, a trailing one as `badge+field`. */
+const lead = (corner: Corner) => `${f(corner.field)}+${f(corner.badge)}`;
+const trailing = (corner: Corner) => `${f(corner.badge)}+${f(corner.field)}`;
+
 function drawn(lines: RowLines): string[] {
-  const title = `name+${lines.title.badge ?? "-"}|${lines.title.trailing ?? "-"}`;
+  const title = `name+${f(lines.title.badge)}|${trailing(lines.title.trailing)}`;
   return lines.subtitle === null
     ? [title]
-    : [title, `${lines.subtitle.lead}|${lines.subtitle.trailing ?? "-"}`];
+    : [
+        title,
+        `${lead(lines.subtitle.lead)}|${trailing(lines.subtitle.trailing)}`,
+      ];
 }
 
 const lay = (staged: RowLayoutInput) =>
@@ -25,26 +33,42 @@ const lay = (staged: RowLayoutInput) =>
 describe("rowLines", () => {
   it("draws the default layout on two lines", () => {
     expect(drawn(rowLines(DEFAULT_ROW_LAYOUT))).toEqual([
-      "name+structure|states",
-      "address|people",
+      "name+structure|-+states",
+      "address+-|-+people",
     ]);
   });
 
   it.each([
-    // A field in every place.
     [
       { titleBadge: "people", subtitle: "states", subtitleTrailing: "address" },
-      ["name+people|-", "states|address"],
+      ["name+people|-+-", "states+-|-+address"],
     ],
-    // No subtitle: its trailing field is drawn in its place.
-    [{ subtitle: null }, ["name+structure|states", "people|-"]],
+    // A flag pinned to a corner's field, on its inner side.
     [
-      { subtitle: null, subtitleTrailing: "states", titleTrailing: null },
-      ["name+structure|-", "states|-"],
+      { titleBadge: null, subtitleTrailingBadge: "structure" },
+      ["name+-|-+states", "address+-|structure+people"],
+    ],
+    [
+      { titleBadge: null, subtitleBadge: "structure" },
+      ["name+-|-+states", "address+structure|-+people"],
+    ],
+    [
+      { titleBadge: null, titleTrailingBadge: "structure" },
+      ["name+-|structure+states", "address+-|-+people"],
+    ],
+    // No subtitle: the trailing corner is drawn in the lead's, badge and all.
+    [{ subtitle: null }, ["name+structure|-+states", "people+-|-+-"]],
+    [
+      { subtitle: null, titleBadge: null, subtitleTrailingBadge: "structure" },
+      ["name+-|-+states", "people+structure|-+-"],
+    ],
+    // A badge alone keeps its corner.
+    [
+      { subtitle: null, titleBadge: null, subtitleBadge: "structure" },
+      ["name+-|-+states", "-+structure|-+people"],
     ],
     // Nothing placed on the second line: the first line is the row.
-    [{ subtitle: null, subtitleTrailing: null }, ["name+structure|states"]],
-    // Only the title: a row is the entity it names.
+    [{ subtitle: null, subtitleTrailing: null }, ["name+structure|-+states"]],
     [
       {
         titleBadge: null,
@@ -52,11 +76,8 @@ describe("rowLines", () => {
         subtitle: null,
         subtitleTrailing: null,
       },
-      ["name+-|-"],
+      ["name+-|-+-"],
     ],
-    // An empty trailing place leaves its lead where it is.
-    [{ subtitleTrailing: null }, ["name+structure|states", "address|-"]],
-    [{ titleBadge: null }, ["name+-|states", "address|people"]],
   ] satisfies [RowLayoutInput, string[]][])(
     "lays out %j as %j",
     (staged, lines) => {

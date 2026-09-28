@@ -430,14 +430,16 @@ export function BusinessAutocompleteView({
               };
               const draw = (field: RowField | null, place: RowPlace) =>
                 field === null ? null : fieldNode[field](place);
-              const lead =
-                lines.subtitle === null
-                  ? null
-                  : draw(lines.subtitle.lead, "subtitle");
+              // The second line: its lead corner (the field, then its badge)
+              // and its trailing corner (the badge, then the field).
+              const second = lines.subtitle;
+              const lead = second && draw(second.lead.field, "subtitle");
+              const leadBadge =
+                second && draw(second.lead.badge, "subtitleBadge");
+              const trailingBadge =
+                second && draw(second.trailing.badge, "subtitleTrailingBadge");
               const trailing =
-                lines.subtitle === null
-                  ? null
-                  : draw(lines.subtitle.trailing, "subtitleTrailing");
+                second && draw(second.trailing.field, "subtitleTrailing");
               const defaultRow = (
                 <>
                   <div
@@ -479,11 +481,12 @@ export function BusinessAutocompleteView({
                         </span>
                       )}
                     </span>
-                    {draw(lines.title.trailing, "titleTrailing")}
+                    {draw(lines.title.trailing.badge, "titleTrailingBadge")}
+                    {draw(lines.title.trailing.field, "titleTrailing")}
                   </div>
                   {/* A row with nothing for its second line (no officers
                       where only they are placed) drops the line. */}
-                  {(lead || trailing) && (
+                  {(lead || leadBadge || trailingBadge || trailing) && (
                     <div
                       className={cx(
                         "subtitleLine",
@@ -491,6 +494,8 @@ export function BusinessAutocompleteView({
                       )}
                     >
                       {lead}
+                      {leadBadge}
+                      {trailingBadge}
                       {trailing}
                     </div>
                   )}

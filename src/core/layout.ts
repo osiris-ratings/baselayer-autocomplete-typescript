@@ -8,15 +8,19 @@ import { ROUTES } from "./entities";
 import type { Include } from "./wire";
 
 /**
- * The places a host fills, in reading order: the badge pinned to the end of
- * the name and the first line's trailing place, then the second line's lead
- * and its trailing place. The title, which leads the first line, always
- * holds the name.
+ * The places a host fills, in reading order, left to right and line by line.
+ * A row has four corners: the title, which always holds the name, and the
+ * first line's trailing place; the second line's lead and its trailing place.
+ * Each corner has a badge pinned to its inner side: after the name or the
+ * lead, before a trailing place.
  */
 export const ROW_PLACES = [
   "titleBadge",
+  "titleTrailingBadge",
   "titleTrailing",
   "subtitle",
+  "subtitleBadge",
+  "subtitleTrailingBadge",
   "subtitleTrailing",
 ] as const;
 export type RowPlace = (typeof ROW_PLACES)[number];
@@ -37,8 +41,11 @@ export type RowLayoutInput = { [P in RowPlace]?: RowField | null | undefined };
 
 export const DEFAULT_ROW_LAYOUT: Readonly<RowLayout> = Object.freeze({
   titleBadge: "structure",
+  titleTrailingBadge: null,
   titleTrailing: "states",
   subtitle: "address",
+  subtitleBadge: null,
+  subtitleTrailingBadge: null,
   subtitleTrailing: "people",
 });
 
