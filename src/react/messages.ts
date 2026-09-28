@@ -1,3 +1,5 @@
+import type { BusinessStructure } from "@baselayer-sdk/autocomplete";
+
 /** Every string the typeahead draws, overridable one at a time. */
 export interface AutocompleteMessages {
   searching: string;
@@ -15,6 +17,12 @@ export interface AutocompleteMessages {
   agentSuffix: string;
   /** The overflow count beside the first officer or the third state. */
   more: (count: number) => string;
+  /**
+   * Structure flags relabeled, one value at a time, over `structureLabel`'s
+   * own; `""` hides that value's flag. Any value, one this build does not
+   * know included, can be given a label.
+   */
+  structures: Partial<Record<BusinessStructure, string>>;
   /** The organization's daily pool of sessions is spent. */
   dayLimit: string;
   /** A mint or a reply failed with nothing more specific to say. */
@@ -34,6 +42,7 @@ export const DEFAULT_MESSAGES: Readonly<AutocompleteMessages> = Object.freeze({
   noAddress: "No address on file",
   agentSuffix: " · agent",
   more: (count: number) => `+${count}`,
+  structures: Object.freeze({}),
   dayLimit:
     "Your plan's daily autocomplete limit is reached; suggestions return tomorrow.",
   unavailable: "Autocomplete unavailable",

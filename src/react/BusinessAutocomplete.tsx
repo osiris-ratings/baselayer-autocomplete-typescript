@@ -9,10 +9,10 @@ import {
 
 import type { Filters } from "@baselayer-sdk/autocomplete";
 import type { AutocompleteClient } from "@baselayer-sdk/autocomplete";
-import type { LookInput, RowParts } from "@baselayer-sdk/autocomplete";
+import type { LookInput, RowLayoutInput } from "@baselayer-sdk/autocomplete";
 import { defaultMint, type MintFunction } from "@baselayer-sdk/autocomplete";
 import { BUSINESS_TOKEN_TTL_SECONDS } from "@baselayer-sdk/autocomplete";
-import { includeForParts, resolveParts } from "@baselayer-sdk/autocomplete";
+import { includeForLayout } from "@baselayer-sdk/autocomplete";
 import type { BusinessSuggestion } from "@baselayer-sdk/autocomplete";
 
 import {
@@ -76,10 +76,11 @@ interface CommonProps {
    */
   open?: boolean;
   /**
-   * Which parts of a row show besides its title, which always does: the flags,
-   * the subtitle and the secondary subtitle. Each shows unless set to `false`.
+   * The field each place of a row shows (`ROW_PLACES`, `ROW_FIELDS`); a place
+   * left out keeps its default field unless it is placed elsewhere, and null
+   * leaves a place empty. The placed fields also decide what is fetched.
    */
-  parts?: Partial<RowParts>;
+  layout?: RowLayoutInput;
   /**
    * The menu as wide as the input (the default), or, `false`, as wide as
    * `--bl-ac-menu-width` from 48em up.
@@ -159,7 +160,7 @@ function Connected({
   classNames,
   unstyled,
   open,
-  parts,
+  layout,
   menuFollowsInputWidth,
   onUnavailable,
 }: CommonProps & { client: AutocompleteClient }) {
@@ -167,10 +168,10 @@ function Connected({
   // A pick writes the suggestion's label into the field; querying that exact
   // label again would only reopen the menu on the row just chosen.
   const [pickedLabel, setPickedLabel] = useState<string | null>(null);
-  // The parts drawn decide what is fetched: a part left out is not asked for.
-  // With none needing a related entity the tier's default stands, since it
-  // refuses an empty include.
-  const include = includeForParts(resolveParts(parts));
+  // The fields drawn decide what is fetched: a field placed nowhere is not
+  // asked for. With none needing a related entity the tier's default stands,
+  // since it refuses an empty include.
+  const include = includeForLayout(layout);
   const { unavailable, errorKind, filtersWithheld, requestId, ...state } =
     useBusinessAutocomplete({
       client,
@@ -234,7 +235,7 @@ function Connected({
       classNames={classNames}
       unstyled={unstyled}
       open={open}
-      parts={parts}
+      layout={layout}
       menuFollowsInputWidth={menuFollowsInputWidth}
     />
   );

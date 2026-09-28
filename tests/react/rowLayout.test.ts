@@ -1,56 +1,66 @@
 import { describe, expect, it } from "vitest";
 
-import { ROW_PARTS, type RowParts } from "@baselayer-sdk/autocomplete";
+import {
+  DEFAULT_ROW_LAYOUT,
+  resolveRowLayout,
+  type RowLayoutInput,
+} from "@baselayer-sdk/autocomplete";
 
-import { rowLayout } from "../../src/react/rowLayout";
+import { rowLines, type RowLines } from "../../src/react/rowLayout";
 
-const T = "title";
-const F = "flags";
-const S = "subtitle";
-const X = "secondarySubtitle";
-
-function parts(...on: (typeof ROW_PARTS)[number][]): RowParts {
-  return Object.fromEntries(
-    ROW_PARTS.map(part => [part, on.includes(part)]),
-  ) as RowParts;
+/**
+ * The lines as drawn, a place per slot: `name+badge|trailing` for the first,
+ * `lead|trailing` for the second, `-` for an empty place.
+ */
+function drawn(lines: RowLines): string[] {
+  const title = `name+${lines.title.badge ?? "-"}|${lines.title.trailing ?? "-"}`;
+  return lines.subtitle === null
+    ? [title]
+    : [title, `${lines.subtitle.lead}|${lines.subtitle.trailing ?? "-"}`];
 }
 
-/** A layout as `left|right` per line, `-` for an empty right. */
-function drawn(layout: ReturnType<typeof rowLayout>): string[] {
-  return layout.map(line => `${line.left}|${line.right ?? "-"}`);
-}
+const lay = (staged: RowLayoutInput) =>
+  drawn(rowLines(resolveRowLayout(staged)));
 
-describe("rowLayout", () => {
-  it("names the parts a host may leave out: every part but the title", () => {
-    expect(ROW_PARTS).toEqual([F, S, X]);
+describe("rowLines", () => {
+  it("draws the default layout on two lines", () => {
+    expect(drawn(rowLines(DEFAULT_ROW_LAYOUT))).toEqual([
+      "name+structure|states",
+      "address|people",
+    ]);
   });
 
   it.each([
-    // Every part: the title line and the subtitle line, as ever.
+    // A field in every place.
     [
-      [F, S, X],
-      [`${T}|${F}`, `${S}|${X}`],
+      { titleBadge: "people", subtitle: "states", subtitleTrailing: "address" },
+      ["name+people|-", "states|address"],
     ],
+    // No subtitle: its trailing field is drawn in its place.
+    [{ subtitle: null }, ["name+structure|states", "people|-"]],
     [
-      [F, S],
-      [`${T}|${F}`, `${S}|-`],
+      { subtitle: null, subtitleTrailing: "states", titleTrailing: null },
+      ["name+structure|-", "states|-"],
     ],
-    // No subtitle: the secondary subtitle is promoted to subtitle.
+    // Nothing placed on the second line: the first line is the row.
+    [{ subtitle: null, subtitleTrailing: null }, ["name+structure|states"]],
+    // Only the title: a row is the entity it names.
     [
-      [F, X],
-      [`${T}|${F}`, `${X}|-`],
+      {
+        titleBadge: null,
+        titleTrailing: null,
+        subtitle: null,
+        subtitleTrailing: null,
+      },
+      ["name+-|-"],
     ],
-    [[F], [`${T}|${F}`]],
-    // No flags: every other part keeps its place.
-    [
-      [S, X],
-      [`${T}|-`, `${S}|${X}`],
-    ],
-    [[S], [`${T}|-`, `${S}|-`]],
-    [[X], [`${T}|-`, `${X}|-`]],
-    // Nothing else: the title is the row.
-    [[], [`${T}|-`]],
-  ] as const)("lays out %j as %j", (on, lines) => {
-    expect(drawn(rowLayout(parts(...on)))).toEqual(lines);
-  });
+    // An empty trailing place leaves its lead where it is.
+    [{ subtitleTrailing: null }, ["name+structure|states", "address|-"]],
+    [{ titleBadge: null }, ["name+-|states", "address|people"]],
+  ] satisfies [RowLayoutInput, string[]][])(
+    "lays out %j as %j",
+    (staged, lines) => {
+      expect(lay(staged)).toEqual(lines);
+    },
+  );
 });

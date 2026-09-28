@@ -1,34 +1,31 @@
-import type { RowPart, RowParts } from "@baselayer-sdk/autocomplete";
+import type { RowField, RowLayout } from "@baselayer-sdk/autocomplete";
 
-/** A place in a row: the title, which always shows, or a part a host may leave out. */
-export type RowPlace = "title" | RowPart;
-
-export interface RowLine {
-  left: RowPlace;
-  right: RowPlace | null;
+export interface RowLines {
+  /** The first line, led by the title: the badge after the name, and the trailing field. */
+  title: { badge: RowField | null; trailing: RowField | null };
+  /** The second line's lead and trailing fields, or null when nothing is placed on it. */
+  subtitle: { lead: RowField; trailing: RowField | null } | null;
 }
 
 /**
- * Where a row's parts go. A row has four places, each named for the part it
- * holds: the title and the flags on the first line, the subtitle and the
- * secondary subtitle on the second. With the subtitle left out, the secondary
- * subtitle is promoted to its place, so no line starts with a gap.
+ * What a row draws on each line. With `subtitle` empty, the field in
+ * `subtitleTrailing` is drawn in its place, so the second line never starts
+ * with a gap; with neither, there is no second line.
  *
- * It follows the parts asked for, not what a row holds, so every row of a
- * menu shares one layout and its columns line up; a row without a part (no
- * officers) leaves that part's place empty.
+ * It follows the layout, not what a row holds, so every row of a menu shares
+ * one and its columns line up; a row without a field (no officers) leaves
+ * that field's place empty.
  */
-export function rowLayout(parts: RowParts): RowLine[] {
-  const flags = parts.flags ? "flags" : null;
-  let subtitle: RowPart | null = parts.subtitle ? "subtitle" : null;
-  let secondary: RowPart | null = parts.secondarySubtitle
-    ? "secondarySubtitle"
-    : null;
-  if (subtitle === null) {
-    [subtitle, secondary] = [secondary, null];
-  }
-  const title: RowLine = { left: "title", right: flags };
-  return subtitle === null
-    ? [title]
-    : [title, { left: subtitle, right: secondary }];
+export function rowLines(layout: RowLayout): RowLines {
+  const lead = layout.subtitle ?? layout.subtitleTrailing;
+  return {
+    title: { badge: layout.titleBadge, trailing: layout.titleTrailing },
+    subtitle:
+      lead === null
+        ? null
+        : {
+            lead,
+            trailing: layout.subtitle === null ? null : layout.subtitleTrailing,
+          },
+  };
 }

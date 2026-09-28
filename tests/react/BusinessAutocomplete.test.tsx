@@ -47,7 +47,7 @@ function jsonResponse(
   };
 }
 
-function wireSuggestion(token: string, label: string) {
+function wireSuggestion(token: string, label: string, structure: string) {
   return {
     type: "business",
     token,
@@ -56,6 +56,7 @@ function wireSuggestion(token: string, label: string) {
     match: "strong",
     domicile_state: "DE",
     states: ["DE"],
+    structure,
     related: {
       people: { count: 0, matched: null, truncated: false, items: [] },
       addresses: {
@@ -90,8 +91,12 @@ function businessesBody(q: string) {
       liens: { status: "not_requested" },
     },
     suggestions: [
-      wireSuggestion("tok-cinder-rigging", "CINDER RIGGING, INC."),
-      wireSuggestion("tok-cinder-racing", "CINDER RACING STABLES, LLC"),
+      wireSuggestion(
+        "tok-cinder-rigging",
+        "CINDER RIGGING, INC.",
+        "C_CORPORATION",
+      ),
+      wireSuggestion("tok-cinder-racing", "CINDER RACING STABLES, LLC", "LLC"),
     ],
   };
 }
@@ -204,7 +209,7 @@ describe("BusinessAutocomplete", () => {
     });
   });
 
-  it("asks the tier for what its parts show, and no more", async () => {
+  it("asks the tier for what its layout shows, and no more", async () => {
     const fetch = tierFetch();
     vi.stubGlobal("fetch", fetch);
     const user = userEvent.setup();
@@ -212,7 +217,7 @@ describe("BusinessAutocomplete", () => {
       <Host
         source={{ mint: grantingMint(), baseUrl: BASE_URL }}
         mintOn="request"
-        parts={{ subtitle: false }}
+        layout={{ subtitle: null }}
       />,
     );
 
@@ -223,7 +228,7 @@ describe("BusinessAutocomplete", () => {
     expect(url.searchParams.get("include")).toBe("people");
   });
 
-  it("leaves include to the tier when no part needs a related entity", async () => {
+  it("leaves include to the tier when no placed field needs a related entity", async () => {
     const fetch = tierFetch();
     vi.stubGlobal("fetch", fetch);
     const user = userEvent.setup();
@@ -231,7 +236,7 @@ describe("BusinessAutocomplete", () => {
       <Host
         source={{ mint: grantingMint(), baseUrl: BASE_URL }}
         mintOn="request"
-        parts={{ subtitle: false, secondarySubtitle: false }}
+        layout={{ subtitle: null, subtitleTrailing: null }}
       />,
     );
 
@@ -265,24 +270,52 @@ describe("BusinessAutocomplete", () => {
     expect(screen.getAllByTestId("business-suggestion")).toHaveLength(2);
   });
 
-  it("draws only the parts of a row it is given", async () => {
+  it("draws each field where its layout places it, and asks for what it draws", async () => {
+    const fetch = tierFetch();
+    vi.stubGlobal("fetch", fetch);
+    const user = userEvent.setup();
+    render(
+      <Host
+        source={{ mint: grantingMint(), baseUrl: BASE_URL }}
+        mintOn="request"
+        layout={{
+          titleBadge: "address",
+          subtitle: null,
+          subtitleTrailing: null,
+        }}
+      />,
+    );
+
+    await user.type(input(), "cinder");
+    const [row] = await screen.findAllByTestId("business-suggestion");
+
+    expect(row).toHaveTextContent("CINDER RIGGING, INC.");
+    expect(
+      row!.querySelector('[data-testid="business-suggestion-address"]'),
+    ).toHaveAttribute("data-place", "titleBadge");
+    expect(row!.querySelectorAll(".bl-ac-line")).toHaveLength(1);
+    const url = new URL(fetch.mock.calls.at(-1)?.[0] ?? "");
+    expect(url.searchParams.get("include")).toBe("addresses");
+  });
+
+  it("draws the structure the tier sends after the name", async () => {
     vi.stubGlobal("fetch", tierFetch());
     const user = userEvent.setup();
     render(
       <Host
         source={{ mint: grantingMint(), baseUrl: BASE_URL }}
         mintOn="request"
-        parts={{ subtitle: false }}
       />,
     );
 
     await user.type(input(), "cinder");
-    const rows = await screen.findAllByTestId("business-suggestion");
+    await screen.findAllByTestId("business-suggestion");
 
-    expect(rows[0]).toHaveTextContent("CINDER RIGGING, INC.");
-    expect(screen.queryAllByTestId("business-suggestion-address")).toHaveLength(
-      0,
-    );
+    expect(
+      screen
+        .getAllByTestId("business-suggestion-structure")
+        .map(flag => flag.textContent),
+    ).toEqual(["C-Corp", "LLC"]);
   });
 
   it("hands the host the pick and its token, and does not query the picked name", async () => {

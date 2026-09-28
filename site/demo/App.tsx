@@ -857,7 +857,6 @@ export function App() {
                     messages={style.messages}
                     unstyled={style.unstyled}
                     open={styling}
-                    parts={style.parts}
                     {...(style.pageInput
                       ? { classNames: { input: "demo-input" } }
                       : {})}
@@ -893,7 +892,6 @@ export function App() {
                       look={{ ...changedLook(style) }}
                       messages={style.messages}
                       unstyled={style.unstyled}
-                      parts={style.parts}
                       menuFollowsInputWidth={style.menuFollowsInputWidth}
                     />
                   </div>
