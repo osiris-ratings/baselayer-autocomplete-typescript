@@ -542,13 +542,15 @@
 /* A menu row in outline: the name and the badge, then the first line's
    right; the second line's lead and its right. Each place is a dropdown drawn
    the way the field it holds is, so the drawing reads as the row. */
+/* Painted in the look being styled: the menu's background, border and
+   corners, and each field in its own colors (--map-*, set from the state). */
 .row-map {
   display: grid;
   gap: 8px;
   padding: 14px 16px;
-  background: var(--paper);
-  border: 1px solid var(--line-soft);
-  border-radius: 4px;
+  background: var(--map-bg, var(--paper));
+  border: 1px solid var(--map-border, var(--line-soft));
+  border-radius: var(--map-radius, 4px);
   box-shadow: 0 2px 6px rgba(9, 35, 79, 0.06);
 }
 
@@ -571,9 +573,10 @@
   padding: 0 24px 0 9px;
   overflow: hidden;
   background: transparent;
-  border: 1px dashed #c3c6cf;
-  border-radius: 3px;
-  color: var(--ink);
+  /* A dash in the place's own ink, half faded. */
+  border: 1px dashed color-mix(in srgb, currentColor 45%, transparent);
+  border-radius: var(--map-pill-radius, 3px);
+  color: inherit;
   font: inherit;
   font-size: 13px;
   text-align: left;
@@ -585,8 +588,8 @@
   flex: 0 1 13rem;
   min-width: 0;
   padding-right: 9px;
-  background: #f5f6f8;
-  color: var(--muted);
+  background: color-mix(in srgb, var(--map-title, var(--ink)) 6%, transparent);
+  color: color-mix(in srgb, var(--map-title, var(--ink)) 60%, transparent);
   font-weight: 600;
   cursor: not-allowed;
 }
@@ -642,45 +645,39 @@
 }
 
 .row-map-place[data-field="states"] {
-  color: #22543d;
+  color: var(--map-pill-fg, #22543d);
 }
 
 .row-map-place[data-field="states"] select {
-  background: #c6f6d5;
-  border-color: #48bb78;
-  color: #22543d;
+  background: var(--map-pill-bg, #c6f6d5);
+  border-color: var(--map-pill-border, #48bb78);
   font-size: 12px;
   font-weight: 600;
 }
 
 .row-map-place[data-field="structure"] {
-  color: #4a5568;
+  color: var(--map-structure-fg, #4a5568);
 }
 
 .row-map-place[data-field="structure"] select {
-  background: #edf2f7;
-  border-color: #a0aec0;
-  color: #4a5568;
+  background: var(--map-structure-bg, #edf2f7);
   font-size: 12px;
   font-weight: 600;
 }
 
 .row-map-place[data-field="address"],
 .row-map-place[data-field="people"] {
-  color: #718096;
-}
-
-.row-map-place[data-field="address"] select,
-.row-map-place[data-field="people"] select {
-  color: #718096;
+  color: var(--map-subtitle, #718096);
 }
 
 .row-map-place[data-field="empty"] {
-  color: #a4a7b0;
+  color: color-mix(in srgb, var(--map-subtitle, #718096) 60%, transparent);
 }
 
-.row-map-place[data-field="empty"] select {
-  color: #a4a7b0;
+/* The dropdown's own list stays legible whatever the look. */
+.row-map-place option {
+  color: #1c1b1c;
+  background: #ffffff;
 }
 
 .row-map-place select:hover {

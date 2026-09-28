@@ -10,6 +10,8 @@ import {
   type MintTiming,
 } from "@baselayer-sdk/autocomplete/react";
 
+import type { CSSProperties } from "react";
+
 import { Code } from "../shared/Code";
 import { ColorInput, Field, Fold, Select, Toggle } from "./controls";
 import {
@@ -69,6 +71,24 @@ const MINT_TIMING_LABELS: Record<MintTiming, string> = {
   keystroke: "On first keystroke (prewarm)",
   request: "On first request (lazy)",
 };
+
+/** The look's colors and corners, as the drawn row paints its places. */
+function rowMapColors(state: StyleState): CSSProperties {
+  const { look, vars } = state;
+  return {
+    "--map-bg": look.backgroundColor,
+    "--map-border": vars["--bl-ac-border"],
+    "--map-radius": vars["--bl-ac-radius"],
+    "--map-pill-radius": vars["--bl-ac-pill-radius"],
+    "--map-title": look.titleColor,
+    "--map-subtitle": look.subtitleColor,
+    "--map-pill-bg": look.pillBackgroundColor,
+    "--map-pill-fg": look.pillForegroundColor,
+    "--map-pill-border": look.primaryPillBorderColor,
+    "--map-structure-bg": look.structurePillBackgroundColor,
+    "--map-structure-fg": look.structurePillForegroundColor,
+  } as CSSProperties;
+}
 
 /**
  * One place of the drawn row: a dropdown of what it can show, drawn the way
@@ -212,7 +232,12 @@ export function StylingPanel({
           A row, drawn as its places (<code>layout</code>). Pick what each one
           shows; a field taken from another place leaves that one empty.
         </p>
-        <div className="row-map" role="group" aria-label="A row's places">
+        <div
+          className="row-map"
+          role="group"
+          aria-label="A row's places"
+          style={rowMapColors(state)}
+        >
           <div className="row-map-line">
             {/* A row is the entity it names, so its title always shows. */}
             <button
