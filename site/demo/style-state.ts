@@ -237,6 +237,28 @@ export const PLACE_LABELS: Record<RowPlace, string> = {
 export const TRAY = "tray";
 export type DropSpot = RowPlace | typeof TRAY;
 
+/** A corner's badge place, and the field place it is pinned beside. */
+const PINNED_BESIDE: Partial<Record<RowPlace, RowPlace>> = {
+  titleTrailingBadge: "titleTrailing",
+  subtitleBadge: "subtitle",
+  subtitleTrailingBadge: "subtitleTrailing",
+};
+
+/**
+ * Whether a field can be dropped on a spot. Not on its own place, nor on the
+ * badge pinned beside it, which would pin it beside itself; on the tray only
+ * when the row shows it.
+ */
+export function canDrop(
+  layout: RowLayout,
+  field: RowField,
+  to: DropSpot,
+): boolean {
+  const from = ROW_PLACES.find(place => layout[place] === field);
+  if (to === TRAY) return from !== undefined;
+  return to !== from && (from === undefined || PINNED_BESIDE[to] !== from);
+}
+
 /** The fields the layout places nowhere, in their own order. */
 export function unplacedFields(layout: RowLayout): RowField[] {
   const placed = new Set(ROW_PLACES.map(place => layout[place]));
@@ -281,14 +303,19 @@ export const CHOICE_LABELS: Record<PlaceChoice, string> = {
 };
 
 /**
- * A place's options: empty, and every field. A field placed elsewhere says
- * where it would move from, since picking it empties that place.
+ * A place's options: empty, and every field but the one a badge is pinned
+ * beside. A field placed elsewhere says where it would move from, since
+ * picking it empties that place.
  */
 export function placeOptions(
   layout: RowLayout,
   place: RowPlace,
 ): { value: PlaceChoice; label: string }[] {
-  return CHOICES.map(choice => {
+  const beside = PINNED_BESIDE[place];
+  const pinnable = CHOICES.filter(
+    choice => beside === undefined || layout[beside] !== choice,
+  );
+  return pinnable.map(choice => {
     const elsewhere = ROW_PLACES.find(
       other => other !== place && layout[other] === choice,
     );

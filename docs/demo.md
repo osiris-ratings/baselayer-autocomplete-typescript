@@ -168,7 +168,9 @@ drawn as the row itself (the name, which always shows, then each line's two
 corners, a field and the badge pinned to its inner side; each place drawn as
 the field it holds. A field is dragged, by mouse or by finger, onto another
 place, where it swaps with what was there, or onto a tray of the fields the
-row leaves out; each place's chevron is also a dropdown of what it can show,
+row leaves out. While it flies, tilted, every spot that takes it is lit: all
+but its own place and the badge beside it, which would pin it to itself.
+Each place's chevron is also a dropdown of what it can show,
 and picking a field from another place moves it and leaves that place
 empty),
 how matched words are highlighted (the emphasis, the region, and one color

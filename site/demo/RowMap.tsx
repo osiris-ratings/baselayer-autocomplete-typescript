@@ -17,6 +17,7 @@ import {
   EMPTY_PLACE,
   PLACE_LABELS,
   TRAY,
+  canDrop,
   moveField,
   placeOptions,
   unplacedFields,
@@ -47,8 +48,22 @@ function rowMapColors(state: StyleState): CSSProperties {
   } as CSSProperties;
 }
 
+/** What was picked up, as the ghost redraws it: its size, and where it was held. */
+interface Lifted {
+  /** A place in the row, or a chip on the tray. */
+  chip: boolean;
+  badge: boolean;
+  width: number;
+  height: number;
+  grabX: number;
+  grabY: number;
+  /** The face's type and padding, which the panel's width may have changed. */
+  face: CSSProperties;
+}
+
 interface Drag {
   field: RowField;
+  lifted: Lifted;
   pointerId: number;
   startX: number;
   startY: number;
@@ -56,6 +71,7 @@ interface Drag {
   y: number;
   /** Past the slop: the ghost follows the pointer. */
   moving: boolean;
+  /** The spot under the pointer, when it takes the field. */
   over: DropSpot | null;
 }
 
@@ -67,7 +83,31 @@ function spotAt(x: number, y: number): DropSpot | null {
   return (target?.dataset.drop as DropSpot | undefined) ?? null;
 }
 
-function useFieldDrag(onDrop: (field: RowField, to: DropSpot) => void) {
+function lift(handle: HTMLElement, x: number, y: number): Lifted {
+  const cell = handle.closest<HTMLElement>(".row-map-place, .row-map-chip");
+  const box = (cell ?? handle).getBoundingClientRect();
+  const face = getComputedStyle(
+    cell?.querySelector("select") ?? cell ?? handle,
+  );
+  return {
+    chip: cell?.classList.contains("row-map-chip") ?? false,
+    badge: cell?.dataset.badge !== undefined,
+    width: box.width,
+    height: box.height,
+    grabX: x - box.left,
+    grabY: y - box.top,
+    face: {
+      fontSize: face.fontSize,
+      paddingLeft: face.paddingLeft,
+      paddingRight: face.paddingRight,
+    },
+  };
+}
+
+function useFieldDrag(
+  accepts: (field: RowField, to: DropSpot) => boolean,
+  onDrop: (field: RowField, to: DropSpot) => void,
+) {
   const [drag, setDrag] = useState<Drag | null>(null);
   // Read in the handlers, which a render may not have caught up with.
   const current = useRef<Drag | null>(null);
@@ -87,6 +127,7 @@ function useFieldDrag(onDrop: (field: RowField, to: DropSpot) => void) {
       event.currentTarget.setPointerCapture(event.pointerId);
       update({
         field,
+        lifted: lift(event.currentTarget, event.clientX, event.clientY),
         pointerId: event.pointerId,
         startX: event.clientX,
         startY: event.clientY,
@@ -103,12 +144,13 @@ function useFieldDrag(onDrop: (field: RowField, to: DropSpot) => void) {
         now.moving ||
         Math.hypot(event.clientX - now.startX, event.clientY - now.startY) >
           DRAG_SLOP;
+      const spot = moving ? spotAt(event.clientX, event.clientY) : null;
       update({
         ...now,
         x: event.clientX,
         y: event.clientY,
         moving,
-        over: moving ? spotAt(event.clientX, event.clientY) : null,
+        over: spot !== null && accepts(now.field, spot) ? spot : null,
       });
     },
     onPointerUp(event: ReactPointerEvent<HTMLElement>) {
@@ -135,6 +177,43 @@ function useFieldDrag(onDrop: (field: RowField, to: DropSpot) => void) {
   return { drag, handle };
 }
 
+/**
+ * The field in flight: the cell it was lifted from, drawn again at its size
+ * where the pointer holds it, and tilted.
+ */
+function Ghost({ drag, colors }: { drag: Drag; colors: CSSProperties }) {
+  const { lifted } = drag;
+  const label = CHOICE_LABELS[drag.field];
+  const style: CSSProperties = {
+    ...colors,
+    left: drag.x - lifted.grabX,
+    top: drag.y - lifted.grabY,
+    width: lifted.width,
+    height: lifted.height,
+    transformOrigin: `${lifted.grabX}px ${lifted.grabY}px`,
+  };
+  return lifted.chip ? (
+    <span
+      className="row-map-chip row-map-ghost"
+      data-field={drag.field}
+      style={style}
+    >
+      {label}
+    </span>
+  ) : (
+    <span
+      className="row-map-place row-map-ghost"
+      data-field={drag.field}
+      data-badge={lifted.badge || undefined}
+      style={style}
+    >
+      <span className="row-map-face" style={lifted.face}>
+        {label}
+      </span>
+    </span>
+  );
+}
+
 export function RowMap({
   state,
   onChange,
@@ -142,10 +221,18 @@ export function RowMap({
   state: StyleState;
   onChange(state: StyleState): void;
 }) {
-  const { drag, handle } = useFieldDrag((field, to) =>
-    onChange({ ...state, layout: moveField(state.layout, field, to) }),
+  const { drag, handle } = useFieldDrag(
+    (field, to) => canDrop(state.layout, field, to),
+    (field, to) =>
+      onChange({ ...state, layout: moveField(state.layout, field, to) }),
   );
-  const over = drag?.moving === true ? drag.over : null;
+  const moving = drag?.moving === true ? drag : null;
+  const over = moving?.over ?? null;
+  /** While a field is dragged, every spot that takes it says so. */
+  const accepts = (spot: DropSpot) =>
+    moving !== null && canDrop(state.layout, moving.field, spot)
+      ? true
+      : undefined;
   const colors = rowMapColors(state);
 
   /**
@@ -162,9 +249,10 @@ export function RowMap({
         data-field={choice}
         data-badge={badge || undefined}
         data-trailing={trailing || undefined}
+        data-accepts={accepts(spot)}
         data-over={over === spot || undefined}
         data-dragged={
-          drag?.moving === true && drag.field === field ? true : undefined
+          moving !== null && moving.field === field ? true : undefined
         }
         title={`${PLACE_LABELS[spot]} · layout.${spot}`}
       >
@@ -203,7 +291,12 @@ export function RowMap({
   const unplaced = unplacedFields(state.layout);
   return (
     <div className="row-map-wrap" style={colors}>
-      <div className="row-map" role="group" aria-label="A row's places">
+      <div
+        className="row-map"
+        role="group"
+        aria-label="A row's places"
+        data-dragging={moving !== null || undefined}
+      >
         <div className="row-map-line">
           {/* A row is the entity it names, so its title always shows. */}
           <button
@@ -229,6 +322,7 @@ export function RowMap({
       <div
         className="row-map-tray"
         data-drop={TRAY}
+        data-accepts={accepts(TRAY)}
         data-over={over === TRAY || undefined}
       >
         <span className="row-map-tray-label">Not shown</span>
@@ -244,26 +338,15 @@ export function RowMap({
               data-field={field}
               title={`Drag ${CHOICE_LABELS[field]} onto a place`}
               {...handle(field)}
-              data-dragged={
-                drag?.moving === true && drag.field === field ? true : undefined
-              }
+              data-dragged={moving?.field === field || undefined}
             >
               {CHOICE_LABELS[field]}
             </span>
           ))
         )}
       </div>
-      {drag?.moving === true &&
-        createPortal(
-          <span
-            className="row-map-ghost"
-            data-field={drag.field}
-            style={{ ...colors, left: drag.x, top: drag.y }}
-          >
-            {CHOICE_LABELS[drag.field]}
-          </span>,
-          document.body,
-        )}
+      {moving !== null &&
+        createPortal(<Ghost drag={moving} colors={colors} />, document.body)}
     </div>
   );
 }

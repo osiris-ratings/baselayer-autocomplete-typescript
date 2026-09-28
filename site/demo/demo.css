@@ -565,7 +565,7 @@
    long, the people middling, a flag short. The name is fixed, so it is drawn
    as a place that cannot be picked. */
 .row-map-name,
-.row-map-place select {
+.row-map-place :is(select, .row-map-face) {
   box-sizing: border-box;
   width: 100%;
   height: 28px;
@@ -625,7 +625,7 @@
   margin-left: auto;
 }
 
-.row-map-place select {
+.row-map-place :is(select, .row-map-face) {
   appearance: none;
   cursor: pointer;
 }
@@ -648,7 +648,7 @@
   color: var(--map-pill-fg, #22543d);
 }
 
-.row-map-place[data-field="states"] select {
+.row-map-place[data-field="states"] :is(select, .row-map-face) {
   background: var(--map-pill-bg, #c6f6d5);
   border-color: var(--map-pill-border, #48bb78);
   font-size: 12px;
@@ -659,7 +659,7 @@
   color: var(--map-structure-fg, #4a5568);
 }
 
-.row-map-place[data-field="structure"] select {
+.row-map-place[data-field="structure"] :is(select, .row-map-face) {
   background: var(--map-structure-bg, #edf2f7);
   font-size: 12px;
   font-weight: 600;
@@ -696,7 +696,7 @@
 }
 
 /* Its menu's text is hidden, not its ink: the dashed border is drawn in it. */
-.row-map-place[data-badge][data-field="empty"] select {
+.row-map-place[data-badge][data-field="empty"] :is(select, .row-map-face) {
   padding: 0;
   font-size: 0;
 }
@@ -761,17 +761,27 @@
   z-index: 2;
 }
 
-/* Where a drag would land, and what it has lifted. */
-.row-map-place[data-over] select,
-.row-map-tray[data-over] {
-  border-style: solid;
+/* While a field is dragged, every spot that takes it says so, the one under
+   the pointer most; a spot that does not is faded, and so is the field's own. */
+.row-map-place[data-accepts][data-field] select,
+.row-map-tray[data-accepts] {
   border-color: var(--blue);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blue) 25%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 14%, transparent);
 }
 
-.row-map-place[data-dragged],
+.row-map-tray[data-accepts] {
+  background: color-mix(in srgb, var(--blue) 5%, transparent);
+}
+
+.row-map-place[data-over][data-field] select,
+.row-map-tray[data-over] {
+  border-style: solid;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 32%, transparent);
+}
+
+.row-map[data-dragging] .row-map-place:not([data-accepts]),
 .row-map-chip[data-dragged] {
-  opacity: 0.35;
+  opacity: 0.4;
 }
 
 /* The fields the row leaves out, to drag back in. */
@@ -799,8 +809,7 @@
   opacity: 0.8;
 }
 
-.row-map-chip,
-.row-map-ghost {
+.row-map-chip {
   position: relative;
   display: inline-flex;
   box-sizing: border-box;
@@ -815,29 +824,38 @@
   white-space: nowrap;
 }
 
-.row-map-chip[data-field="states"],
-.row-map-ghost[data-field="states"] {
+.row-map-chip[data-field="states"] {
   background: var(--map-pill-bg, #c6f6d5);
   border-color: var(--map-pill-border, #48bb78);
   color: var(--map-pill-fg, #22543d);
   font-weight: 600;
 }
 
-.row-map-chip[data-field="structure"],
-.row-map-ghost[data-field="structure"] {
+.row-map-chip[data-field="structure"] {
   background: var(--map-structure-bg, #edf2f7);
   color: var(--map-structure-fg, #4a5568);
   font-weight: 600;
 }
 
-/* Follows the pointer, above the finger that drags it. */
+/* The field in flight: the cell it was lifted from, at its size, held where
+   it was grabbed, and tilted as if picked up. A face over nothing gets the
+   menu's background, since the page shows through it otherwise. */
 .row-map-ghost {
   position: fixed;
   z-index: 1000;
-  border-style: solid;
-  box-shadow: 0 6px 16px rgba(9, 35, 79, 0.18);
+  margin: 0;
+  filter: drop-shadow(0 8px 12px rgba(9, 35, 79, 0.22));
   pointer-events: none;
-  transform: translate(-50%, calc(-100% - 12px));
+  transform: rotate(-3deg);
+}
+
+.row-map-face {
+  display: block;
+  line-height: 26px;
+}
+
+.row-map-ghost .row-map-face {
+  background-color: var(--map-bg, var(--paper));
 }
 
 /* No place shrinks past its own label; the name, a stand-in, goes first. */
@@ -891,12 +909,12 @@
   }
 
   .row-map-name,
-  .row-map-place select {
+  .row-map-place :is(select, .row-map-face) {
     padding-left: 7px;
     font-size: 12px;
   }
 
-  .row-map-place select {
+  .row-map-place :is(select, .row-map-face) {
     padding-right: 22px;
   }
 

@@ -101,6 +101,42 @@ describe("the Components fold's row", () => {
     expect(onChange.mock.calls[1]![0].layout.subtitleBadge).toBe("people");
   });
 
+  it("lights every spot that takes the field while it is dragged", () => {
+    const { view, spot } = mount();
+    const handle = spot("subtitle").querySelector(".row-map-handle")!;
+    vi.spyOn(document, "elementFromPoint").mockReturnValue(spot("titleBadge"));
+    fireEvent.pointerDown(handle, { button: 0, clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(handle, { clientX: 40, clientY: 30 });
+
+    const accepting = [
+      ...view.container.querySelectorAll<HTMLElement>("[data-accepts]"),
+    ].map(place => place.dataset.drop);
+    // Not its own place, nor the badge that would pin it beside itself.
+    expect(accepting).toEqual([
+      "titleBadge",
+      "titleTrailingBadge",
+      "titleTrailing",
+      "subtitleTrailingBadge",
+      "subtitleTrailing",
+      "tray",
+    ]);
+    expect(document.querySelector(".row-map-ghost")).toHaveProperty(
+      "textContent",
+      "Address",
+    );
+    fireEvent.pointerUp(handle, { clientX: 40, clientY: 30 });
+    expect(view.container.querySelector("[data-accepts]")).toBeNull();
+  });
+
+  it("does not pin a field beside itself", () => {
+    const { onChange, spot } = mount();
+    drag(
+      spot("subtitle").querySelector(".row-map-handle")!,
+      spot("subtitleBadge"),
+    );
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it("does not drop a press that never moves", () => {
     const { onChange, spot } = mount();
     const handle = spot("titleBadge").querySelector(".row-map-handle")!;

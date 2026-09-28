@@ -3,6 +3,7 @@ import {
   ROW_FIELDS,
   ROW_PLACES,
   resolveRowLayout,
+  type RowField,
   type RowLayout,
 } from "@baselayer-sdk/autocomplete";
 import { describe, expect, it } from "vitest";
@@ -20,6 +21,7 @@ import {
   exportCode,
   INITIAL_STYLE,
   placeOptions,
+  canDrop,
   moveField,
   unplacedFields,
   TRAY,
@@ -180,6 +182,23 @@ describe("the Components fold", () => {
     ).toBe("Address");
   });
 
+  it("never offers a badge the field it is pinned beside", () => {
+    const beside = placeOptions(DEFAULT_ROW_LAYOUT, "subtitleBadge");
+    expect(beside.map(option => option.value)).not.toContain("address");
+    expect(
+      placeOptions(DEFAULT_ROW_LAYOUT, "subtitleTrailingBadge").map(
+        option => option.value,
+      ),
+    ).not.toContain("people");
+    // The field place keeps offering its badge's field: that is no pin.
+    expect(
+      placeOptions(
+        { ...DEFAULT_ROW_LAYOUT, subtitleBadge: "structure", titleBadge: null },
+        "subtitle",
+      ).map(option => option.value),
+    ).toContain("structure");
+  });
+
   it("moves a field picked from another place, and empties the place it left", () => {
     expect(withPlaced(DEFAULT_ROW_LAYOUT, "subtitle", "states")).toEqual({
       ...DEFAULT_ROW_LAYOUT,
@@ -246,6 +265,40 @@ describe("dragging a field", () => {
       subtitleTrailing: null,
     });
     expect(unplacedFields(placed)).toEqual(["address"]);
+  });
+
+  it("takes a field anywhere but its own place and the badge beside it", () => {
+    const spots = (field: RowField) =>
+      [...ROW_PLACES, TRAY].filter(to =>
+        canDrop(DEFAULT_ROW_LAYOUT, field, to),
+      );
+    expect(spots("address")).toEqual([
+      "titleBadge",
+      "titleTrailingBadge",
+      "titleTrailing",
+      "subtitleTrailingBadge",
+      "subtitleTrailing",
+      TRAY,
+    ]);
+    expect(spots("people")).toEqual([
+      "titleBadge",
+      "titleTrailingBadge",
+      "titleTrailing",
+      "subtitle",
+      "subtitleBadge",
+      TRAY,
+    ]);
+    // A badge has no field of its own to be pinned beside.
+    expect(spots("structure")).not.toContain("titleBadge");
+    expect(spots("structure")).toHaveLength(ROW_PLACES.length);
+  });
+
+  it("takes a field from the tray anywhere in the row, and not back on it", () => {
+    const hidden = moveField(DEFAULT_ROW_LAYOUT, "people", TRAY);
+    for (const place of ROW_PLACES) {
+      expect(canDrop(hidden, "people", place)).toBe(true);
+    }
+    expect(canDrop(hidden, "people", TRAY)).toBe(false);
   });
 
   it("never places a field twice, from any layout, dropped anywhere", () => {
