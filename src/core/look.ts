@@ -7,9 +7,6 @@
  * design system on the page.
  */
 
-import { ROUTES } from "./entities";
-import type { Include } from "./wire";
-
 export const MATCH_EMPHASES = [
   "plain",
   "weight",
@@ -47,43 +44,6 @@ export interface Look {
   /** The structure's flag. */
   structurePillBackgroundColor: string;
   structurePillForegroundColor: string;
-}
-
-/**
- * The parts of a suggestion row a host may leave out, named for what they are
- * on any entity: its flags (a business's states), the subtitle (its lead
- * address) and the secondary subtitle (its officers, or its agent). The title
- * (a business's name, with an alternative name that matched) always shows: a
- * row is the entity it names.
- */
-export const ROW_PARTS = ["flags", "subtitle", "secondarySubtitle"] as const;
-export type RowPart = (typeof ROW_PARTS)[number];
-/** Which parts a row shows; a part left out, or anything but `false`, shows. */
-export type RowParts = Record<RowPart, boolean>;
-
-/** Which parts show, of those asked for: every part not set to `false`. */
-export function resolveParts(parts: Partial<RowParts> = {}): RowParts {
-  return Object.fromEntries(
-    ROW_PARTS.map(part => [part, parts[part] !== false]),
-  ) as RowParts;
-}
-
-/** The related entity each part of a business row is drawn from; its flags are its own. */
-const PART_SOURCES: Partial<Record<RowPart, Include>> = {
-  subtitle: "addresses",
-  secondarySubtitle: "people",
-};
-
-/**
- * What the tier is to expand for a business row showing these parts, in the
- * tier's own order: the rows' parts decide what is fetched, as well as what
- * is drawn. Empty when no part needs a related entity.
- */
-export function includeForParts(parts: RowParts): Include[] {
-  const needed = new Set(
-    ROW_PARTS.filter(part => parts[part]).map(part => PART_SOURCES[part]),
-  );
-  return ROUTES.businesses.includes.filter(relation => needed.has(relation));
 }
 
 export const DEFAULT_LOOK: Readonly<Look> = Object.freeze({

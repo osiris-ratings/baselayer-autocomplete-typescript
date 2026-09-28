@@ -68,16 +68,11 @@ export {
   DEFAULT_LOOK,
   MATCH_EMPHASES,
   MATCH_REGIONS,
-  ROW_PARTS,
-  includeForParts,
   resolveLook,
-  resolveParts,
   type Look,
   type LookInput,
   type MatchEmphasis,
   type MatchRegion,
-  type RowPart,
-  type RowParts,
 } from "./core/look";
 export {
   MINT_DAY_SCOPE,

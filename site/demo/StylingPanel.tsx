@@ -1,19 +1,22 @@
 // Every knob the styled component has, grouped the way a designer would reach
 // for them, and at the end the code that reproduces the result.
 
-import { ROW_PARTS, type RowPart } from "@baselayer-sdk/autocomplete";
+import { BUSINESS_STRUCTURES, ROW_PLACES } from "@baselayer-sdk/autocomplete";
 import {
   MINT_TIMINGS,
   type MintTiming,
 } from "@baselayer-sdk/autocomplete/react";
 
 import { Code } from "../shared/Code";
-import { ColorInput, Field, Fold, Select, Toggle } from "./controls";
+import { ColorInput, Field, Fold, Segmented, Select, Toggle } from "./controls";
 import {
   CSS_VARIABLES,
   DEFAULT_STYLE,
+  EMPTY_PLACE,
   INITIAL_STYLE,
+  PLACE_LABELS,
   PRESETS,
+  STRUCTURE_FLAGS,
   activePreset,
   applyPreset,
   presetChanges,
@@ -23,9 +26,13 @@ import {
   LOOK_COLORS,
   REGIONS,
   TEXT_MESSAGES,
+  changedLayout,
   changedLook,
   changedMessages,
+  changedStructures,
   exportCode,
+  placeChoices,
+  withPlaced,
   type CssVariable,
   type StyleState,
   type TextMessage,
@@ -57,16 +64,6 @@ const MINT_TIMING_LABELS: Record<MintTiming, string> = {
   focus: "On focus (eager prewarm)",
   keystroke: "On first keystroke (prewarm)",
   request: "On first request (lazy)",
-};
-
-/** A row's parts, as any entity has them, and what they are on a business. */
-const COMPONENTS: Record<RowPart, { label: string; business: string }> = {
-  flags: { label: "Flags", business: "the states" },
-  subtitle: { label: "Subtitle", business: "the lead address" },
-  secondarySubtitle: {
-    label: "Secondary subtitle",
-    business: "the officers, or the registered agent",
-  },
 };
 
 export function StylingPanel({
@@ -158,33 +155,36 @@ export function StylingPanel({
 
       <Fold
         title="Components"
-        summary={count(ROW_PARTS.filter(part => !state.parts[part]).length)}
+        summary={count(Object.keys(changedLayout(state)).length)}
       >
         <p className="hint fold-note">
-          What each row shows, named for any entity (<code>parts</code>). On a
-          business:
+          The field each place of a row shows (<code>layout</code>). A field
+          sits in one place at most: empty its place to move it.
         </p>
-        <div className="toggle-list">
-          {/* A row is the entity it names, so its title always shows. */}
-          <Toggle checked disabled onChange={() => {}}>
-            Title{" "}
-            <span className="hint">
-              the name, and an alternative name that matched; always shown
-            </span>
-          </Toggle>
-          {ROW_PARTS.map(part => (
-            <Toggle
-              key={part}
-              checked={state.parts[part]}
-              onChange={on =>
-                onChange({ ...state, parts: { ...state.parts, [part]: on } })
+        {/* A row is the entity it names, so its title always shows. */}
+        <Field label="Title" group>
+          <span className="place-fixed">The name, always shown</span>
+        </Field>
+        {ROW_PLACES.map(place => (
+          <Field
+            key={place}
+            label={PLACE_LABELS[place]}
+            group
+            hint={<code>layout.{place}</code>}
+          >
+            <Segmented
+              label={PLACE_LABELS[place]}
+              value={state.layout[place] ?? EMPTY_PLACE}
+              options={placeChoices(state.layout, place)}
+              onChange={choice =>
+                onChange({
+                  ...state,
+                  layout: withPlaced(state.layout, place, choice),
+                })
               }
-            >
-              {COMPONENTS[part].label}{" "}
-              <span className="hint">{COMPONENTS[part].business}</span>
-            </Toggle>
-          ))}
-        </div>
+            />
+          </Field>
+        ))}
       </Fold>
 
       <Fold
@@ -368,6 +368,7 @@ export function StylingPanel({
         title="Text"
         summary={count(
           changedMessages(state).length +
+            changedStructures(state).length +
             (state.label !== DEFAULT_STYLE.label ? 1 : 0),
         )}
       >
@@ -398,10 +399,37 @@ export function StylingPanel({
             </Field>
           ))}
         </div>
+        <p className="mono-label fold-subhead">Structure flags</p>
+        <p className="hint fold-note">
+          Each structure&apos;s flag (<code>messages.structures</code>). Empty,
+          it draws none.
+        </p>
+        <div className="field-grid">
+          {BUSINESS_STRUCTURES.map(structure => (
+            <Field
+              key={structure}
+              label={<code className="field-code">{structure}</code>}
+            >
+              <input
+                type="text"
+                value={state.structures[structure]}
+                placeholder={
+                  STRUCTURE_FLAGS[structure] === "" ? "no flag" : undefined
+                }
+                onChange={event =>
+                  set("structures", {
+                    ...state.structures,
+                    [structure]: event.target.value,
+                  })
+                }
+              />
+            </Field>
+          ))}
+        </div>
       </Fold>
 
       <Fold
-        title="Structure"
+        title="Markup"
         summary={count((state.pageInput ? 1 : 0) + (state.unstyled ? 1 : 0))}
       >
         <div className="field-grid">

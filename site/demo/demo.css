@@ -521,22 +521,81 @@
   gap: 0 16px;
 }
 
-/* One toggle a line, each with what it is on a business. */
-.toggle-list {
-  display: grid;
-}
-
-.toggle-list .toggle {
-  min-height: 34px;
-}
-
-.toggle-list .hint {
-  margin-left: 4px;
+.fold-note {
+  margin: 0 0 12px;
   font-size: 13px;
 }
 
-.fold-note {
-  margin: 0 0 12px;
+.fold-subhead {
+  margin: 8px 0 6px;
+}
+
+/* A structure's value as a field's label: the code, not a phrase. */
+.field-code {
+  padding: 0;
+  background: none;
+  font-size: 12px;
+}
+
+/* ---- Segmented: a row of choices, drawn as the tabs are ----------------- */
+
+/* Equal columns, so the controls stacked in a fold read as a grid in which
+   each field is lit once. */
+.demo .segmented {
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  border-bottom: 1px solid var(--line);
+}
+
+.demo .segmented button {
+  min-width: 0;
+  margin-bottom: -1px;
+  padding: 10px 2px;
+  overflow: hidden;
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.demo .segmented button:hover {
+  color: var(--ink);
+}
+
+.demo .segmented button[aria-checked="true"] {
+  border-bottom-color: var(--blue);
+  color: var(--ink);
+}
+
+/* Placed elsewhere: shown, so the grid reads whole, but not a choice here. */
+.demo .segmented button[aria-disabled="true"] {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.demo .segmented button[aria-disabled="true"]:hover {
+  color: var(--muted);
+}
+
+.demo .segmented button:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: -2px;
+}
+
+/* The title's place, which is fixed: a line where the others have a control. */
+.place-fixed {
+  display: block;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
   font-size: 13px;
 }
 

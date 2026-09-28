@@ -1,7 +1,7 @@
 // The demo's form controls. Every one is the same height and border as a text
 // input, selects included, so the panels read as one form.
 
-import { useId, useState, type ReactNode, type Ref } from "react";
+import { useId, useRef, useState, type ReactNode, type Ref } from "react";
 
 import { Icon, type IconName } from "../shared/icons";
 
@@ -164,6 +164,95 @@ export function Select<T extends string>({
         ))}
       </select>
     </span>
+  );
+}
+
+/** One choice of a `Segmented`. */
+export interface Segment<T extends string> {
+  value: T;
+  label: string;
+  /** Why it cannot be picked, as its tooltip; unset, it can. */
+  disabledReason?: string | undefined;
+}
+
+const STEPS: Partial<Record<string, 1 | -1>> = {
+  ArrowRight: 1,
+  ArrowDown: 1,
+  ArrowLeft: -1,
+  ArrowUp: -1,
+};
+
+/**
+ * Where an arrow key goes from `from`: the next segment that can be picked,
+ * a `step` at a time, round the end; `from` itself when no other can.
+ */
+export function nextSegment(
+  enabled: readonly boolean[],
+  from: number,
+  step: 1 | -1,
+): number {
+  const count = enabled.length;
+  for (let offset = 1; offset < count; offset++) {
+    const index = (((from + step * offset) % count) + count) % count;
+    if (enabled[index] === true) return index;
+  }
+  return from;
+}
+
+/**
+ * Choices of which exactly one is picked, drawn as the tabs are: a radio
+ * group whose arrow keys pick the next choice that can be picked. A choice
+ * that cannot is shown, disabled, with a tooltip saying why.
+ */
+export function Segmented<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: readonly Segment<T>[];
+  onChange(value: T): void;
+}) {
+  const buttons = useRef<(HTMLButtonElement | null)[]>([]);
+  const enabled = options.map(option => option.disabledReason === undefined);
+  const pick = (index: number) => {
+    const option = options[index];
+    if (option === undefined || enabled[index] !== true) return;
+    onChange(option.value);
+    buttons.current[index]?.focus();
+  };
+  return (
+    <div className="segmented" role="radiogroup" aria-label={label}>
+      {options.map((option, index) => {
+        const checked = option.value === value;
+        return (
+          <button
+            key={option.value}
+            ref={element => {
+              buttons.current[index] = element;
+            }}
+            type="button"
+            role="radio"
+            aria-checked={checked}
+            // Not `disabled`: a disabled button shows no tooltip everywhere.
+            aria-disabled={enabled[index] === true ? undefined : true}
+            title={option.disabledReason}
+            tabIndex={checked ? 0 : -1}
+            onClick={() => pick(index)}
+            onKeyDown={event => {
+              const step = STEPS[event.key];
+              if (step === undefined) return;
+              event.preventDefault();
+              pick(nextSegment(enabled, index, step));
+            }}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

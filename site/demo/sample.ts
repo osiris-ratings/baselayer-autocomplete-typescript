@@ -1,7 +1,8 @@
-// Made-up rows for the Styling preview, so every part of a row can be styled
+// Made-up rows for the Styling preview, so every field of a row can be styled
 // before anything is typed: highlights, an alternative name that matched, the
-// domicile square and the overflow, an address, officers with a +N, and a
-// registered agent. None of these businesses is real.
+// domicile square and the overflow, a spread of structures (one on a name
+// that carries no suffix, and one not known), an address, officers with a +N,
+// and a registered agent. None of these businesses is real.
 
 import { queryTokens } from "@baselayer-sdk/autocomplete";
 import type {
@@ -168,9 +169,9 @@ const NOT_REQUESTED: RelatedSet = {
 
 /**
  * The sample rows as the knobs would have them come back: no more than
- * `limit`, and a relation the row's parts do not ask for (`include`, from
- * `includeForParts`) not sent, as the tier leaves it out. The other knobs act
- * on typing, which the sample has none of.
+ * `limit`, and a relation no placed field asks for (`include`, from
+ * `includeForLayout`) not sent, as the tier leaves it out. The other knobs
+ * act on typing, which the sample has none of.
  */
 export function sampleRows({
   limit,

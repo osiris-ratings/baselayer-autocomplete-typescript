@@ -1,5 +1,12 @@
-import { includeForParts, partsFor } from "@baselayer-sdk/autocomplete";
+import {
+  includeForLayout,
+  leadAddressOf,
+  partsFor,
+  peopleLineOf,
+  structureLabel,
+} from "@baselayer-sdk/autocomplete";
 import { queryTokens } from "@baselayer-sdk/autocomplete";
+import { DEFAULT_LIMIT } from "@baselayer-sdk/autocomplete/react";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -67,14 +74,10 @@ describe("the sample rows under Behavior", () => {
     expect(SAMPLE_SUGGESTIONS.length).toBeGreaterThan(5);
   });
 
-  it("leaves out the related entities the row's parts do not ask for", () => {
+  it("leaves out the related entities no placed field asks for", () => {
     const rows = sampleRows({
       limit: 20,
-      include: includeForParts({
-        flags: true,
-        subtitle: false,
-        secondarySubtitle: true,
-      }),
+      include: includeForLayout({ subtitle: null }),
     });
 
     for (const row of rows) {
@@ -86,5 +89,48 @@ describe("the sample rows under Behavior", () => {
       });
     }
     expect(rows.some(row => row.related.people.items.length > 0)).toBe(true);
+  });
+});
+
+describe("the sample rows' fields", () => {
+  // What the preview shows before Rows is raised.
+  const shown = SAMPLE_SUGGESTIONS.slice(0, DEFAULT_LIMIT);
+
+  it("draw every field on the rows the preview opens with", () => {
+    expect(shown.every(row => row.states.length > 0)).toBe(true);
+    expect(shown.some(row => row.states.length > 3)).toBe(true);
+    expect(shown.some(row => structureLabel(row.structure) !== null)).toBe(
+      true,
+    );
+    expect(shown.every(row => leadAddressOf(row) !== null)).toBe(true);
+    const people = shown.map(peopleLineOf);
+    expect(people.some(line => line?.role === "officer" && line.more > 0)).toBe(
+      true,
+    );
+    expect(people.some(line => line?.role === "agent")).toBe(true);
+  });
+
+  it("carry a spread of structures, one not known, each drawn as its own flag", () => {
+    const structures = SAMPLE_SUGGESTIONS.map(row => row.structure);
+    const flags = new Set(
+      structures.flatMap(structure => structureLabel(structure) ?? []),
+    );
+
+    expect(flags.size).toBeGreaterThanOrEqual(5);
+    expect(shown.some(row => row.structure === null)).toBe(true);
+    // A known structure always draws: none of them is OTHER.
+    for (const structure of structures) {
+      if (structure !== null) {
+        expect(structureLabel(structure), structure).not.toBeNull();
+      }
+    }
+  });
+
+  it("carry a structure on a name with no suffix to say it, where the flag earns its place", () => {
+    const suffix = /(INC\.|LLC|LP|CO\.)$/;
+    const bare = shown.find(row => !suffix.test(row.label));
+
+    expect(bare?.structure).toBe("TRADE_NAME");
+    expect(structureLabel(bare!.structure)).toBe("DBA");
   });
 });

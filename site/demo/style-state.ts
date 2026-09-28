@@ -1,16 +1,22 @@
 // Everything the styled component lets a host change, as one piece of state:
-// the `look` knobs, the CSS variables that are not knobs, the behavior
-// props, the text, and the structural switches. Defaults are the SDK's own,
-// imported rather than copied, except the stylesheet's variables, which the
-// stylesheet declares.
+// the `look` knobs, the CSS variables that are not knobs, the row's layout,
+// the behavior props, the text, and the markup switches. Defaults are the
+// SDK's own, imported rather than copied, except the stylesheet's variables,
+// which the stylesheet declares.
 
 import {
+  BUSINESS_STRUCTURES,
   DEFAULT_LOOK,
-  ROW_PARTS,
+  DEFAULT_ROW_LAYOUT,
+  ROW_FIELDS,
+  ROW_PLACES,
+  structureLabel,
   type Look,
   type MatchEmphasis,
   type MatchRegion,
-  type RowParts,
+  type RowField,
+  type RowLayout,
+  type RowPlace,
 } from "@baselayer-sdk/autocomplete";
 import {
   DEBOUNCE_MS,
@@ -20,6 +26,8 @@ import {
   type AutocompleteMessages,
   type MintTiming,
 } from "@baselayer-sdk/autocomplete/react";
+
+import type { Segment } from "./controls";
 
 /** The variables in react/styles.css that `look` does not set. */
 export const CSS_VARIABLES = {
@@ -95,10 +103,21 @@ export const TEXT_MESSAGES = [
 
 export type TextMessage = (typeof TEXT_MESSAGES)[number];
 
+/** A structure the tier knows, which the Text fold lists. */
+export type Structure = (typeof BUSINESS_STRUCTURES)[number];
+
+/** Each structure's flag as the SDK draws it; "" for none. */
+export const STRUCTURE_FLAGS = Object.fromEntries(
+  BUSINESS_STRUCTURES.map(structure => [
+    structure,
+    structureLabel(structure) ?? "",
+  ]),
+) as Record<Structure, string>;
+
 export interface StyleState {
   look: Look;
-  /** Which parts of a row show (`parts`). */
-  parts: RowParts;
+  /** The field each place of a row shows (`layout`). */
+  layout: RowLayout;
   vars: Record<CssVariable, string>;
   limit: number;
   minChars: number;
@@ -109,6 +128,8 @@ export interface StyleState {
   menuFollowsInputWidth: boolean;
   label: string;
   messages: Record<TextMessage, string>;
+  /** Each structure's flag (`messages.structures`); "" draws none. */
+  structures: Record<Structure, string>;
   /** Draw the input with this page's own input class (`classNames.input`). */
   pageInput: boolean;
   unstyled: boolean;
@@ -120,7 +141,7 @@ export const DEFAULT_LABEL = "Business name";
 
 export const DEFAULT_STYLE: StyleState = {
   look: { ...DEFAULT_LOOK },
-  parts: Object.fromEntries(ROW_PARTS.map(part => [part, true])) as RowParts,
+  layout: { ...DEFAULT_ROW_LAYOUT },
   vars: Object.fromEntries(
     Object.entries(CSS_VARIABLES).map(([name, spec]) => [name, spec.value]),
   ) as Record<CssVariable, string>,
@@ -133,6 +154,7 @@ export const DEFAULT_STYLE: StyleState = {
   messages: Object.fromEntries(
     TEXT_MESSAGES.map(key => [key, DEFAULT_MESSAGES[key]]),
   ) as Record<TextMessage, string>,
+  structures: { ...STRUCTURE_FLAGS },
   pageInput: false,
   unstyled: false,
   preset: "Light",
@@ -154,6 +176,8 @@ export const LOOK_COLORS: { key: LookColor; label: string }[] = [
   { key: "pillForegroundColor", label: "Flag text" },
   { key: "primaryPillBorderColor", label: "Domicile flag border" },
   { key: "secondaryPillBackgroundColor", label: "+N flag" },
+  { key: "structurePillBackgroundColor", label: "Structure flag" },
+  { key: "structurePillForegroundColor", label: "Structure flag text" },
 ];
 
 export const EMPHASES: MatchEmphasis[] = [
@@ -193,6 +217,77 @@ export function changedMessages(state: StyleState): [TextMessage, string][] {
   ).map(key => [key, state.messages[key]]);
 }
 
+/** The structure flags relabeled, in the tier's order. */
+export function changedStructures(state: StyleState): [Structure, string][] {
+  return BUSINESS_STRUCTURES.filter(
+    structure => state.structures[structure] !== STRUCTURE_FLAGS[structure],
+  ).map(structure => [structure, state.structures[structure]]);
+}
+
+/** Each place a host fills, named for where it sits. */
+export const PLACE_LABELS: Record<RowPlace, string> = {
+  titleBadge: "Badge",
+  titleTrailing: "Title, right",
+  subtitle: "Subtitle",
+  subtitleTrailing: "Subtitle, right",
+};
+
+/** The choice that leaves a place empty. */
+export const EMPTY_PLACE = "empty";
+export type PlaceChoice = RowField | typeof EMPTY_PLACE;
+
+const CHOICES: readonly PlaceChoice[] = [EMPTY_PLACE, ...ROW_FIELDS];
+
+const CHOICE_LABELS: Record<PlaceChoice, string> = {
+  [EMPTY_PLACE]: "—",
+  states: "States",
+  structure: "Structure",
+  address: "Address",
+  people: "People",
+};
+
+/**
+ * A place's choices: none, and every field. A field placed elsewhere is
+ * shown but disabled, naming where it is, so each field is lit once down the
+ * fold and none can be placed twice.
+ */
+export function placeChoices(
+  layout: RowLayout,
+  place: RowPlace,
+): Segment<PlaceChoice>[] {
+  return CHOICES.map(choice => {
+    const elsewhere = ROW_PLACES.find(
+      other => other !== place && layout[other] === choice,
+    );
+    return {
+      value: choice,
+      label: CHOICE_LABELS[choice],
+      disabledReason:
+        elsewhere === undefined
+          ? undefined
+          : `In ${PLACE_LABELS[elsewhere]}; empty that place to move it here`,
+    };
+  });
+}
+
+/** The layout with a choice made for one place. */
+export function withPlaced(
+  layout: RowLayout,
+  place: RowPlace,
+  choice: PlaceChoice,
+): RowLayout {
+  return { ...layout, [place]: choice === EMPTY_PLACE ? null : choice };
+}
+
+/** The places that show another field than the SDK's default, in reading order. */
+export function changedLayout(state: StyleState): Partial<RowLayout> {
+  return Object.fromEntries(
+    ROW_PLACES.filter(
+      place => state.layout[place] !== DEFAULT_ROW_LAYOUT[place],
+    ).map(place => [place, state.layout[place]]),
+  );
+}
+
 /** The preview's stylesheet: the changed variables, on the demo's component only. */
 export function previewCss(state: StyleState): string {
   const vars = changedVars(state);
@@ -213,10 +308,10 @@ export function exportCode(state: StyleState): { tsx: string; css: string } {
       `look={{\n${look.map(([key, value]) => `    ${key}: ${literal(value)},`).join("\n")}\n  }}`,
     );
   }
-  const hidden = ROW_PARTS.filter(part => !state.parts[part]);
-  if (hidden.length > 0) {
+  const layout = Object.entries(changedLayout(state));
+  if (layout.length > 0) {
     props.push(
-      `parts={{ ${hidden.map(part => `${part}: false`).join(", ")} }}`,
+      `layout={{ ${layout.map(([place, field]) => `${place}: ${field === null ? "null" : JSON.stringify(field)}`).join(", ")} }}`,
     );
   }
   if (state.limit !== DEFAULT_STYLE.limit) props.push(`limit={${state.limit}}`);
@@ -229,11 +324,17 @@ export function exportCode(state: StyleState): { tsx: string; css: string } {
   if (!state.menuFollowsInputWidth) props.push("menuFollowsInputWidth={false}");
   if (state.label !== DEFAULT_LABEL)
     props.push(`label=${JSON.stringify(state.label)}`);
-  const messages = changedMessages(state);
-  if (messages.length > 0) {
-    props.push(
-      `messages={{\n${messages.map(([key, value]) => `    ${key}: ${JSON.stringify(value)},`).join("\n")}\n  }}`,
+  const messages = changedMessages(state).map(
+    ([key, value]) => `    ${key}: ${JSON.stringify(value)},`,
+  );
+  const structures = changedStructures(state);
+  if (structures.length > 0) {
+    messages.push(
+      `    structures: { ${structures.map(([structure, flag]) => `${structure}: ${JSON.stringify(flag)}`).join(", ")} },`,
     );
+  }
+  if (messages.length > 0) {
+    props.push(`messages={{\n${messages.join("\n")}\n  }}`);
   }
   if (state.pageInput) props.push('classNames={{ input: "your-input" }}');
   if (state.unstyled) props.push("unstyled");
@@ -283,6 +384,8 @@ export const PRESETS: Preset[] = [
       pillForegroundColor: "#09234f",
       primaryPillBorderColor: "#384ce3",
       secondaryPillBackgroundColor: "#f1f6fd",
+      structurePillBackgroundColor: "#eef0f3",
+      structurePillForegroundColor: "#4b4f58",
     },
     vars: {
       "--bl-ac-highlight-bg": "#f1f6fd",
@@ -308,6 +411,8 @@ export const PRESETS: Preset[] = [
       pillForegroundColor: "#a5b4fc",
       primaryPillBorderColor: "#6366f1",
       secondaryPillBackgroundColor: "#182033",
+      structurePillBackgroundColor: "#1c2230",
+      structurePillForegroundColor: "#aeb6c4",
     },
     vars: {
       "--bl-ac-highlight-bg": "#172036",
@@ -331,6 +436,8 @@ export const PRESETS: Preset[] = [
       pillForegroundColor: "#a6e22e",
       primaryPillBorderColor: "#a6e22e",
       secondaryPillBackgroundColor: "#3e3d32",
+      structurePillBackgroundColor: "#3e3d32",
+      structurePillForegroundColor: "#66d9ef",
     },
     vars: {
       "--bl-ac-highlight-bg": "#3e3d32",
@@ -355,6 +462,8 @@ export const PRESETS: Preset[] = [
       pillForegroundColor: "#6b4a24",
       primaryPillBorderColor: "#b0793a",
       secondaryPillBackgroundColor: "#f3ead9",
+      structurePillBackgroundColor: "#ede7dd",
+      structurePillForegroundColor: "#6e6358",
     },
     vars: {
       "--bl-ac-highlight-bg": "#f3ead9",
@@ -376,6 +485,8 @@ export const PRESETS: Preset[] = [
       pillForegroundColor: "#9d174d",
       primaryPillBorderColor: "#db2777",
       secondaryPillBackgroundColor: "#fdf2f6",
+      structurePillBackgroundColor: "#f2ebee",
+      structurePillForegroundColor: "#6f5a63",
     },
     vars: {
       "--bl-ac-highlight-bg": "#fdf2f6",

@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_LOOK,
-  includeForParts,
   MATCH_EMPHASES,
   MATCH_REGIONS,
   resolveLook,
@@ -150,33 +149,5 @@ describe("resolveLook", () => {
     }
     expect(Object.isFrozen(DEFAULT_LOOK)).toBe(true);
     expect(resolveLook()).not.toBe(DEFAULT_LOOK);
-  });
-});
-
-describe("includeForParts", () => {
-  const all = { flags: true, subtitle: true, secondarySubtitle: true };
-
-  it("asks for the officers and the addresses while both lines show", () => {
-    expect(includeForParts(all)).toEqual(["people", "addresses"]);
-  });
-
-  it("asks for no addresses without the subtitle, the lead address", () => {
-    expect(includeForParts({ ...all, subtitle: false })).toEqual(["people"]);
-  });
-
-  it("asks for no officers without the secondary subtitle", () => {
-    expect(includeForParts({ ...all, secondarySubtitle: false })).toEqual([
-      "addresses",
-    ]);
-  });
-
-  it("asks for nothing related when only the title and flags show", () => {
-    expect(
-      includeForParts({
-        flags: true,
-        subtitle: false,
-        secondarySubtitle: false,
-      }),
-    ).toEqual([]);
   });
 });

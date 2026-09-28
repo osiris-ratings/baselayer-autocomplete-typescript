@@ -1,6 +1,6 @@
 import {
   createAutocompleteClient,
-  includeForParts,
+  includeForLayout,
   type AutocompleteClient,
   type BusinessSuggestion,
   type Filters,
@@ -540,6 +540,8 @@ export function App() {
       </span>
     </>
   );
+  // The strings and the structure flags, as one `messages`.
+  const messages = { ...style.messages, structures: style.structures };
 
   return (
     <main className="demo">
@@ -854,9 +856,10 @@ export function App() {
                     debounceMs={style.debounceMs}
                     mintOn={style.mintOn}
                     menuFollowsInputWidth={style.menuFollowsInputWidth}
-                    messages={style.messages}
+                    messages={messages}
                     unstyled={style.unstyled}
                     open={styling}
+                    layout={style.layout}
                     {...(style.pageInput
                       ? { classNames: { input: "demo-input" } }
                       : {})}
@@ -879,7 +882,7 @@ export function App() {
                       )}
                       suggestions={sampleRows({
                         limit: style.limit,
-                        include: includeForParts(style.parts),
+                        include: includeForLayout(style.layout),
                       })}
                       found={SAMPLE_META.found}
                       foundCapped={false}
@@ -890,8 +893,9 @@ export function App() {
                       error={null}
                       open
                       look={{ ...changedLook(style) }}
-                      messages={style.messages}
+                      messages={messages}
                       unstyled={style.unstyled}
+                      layout={style.layout}
                       menuFollowsInputWidth={style.menuFollowsInputWidth}
                     />
                   </div>
