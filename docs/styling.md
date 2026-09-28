@@ -292,7 +292,9 @@ while the states and the structure come on the row itself.
 `includeForLayout(layout)` in the core says what a layout asks for. With
 neither placed, the tier refuses an empty `include`, so none is sent and its
 default, people and addresses, stands. A form that fills an address from
-the pick keeps the address placed.
+the pick keeps the address placed. `include` on `BusinessAutocomplete` asks
+for what it names instead, whatever the layout places: rows you draw with
+`renderRow` name what they read, `include={["people"]}`.
 
 ### The structure's flag
 

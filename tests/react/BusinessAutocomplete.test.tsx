@@ -248,6 +248,50 @@ describe("BusinessAutocomplete", () => {
     expect(url.searchParams.has("include")).toBe(false);
   });
 
+  it("asks the tier for what include names, whatever the layout places, for rows a host draws itself", async () => {
+    const fetch = tierFetch();
+    vi.stubGlobal("fetch", fetch);
+    const user = userEvent.setup();
+    render(
+      <Host
+        source={{ mint: grantingMint(), baseUrl: BASE_URL }}
+        mintOn="request"
+        // Its own rows read the officers, which no place shows.
+        layout={{ subtitle: null, subtitleTrailing: null }}
+        include={["people"]}
+        renderRow={({ item }) =>
+          `${item.label} · ${item.related.people.items[0]?.label ?? ""}`
+        }
+      />,
+    );
+
+    await user.type(input(), "cinder");
+    const [row] = await screen.findAllByTestId("business-suggestion");
+
+    const url = new URL(fetch.mock.calls.at(-1)?.[0] ?? "");
+    expect(url.searchParams.get("include")).toBe("people");
+    expect(row).toHaveTextContent("CINDER RIGGING, INC. ·");
+  });
+
+  it("leaves include to the tier when include is empty", async () => {
+    const fetch = tierFetch();
+    vi.stubGlobal("fetch", fetch);
+    const user = userEvent.setup();
+    render(
+      <Host
+        source={{ mint: grantingMint(), baseUrl: BASE_URL }}
+        mintOn="request"
+        include={[]}
+      />,
+    );
+
+    await user.type(input(), "cinder");
+    await screen.findAllByTestId("business-suggestion");
+
+    const url = new URL(fetch.mock.calls.at(-1)?.[0] ?? "");
+    expect(url.searchParams.has("include")).toBe(false);
+  });
+
   it("keeps its rows on screen after the field loses focus while held open", async () => {
     vi.stubGlobal("fetch", tierFetch());
     const user = userEvent.setup();

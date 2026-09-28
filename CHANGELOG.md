@@ -22,6 +22,9 @@ as a minor release.
   domicile registration: one of `BUSINESS_STRUCTURES` (`BusinessStructure`),
   or null when it is not known or the API does not send it. A value this
   build does not know is kept as the string it is.
+- `include` on `BusinessAutocomplete`: the related entities the tier expands
+  for each row, by default what `layout` places (`includeForLayout(layout)`),
+  so rows a host draws with `renderRow` can ask for what they read.
 - `layout` on `BusinessAutocomplete` and `BusinessAutocompleteView`: the
   field (`states`, `structure`, `address` or `people`) each place of a row
   shows, or `null` for an empty one. The places are each line's two
