@@ -242,6 +242,10 @@ export function RowMap({
   const place = (spot: RowPlace, { trailing = false, badge = false } = {}) => {
     const field = state.layout[spot];
     const choice: PlaceChoice = field ?? EMPTY_PLACE;
+    const options = placeOptions(state.layout, spot);
+    // Nothing the row would draw here: a badge beside an empty field, or the
+    // second line's right with no lead.
+    const closed = options.length === 1;
     return (
       <span
         className="row-map-place"
@@ -249,12 +253,17 @@ export function RowMap({
         data-field={choice}
         data-badge={badge || undefined}
         data-trailing={trailing || undefined}
+        data-closed={closed || undefined}
         data-accepts={accepts(spot)}
         data-over={over === spot || undefined}
         data-dragged={
           moving !== null && moving.field === field ? true : undefined
         }
-        title={`${PLACE_LABELS[spot]} · layout.${spot}`}
+        title={
+          closed
+            ? `${PLACE_LABELS[spot]}: fill the place beside it first`
+            : `${PLACE_LABELS[spot]} · layout.${spot}`
+        }
       >
         {field !== null && (
           <span
@@ -267,6 +276,7 @@ export function RowMap({
         <select
           aria-label={PLACE_LABELS[spot]}
           value={choice}
+          disabled={closed}
           onChange={event =>
             onChange({
               ...state,
@@ -278,7 +288,7 @@ export function RowMap({
             })
           }
         >
-          {placeOptions(state.layout, spot).map(option => (
+          {options.map(option => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>

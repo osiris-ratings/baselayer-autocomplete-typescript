@@ -116,7 +116,6 @@ describe("the Components fold's row", () => {
       "titleBadge",
       "titleTrailingBadge",
       "titleTrailing",
-      "subtitleTrailingBadge",
       "subtitleTrailing",
       "tray",
     ]);

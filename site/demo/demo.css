@@ -784,6 +784,19 @@
   opacity: 0.4;
 }
 
+/* A place nothing can go in until the one beside it is filled. */
+.row-map-place[data-closed] {
+  opacity: 0.35;
+}
+
+.row-map-place[data-closed] select {
+  cursor: not-allowed;
+}
+
+.row-map-place[data-closed]::before {
+  display: none;
+}
+
 /* The fields the row leaves out, to drag back in. */
 .row-map-tray {
   display: flex;
@@ -849,7 +862,8 @@
   transform: rotate(-3deg);
 }
 
-.row-map-face {
+/* After the places' shared rule, whose `font` would reset the line. */
+.row-map-place .row-map-face {
   display: block;
   line-height: 26px;
 }

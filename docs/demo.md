@@ -172,7 +172,10 @@ row leaves out. While it flies, tilted, every spot that takes it is lit: all
 but its own place and the badge beside it, which would pin it to itself.
 Each place's chevron is also a dropdown of what it can show,
 and picking a field from another place moves it and leaves that place
-empty),
+empty. The drawn row is always the row as drawn: a place the row would not
+draw a field in, a badge beside an empty field or the second line's right
+with no lead, is faded and takes nothing, and a field that leaves the lead
+lets the right corner slide into it, as the row does),
 how matched words are highlighted (the emphasis, the region, and one color
 override for every emphasis) and whether the footer
 shows the round trip and the index that answered (`look.showDebugInfo`, a

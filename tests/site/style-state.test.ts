@@ -2,6 +2,7 @@ import {
   DEFAULT_ROW_LAYOUT,
   ROW_FIELDS,
   ROW_PLACES,
+  drawnRowLayout,
   resolveRowLayout,
   type RowField,
   type RowLayout,
@@ -229,8 +230,9 @@ describe("the Components fold", () => {
       }
     }
 
-    const every = everyLayout();
-    expect([...seen.keys()].sort()).toEqual(every.map(key).sort());
+    // Every layout, as the row draws it: the fold shows nothing else.
+    const drawn = new Set(everyLayout().map(drawnRowLayout).map(key));
+    expect([...seen.keys()].sort()).toEqual([...drawn].sort());
   });
 });
 
@@ -267,16 +269,17 @@ describe("dragging a field", () => {
     expect(unplacedFields(placed)).toEqual(["address"]);
   });
 
-  it("takes a field anywhere but its own place and the badge beside it", () => {
+  it("takes a field only where the row would draw it, and not on its own place", () => {
     const spots = (field: RowField) =>
-      [...ROW_PLACES, TRAY].filter(to =>
+      ([...ROW_PLACES, TRAY] as const).filter(to =>
         canDrop(DEFAULT_ROW_LAYOUT, field, to),
       );
+    // Not beside itself, nor beside the people: with the lead empty, the
+    // people's corner would be drawn in its place.
     expect(spots("address")).toEqual([
       "titleBadge",
       "titleTrailingBadge",
       "titleTrailing",
-      "subtitleTrailingBadge",
       "subtitleTrailing",
       TRAY,
     ]);
@@ -293,12 +296,21 @@ describe("dragging a field", () => {
     expect(spots("structure")).toHaveLength(ROW_PLACES.length);
   });
 
-  it("takes a field from the tray anywhere in the row, and not back on it", () => {
+  it("takes a field from the tray anywhere the row draws it, and not back on it", () => {
     const hidden = moveField(DEFAULT_ROW_LAYOUT, "people", TRAY);
-    for (const place of ROW_PLACES) {
-      expect(canDrop(hidden, "people", place)).toBe(true);
-    }
+    // The badge beside the empty right corner would be drawn as its field.
+    expect(
+      ROW_PLACES.filter(place => !canDrop(hidden, "people", place)),
+    ).toEqual(["subtitleTrailingBadge"]);
     expect(canDrop(hidden, "people", TRAY)).toBe(false);
+  });
+
+  it("draws the row as it will be: a lead left empty takes the right corner", () => {
+    expect(moveField(DEFAULT_ROW_LAYOUT, "address", TRAY)).toEqual({
+      ...DEFAULT_ROW_LAYOUT,
+      subtitle: "people",
+      subtitleTrailing: null,
+    });
   });
 
   it("never places a field twice, from any layout, dropped anywhere", () => {
@@ -310,7 +322,10 @@ describe("dragging a field", () => {
             placed => placed !== null,
           );
           expect(new Set(drawn).size).toBe(drawn.length);
-          if (to !== TRAY) expect(next[to]).toBe(field);
+          expect(drawnRowLayout(next)).toEqual(next);
+          if (to !== TRAY && canDrop(layout, field, to)) {
+            expect(next[to]).toBe(field);
+          }
         }
       }
     }

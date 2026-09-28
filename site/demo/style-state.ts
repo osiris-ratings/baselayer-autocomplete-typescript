@@ -10,6 +10,7 @@ import {
   DEFAULT_ROW_LAYOUT,
   ROW_FIELDS,
   ROW_PLACES,
+  drawnRowLayout,
   structureLabel,
   type Look,
   type MatchEmphasis,
@@ -237,17 +238,11 @@ export const PLACE_LABELS: Record<RowPlace, string> = {
 export const TRAY = "tray";
 export type DropSpot = RowPlace | typeof TRAY;
 
-/** A corner's badge place, and the field place it is pinned beside. */
-const PINNED_BESIDE: Partial<Record<RowPlace, RowPlace>> = {
-  titleTrailingBadge: "titleTrailing",
-  subtitleBadge: "subtitle",
-  subtitleTrailingBadge: "subtitleTrailing",
-};
-
 /**
- * Whether a field can be dropped on a spot. Not on its own place, nor on the
- * badge pinned beside it, which would pin it beside itself; on the tray only
- * when the row shows it.
+ * Whether a field can be dropped on a spot: on a place other than its own
+ * where the row would draw it, and on the tray when the row shows it. A
+ * badge beside nothing, the badge beside the field itself included, or the
+ * second line's right with no lead, is drawn elsewhere, so it takes nothing.
  */
 export function canDrop(
   layout: RowLayout,
@@ -256,7 +251,7 @@ export function canDrop(
 ): boolean {
   const from = ROW_PLACES.find(place => layout[place] === field);
   if (to === TRAY) return from !== undefined;
-  return to !== from && (from === undefined || PINNED_BESIDE[to] !== from);
+  return to !== from && moveField(layout, field, to)[to] === field;
 }
 
 /** The fields the layout places nowhere, in their own order. */
@@ -266,10 +261,10 @@ export function unplacedFields(layout: RowLayout): RowField[] {
 }
 
 /**
- * The layout with a field dropped somewhere. On a place, the field takes it
- * and whatever the place held goes where the field came from (a swap, or out
- * of the row when the field came from the tray); on the tray, the field
- * leaves the row.
+ * The layout with a field dropped somewhere, as the row draws it. On a place,
+ * the field takes it and whatever the place held goes where the field came
+ * from (a swap, or out of the row when the field came from the tray); on the
+ * tray, the field leaves the row.
  */
 export function moveField(
   layout: RowLayout,
@@ -280,12 +275,12 @@ export function moveField(
   const next = { ...layout };
   if (to === TRAY) {
     if (from !== undefined) next[from] = null;
-    return next;
+    return drawnRowLayout(next);
   }
   const displaced = next[to];
   if (from !== undefined) next[from] = displaced;
   next[to] = field;
-  return next;
+  return drawnRowLayout(next);
 }
 
 /** The choice that leaves a place empty. */
@@ -303,19 +298,20 @@ export const CHOICE_LABELS: Record<PlaceChoice, string> = {
 };
 
 /**
- * A place's options: empty, and every field but the one a badge is pinned
- * beside. A field placed elsewhere says where it would move from, since
- * picking it empties that place.
+ * A place's options: empty, and every field the row would draw there. A
+ * field placed elsewhere says where it would move from, since picking it
+ * empties that place.
  */
 export function placeOptions(
   layout: RowLayout,
   place: RowPlace,
 ): { value: PlaceChoice; label: string }[] {
-  const beside = PINNED_BESIDE[place];
-  const pinnable = CHOICES.filter(
-    choice => beside === undefined || layout[beside] !== choice,
+  const drawnHere = CHOICES.filter(
+    choice =>
+      choice === EMPTY_PLACE ||
+      withPlaced(layout, place, choice)[place] === choice,
   );
-  return pinnable.map(choice => {
+  return drawnHere.map(choice => {
     const elsewhere = ROW_PLACES.find(
       other => other !== place && layout[other] === choice,
     );
@@ -329,7 +325,10 @@ export function placeOptions(
   });
 }
 
-/** The layout with a choice made for one place; a field it takes from another place leaves that place empty. */
+/**
+ * The layout with a choice made for one place, as the row draws it; a field
+ * it takes from another place leaves that place empty.
+ */
 export function withPlaced(
   layout: RowLayout,
   place: RowPlace,
@@ -342,7 +341,7 @@ export function withPlaced(
     }
   }
   next[place] = choice === EMPTY_PLACE ? null : choice;
-  return next;
+  return drawnRowLayout(next);
 }
 
 /** The places that show another field than the SDK's default, in reading order. */
