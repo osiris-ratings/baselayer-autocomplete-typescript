@@ -136,7 +136,7 @@ describe("resolveRowLayout", () => {
     expect(resolveRowLayout(staged)).toEqual(DEFAULT_ROW_LAYOUT);
   });
 
-  it("never draws a field twice, and keeps every place the host set, whatever the layout", () => {
+  it("never draws a field twice, keeps every place the host set, and every place left out its default, whatever the layout", () => {
     const values: (RowField | null | undefined)[] = [
       undefined,
       null,
@@ -158,6 +158,7 @@ describe("resolveRowLayout", () => {
       );
       if (new Set(drawn).size !== drawn.length)
         wrong.push(JSON.stringify(staged));
+      const placed = new Set(ROW_PLACES.map(place => staged[place]));
       // A field the host placed is drawn where it was placed first.
       const first = new Set<RowField>();
       for (const place of ROW_PLACES) {
@@ -168,6 +169,15 @@ describe("resolveRowLayout", () => {
           first.add(field);
           if (layout[place] !== field) wrong.push(JSON.stringify(staged));
         }
+        // A place left out keeps its default, unless that field is placed
+        // somewhere else.
+        const fallback = DEFAULT_ROW_LAYOUT[place];
+        if (
+          field === undefined &&
+          layout[place] !==
+            (fallback !== null && placed.has(fallback) ? null : fallback)
+        )
+          wrong.push(JSON.stringify(staged));
       }
     }
     expect(wrong.slice(0, 5)).toEqual([]);
@@ -271,7 +281,7 @@ describe("drawnRowLayout", () => {
     ).toEqual({ ...DEFAULT_ROW_LAYOUT, subtitleTrailing: null });
   });
 
-  it("draws every layout as one it leaves as it is", () => {
+  it("draws every layout with no badge beside an empty field and no second line led by a gap, as one it leaves as it is", () => {
     const choices = [null, ...ROW_FIELDS];
     let layouts: RowLayout[] = [{} as RowLayout];
     for (const place of ROW_PLACES) {
@@ -279,6 +289,13 @@ describe("drawnRowLayout", () => {
         choices.map(field => ({ ...layout, [place]: field })),
       );
     }
+    // Each corner with a field of its own, as its badge and its field.
+    const corners = [
+      { badge: "titleTrailingBadge", field: "titleTrailing" },
+      { badge: "subtitleBadge", field: "subtitle" },
+      { badge: "subtitleTrailingBadge", field: "subtitleTrailing" },
+    ] as const;
+    const wrong: string[] = [];
     for (const layout of layouts) {
       const drawn = drawnRowLayout(layout);
       expect(drawnRowLayout(drawn)).toEqual(drawn);
@@ -288,7 +305,22 @@ describe("drawnRowLayout", () => {
           .filter(field => field !== null)
           .sort();
       expect(fields(drawn)).toEqual(fields(layout));
+      const badgeBesideNothing = corners.some(
+        ({ badge, field }) => drawn[field] === null && drawn[badge] !== null,
+      );
+      const ledByAGap =
+        drawn.subtitle === null &&
+        (drawn.subtitleTrailing !== null ||
+          drawn.subtitleTrailingBadge !== null);
+      if (
+        badgeBesideNothing ||
+        ledByAGap ||
+        drawn.titleBadge !== layout.titleBadge
+      )
+        wrong.push(JSON.stringify(layout));
     }
+    expect(wrong.slice(0, 5)).toEqual([]);
+    expect(layouts).toHaveLength(5 ** 7);
   });
 });
 
