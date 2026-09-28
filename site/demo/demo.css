@@ -584,10 +584,14 @@
   white-space: nowrap;
 }
 
-.row-map-name {
-  flex: 0 1 13rem;
+/* The name's slot shrinks as a place does: no padding of its own. */
+.row-map-slot {
+  display: inline-flex;
+  flex: 0 1 var(--map-lead);
   min-width: 0;
-  padding-right: 9px;
+}
+
+.row-map-name {
   background: color-mix(in srgb, var(--map-title, var(--ink)) 6%, transparent);
   color: color-mix(in srgb, var(--map-title, var(--ink)) 60%, transparent);
   font-weight: 600;
@@ -597,28 +601,24 @@
 .row-map-place {
   position: relative;
   display: inline-flex;
-  flex: 0 1 6rem;
+  flex: 0 1 var(--map-trailing);
   min-width: 0;
 }
 
-.row-map-place[data-field="states"] {
-  flex-basis: 6.5rem;
+/* A place is as wide as where it sits, whatever it holds, so its chevron
+   stays put as its field changes; the two lines' columns line up. */
+.row-map-wrap {
+  --map-lead: 11rem;
+  --map-badge: 6rem;
+  --map-trailing: 7rem;
 }
 
-.row-map-place[data-field="structure"] {
-  flex-basis: 6rem;
+.row-map-place[data-drop="subtitle"] {
+  flex-basis: var(--map-lead);
 }
 
-.row-map-place[data-field="address"] {
-  flex-basis: 13rem;
-}
-
-.row-map-place[data-field="people"] {
-  flex-basis: 9rem;
-}
-
-.row-map-place[data-field="empty"] {
-  flex-basis: 5.5rem;
+.row-map-place[data-badge] {
+  flex-basis: var(--map-badge);
 }
 
 .row-map-place[data-trailing] {
@@ -693,12 +693,7 @@
   outline-offset: -1px;
 }
 
-/* An empty badge slot is a small square: it holds a flag when one is dropped
-   or picked, and is otherwise only a target. */
-.row-map-place[data-badge][data-field="empty"] {
-  flex: 0 0 28px;
-}
-
+/* An empty badge slot shows only a `+`. */
 /* Its menu's text is hidden, not its ink: the dashed border is drawn in it. */
 .row-map-place[data-badge][data-field="empty"] :is(select, .row-map-face) {
   padding: 0;
@@ -875,26 +870,7 @@
   background-color: var(--map-bg, var(--paper));
 }
 
-/* No place shrinks past its own label; the name, a stand-in, goes first. */
-.row-map-place[data-field="states"] {
-  min-width: 4.5rem;
-}
-
-.row-map-place[data-field="structure"] {
-  min-width: 5.5rem;
-}
-
-.row-map-place[data-field="address"],
-.row-map-place[data-field="people"] {
-  min-width: 4.75rem;
-}
-
-.row-map-name {
-  min-width: 3.5rem;
-}
-
-/* On a phone the places give up their slack before their labels: the name is
-   shortened, and every gap and margin tightens. */
+/* On a phone the name is shortened, and every gap and margin tightens. */
 .row-map-wrap {
   container-type: inline-size;
 }
@@ -904,6 +880,15 @@
 }
 
 @container (max-width: 420px) {
+  /* Four places to a line: the name is short here, so the lead gives the
+     others its room. */
+  .row-map-wrap,
+  .row-map {
+    --map-lead: 5.5rem;
+    --map-badge: 5rem;
+    --map-trailing: 5.5rem;
+  }
+
   .row-map {
     gap: 6px;
     padding: 10px;
@@ -921,34 +906,24 @@
     display: inline;
   }
 
-  .row-map-name {
-    flex-basis: 4rem;
-  }
-
   .row-map-name,
   .row-map-place :is(select, .row-map-face) {
-    padding-left: 7px;
-    font-size: 12px;
-  }
-
-  .row-map-place :is(select, .row-map-face) {
-    padding-right: 22px;
+    padding-right: 18px;
+    padding-left: 6px;
+    font-size: 11.5px;
   }
 
   .row-map-handle {
-    right: 22px;
+    right: 18px;
   }
 
   .row-map-place::after {
-    right: 9px;
+    right: 7px;
   }
 
   .row-map-place::before {
-    right: 3px;
-  }
-
-  .row-map-place[data-badge][data-field="empty"] {
-    flex-basis: 24px;
+    right: 2px;
+    width: 15px;
   }
 }
 

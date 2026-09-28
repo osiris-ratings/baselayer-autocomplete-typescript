@@ -176,10 +176,19 @@ function useFieldDrag(
     };
   }, [pointerId]);
 
-  /** A handle picks its field up; the window follows the pointer from there. */
+  /**
+   * A place, or a chip on the tray, picks its field up on a press anywhere but
+   * the chevron; the window follows the pointer from there. The place listens,
+   * not its handle: after a native menu closes, a browser can route the next
+   * press to the menu under the handle until the pointer leaves the place.
+   */
   const handle = (field: RowField) => ({
     onPointerDown(event: ReactPointerEvent<HTMLElement>) {
       if (event.button !== 0) return;
+      const grip = event.currentTarget.querySelector(".row-map-handle");
+      if (grip !== null && event.clientX > grip.getBoundingClientRect().right) {
+        return; // The chevron: the menu opens as a menu does.
+      }
       event.preventDefault();
       // A menu left focused would keep its ring through the drag.
       if (document.activeElement instanceof HTMLElement) {
@@ -190,8 +199,7 @@ function useFieldDrag(
       } catch {
         // The window's listeners follow the pointer without it.
       }
-      menu.current =
-        event.currentTarget.parentElement?.querySelector("select") ?? null;
+      menu.current = event.currentTarget.querySelector("select");
       update({
         field,
         lifted: lift(event.currentTarget, event.clientX, event.clientY),
@@ -291,6 +299,7 @@ export function RowMap({
         data-dragged={
           moving !== null && moving.field === field ? true : undefined
         }
+        {...(field === null ? {} : handle(field))}
         title={
           closed
             ? `${PLACE_LABELS[spot]}: fill the place beside it first`
@@ -300,9 +309,9 @@ export function RowMap({
         {field !== null && (
           <span
             className="row-map-handle"
+            // The grab cursor and the finger's hold; the place takes the press.
             // The dropdown does the same, from a keyboard too.
             aria-hidden="true"
-            {...handle(field)}
           />
         )}
         <select
@@ -341,15 +350,17 @@ export function RowMap({
       >
         <div className="row-map-line">
           {/* A row is the entity it names, so its title always shows. */}
-          <button
-            type="button"
-            className="row-map-name"
-            disabled
-            title="The name, always shown"
-          >
-            <span className="row-map-name-long">Business name</span>
-            <span className="row-map-name-short">Name</span>
-          </button>
+          <span className="row-map-slot">
+            <button
+              type="button"
+              className="row-map-name"
+              disabled
+              title="The name, always shown"
+            >
+              <span className="row-map-name-long">Business name</span>
+              <span className="row-map-name-short">Name</span>
+            </button>
+          </span>
           {place("titleBadge", { badge: true })}
           {place("titleTrailingBadge", { badge: true, trailing: true })}
           {place("titleTrailing")}

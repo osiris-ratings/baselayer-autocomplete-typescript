@@ -159,6 +159,48 @@ describe("the Components fold's row", () => {
     expect(layout.subtitleTrailing).toBe("states");
   });
 
+  it("drags from a press the browser routes to the menu, away from the chevron", () => {
+    const { onChange, spot } = mount();
+    const place = spot("titleTrailing");
+    vi.spyOn(
+      place.querySelector(".row-map-handle")!,
+      "getBoundingClientRect",
+    ).mockReturnValue(new DOMRect(0, 0, 100, 28));
+    vi.spyOn(document, "elementFromPoint").mockReturnValue(
+      spot("subtitleTrailing"),
+    );
+
+    // Right after a native menu closes, the press lands on the select.
+    const menu = place.querySelector("select")!;
+    fireEvent.pointerDown(menu, { button: 0, clientX: 20, clientY: 10 });
+    fireEvent.pointerMove(document.body, { clientX: 60, clientY: 40 });
+    fireEvent.pointerUp(document.body, { clientX: 60, clientY: 40 });
+
+    expect(onChange.mock.calls[0]![0].layout.subtitleTrailing).toBe("states");
+  });
+
+  it("leaves a press on the chevron to the menu", () => {
+    const { view, onChange, spot } = mount();
+    const place = spot("titleTrailing");
+    vi.spyOn(
+      place.querySelector(".row-map-handle")!,
+      "getBoundingClientRect",
+    ).mockReturnValue(new DOMRect(0, 0, 100, 28));
+
+    const menu = place.querySelector("select")!;
+    const opened = fireEvent.pointerDown(menu, {
+      button: 0,
+      clientX: 110,
+      clientY: 10,
+    });
+    fireEvent.pointerMove(document.body, { clientX: 160, clientY: 40 });
+
+    // Not cancelled, so the select still opens, and nothing is lifted.
+    expect(opened).toBe(true);
+    expect(view.container.querySelector("[data-accepts]")).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it("does not drop a press that never moves", () => {
     const { onChange, spot } = mount();
     const handle = spot("titleBadge").querySelector(".row-map-handle")!;
