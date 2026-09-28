@@ -166,17 +166,17 @@ and leaves your sizes, behavior and text alone. Then every knob the styled
 component has, in sections that start folded: the components a row shows,
 drawn as the row itself (the name, which always shows, then each line's two
 corners, a field and the badge pinned to its inner side; each place drawn as
-the field it holds, and as wide as where it sits, whatever it holds, so the
-two lines' columns line up and a chevron stays put. A field is dragged, by mouse or by finger, onto another
-place, where it swaps with what was there, or onto a tray of the fields the
-row leaves out. While it flies, tilted, every spot that takes it is lit: all
-but its own place and the badge beside it, which would pin it to itself.
-Each place's chevron is also a dropdown of what it can show,
-and picking a field from another place moves it and leaves that place
-empty. The drawn row is always the row as drawn: a place the row would not
-draw a field in, a badge beside an empty field or the second line's right
-with no lead, is hidden, keeping its room, and takes nothing, and a field that leaves the lead
-lets the right corner slide into it, as the row does),
+the field it holds, and as wide as where it sits, whatever it holds, so the two
+lines' columns line up and a chevron stays put. A field is dragged, by mouse or
+by finger, onto another place, where it swaps with what was there, or onto a
+tray of the fields the row leaves out. While it flies, tilted and drawn as the
+cell it left, every spot that takes it is lit. The fold shows only layouts the
+row can draw: a drop lands only where the field would stay; a place nothing can
+go in yet, a badge beside an empty field or the second line's right with no
+lead, is hidden, keeping its room; and a field that leaves the lead lets the
+right corner slide into it, as the row does. Each place's chevron is also a
+dropdown of what it can show, and picking a field from another place moves it
+and leaves that place empty),
 how matched words are highlighted (the emphasis, the region, and one color
 override for every emphasis) and whether the footer
 shows the round trip and the index that answered (`look.showDebugInfo`, a
