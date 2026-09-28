@@ -117,8 +117,15 @@
   margin: 0;
 }
 
+/* Text on the first line sits on the name's baseline, whatever its size;
+   a flag is centred on the line instead. */
 .bl-ac-line-title {
-  align-items: center;
+  align-items: baseline;
+}
+
+.bl-ac-line-title .bl-ac-states,
+.bl-ac-line-title .bl-ac-structure {
+  align-self: center;
 }
 
 .bl-ac-line-subtitle {
@@ -138,7 +145,7 @@
   flex-wrap: wrap;
   column-gap: 0.5rem;
   align-content: flex-start;
-  align-items: center;
+  align-items: baseline;
   min-width: 0;
   /* One line, or, where a tight line-height or a small font leaves it
      shorter, a flag's height (1rem and 2px) or a text badge's line (14px). */
@@ -155,7 +162,7 @@
   display: flex;
   flex: 0 1 auto;
   gap: 0.5rem;
-  align-items: center;
+  align-items: baseline;
   min-width: 0;
   max-width: 100%;
 }

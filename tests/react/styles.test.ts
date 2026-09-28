@@ -190,6 +190,27 @@ describe("what gives way when a line runs out of room", () => {
   });
 });
 
+describe("the first line's alignment", () => {
+  it("sits text on the name's baseline: the title, its pieces and text in any place", () => {
+    for (const container of [
+      ".bl-ac-line-title",
+      ".bl-ac-title",
+      ".bl-ac-name-group",
+    ]) {
+      expect(rule(container), container).toMatch(/align-items: baseline/);
+    }
+  });
+
+  it("keeps a flag centred on the line, wherever it sits", () => {
+    for (const flag of [
+      ".bl-ac-line-title .bl-ac-states",
+      ".bl-ac-line-title .bl-ac-structure",
+    ]) {
+      expect(rule(flag), flag).toMatch(/align-self: center/);
+    }
+  });
+});
+
 describe("the stylesheet's colors", () => {
   // Each color knob of `look`, and the variable it sets.
   const VARIABLES: Record<

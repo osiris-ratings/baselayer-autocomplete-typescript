@@ -237,6 +237,9 @@ what gives way first:
   line runs out of room, `also …` gives way first: it is ellipsised down to
   6em, then leaves the line whole rather than shrinking to a stray letter.
   Then the name is ellipsised; the badge and the trailing place stay.
+- Text on the first line, the name, `also …` and an address or the people
+  in any of its places, sits on the name's baseline; a flag is centred on
+  the line.
 - A corner's badge keeps beside its field, on the side facing the middle
   of the row; text in a badge place keeps its width, up to 40% of the line.
 - A trailing place keeps to the right. Text there keeps its width, up to
