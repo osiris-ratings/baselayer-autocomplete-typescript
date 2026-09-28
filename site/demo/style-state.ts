@@ -224,11 +224,47 @@ export function changedStructures(state: StyleState): [Structure, string][] {
 
 /** Each place a host fills, named for where it sits. */
 export const PLACE_LABELS: Record<RowPlace, string> = {
-  titleBadge: "Badge",
+  titleBadge: "Beside the name",
+  titleTrailingBadge: "Beside title, right",
   titleTrailing: "Title, right",
   subtitle: "Subtitle",
+  subtitleBadge: "Beside subtitle",
+  subtitleTrailingBadge: "Beside subtitle, right",
   subtitleTrailing: "Subtitle, right",
 };
+
+/** Where a dragged field can land besides a place: out of the row. */
+export const TRAY = "tray";
+export type DropSpot = RowPlace | typeof TRAY;
+
+/** The fields the layout places nowhere, in their own order. */
+export function unplacedFields(layout: RowLayout): RowField[] {
+  const placed = new Set(ROW_PLACES.map(place => layout[place]));
+  return ROW_FIELDS.filter(field => !placed.has(field));
+}
+
+/**
+ * The layout with a field dropped somewhere. On a place, the field takes it
+ * and whatever the place held goes where the field came from (a swap, or out
+ * of the row when the field came from the tray); on the tray, the field
+ * leaves the row.
+ */
+export function moveField(
+  layout: RowLayout,
+  field: RowField,
+  to: DropSpot,
+): RowLayout {
+  const from = ROW_PLACES.find(place => layout[place] === field);
+  const next = { ...layout };
+  if (to === TRAY) {
+    if (from !== undefined) next[from] = null;
+    return next;
+  }
+  const displaced = next[to];
+  if (from !== undefined) next[from] = displaced;
+  next[to] = field;
+  return next;
+}
 
 /** The choice that leaves a place empty. */
 export const EMPTY_PLACE = "empty";

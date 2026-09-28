@@ -689,6 +689,234 @@
   outline-offset: 1px;
 }
 
+/* An empty badge slot is a small square: it holds a flag when one is dropped
+   or picked, and is otherwise only a target. */
+.row-map-place[data-badge][data-field="empty"] {
+  flex: 0 0 28px;
+}
+
+/* Its menu's text is hidden, not its ink: the dashed border is drawn in it. */
+.row-map-place[data-badge][data-field="empty"] select {
+  padding: 0;
+  font-size: 0;
+}
+
+.row-map-place[data-badge][data-field="empty"]::after {
+  top: 50%;
+  right: 50%;
+  width: auto;
+  height: auto;
+  border: 0;
+  content: "+";
+  font-size: 15px;
+  line-height: 1;
+  transform: translate(50%, -55%);
+}
+
+/* A filled place drags by all of it but the chevron, which is its dropdown.
+   It keeps the page from scrolling while a finger drags. */
+.row-map-handle,
+.row-map-chip {
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+}
+
+.row-map-handle {
+  position: absolute;
+  z-index: 1;
+  inset: 0 24px 0 0;
+}
+
+/* The chevron is the dropdown: a rounded box comes up under the pointer (or
+   the keyboard's focus) there, so it reads as a button of its own. */
+.row-map-place::before {
+  position: absolute;
+  z-index: 1;
+  top: 4px;
+  right: 4px;
+  bottom: 4px;
+  width: 18px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  border-radius: 4px;
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.row-map-place[data-badge][data-field="empty"]::before {
+  inset: 4px;
+  width: auto;
+}
+
+.row-map-place:has(select:hover)::before,
+.row-map-place:has(select:focus-visible)::before {
+  opacity: 1;
+}
+
+.row-map-place::after {
+  z-index: 2;
+}
+
+/* Where a drag would land, and what it has lifted. */
+.row-map-place[data-over] select,
+.row-map-tray[data-over] {
+  border-style: solid;
+  border-color: var(--blue);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blue) 25%, transparent);
+}
+
+.row-map-place[data-dragged],
+.row-map-chip[data-dragged] {
+  opacity: 0.35;
+}
+
+/* The fields the row leaves out, to drag back in. */
+.row-map-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  min-height: 36px;
+  margin-top: 8px;
+  padding: 4px 8px;
+  border: 1px dashed var(--line);
+  border-radius: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.row-map-tray-label {
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.row-map-tray-hint {
+  opacity: 0.8;
+}
+
+.row-map-chip,
+.row-map-ghost {
+  position: relative;
+  display: inline-flex;
+  box-sizing: border-box;
+  align-items: center;
+  height: 26px;
+  padding: 0 9px;
+  background: var(--paper, #ffffff);
+  border: 1px dashed color-mix(in srgb, currentColor 45%, transparent);
+  border-radius: var(--map-pill-radius, 3px);
+  color: var(--map-subtitle, #718096);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.row-map-chip[data-field="states"],
+.row-map-ghost[data-field="states"] {
+  background: var(--map-pill-bg, #c6f6d5);
+  border-color: var(--map-pill-border, #48bb78);
+  color: var(--map-pill-fg, #22543d);
+  font-weight: 600;
+}
+
+.row-map-chip[data-field="structure"],
+.row-map-ghost[data-field="structure"] {
+  background: var(--map-structure-bg, #edf2f7);
+  color: var(--map-structure-fg, #4a5568);
+  font-weight: 600;
+}
+
+/* Follows the pointer, above the finger that drags it. */
+.row-map-ghost {
+  position: fixed;
+  z-index: 1000;
+  border-style: solid;
+  box-shadow: 0 6px 16px rgba(9, 35, 79, 0.18);
+  pointer-events: none;
+  transform: translate(-50%, calc(-100% - 12px));
+}
+
+/* No place shrinks past its own label; the name, a stand-in, goes first. */
+.row-map-place[data-field="states"] {
+  min-width: 4.5rem;
+}
+
+.row-map-place[data-field="structure"] {
+  min-width: 5.5rem;
+}
+
+.row-map-place[data-field="address"],
+.row-map-place[data-field="people"] {
+  min-width: 4.75rem;
+}
+
+.row-map-name {
+  min-width: 3.5rem;
+}
+
+/* On a phone the places give up their slack before their labels: the name is
+   shortened, and every gap and margin tightens. */
+.row-map-wrap {
+  container-type: inline-size;
+}
+
+.row-map-name-short {
+  display: none;
+}
+
+@container (max-width: 420px) {
+  .row-map {
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .row-map-line {
+    gap: 5px;
+  }
+
+  .row-map-name-long {
+    display: none;
+  }
+
+  .row-map-name-short {
+    display: inline;
+  }
+
+  .row-map-name {
+    flex-basis: 4rem;
+  }
+
+  .row-map-name,
+  .row-map-place select {
+    padding-left: 7px;
+    font-size: 12px;
+  }
+
+  .row-map-place select {
+    padding-right: 22px;
+  }
+
+  .row-map-handle {
+    right: 22px;
+  }
+
+  .row-map-place::after {
+    right: 9px;
+  }
+
+  .row-map-place::before {
+    right: 3px;
+  }
+
+  .row-map-place[data-badge][data-field="empty"] {
+    flex-basis: 24px;
+  }
+}
+
 /* ---- Connect ------------------------------------------------------------ */
 
 .demo .tabs {

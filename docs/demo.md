@@ -164,10 +164,13 @@ colors: Light (the default, with matched ink in green), Baselayer, Midnight,
 Monokai, Sepia and Rosé. A preset sets the colors, the corners and the shadow,
 and leaves your sizes, behavior and text alone. Then every knob the styled
 component has, in sections that start folded: the components a row shows,
-drawn as the row itself (the name, which always shows, with the badge after
-it and the first line's right, then the second line's lead and its right;
-each place a dropdown of what it can show, drawn as the field it holds, and
-picking a field from another place moves it and leaves that place empty),
+drawn as the row itself (the name, which always shows, then each line's two
+corners, a field and the badge pinned to its inner side; each place drawn as
+the field it holds. A field is dragged, by mouse or by finger, onto another
+place, where it swaps with what was there, or onto a tray of the fields the
+row leaves out; each place's chevron is also a dropdown of what it can show,
+and picking a field from another place moves it and leaves that place
+empty),
 how matched words are highlighted (the emphasis, the region, and one color
 override for every emphasis) and whether the footer
 shows the round trip and the index that answered (`look.showDebugInfo`, a

@@ -20,6 +20,9 @@ import {
   exportCode,
   INITIAL_STYLE,
   placeOptions,
+  moveField,
+  unplacedFields,
+  TRAY,
   presetChanges,
   presetColor,
   presetVar,
@@ -40,22 +43,17 @@ function exportedLayout(tsx: string): Partial<RowLayout> | null {
 /** Every layout the SDK draws: each place a field or empty, no field twice. */
 function everyLayout(): RowLayout[] {
   const choices = [null, ...ROW_FIELDS];
-  return choices.flatMap(titleBadge =>
-    choices.flatMap(titleTrailing =>
-      choices.flatMap(subtitle =>
-        choices.flatMap(subtitleTrailing => {
-          const layout = {
-            titleBadge,
-            titleTrailing,
-            subtitle,
-            subtitleTrailing,
-          };
-          const placed = Object.values(layout).filter(field => field !== null);
-          return new Set(placed).size === placed.length ? [layout] : [];
-        }),
+  return ROW_PLACES.reduce<Partial<RowLayout>[]>(
+    (partial, place) =>
+      partial.flatMap(layout =>
+        choices
+          .filter(
+            field => field === null || !Object.values(layout).includes(field),
+          )
+          .map(field => ({ ...layout, [place]: field })),
       ),
-    ),
-  );
+    [{}],
+  ) as RowLayout[];
 }
 
 describe("the Styling panel's exported configuration", () => {
@@ -67,6 +65,7 @@ describe("the Styling panel's exported configuration", () => {
     const { tsx } = exportCode({
       ...DEFAULT_STYLE,
       layout: {
+        ...DEFAULT_ROW_LAYOUT,
         titleBadge: null,
         titleTrailing: null,
         subtitle: "people",
@@ -183,6 +182,7 @@ describe("the Components fold", () => {
 
   it("moves a field picked from another place, and empties the place it left", () => {
     expect(withPlaced(DEFAULT_ROW_LAYOUT, "subtitle", "states")).toEqual({
+      ...DEFAULT_ROW_LAYOUT,
       titleBadge: "structure",
       titleTrailing: null,
       subtitle: "states",
@@ -212,6 +212,55 @@ describe("the Components fold", () => {
 
     const every = everyLayout();
     expect([...seen.keys()].sort()).toEqual(every.map(key).sort());
+  });
+});
+
+describe("dragging a field", () => {
+  it("drops it on a place, swapping in whatever that place held", () => {
+    // The states onto the address: the address takes the states' place.
+    expect(moveField(DEFAULT_ROW_LAYOUT, "states", "subtitle")).toEqual({
+      ...DEFAULT_ROW_LAYOUT,
+      titleTrailing: "address",
+      subtitle: "states",
+    });
+    // Onto an empty place: the place it left is empty.
+    expect(
+      moveField(DEFAULT_ROW_LAYOUT, "structure", "subtitleTrailingBadge"),
+    ).toEqual({
+      ...DEFAULT_ROW_LAYOUT,
+      titleBadge: null,
+      subtitleTrailingBadge: "structure",
+    });
+  });
+
+  it("hides a field dropped on the tray, and places one dragged out of it", () => {
+    const hidden = moveField(DEFAULT_ROW_LAYOUT, "people", TRAY);
+    expect(hidden).toEqual({ ...DEFAULT_ROW_LAYOUT, subtitleTrailing: null });
+    expect(unplacedFields(hidden)).toEqual(["people"]);
+
+    // From the tray onto a taken place: what that place held goes to the tray.
+    const placed = moveField(hidden, "people", "subtitle");
+    expect(placed).toEqual({
+      ...DEFAULT_ROW_LAYOUT,
+      subtitle: "people",
+      subtitleTrailing: null,
+    });
+    expect(unplacedFields(placed)).toEqual(["address"]);
+  });
+
+  it("never places a field twice, from any layout, dropped anywhere", () => {
+    for (const layout of everyLayout()) {
+      for (const field of ROW_FIELDS) {
+        for (const to of [...ROW_PLACES, TRAY] as const) {
+          const next = moveField(layout, field, to);
+          const drawn = ROW_PLACES.map(place => next[place]).filter(
+            placed => placed !== null,
+          );
+          expect(new Set(drawn).size).toBe(drawn.length);
+          if (to !== TRAY) expect(next[to]).toBe(field);
+        }
+      }
+    }
   });
 });
 
