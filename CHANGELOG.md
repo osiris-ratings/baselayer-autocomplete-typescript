@@ -6,6 +6,8 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-09-28
+
 A row's places are named for where they sit, a host picks the field each one
 shows, and the business structure is a new field, drawn by default as a flag
 after the name. `parts` gives way to `layout`, a breaking change: this ships
