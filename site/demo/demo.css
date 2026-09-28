@@ -674,8 +674,10 @@
   color: color-mix(in srgb, var(--map-subtitle, #718096) 60%, transparent);
 }
 
-/* The dropdown's own list stays legible whatever the look. */
+/* The dropdown's own list stays legible whatever the look, and whatever
+   size its select draws its own text at (none, in an empty badge). */
 .row-map-place option {
+  font-size: 13px;
   color: #1c1b1c;
   background: #ffffff;
 }
@@ -875,7 +877,6 @@
 @container (max-width: 420px) {
   /* Four places to a line: the name is short here, so the lead gives the
      others its room. */
-  .row-map-wrap,
   .row-map {
     --map-lead: 5.5rem;
     --map-badge: 5rem;

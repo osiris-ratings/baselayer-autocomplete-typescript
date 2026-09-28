@@ -339,7 +339,7 @@ export function StylingPanel({
             </Field>
           ))}
         </div>
-        <p className="mono-label font-own-label">Using your own font</p>
+        <p className="mono-label">Using your own font</p>
         <Code snippets={fontSnippets(state)} />
       </Fold>
 
