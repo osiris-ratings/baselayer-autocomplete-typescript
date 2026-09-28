@@ -39,3 +39,18 @@ jobs:
         run: pnpm dlx markdownlint-cli2 README.md CHANGELOG.md CONTRIBUTING.md SECURITY.md "docs/*.md"
       - name: Site builds
         run: pnpm site:build
+
+  browser:
+    name: browser
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps --only-shell chromium
+      - run: pnpm test:browser

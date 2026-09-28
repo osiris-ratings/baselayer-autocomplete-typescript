@@ -7,7 +7,7 @@ const src = (path: string) =>
 
 // The package's two entry points, resolved to source. Exact matches, so the
 // root does not take the react one as a path inside itself.
-const alias = [
+export const alias = [
   {
     find: /^@baselayer-sdk\/autocomplete\/react$/,
     replacement: src("react/index.ts"),
