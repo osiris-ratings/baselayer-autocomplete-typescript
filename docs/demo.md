@@ -167,8 +167,9 @@ component has, in sections that start folded: the components a row shows,
 drawn as the row itself (the name, which always shows, with the badge after
 it and the first line's right, then the second line's lead and its right;
 each place a dropdown of what it can show, drawn as the field it holds, and
-picking a field from another place moves it and leaves that place empty), how matched words are highlighted (the emphasis, the
-region, and one color override for every emphasis) and whether the footer
+picking a field from another place moves it and leaves that place empty),
+how matched words are highlighted (the emphasis, the region, and one color
+override for every emphasis) and whether the footer
 shows the round trip and the index that answered (`look.showDebugInfo`, a
 switch in the same fold), every color (the `look` prop's and the stylesheet's
 own variables, each with a swatch that opens a color picker), shape and size,
