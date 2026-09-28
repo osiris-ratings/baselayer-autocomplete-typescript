@@ -264,8 +264,11 @@ export function StylingPanel({
       <Fold title="Font" summary={count(changes.font)}>
         <p className="hint fold-note">
           The component takes the page&rsquo;s font unless{" "}
-          <code>--bl-ac-font</code> names one. A weight the font does not have
-          is drawn in the nearest one it does.
+          <code>--bl-ac-font</code> names one. Unmatched and matched words take
+          their weights under the weight emphasis (Highlights). A weight the
+          font does not have is drawn in the nearest one it does: this page has
+          Uncut Sans in 300 to 700, Newsreader in 200 to 800 and Geist Mono in
+          400 and 500; a system font usually has all nine.
         </p>
         <div className="field-grid">
           <Field label="Font" hint={<code>--bl-ac-font</code>}>
@@ -310,6 +313,8 @@ export function StylingPanel({
               />
             </Field>
           )}
+        </div>
+        <div className="field-grid">
           {WEIGHT_VARIABLES.map(name => (
             <Field
               key={name}

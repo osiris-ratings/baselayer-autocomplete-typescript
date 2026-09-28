@@ -88,12 +88,12 @@ export const CSS_VARIABLES = {
   "--bl-ac-font": { label: "Font", kind: "font", value: "" },
   "--bl-ac-name-weight": { label: "Name", kind: "weight", value: "600" },
   "--bl-ac-weight-base": {
-    label: "Unmatched words (weight emphasis)",
+    label: "Unmatched words",
     kind: "weight",
     value: "500",
   },
   "--bl-ac-weight-mark": {
-    label: "Matched words (weight emphasis)",
+    label: "Matched words",
     kind: "weight",
     value: "700",
   },
@@ -103,17 +103,17 @@ export type CssVariable = keyof typeof CSS_VARIABLES;
 
 /** The fonts the Font fold offers: the page's own, and the ones it loads. */
 export const FONT_CHOICES = [
-  { label: "The page's font (Uncut Sans, 300 to 700)", value: "" },
+  { label: "Page font (Uncut Sans)", value: "" },
   {
-    label: "System UI (the platform's, 100 to 900)",
+    label: "System UI",
     value: 'system-ui, -apple-system, "Segoe UI", sans-serif',
   },
   {
-    label: "Serif (Newsreader, 200 to 800)",
+    label: "Serif (Newsreader)",
     value: '"Newsreader Variable", Georgia, serif',
   },
   {
-    label: "Mono (Geist Mono, 400 and 500)",
+    label: "Mono (Geist Mono)",
     value: '"Geist Mono", ui-monospace, monospace',
   },
 ] as const;
