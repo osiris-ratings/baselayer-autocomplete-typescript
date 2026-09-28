@@ -54,6 +54,17 @@ export {
   type MintScope,
 } from "./core/errors";
 export {
+  DEFAULT_ROW_LAYOUT,
+  ROW_FIELDS,
+  ROW_PLACES,
+  includeForLayout,
+  resolveRowLayout,
+  type RowField,
+  type RowLayout,
+  type RowLayoutInput,
+  type RowPlace,
+} from "./core/layout";
+export {
   DEFAULT_LOOK,
   MATCH_EMPHASES,
   MATCH_REGIONS,

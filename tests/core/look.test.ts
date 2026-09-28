@@ -119,9 +119,26 @@ describe("resolveLook", () => {
       pillForegroundColor: "#555555",
       primaryPillBorderColor: "#666666",
       secondaryPillBackgroundColor: "#777777",
+      structurePillBackgroundColor: "#888888",
+      structurePillForegroundColor: "#999999",
     } satisfies Partial<Look>;
 
     expect(resolveLook(colors)).toEqual({ ...DEFAULT_LOOK, ...colors });
+  });
+
+  it("draws the structure flag in a neutral grey, so it does not read as a state square", () => {
+    const background = DEFAULT_LOOK.structurePillBackgroundColor;
+    const foreground = DEFAULT_LOOK.structurePillForegroundColor;
+    // A grey: its three channels within a few steps of one another.
+    const spread = (hex: string) => {
+      const channels = [1, 3, 5].map(at => parseInt(hex.slice(at, at + 2), 16));
+      return Math.max(...channels) - Math.min(...channels);
+    };
+
+    expect(spread(background)).toBeLessThanOrEqual(32);
+    expect(spread(foreground)).toBeLessThanOrEqual(32);
+    expect(background).not.toBe(DEFAULT_LOOK.pillBackgroundColor);
+    expect(foreground).not.toBe(DEFAULT_LOOK.pillForegroundColor);
   });
 
   it("defaults to hex colors, and hands back a look of its own", () => {

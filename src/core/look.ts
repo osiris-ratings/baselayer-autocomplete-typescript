@@ -33,9 +33,9 @@ export interface Look {
   matchEmphasisRegion: MatchRegion;
   /** Behind the suggestion menu. */
   backgroundColor: string;
-  /** A row's first line, the name. */
+  /** The name, which leads every row. */
   titleColor: string;
-  /** A row's second line, and the fainter alternative name on the first. */
+  /** The address and the people, wherever they sit, and the fainter alternative name. */
   subtitleColor: string;
   /** The state squares. */
   pillBackgroundColor: string;
@@ -44,6 +44,9 @@ export interface Look {
   primaryPillBorderColor: string;
   /** The `+N` square that counts the states not shown. */
   secondaryPillBackgroundColor: string;
+  /** The structure's flag. */
+  structurePillBackgroundColor: string;
+  structurePillForegroundColor: string;
 }
 
 /**
@@ -95,6 +98,9 @@ export const DEFAULT_LOOK: Readonly<Look> = Object.freeze({
   pillForegroundColor: "#22543D", // green.800
   primaryPillBorderColor: "#48BB78", // green.400
   secondaryPillBackgroundColor: "#EDF2F7", // gray.100
+  // Neutral, so the flag does not read as a state square.
+  structurePillBackgroundColor: "#EDF2F7", // gray.100
+  structurePillForegroundColor: "#4A5568", // gray.600
 });
 
 const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
@@ -162,6 +168,14 @@ export function resolveLook(staged: LookInput = {}): Look {
     secondaryPillBackgroundColor: color(
       staged.secondaryPillBackgroundColor,
       base.secondaryPillBackgroundColor,
+    ),
+    structurePillBackgroundColor: color(
+      staged.structurePillBackgroundColor,
+      base.structurePillBackgroundColor,
+    ),
+    structurePillForegroundColor: color(
+      staged.structurePillForegroundColor,
+      base.structurePillForegroundColor,
     ),
   };
 }
