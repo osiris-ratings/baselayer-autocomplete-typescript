@@ -94,12 +94,22 @@ describe("what gives way when a line runs out of room", () => {
     const title = rule(".bl-ac-title");
 
     expect(title).toContain("flex-wrap: wrap;");
-    expect(title).toContain("max-height: 1lh;");
     expect(title).toContain("overflow: hidden;");
     // It stays on the line only with 6em to spare, and the name and its badge
     // are one piece that never wraps apart.
     expect(rule(".bl-ac-also")).toContain("flex: 1 1 6em;");
     expect(rule(".bl-ac-name-group")).toContain("max-width: 100%;");
+  });
+
+  it("keeps the title one line tall, but never shorter than a flag, however tight the line-height", () => {
+    // A flag is 0.75rem of text on a line-height of 1, 0.125rem of padding
+    // and a 1px border above and below: 1rem and 2px.
+    const flag = rule(".bl-ac-structure");
+    expect(flag).toContain("font-size: 0.75rem;");
+    expect(flag).toContain("line-height: 1;");
+    expect(rule(".bl-ac-title")).toContain(
+      "max-height: max(1lh, calc(1rem + 2px));",
+    );
   });
 
   it("is never text at the right while its lead can give way, which a flag cannot", () => {

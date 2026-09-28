@@ -141,8 +141,10 @@
   align-content: flex-start;
   align-items: center;
   min-width: 0;
-  max-height: calc(1em * var(--bl-ac-line-height));
-  max-height: 1lh;
+  /* One line, or a flag's height (1rem and 2px) where a tight line-height
+     leaves a line shorter than a flag. */
+  max-height: max(calc(1em * var(--bl-ac-line-height)), calc(1rem + 2px));
+  max-height: max(1lh, calc(1rem + 2px));
   overflow: hidden;
 }
 
