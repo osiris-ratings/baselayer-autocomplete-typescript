@@ -680,8 +680,12 @@
   background: #ffffff;
 }
 
-.row-map-place select:hover {
-  border-color: var(--blue);
+/* The dash says a field can be dragged; over the chevron, or on a place that
+   is all dropdown, it goes solid: a press there opens the menu instead. */
+.row-map:not([data-dragging])
+  .row-map-place:not([data-closed])
+  select:is(:hover, :focus-visible) {
+  border-style: solid;
 }
 
 .row-map-place select:focus-visible {
