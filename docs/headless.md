@@ -228,6 +228,8 @@ The row helpers the styled component uses are exported for your own rows:
 `structureLabel` (a structure's flag, `C-Corp` for `C_CORPORATION`),
 `formatFound`, `queryTokens` and `partsFor` (the highlight parts to draw for
 a name, whole-word or cut at the typed prefix). To lay your rows out in the
-styled component's places, `resolveRowLayout(layout)` resolves a layout as
-it does, and `includeForLayout(layout)` says what to ask the tier to expand
-for it (see [A row's places and fields](styling.md#5-a-rows-places-and-fields)).
+styled component's places, `drawnRowLayout(resolveRowLayout(layout))` is the
+field each place draws, as the component has it, `ROW_LINES` groups the
+places into each line's lead and trailing corner, and
+`includeForLayout(layout)` says what to ask the tier to expand for it (see
+[A row's places and fields](styling.md#5-a-rows-places-and-fields)).

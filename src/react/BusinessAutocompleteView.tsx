@@ -8,12 +8,16 @@ import {
 
 import {
   DEFAULT_LOOK,
+  ROW_LINES,
+  drawnRowLayout,
   resolveLook,
   resolveRowLayout,
   type Look,
   type LookInput,
   type RowField,
+  type RowLayout,
   type RowLayoutInput,
+  type RowLine,
   type RowPlace,
 } from "@baselayer-sdk/autocomplete";
 import {
@@ -31,7 +35,6 @@ import type {
 } from "@baselayer-sdk/autocomplete";
 
 import { resolveMessages, type AutocompleteMessages } from "./messages";
-import { rowLines } from "./rowLayout";
 import { useBusinessCombobox } from "./useBusinessCombobox";
 
 /** Squares shown before the `+N` overflow: the domicile and two more. */
@@ -256,6 +259,147 @@ function StateSquares({
   );
 }
 
+/** Each line's slot and classes. */
+const LINE_CLASSES: Record<
+  RowLine["line"],
+  { slot: SlotName; className: string }
+> = {
+  title: { slot: "titleLine", className: "bl-ac-line bl-ac-line-title" },
+  subtitle: {
+    slot: "subtitleLine",
+    className: "bl-ac-line bl-ac-line-subtitle",
+  },
+};
+
+interface DefaultRowProps {
+  item: BusinessSuggestion;
+  /** The layout as the row draws it (`drawnRowLayout`), one for every row. */
+  layout: RowLayout;
+  look: Look;
+  /** What was typed, as the tier tokenizes it (`queryTokens`). */
+  tokens: string[];
+  text: AutocompleteMessages;
+  cx: ClassFor;
+}
+
+/**
+ * One business as the component draws it: each line of `ROW_LINES`, its lead
+ * corner then its trailing corner, with every place's field. The first line's
+ * lead is the title: the name with its badge, then `also …`.
+ */
+function DefaultRow({ item, layout, look, tokens, text, cx }: DefaultRowProps) {
+  const region = look.matchEmphasisRegion;
+  // Plain draws none of the marks, which is no parts at all.
+  const parts = look.matchEmphasis !== "plain" ? item.highlight : [];
+  const markClass = cx("mark", "bl-ac-mark");
+  const address = leadAddressOf(item);
+  const people = peopleLineOf(item);
+  const structure = structureLabel(item.structure, text.structures);
+  // Each field as drawn in a place: the same in any, the place deciding
+  // where it sits and what gives way first.
+  const fieldNode: Record<RowField, (place: RowPlace) => ReactNode> = {
+    states: place => (
+      <StateSquares suggestion={item} cx={cx} more={text.more} place={place} />
+    ),
+    structure: place =>
+      structure !== null && (
+        <span
+          className={cx("structure", "bl-ac-structure")}
+          data-place={place}
+          data-testid="business-suggestion-structure"
+        >
+          {structure}
+        </span>
+      ),
+    address: place => (
+      <span
+        className={cx("address", "bl-ac-address")}
+        data-place={place}
+        data-testid="business-suggestion-address"
+      >
+        {address ?? text.noAddress}
+      </span>
+    ),
+    people: place =>
+      people !== null && (
+        <span
+          className={cx("people", "bl-ac-people")}
+          data-place={place}
+          data-testid="business-suggestion-officers"
+          data-role={people.role}
+        >
+          {people.names[0]}
+          {people.more > 0 ? ` ${text.more(people.more)}` : ""}
+          {people.role === "agent" ? text.agentSuffix : ""}
+        </span>
+      ),
+  };
+  const draw = (place: RowPlace): ReactNode => {
+    const field = layout[place];
+    return field === null ? null : fieldNode[field](place);
+  };
+  const title = (badge: RowPlace) => (
+    <span className={cx("title", "bl-ac-title")} data-place="title">
+      {/* One piece, so `also …` leaves the line whole rather than splitting
+          the name from its badge. */}
+      <span className={cx("nameGroup", "bl-ac-name-group")}>
+        <span
+          className={cx("name", "bl-ac-name")}
+          data-testid="business-suggestion-name"
+          data-emphasis={look.matchEmphasis}
+          data-region={region}
+        >
+          {marked(
+            item.label,
+            partsFor(item.label, parts, region, tokens),
+            markClass,
+          )}
+        </span>
+        {draw(badge)}
+      </span>
+      {item.matched_name !== null && (
+        <span
+          className={cx("also", "bl-ac-also")}
+          data-testid="business-suggestion-also"
+          data-emphasis={look.matchEmphasis}
+        >
+          also{" "}
+          {marked(
+            item.matched_name,
+            partsFor(item.matched_name, parts, region, tokens),
+            markClass,
+          )}
+        </span>
+      )}
+    </span>
+  );
+  return (
+    <>
+      {ROW_LINES.map(({ line, lead, trailing }) => {
+        const leadField =
+          lead.field === null ? title(lead.badge) : draw(lead.field);
+        const leadBadge = lead.field === null ? null : draw(lead.badge);
+        const trailingBadge = draw(trailing.badge);
+        const trailingField = draw(trailing.field);
+        // A line with nothing on it for this row (no officers where only
+        // they are placed) is dropped; the title's never is.
+        if (!(leadField || leadBadge || trailingBadge || trailingField)) {
+          return null;
+        }
+        const { slot, className } = LINE_CLASSES[line];
+        return (
+          <div key={line} className={cx(slot, className)}>
+            {leadField}
+            {leadBadge}
+            {trailingBadge}
+            {trailingField}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
 /**
  * The styled typeahead, with the state supplied by the host
  * (`useBusinessAutocomplete`). Each row is one business family, drawn in the
@@ -295,8 +439,8 @@ export function BusinessAutocompleteView({
   unstyled = false,
 }: BusinessAutocompleteViewProps) {
   const look = resolveLook(lookInput ?? {});
-  // One layout for every row, from the places the host filled.
-  const lines = rowLines(resolveRowLayout(layoutInput));
+  // One layout for every row, from the places the host filled, as drawn.
+  const layout = drawnRowLayout(resolveRowLayout(layoutInput));
   const text = resolveMessages(messageOverrides);
   const cx = classes(unstyled, classNames);
   const hasFooter = isSearching || error !== null || roundTripMs !== null;
@@ -340,8 +484,6 @@ export function BusinessAutocompleteView({
   });
 
   const region = look.matchEmphasisRegion;
-  // Plain draws none of the marks, which is no parts at all.
-  const drawMarks = look.matchEmphasis !== "plain";
 
   return (
     <div
@@ -375,131 +517,16 @@ export function BusinessAutocompleteView({
         <div className={cx("list", "bl-ac-list")} {...combobox.getMenuProps()}>
           {hasRows &&
             suggestions.map((item, index) => {
-              const address = leadAddressOf(item);
-              const people = peopleLineOf(item);
-              const structure = structureLabel(item.structure, text.structures);
-              const parts = drawMarks ? item.highlight : [];
               const highlighted = highlightedIndex === index;
-              const markClass = cx("mark", "bl-ac-mark");
-              // Each field as drawn in a place: the same in any, the place
-              // deciding where it sits and what gives way first.
-              const fieldNode: Record<
-                RowField,
-                (place: RowPlace) => ReactNode
-              > = {
-                states: place => (
-                  <StateSquares
-                    suggestion={item}
-                    cx={cx}
-                    more={text.more}
-                    place={place}
-                  />
-                ),
-                structure: place =>
-                  structure !== null && (
-                    <span
-                      className={cx("structure", "bl-ac-structure")}
-                      data-place={place}
-                      data-testid="business-suggestion-structure"
-                    >
-                      {structure}
-                    </span>
-                  ),
-                address: place => (
-                  <span
-                    className={cx("address", "bl-ac-address")}
-                    data-place={place}
-                    data-testid="business-suggestion-address"
-                  >
-                    {address ?? text.noAddress}
-                  </span>
-                ),
-                people: place =>
-                  people !== null && (
-                    <span
-                      className={cx("people", "bl-ac-people")}
-                      data-place={place}
-                      data-testid="business-suggestion-officers"
-                      data-role={people.role}
-                    >
-                      {people.names[0]}
-                      {people.more > 0 ? ` ${text.more(people.more)}` : ""}
-                      {people.role === "agent" ? text.agentSuffix : ""}
-                    </span>
-                  ),
-              };
-              const draw = (field: RowField | null, place: RowPlace) =>
-                field === null ? null : fieldNode[field](place);
-              // The second line: its lead corner (the field, then its badge)
-              // and its trailing corner (the badge, then the field).
-              const second = lines.subtitle;
-              const lead = second && draw(second.lead.field, "subtitle");
-              const leadBadge =
-                second && draw(second.lead.badge, "subtitleBadge");
-              const trailingBadge =
-                second && draw(second.trailing.badge, "subtitleTrailingBadge");
-              const trailing =
-                second && draw(second.trailing.field, "subtitleTrailing");
               const defaultRow = (
-                <>
-                  <div
-                    className={cx("titleLine", "bl-ac-line bl-ac-line-title")}
-                  >
-                    <span
-                      className={cx("title", "bl-ac-title")}
-                      data-place="title"
-                    >
-                      {/* One piece, so `also …` leaves the line whole rather
-                          than splitting the name from its badge. */}
-                      <span className={cx("nameGroup", "bl-ac-name-group")}>
-                        <span
-                          className={cx("name", "bl-ac-name")}
-                          data-testid="business-suggestion-name"
-                          data-emphasis={look.matchEmphasis}
-                          data-region={region}
-                        >
-                          {marked(
-                            item.label,
-                            partsFor(item.label, parts, region, tokens),
-                            markClass,
-                          )}
-                        </span>
-                        {draw(lines.title.badge, "titleBadge")}
-                      </span>
-                      {item.matched_name !== null && (
-                        <span
-                          className={cx("also", "bl-ac-also")}
-                          data-testid="business-suggestion-also"
-                          data-emphasis={look.matchEmphasis}
-                        >
-                          also{" "}
-                          {marked(
-                            item.matched_name,
-                            partsFor(item.matched_name, parts, region, tokens),
-                            markClass,
-                          )}
-                        </span>
-                      )}
-                    </span>
-                    {draw(lines.title.trailing.badge, "titleTrailingBadge")}
-                    {draw(lines.title.trailing.field, "titleTrailing")}
-                  </div>
-                  {/* A row with nothing for its second line (no officers
-                      where only they are placed) drops the line. */}
-                  {(lead || leadBadge || trailingBadge || trailing) && (
-                    <div
-                      className={cx(
-                        "subtitleLine",
-                        "bl-ac-line bl-ac-line-subtitle",
-                      )}
-                    >
-                      {lead}
-                      {leadBadge}
-                      {trailingBadge}
-                      {trailing}
-                    </div>
-                  )}
-                </>
+                <DefaultRow
+                  item={item}
+                  layout={layout}
+                  look={look}
+                  tokens={tokens}
+                  text={text}
+                  cx={cx}
+                />
               );
               return (
                 <div

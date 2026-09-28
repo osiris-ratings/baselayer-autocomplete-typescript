@@ -3,7 +3,11 @@
 // the tray of fields the row leaves out; each place's chevron is a dropdown of
 // what it can show. Pointer events, so a mouse and a finger drag the same way.
 
-import type { RowField, RowPlace } from "@baselayer-sdk/autocomplete";
+import {
+  ROW_LINES,
+  type RowField,
+  type RowPlace,
+} from "@baselayer-sdk/autocomplete";
 import {
   useEffect,
   useLayoutEffect,
@@ -367,29 +371,29 @@ export function RowMap({
         aria-label="A row's places"
         data-dragging={moving !== null || undefined}
       >
-        <div className="row-map-line">
-          {/* A row is the entity it names, so its title always shows. */}
-          <span className="row-map-slot">
-            <button
-              type="button"
-              className="row-map-name"
-              disabled
-              title="The name, always shown"
-            >
-              <span className="row-map-name-long">Business name</span>
-              <span className="row-map-name-short">Name</span>
-            </button>
-          </span>
-          {place("titleBadge", { badge: true })}
-          {place("titleTrailingBadge", { badge: true, trailing: true })}
-          {place("titleTrailing")}
-        </div>
-        <div className="row-map-line">
-          {place("subtitle")}
-          {place("subtitleBadge", { badge: true })}
-          {place("subtitleTrailingBadge", { badge: true, trailing: true })}
-          {place("subtitleTrailing")}
-        </div>
+        {ROW_LINES.map(({ line, lead, trailing }) => (
+          <div key={line} className="row-map-line">
+            {lead.field === null ? (
+              // A row is the entity it names, so its title always shows.
+              <span className="row-map-slot">
+                <button
+                  type="button"
+                  className="row-map-name"
+                  disabled
+                  title="The name, always shown"
+                >
+                  <span className="row-map-name-long">Business name</span>
+                  <span className="row-map-name-short">Name</span>
+                </button>
+              </span>
+            ) : (
+              place(lead.field)
+            )}
+            {place(lead.badge, { badge: true })}
+            {place(trailing.badge, { badge: true, trailing: true })}
+            {place(trailing.field)}
+          </div>
+        ))}
       </div>
       <div
         className="row-map-tray"

@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_ROW_LAYOUT,
   ROW_FIELDS,
+  ROW_LINES,
   ROW_PLACES,
   drawnRowLayout,
   includeForLayout,
@@ -10,6 +11,7 @@ import {
   type RowField,
   type RowLayout,
   type RowLayoutInput,
+  type RowPlace,
 } from "@baselayer-sdk/autocomplete";
 
 /** The corners' badges, which a layout leaves empty unless it places them. */
@@ -322,6 +324,107 @@ describe("drawnRowLayout", () => {
     expect(wrong.slice(0, 5)).toEqual([]);
     expect(layouts).toHaveLength(5 ** 7);
   });
+});
+
+describe("ROW_LINES", () => {
+  it("groups every place into its line's two corners, in reading order", () => {
+    expect(
+      ROW_LINES.flatMap(({ lead, trailing }) => [
+        lead.field,
+        lead.badge,
+        trailing.badge,
+        trailing.field,
+      ]).filter(place => place !== null),
+    ).toEqual(ROW_PLACES);
+  });
+
+  it("leads the first line with the name, which no place holds", () => {
+    expect(ROW_LINES.map(({ line }) => line)).toEqual(["title", "subtitle"]);
+    expect(ROW_LINES[0].lead.field).toBeNull();
+    expect(ROW_LINES[1].lead.field).toBe("subtitle");
+  });
+});
+
+describe("a layout drawn line by line", () => {
+  /**
+   * Each line a row draws for a staged layout, as `field+badge|badge+field`,
+   * `-` for an empty place and `name` for the title's lead; a line with
+   * nothing in its lead draws nothing.
+   */
+  function linesOf(staged: RowLayoutInput): string[] {
+    const drawn = drawnRowLayout(resolveRowLayout(staged));
+    const f = (place: RowPlace) => drawn[place] ?? "-";
+    return ROW_LINES.flatMap(({ lead, trailing }) => {
+      const leadField = lead.field === null ? "name" : f(lead.field);
+      return leadField === "-"
+        ? []
+        : [
+            `${leadField}+${f(lead.badge)}|${f(trailing.badge)}+${f(trailing.field)}`,
+          ];
+    });
+  }
+
+  it("draws the default layout on two lines", () => {
+    expect(linesOf({})).toEqual([
+      "name+structure|-+states",
+      "address+-|-+people",
+    ]);
+  });
+
+  it.each([
+    [
+      { titleBadge: "people", subtitle: "states", subtitleTrailing: "address" },
+      ["name+people|-+-", "states+-|-+address"],
+    ],
+    // A flag pinned to a corner's field, on its inner side.
+    [
+      { titleBadge: null, subtitleTrailingBadge: "structure" },
+      ["name+-|-+states", "address+-|structure+people"],
+    ],
+    [
+      { titleBadge: null, subtitleBadge: "structure" },
+      ["name+-|-+states", "address+structure|-+people"],
+    ],
+    [
+      { titleBadge: null, titleTrailingBadge: "structure" },
+      ["name+-|structure+states", "address+-|-+people"],
+    ],
+    // No subtitle: the trailing corner is drawn in the lead's, badge and all.
+    [{ subtitle: null }, ["name+structure|-+states", "people+-|-+-"]],
+    [
+      { subtitle: null, titleBadge: null, subtitleTrailingBadge: "structure" },
+      ["name+-|-+states", "people+structure|-+-"],
+    ],
+    // A badge beside nothing is drawn as its corner's field.
+    [
+      { subtitle: null, titleBadge: null, subtitleBadge: "structure" },
+      ["name+-|-+states", "structure+-|-+people"],
+    ],
+    [
+      {
+        titleTrailing: null,
+        titleTrailingBadge: "people",
+        subtitleTrailing: null,
+      },
+      ["name+structure|-+people", "address+-|-+-"],
+    ],
+    // Nothing placed on the second line: the first line is the row.
+    [{ subtitle: null, subtitleTrailing: null }, ["name+structure|-+states"]],
+    [
+      {
+        titleBadge: null,
+        titleTrailing: null,
+        subtitle: null,
+        subtitleTrailing: null,
+      },
+      ["name+-|-+-"],
+    ],
+  ] satisfies [RowLayoutInput, string[]][])(
+    "lays out %j as %j",
+    (staged, lines) => {
+      expect(linesOf(staged)).toEqual(lines);
+    },
+  );
 });
 
 describe("includeForLayout", () => {

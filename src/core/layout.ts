@@ -87,32 +87,59 @@ export function resolveRowLayout(input: RowLayoutInput | null = {}): RowLayout {
   return layout;
 }
 
-/** Each corner with a field of its own, as its badge and its field. */
-const CORNERS = [
-  ["titleTrailingBadge", "titleTrailing"],
-  ["subtitleBadge", "subtitle"],
-  ["subtitleTrailingBadge", "subtitleTrailing"],
-] as const satisfies readonly (readonly [RowPlace, RowPlace])[];
+/** A corner of a line: the place of its field, and of the badge pinned to the field's inner side. */
+export interface RowCorner<Field extends RowPlace | null = RowPlace> {
+  field: Field;
+  badge: RowPlace;
+}
+
+/** A line of a row: its lead corner, then its trailing corner. */
+export interface RowLine {
+  line: "title" | "subtitle";
+  /** On the first line the lead's field is the name, which no place holds: null. */
+  lead: RowCorner<RowPlace | null>;
+  trailing: RowCorner;
+}
+
+/**
+ * A row's lines, top to bottom, each as the places of its two corners: the
+ * lead (its field, then its badge) and the trailing corner (its badge, then
+ * its field). Read in that order, they are `ROW_PLACES`.
+ */
+export const ROW_LINES = [
+  {
+    line: "title",
+    lead: { field: null, badge: "titleBadge" },
+    trailing: { badge: "titleTrailingBadge", field: "titleTrailing" },
+  },
+  {
+    line: "subtitle",
+    lead: { field: "subtitle", badge: "subtitleBadge" },
+    trailing: { badge: "subtitleTrailingBadge", field: "subtitleTrailing" },
+  },
+] as const satisfies readonly RowLine[];
 
 /**
  * The layout as a row draws it. A badge beside an empty field is drawn as
- * that field, and with the second line's lead empty, its right corner is
- * drawn in the lead's place, badge and all: no badge is pinned beside
- * nothing, and no line starts with a gap. A drawn layout is its own.
+ * that field, and a line whose lead is empty draws its trailing corner there,
+ * badge and all: no badge is pinned beside nothing, and no line starts with a
+ * gap. A drawn layout is its own.
  */
 export function drawnRowLayout(layout: RowLayout): RowLayout {
   const drawn = { ...layout };
-  for (const [badge, field] of CORNERS) {
-    if (drawn[field] === null) {
-      drawn[field] = drawn[badge];
-      drawn[badge] = null;
+  for (const { lead, trailing } of ROW_LINES) {
+    for (const { field, badge } of [lead, trailing]) {
+      if (field !== null && drawn[field] === null) {
+        drawn[field] = drawn[badge];
+        drawn[badge] = null;
+      }
     }
-  }
-  if (drawn.subtitle === null) {
-    drawn.subtitle = drawn.subtitleTrailing;
-    drawn.subtitleBadge = drawn.subtitleTrailingBadge;
-    drawn.subtitleTrailing = null;
-    drawn.subtitleTrailingBadge = null;
+    if (lead.field !== null && drawn[lead.field] === null) {
+      drawn[lead.field] = drawn[trailing.field];
+      drawn[lead.badge] = drawn[trailing.badge];
+      drawn[trailing.field] = null;
+      drawn[trailing.badge] = null;
+    }
   }
   return drawn;
 }

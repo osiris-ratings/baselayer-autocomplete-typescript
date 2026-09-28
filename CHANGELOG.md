@@ -33,9 +33,10 @@ as a minor release.
   place, so none is drawn twice. In the core: `ROW_PLACES`, `ROW_FIELDS`,
   `DEFAULT_ROW_LAYOUT`, `resolveRowLayout`, `drawnRowLayout` (a layout as
   the row draws it: a badge beside an empty field is drawn as that field,
-  and an empty second-line lead takes the right corner), `includeForLayout`,
-  and the types
-  `RowPlace`, `RowField`, `RowLayout` and `RowLayoutInput`.
+  and an empty second-line lead takes the right corner), `ROW_LINES` (each
+  line's lead and trailing corner, as the places they are made of),
+  `includeForLayout`, and the types `RowPlace`, `RowField`, `RowLayout`,
+  `RowLayoutInput`, `RowLine` and `RowCorner`.
 - `structureLabel(structure, labels)`: a structure's flag (`C-Corp`, `LLC`,
   `Sole prop.`, `P.A.`, …), or null for `OTHER`, none, or a value it has no
   label for. `messages.structures` relabels any value, and an empty label

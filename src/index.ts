@@ -56,13 +56,16 @@ export {
 export {
   DEFAULT_ROW_LAYOUT,
   ROW_FIELDS,
+  ROW_LINES,
   ROW_PLACES,
   drawnRowLayout,
   includeForLayout,
   resolveRowLayout,
+  type RowCorner,
   type RowField,
   type RowLayout,
   type RowLayoutInput,
+  type RowLine,
   type RowPlace,
 } from "./core/layout";
 export {

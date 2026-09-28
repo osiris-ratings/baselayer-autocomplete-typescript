@@ -3,6 +3,8 @@
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
+import { ROW_LINES, ROW_PLACES } from "@baselayer-sdk/autocomplete";
+
 import { RowMap } from "../../site/demo/RowMap";
 import { DEFAULT_STYLE, type StyleState } from "../../site/demo/style-state";
 
@@ -51,15 +53,16 @@ describe("the Components fold's row", () => {
           place => place.dataset.drop,
         ),
     );
-    expect(lines).toEqual([
-      ["titleBadge", "titleTrailingBadge", "titleTrailing"],
-      [
-        "subtitle",
-        "subtitleBadge",
-        "subtitleTrailingBadge",
-        "subtitleTrailing",
-      ],
-    ]);
+    // The row's own lines, as the core describes them: a place the core
+    // adds is drawn here too.
+    expect(lines).toEqual(
+      ROW_LINES.map(({ lead, trailing }) =>
+        [lead.field, lead.badge, trailing.badge, trailing.field].filter(
+          place => place !== null,
+        ),
+      ),
+    );
+    expect(lines.flat()).toEqual(ROW_PLACES);
   });
 
   it("drags a field by its place onto a corner's badge", () => {

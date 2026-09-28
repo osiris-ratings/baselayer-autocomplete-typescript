@@ -243,9 +243,9 @@ field is drawn in one place at most; placed twice, it stays in the first
 place in reading order and the later one is left empty. In the core,
 `resolveRowLayout(layout)` returns the complete layout, every place with its
 field or `null`; `drawnRowLayout(resolved)` moves the fields to where the
-row draws them (below); `DEFAULT_ROW_LAYOUT` is the default, and
+row draws them (below); `DEFAULT_ROW_LAYOUT` is the default;
 `ROW_PLACES` (in reading order) and `ROW_FIELDS` list the places and the
-fields.
+fields, and `ROW_LINES` groups the places into each line's two corners.
 
 A field looks the same in any place; the place decides where it sits and
 what gives way first:
