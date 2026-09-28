@@ -5,6 +5,8 @@
 
 import type { RowField, RowPlace } from "@baselayer-sdk/autocomplete";
 import {
+  useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
@@ -109,35 +111,24 @@ function useFieldDrag(
   onDrop: (field: RowField, to: DropSpot) => void,
 ) {
   const [drag, setDrag] = useState<Drag | null>(null);
-  // Read in the handlers, which a render may not have caught up with.
+  // Read in the listeners, which a render may not have caught up with.
   const current = useRef<Drag | null>(null);
+  const menu = useRef<HTMLSelectElement | null>(null);
+  const latest = useRef({ accepts, onDrop });
+  useLayoutEffect(() => {
+    latest.current = { accepts, onDrop };
+  });
   const update = (next: Drag | null) => {
     current.current = next;
     setDrag(next);
   };
 
-  /**
-   * What a handle needs: press, move and release, on one pointer. A press
-   * that never moves is a tap, and opens the dropdown beside the handle.
-   */
-  const handle = (field: RowField) => ({
-    onPointerDown(event: ReactPointerEvent<HTMLElement>) {
-      if (event.button !== 0) return;
-      event.preventDefault();
-      event.currentTarget.setPointerCapture(event.pointerId);
-      update({
-        field,
-        lifted: lift(event.currentTarget, event.clientX, event.clientY),
-        pointerId: event.pointerId,
-        startX: event.clientX,
-        startY: event.clientY,
-        x: event.clientX,
-        y: event.clientY,
-        moving: false,
-        over: null,
-      });
-    },
-    onPointerMove(event: ReactPointerEvent<HTMLElement>) {
+  // A drag follows its pointer from the window, not from the handle: the
+  // handle's capture can fail, as it does after a native menu closes.
+  const pointerId = drag?.pointerId ?? null;
+  useEffect(() => {
+    if (pointerId === null) return;
+    const move = (event: PointerEvent) => {
       const now = current.current;
       if (now === null || now.pointerId !== event.pointerId) return;
       const moving =
@@ -150,27 +141,68 @@ function useFieldDrag(
         x: event.clientX,
         y: event.clientY,
         moving,
-        over: spot !== null && accepts(now.field, spot) ? spot : null,
+        over:
+          spot !== null && latest.current.accepts(now.field, spot)
+            ? spot
+            : null,
       });
-    },
-    onPointerUp(event: ReactPointerEvent<HTMLElement>) {
+    };
+    const up = (event: PointerEvent) => {
       const now = current.current;
       if (now === null || now.pointerId !== event.pointerId) return;
       update(null);
       if (now.moving) {
-        if (now.over !== null) onDrop(now.field, now.over);
+        if (now.over !== null) latest.current.onDrop(now.field, now.over);
         return;
       }
-      const menu = event.currentTarget.parentElement?.querySelector("select");
+      // A press that never moved is a tap: it opens the place's menu.
       try {
-        menu?.showPicker();
+        menu.current?.showPicker();
       } catch {
         // No picker without a user activation, or at all on an old browser:
         // the chevron is still there.
       }
-    },
-    onPointerCancel() {
-      update(null);
+    };
+    const cancel = (event: PointerEvent) => {
+      if (current.current?.pointerId === event.pointerId) update(null);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+    window.addEventListener("pointercancel", cancel);
+    return () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      window.removeEventListener("pointercancel", cancel);
+    };
+  }, [pointerId]);
+
+  /** A handle picks its field up; the window follows the pointer from there. */
+  const handle = (field: RowField) => ({
+    onPointerDown(event: ReactPointerEvent<HTMLElement>) {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      // A menu left focused would keep its ring through the drag.
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {
+        // The window's listeners follow the pointer without it.
+      }
+      menu.current =
+        event.currentTarget.parentElement?.querySelector("select") ?? null;
+      update({
+        field,
+        lifted: lift(event.currentTarget, event.clientX, event.clientY),
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        x: event.clientX,
+        y: event.clientY,
+        moving: false,
+        over: null,
+      });
     },
   });
 

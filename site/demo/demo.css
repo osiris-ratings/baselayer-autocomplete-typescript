@@ -680,17 +680,17 @@
   background: #ffffff;
 }
 
-/* The dash says a field can be dragged; over the chevron, or on a place that
-   is all dropdown, it goes solid: a press there opens the menu instead. */
-.row-map:not([data-dragging])
-  .row-map-place:not([data-closed])
-  select:is(:hover, :focus-visible) {
-  border-style: solid;
+/* Over the chevron, or on a place that is all dropdown, the cell's border
+   goes: the dash says a field can be dragged, and a press here opens the
+   menu instead. */
+.row-map:not([data-dragging]) .row-map-place:not([data-closed]) select:hover {
+  border-color: transparent;
 }
 
+/* One ring, over the cell's own border rather than around it. */
 .row-map-place select:focus-visible {
   outline: 2px solid var(--blue);
-  outline-offset: 1px;
+  outline-offset: -1px;
 }
 
 /* An empty badge slot is a small square: it holds a flag when one is dropped
@@ -756,8 +756,7 @@
   width: auto;
 }
 
-.row-map-place:has(select:hover)::before,
-.row-map-place:has(select:focus-visible)::before {
+.row-map-place:has(select:hover)::before {
   opacity: 1;
 }
 

@@ -136,6 +136,29 @@ describe("the Components fold's row", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it("drags after a menu is left focused, even when the handle cannot capture the pointer", () => {
+    const { onChange, spot } = mount();
+    const menu = spot("titleTrailing").querySelector("select")!;
+    menu.focus();
+    vi.spyOn(Element.prototype, "setPointerCapture").mockImplementation(() => {
+      throw new DOMException("No active pointer", "InvalidStateError");
+    });
+    vi.spyOn(document, "elementFromPoint").mockReturnValue(
+      spot("subtitleTrailing"),
+    );
+
+    const handle = spot("titleTrailing").querySelector(".row-map-handle")!;
+    fireEvent.pointerDown(handle, { button: 0, clientX: 0, clientY: 0 });
+    expect(document.activeElement).not.toBe(menu);
+    // Off the handle: the window follows the pointer.
+    fireEvent.pointerMove(document.body, { clientX: 40, clientY: 30 });
+    fireEvent.pointerUp(document.body, { clientX: 40, clientY: 30 });
+
+    const { layout } = onChange.mock.calls[0]![0];
+    expect(layout.titleTrailing).toBe("people");
+    expect(layout.subtitleTrailing).toBe("states");
+  });
+
   it("does not drop a press that never moves", () => {
     const { onChange, spot } = mount();
     const handle = spot("titleBadge").querySelector(".row-map-handle")!;
