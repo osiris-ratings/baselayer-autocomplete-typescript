@@ -28,6 +28,8 @@ import {
   type MintTiming,
 } from "@baselayer-sdk/autocomplete/react";
 
+import type { Snippet } from "../shared/Code";
+
 /** The variables in react/styles.css that `look` does not set. */
 export const CSS_VARIABLES = {
   "--bl-ac-highlight-bg": {
@@ -82,9 +84,145 @@ export const CSS_VARIABLES = {
     value: "0 4px 8px rgba(16, 24, 40, 0.08)",
   },
   "--bl-ac-z": { label: "Stacking (z-index)", kind: "number", value: "1000" },
+  // Unset in the stylesheet: the component takes the page's font.
+  "--bl-ac-font": { label: "Font", kind: "font", value: "" },
+  "--bl-ac-name-weight": { label: "Name", kind: "weight", value: "600" },
+  "--bl-ac-weight-base": {
+    label: "Unmatched words (weight emphasis)",
+    kind: "weight",
+    value: "500",
+  },
+  "--bl-ac-weight-mark": {
+    label: "Matched words (weight emphasis)",
+    kind: "weight",
+    value: "700",
+  },
 } as const;
 
 export type CssVariable = keyof typeof CSS_VARIABLES;
+
+/** The fonts the Font fold offers: the page's own, and the ones it loads. */
+export const FONT_CHOICES = [
+  { label: "The page's font (Uncut Sans, 300 to 700)", value: "" },
+  {
+    label: "System UI (the platform's, 100 to 900)",
+    value: 'system-ui, -apple-system, "Segoe UI", sans-serif',
+  },
+  {
+    label: "Serif (Newsreader, 200 to 800)",
+    value: '"Newsreader Variable", Georgia, serif',
+  },
+  {
+    label: "Mono (Geist Mono, 400 and 500)",
+    value: '"Geist Mono", ui-monospace, monospace',
+  },
+] as const;
+
+/** A font stack the fold does not offer: the host's own. */
+export const CUSTOM_FONT = "custom";
+
+/** Which of the fold's fonts a stack is, or the host's own. */
+export function fontChoice(stack: string): string {
+  const trimmed = stack.trim();
+  return (
+    FONT_CHOICES.find(choice => choice.value === trimmed)?.value ?? CUSTOM_FONT
+  );
+}
+
+export const FONT_WEIGHTS = [
+  "100",
+  "200",
+  "300",
+  "400",
+  "500",
+  "600",
+  "700",
+  "800",
+  "900",
+] as const;
+
+export const WEIGHT_LABELS: Record<(typeof FONT_WEIGHTS)[number], string> = {
+  "100": "100 · Thin",
+  "200": "200 · Extra light",
+  "300": "300 · Light",
+  "400": "400 · Regular",
+  "500": "500 · Medium",
+  "600": "600 · Semibold",
+  "700": "700 · Bold",
+  "800": "800 · Extra bold",
+  "900": "900 · Black",
+};
+
+export const WEIGHT_VARIABLES = [
+  "--bl-ac-name-weight",
+  "--bl-ac-weight-base",
+  "--bl-ac-weight-mark",
+] as const satisfies readonly CssVariable[];
+
+/** A variable's value in the state, or its default when it is left empty. */
+function varOrDefault(state: StyleState, name: CssVariable): string {
+  return state.vars[name].trim() || CSS_VARIABLES[name].value;
+}
+
+/**
+ * How to set a font of your own, in the weights the fold picked: load it in
+ * the page, from a font service or from your own files, then name it in
+ * `--bl-ac-font`. A stack of the host's own names its family; one of the
+ * fold's own fonts stands in as "Your Font".
+ */
+export function fontSnippets(state: StyleState): Snippet[] {
+  const stack = state.vars["--bl-ac-font"].trim();
+  const own = fontChoice(stack) === CUSTOM_FONT;
+  const named = own
+    ? stack
+        .split(",")[0]!
+        .trim()
+        .replace(/^["']|["']$/g, "")
+    : "";
+  const family = named === "" ? "Your Font" : named;
+  const fontStack = own ? stack : `"${family}", system-ui, sans-serif`;
+  const weights = [
+    ...new Set(WEIGHT_VARIABLES.map(name => varOrDefault(state, name))),
+  ].sort((a, b) => Number(a) - Number(b));
+  const rule = [
+    ".your-form .bl-ac {",
+    `  --bl-ac-font: ${fontStack};`,
+    ...WEIGHT_VARIABLES.map(name => `  ${name}: ${varOrDefault(state, name)};`),
+    "}",
+  ];
+  const query = `family=${encodeURIComponent(family).replace(/%20/g, "+")}:wght@${weights.join(";")}&display=swap`;
+  const html = [
+    "<!-- 1. Load the font in your <head>; Google Fonts, for one. -->",
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />',
+    "<link",
+    '  rel="stylesheet"',
+    `  href="https://fonts.googleapis.com/css2?${query}"`,
+    "/>",
+    "",
+    "<!-- 2. Point the autocomplete at it, in the weights it draws. -->",
+    "<style>",
+    ...rule.map(line => `  ${line}`),
+    "</style>",
+  ].join("\n");
+  const css = [
+    "/* 1. Or serve the font files yourself: one @font-face per weight. */",
+    ...weights.flatMap(weight => [
+      "@font-face {",
+      `  font-family: "${family}";`,
+      `  src: url("/fonts/${family.toLowerCase().replace(/\s+/g, "-")}-${weight}.woff2") format("woff2");`,
+      `  font-weight: ${weight};`,
+      "  font-display: swap;",
+      "}",
+    ]),
+    "",
+    "/* 2. Point the autocomplete at it, in the weights it draws. */",
+    ...rule,
+  ].join("\n");
+  return [
+    { label: "HTML", lang: "html", code: html },
+    { label: "CSS", lang: "css", code: css },
+  ];
+}
 
 /** The messages that are strings; `more` and `httpFallback` are functions. */
 export const TEXT_MESSAGES = [
@@ -600,9 +738,22 @@ export function presetVar(state: StyleState, name: CssVariable): string {
 }
 
 /** How many colors, and shapes and sizes, differ from the preset last applied. */
+type VariableKind = (typeof CSS_VARIABLES)[CssVariable]["kind"];
+/** The variables the Shape and size fold holds, and the ones the Font fold does. */
+export const SHAPE_KINDS: ReadonlySet<VariableKind> = new Set([
+  "length",
+  "number",
+  "text",
+]);
+export const FONT_KINDS: ReadonlySet<VariableKind> = new Set([
+  "font",
+  "weight",
+]);
+
 export function presetChanges(state: StyleState): {
   colors: number;
   shape: number;
+  font: number;
 } {
   const differs = (a: string, b: string) =>
     a.trim().toLowerCase() !== b.trim().toLowerCase();
@@ -615,7 +766,9 @@ export function presetChanges(state: StyleState): {
         differs(state.look[key], presetColor(state, key)),
       ).length +
       vars.filter(name => CSS_VARIABLES[name].kind === "color").length,
-    shape: vars.filter(name => CSS_VARIABLES[name].kind !== "color").length,
+    shape: vars.filter(name => SHAPE_KINDS.has(CSS_VARIABLES[name].kind))
+      .length,
+    font: vars.filter(name => FONT_KINDS.has(CSS_VARIABLES[name].kind)).length,
   };
 }
 

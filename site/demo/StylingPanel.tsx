@@ -12,6 +12,14 @@ import { ColorInput, Field, Fold, Select, Toggle } from "./controls";
 import { RowMap } from "./RowMap";
 import {
   CSS_VARIABLES,
+  CUSTOM_FONT,
+  FONT_CHOICES,
+  FONT_WEIGHTS,
+  SHAPE_KINDS,
+  WEIGHT_LABELS,
+  WEIGHT_VARIABLES,
+  fontChoice,
+  fontSnippets,
   DEFAULT_STYLE,
   INITIAL_STYLE,
   PRESETS,
@@ -85,9 +93,11 @@ export function StylingPanel({
   const colorVars = (Object.keys(CSS_VARIABLES) as CssVariable[]).filter(
     name => CSS_VARIABLES[name].kind === "color",
   );
-  const shapeVars = (Object.keys(CSS_VARIABLES) as CssVariable[]).filter(
-    name => CSS_VARIABLES[name].kind !== "color",
+  const shapeVars = (Object.keys(CSS_VARIABLES) as CssVariable[]).filter(name =>
+    SHAPE_KINDS.has(CSS_VARIABLES[name].kind),
   );
+  const font = state.vars["--bl-ac-font"];
+  const fontPick = fontChoice(font);
   const lookChanged = (keys: string[]) =>
     keys.filter(key => key in look).length;
 
@@ -249,6 +259,77 @@ export function StylingPanel({
             </Field>
           ))}
         </div>
+      </Fold>
+
+      <Fold title="Font" summary={count(changes.font)}>
+        <p className="hint fold-note">
+          The component takes the page&rsquo;s font unless{" "}
+          <code>--bl-ac-font</code> names one. A weight the font does not have
+          is drawn in the nearest one it does.
+        </p>
+        <div className="field-grid">
+          <Field label="Font" hint={<code>--bl-ac-font</code>}>
+            <Select
+              value={fontPick}
+              options={[
+                ...FONT_CHOICES.map(choice => choice.value),
+                CUSTOM_FONT,
+              ]}
+              labels={{
+                ...Object.fromEntries(
+                  FONT_CHOICES.map(choice => [choice.value, choice.label]),
+                ),
+                [CUSTOM_FONT]: "Your own…",
+              }}
+              onChange={value =>
+                setVar(
+                  "--bl-ac-font",
+                  value === CUSTOM_FONT
+                    ? '"Your Font", system-ui, sans-serif'
+                    : value,
+                )
+              }
+            />
+          </Field>
+          {fontPick === CUSTOM_FONT && (
+            <Field
+              label="Font stack"
+              hint="Any CSS font-family; the preview draws it if this browser has it."
+            >
+              <input
+                type="text"
+                value={font}
+                spellCheck={false}
+                onChange={event =>
+                  // A stack is names and commas: nothing that could end the rule.
+                  setVar(
+                    "--bl-ac-font",
+                    event.target.value.replace(/[{};<>]/g, ""),
+                  )
+                }
+              />
+            </Field>
+          )}
+          {WEIGHT_VARIABLES.map(name => (
+            <Field
+              key={name}
+              label={CSS_VARIABLES[name].label}
+              hint={<code>{name}</code>}
+            >
+              <Select
+                value={
+                  (state.vars[name] ||
+                    CSS_VARIABLES[name].value) as (typeof FONT_WEIGHTS)[number]
+                }
+                options={FONT_WEIGHTS}
+                labels={WEIGHT_LABELS}
+                onChange={value => setVar(name, value)}
+              />
+            </Field>
+          ))}
+        </div>
+        <p className="mono-label font-own-label">Using your own font</p>
+        <Code snippets={fontSnippets(state)} />
       </Fold>
 
       <Fold title="Shape and size" summary={count(changes.shape)}>

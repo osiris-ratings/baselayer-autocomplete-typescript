@@ -181,7 +181,10 @@ how matched words are highlighted (the emphasis, the region, and one color
 override for every emphasis) and whether the footer
 shows the round trip and the index that answered (`look.showDebugInfo`, a
 switch in the same fold), every color (the `look` prop's and the stylesheet's
-own variables, each with a swatch that opens a color picker), shape and size,
+own variables, each with a swatch that opens a color picker), the font (the
+page's, the system's, a serif or a mono this page loads, or a stack of your
+own; the name's weight and the weight emphasis's two; and the HTML or CSS
+that loads a font of your own in the weights picked), shape and size,
 behavior (rows, 1 to 20; the characters typed before it asks, 2 to 10 and 3 by
 default; the pause before asking; when the session is minted: on focus, on the
 first keystroke or with the first request; and whether the menu is as wide as

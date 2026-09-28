@@ -27,6 +27,10 @@ import {
   unplacedFields,
   TRAY,
   presetChanges,
+  CUSTOM_FONT,
+  FONT_CHOICES,
+  fontChoice,
+  fontSnippets,
   presetColor,
   presetVar,
   withPlaced,
@@ -446,7 +450,11 @@ describe("matched ink", () => {
 
 describe("the Colors and Shape and size counts", () => {
   it("count nothing in the preset the demo opens in", () => {
-    expect(presetChanges(INITIAL_STYLE)).toEqual({ colors: 0, shape: 0 });
+    expect(presetChanges(INITIAL_STYLE)).toEqual({
+      colors: 0,
+      shape: 0,
+      font: 0,
+    });
   });
 
   it("count against the preset last applied, not the defaults", () => {
@@ -460,7 +468,72 @@ describe("the Colors and Shape and size counts", () => {
       vars: { ...midnight.vars, "--bl-ac-radius": "0" },
     };
 
-    expect(presetChanges(midnight)).toEqual({ colors: 0, shape: 0 });
-    expect(presetChanges(changed)).toEqual({ colors: 1, shape: 1 });
+    expect(presetChanges(midnight)).toEqual({ colors: 0, shape: 0, font: 0 });
+    expect(presetChanges(changed)).toEqual({ colors: 1, shape: 1, font: 0 });
+  });
+});
+
+describe("the Font fold", () => {
+  // The demo as it opens, in the Light preset, with some variables set.
+  const withVars = (vars: Partial<StyleState["vars"]>): StyleState => ({
+    ...INITIAL_STYLE,
+    vars: { ...INITIAL_STYLE.vars, ...vars },
+  });
+
+  it("opens on the page's font and the SDK's weights, and exports none of them", () => {
+    expect(fontChoice(DEFAULT_STYLE.vars["--bl-ac-font"])).toBe("");
+    expect(exportCode(DEFAULT_STYLE).css).not.toMatch(
+      /--bl-ac-(font|weight|name-weight)/,
+    );
+  });
+
+  it("names a stack it does not offer as the host's own", () => {
+    for (const { value } of FONT_CHOICES) expect(fontChoice(value)).toBe(value);
+    expect(fontChoice('"Inter", sans-serif')).toBe(CUSTOM_FONT);
+  });
+
+  it("counts the font and the weights apart from the shape", () => {
+    expect(
+      presetChanges(
+        withVars({ "--bl-ac-weight-mark": "800", "--bl-ac-font": "serif" }),
+      ),
+    ).toEqual({ colors: 0, shape: 0, font: 2 });
+  });
+
+  it("exports the weights and the font that changed", () => {
+    const css = exportCode(
+      withVars({
+        "--bl-ac-weight-mark": "800",
+        "--bl-ac-font": '"Inter", sans-serif',
+      }),
+    ).css;
+    expect(css).toContain("--bl-ac-weight-mark: 800;");
+    expect(css).toContain('--bl-ac-font: "Inter", sans-serif;');
+  });
+
+  it("shows how to load a font of your own, in the weights picked", () => {
+    const snippets = fontSnippets(
+      withVars({
+        "--bl-ac-font": '"Inter Tight", system-ui, sans-serif',
+        "--bl-ac-weight-mark": "800",
+      }),
+    );
+    const [html, css] = snippets.map(snippet => snippet.code);
+    expect(snippets.map(snippet => snippet.label)).toEqual(["HTML", "CSS"]);
+    // Every weight the component draws, once each, in order.
+    expect(html).toContain("family=Inter+Tight:wght@500;600;800&display=swap");
+    expect(css).toContain('font-family: "Inter Tight";');
+    for (const code of [html, css]) {
+      expect(code).toContain(
+        '--bl-ac-font: "Inter Tight", system-ui, sans-serif;',
+      );
+      expect(code).toContain("--bl-ac-weight-mark: 800;");
+    }
+  });
+
+  it("uses a stand-in family while the font is one this page offers", () => {
+    const [html] = fontSnippets(DEFAULT_STYLE).map(snippet => snippet.code);
+    expect(html).toContain("family=Your+Font:wght@500;600;700");
+    expect(html).toContain('--bl-ac-font: "Your Font", system-ui, sans-serif;');
   });
 });
