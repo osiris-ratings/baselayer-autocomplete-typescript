@@ -215,9 +215,14 @@ export function StylingPanel({
         <div className="row-map" role="group" aria-label="A row's places">
           <div className="row-map-line">
             {/* A row is the entity it names, so its title always shows. */}
-            <span className="row-map-name" title="The name, always shown">
+            <button
+              type="button"
+              className="row-map-name"
+              disabled
+              title="The name, always shown"
+            >
               Business name
-            </span>
+            </button>
             <PlaceSelect place="titleBadge" state={state} onChange={onChange} />
             <PlaceSelect
               place="titleTrailing"

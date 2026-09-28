@@ -559,20 +559,63 @@
   min-width: 0;
 }
 
-.row-map-name {
+/* Every place is as wide as what it holds usually is: a name and an address
+   long, the people middling, a flag short. The name is fixed, so it is drawn
+   as a place that cannot be picked. */
+.row-map-name,
+.row-map-place select {
+  box-sizing: border-box;
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  padding: 0 24px 0 9px;
   overflow: hidden;
+  background: transparent;
+  border: 1px dashed #c3c6cf;
+  border-radius: 3px;
   color: var(--ink);
-  font-size: 15px;
-  font-weight: 600;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.row-map-name {
+  flex: 0 1 13rem;
+  min-width: 0;
+  padding-right: 9px;
+  background: #f5f6f8;
+  color: var(--muted);
+  font-weight: 600;
+  cursor: not-allowed;
 }
 
 .row-map-place {
   position: relative;
   display: inline-flex;
-  flex: none;
+  flex: 0 1 6rem;
   min-width: 0;
+}
+
+.row-map-place[data-field="states"] {
+  flex-basis: 6.5rem;
+}
+
+.row-map-place[data-field="structure"] {
+  flex-basis: 6rem;
+}
+
+.row-map-place[data-field="address"] {
+  flex-basis: 13rem;
+}
+
+.row-map-place[data-field="people"] {
+  flex-basis: 9rem;
+}
+
+.row-map-place[data-field="empty"] {
+  flex-basis: 5.5rem;
 }
 
 .row-map-place[data-trailing] {
@@ -580,20 +623,8 @@
 }
 
 .row-map-place select {
-  box-sizing: border-box;
-  height: 28px;
-  margin: 0;
-  padding: 0 24px 0 9px;
   appearance: none;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 3px;
-  color: var(--ink);
-  font: inherit;
-  font-size: 13px;
   cursor: pointer;
-  /* As wide as the pick, not the longest option, where the browser can. */
-  field-sizing: content;
 }
 
 /* The dropdown's chevron, in the field's own ink. */
@@ -605,7 +636,6 @@
   height: 5px;
   border-right: 1.5px solid currentColor;
   border-bottom: 1.5px solid currentColor;
-  color: inherit;
   content: "";
   pointer-events: none;
   transform: translateY(-70%) rotate(45deg);
@@ -629,6 +659,7 @@
 
 .row-map-place[data-field="structure"] select {
   background: #edf2f7;
+  border-color: #a0aec0;
   color: #4a5568;
   font-size: 12px;
   font-weight: 600;
@@ -641,17 +672,14 @@
 
 .row-map-place[data-field="address"] select,
 .row-map-place[data-field="people"] select {
-  border-color: var(--line);
   color: #718096;
 }
 
-/* An empty place is a gap with a dashed edge, still there to be filled. */
 .row-map-place[data-field="empty"] {
   color: #a4a7b0;
 }
 
 .row-map-place[data-field="empty"] select {
-  border: 1px dashed #c3c6cf;
   color: #a4a7b0;
 }
 
