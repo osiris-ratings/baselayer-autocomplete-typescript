@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import react from "@vitejs/plugin-react";
@@ -8,6 +9,12 @@ import { apiReference } from "./api/spec/plugin";
 const src = (path: string) =>
   fileURLToPath(new URL(`../src/${path}`, import.meta.url));
 const page = (path: string) => fileURLToPath(new URL(path, import.meta.url));
+
+// The version the pages show comes from the package manifest, so a release
+// never needs a page edit.
+const { version } = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+) as { version: string };
 
 /**
  * The published pages load nothing but their own bundles and fonts, and talk
@@ -115,6 +122,7 @@ export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),
   base: process.env.SITE_BASE ?? "/",
   appType: "mpa",
+  define: { __SDK_VERSION__: JSON.stringify(version) },
   plugins: [
     react(),
     contentSecurityPolicy(),

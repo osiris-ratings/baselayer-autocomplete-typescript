@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 
 import tokenShot from "../../docs/images/typeahead-har-con-pum-token.png";
 import { Code, type Snippet } from "../shared/Code";
-import { links } from "../shared/links";
+import { links, sdkVersion } from "../shared/links";
 import { SiteFooter } from "../shared/SiteFooter";
 import { SiteHeader } from "../shared/SiteHeader";
 import { ArchitectureDiagram } from "./ArchitectureDiagram";
@@ -459,8 +459,8 @@ export function Home() {
             </div>
             <InstallLine />
             <p className="mono-label hero-note">
-              Pre-release 0.x · React 18 or 19, optional · Node 20+ for the
-              server helper
+              {sdkVersion} · React 18 or 19, optional · Node 20+ for the server
+              helper
             </p>
           </div>
         </section>

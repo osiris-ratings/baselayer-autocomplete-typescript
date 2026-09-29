@@ -17,4 +17,7 @@ export const links = {
   source: "https://github.com/osiris-ratings/baselayer-autocomplete-typescript",
 } as const;
 
+// The SDK version from `package.json`, injected by the site build.
+export const sdkVersion = `v${__SDK_VERSION__}`;
+
 export type Page = "home" | "api" | "demo";

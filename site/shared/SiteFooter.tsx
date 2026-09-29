@@ -1,5 +1,5 @@
 import { GitHubMark } from "./GitHubMark";
-import { links } from "./links";
+import { links, sdkVersion } from "./links";
 import { Logo } from "./Logo";
 
 export function SiteFooter() {
@@ -68,7 +68,7 @@ export function SiteFooter() {
         </div>
         <div className="footer-base">
           <span>© {new Date().getFullYear()} Baselayer</span>
-          <span>@baselayer-sdk/autocomplete · pre-release 0.x</span>
+          <span>@baselayer-sdk/autocomplete · {sdkVersion}</span>
         </div>
       </div>
     </footer>
