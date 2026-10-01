@@ -1,0 +1,910 @@
+/* The search step and its report, in the site's brand: the console's pills and
+   grades on the demo's cards. Every class is `sr-`, the search report's. */
+
+.demo-search {
+  --sr-good-bg: #daeae4;
+  --sr-good-fg: #0c5b39;
+  --sr-warn-bg: #ffe9dc;
+  --sr-warn-fg: #b54708;
+  --sr-bad-bg: #fde4e4;
+  --sr-bad-fg: #940719;
+  --sr-neutral-bg: #eceef2;
+  --sr-neutral-fg: #4a5160;
+  --sr-info-bg: #e8eefb;
+  /* The console's grade colours, for the gauge's arc. Words and letters on the
+     card take a darker B and C, which the console's own are too pale to read
+     there (2.3:1 and 3.8:1; these are 5.0:1 and 5.8:1). */
+  --sr-grade-a: var(--blue);
+  --sr-grade-b: var(--teal);
+  --sr-grade-c: #f2884b;
+  --sr-grade-f: #940719;
+  --sr-grade-b-text: #11697e;
+  --sr-grade-c-text: #b54708;
+}
+
+/* The step arrives with the pick, and takes a moment to say so. Positioned, so
+   that its visually hidden nodes (absolute, with no offsets) stay inside the
+   card the pane scrolls and do not stretch the page past the window. */
+.demo-search {
+  position: relative;
+  animation: sr-arrive 260ms ease-out;
+}
+
+@keyframes sr-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* ---- Before the report ---------------------------------------------------- */
+
+.sr-pick {
+  margin: 0 0 24px;
+  padding: 14px 16px;
+  background: var(--faded);
+  border: 1px solid var(--line-soft);
+  border-radius: 2px;
+}
+
+.sr-pick-name {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 20px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.sr-pick-meta {
+  margin: 4px 0 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.sr-expired {
+  color: var(--sr-bad-fg);
+  font-weight: 500;
+}
+
+.sr-waiting {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 16px 0 0;
+  color: var(--ink-soft);
+  font-size: 14px;
+}
+
+.sr-spinner {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  border: 2px solid var(--dusk);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: sr-spin 0.8s linear infinite;
+}
+
+@keyframes sr-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.sr-link {
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--blue);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.sr-link:hover {
+  color: var(--blue-press);
+}
+
+.sr-link .icon {
+  margin-left: 4px;
+  vertical-align: -2px;
+}
+
+/* The link that ends the Run button's note: it folds the request out below. */
+.sr-peek {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sr-peek .fold-chevron {
+  width: 7px;
+  height: 7px;
+  margin: 0 2px 3px 4px;
+  border-color: currentColor;
+}
+
+.sr-peek .fold-chevron[data-open="true"] {
+  margin-bottom: -2px;
+}
+
+.sr-after {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin: 14px 0 0;
+  font-size: 14px;
+}
+
+.sr-skeleton {
+  display: grid;
+  gap: 12px;
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid var(--line);
+}
+
+.sr-skeleton-bar {
+  display: block;
+  height: 14px;
+  background: linear-gradient(90deg, #eef1f7 25%, #f8faff 50%, #eef1f7 75%);
+  background-size: 200% 100%;
+  border-radius: 2px;
+  animation: sr-shimmer 1.4s ease-in-out infinite;
+}
+
+.sr-skeleton-title {
+  width: 60%;
+  height: 28px;
+}
+
+.sr-skeleton-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.sr-skeleton-box {
+  height: 88px;
+}
+
+.sr-skeleton-short {
+  width: 40%;
+}
+
+@keyframes sr-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-search,
+  .sr-spinner,
+  .sr-skeleton-bar {
+    animation: none;
+  }
+}
+
+/* ---- The report ------------------------------------------------------------- */
+
+.sr {
+  display: grid;
+  gap: 28px;
+  margin-top: 22px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line);
+}
+
+.sr-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 18px;
+  /* What the report scrolls to on arrival: the label and the verdict as well
+     as the title. */
+  scroll-margin-top: 16px;
+}
+
+.sr-head-main {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.sr-head .mono-label {
+  margin: 0;
+}
+
+.sr-title {
+  margin: 6px 0 8px;
+  font-family: var(--serif);
+  font-size: clamp(24px, 4vw, 30px);
+  font-weight: 400;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.sr-title:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 4px;
+}
+
+.sr-glance {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 18px;
+  margin: 0 0 10px;
+  padding: 0;
+  color: var(--ink-soft);
+  font-size: 14.5px;
+  line-height: 1.5;
+  list-style: none;
+}
+
+.sr-glance li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sr-glance li::before {
+  content: "";
+  flex: none;
+  width: 5px;
+  height: 5px;
+  background: var(--blue);
+  border-radius: 50%;
+}
+
+.sr-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 14px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sr-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.sr-copy code {
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  background: none;
+  color: var(--ink-soft);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sr-copy:hover,
+.sr-copy:hover code {
+  color: var(--blue);
+}
+
+.sr-verdict {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid;
+  border-radius: 2px;
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sr-verdict[data-kind="verified"] {
+  background: var(--faded);
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.sr-verdict[data-kind="not-verified"] {
+  background: var(--sr-bad-bg);
+  border-color: var(--sr-bad-fg);
+  color: var(--sr-bad-fg);
+}
+
+.sr-verdict[data-kind="fraud"] {
+  background: #ebcbff;
+  border-color: #7d5ade;
+  color: #4a2aa8;
+}
+
+.sr-verdict[data-kind="no-match"],
+.sr-verdict[data-kind="failed"],
+.sr-verdict[data-kind="cancelled"] {
+  background: var(--sr-neutral-bg);
+  border-color: #b9bfcb;
+  color: var(--sr-neutral-fg);
+}
+
+.sr-callout {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid;
+  border-radius: 2px;
+  font-size: 14px;
+}
+
+.sr-callout[data-tone="bad"] {
+  background: #fef3f2;
+  border-color: #f4c7c1;
+  color: #7a271a;
+}
+
+.sr-callout[data-tone="warn"] {
+  background: #fff6ed;
+  border-color: #f6d0b0;
+  color: #7c2d12;
+}
+
+/* The step's own, under the Run button, not inside a report. */
+.demo-search > .sr-callout {
+  margin-top: 16px;
+}
+
+.sr-callout .icon {
+  flex: none;
+  margin-top: 1px;
+}
+
+/* ---- Ratings ----------------------------------------------------------------- */
+
+.sr-ratings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+@media (max-width: 560px) {
+  .sr-ratings {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.sr-rating {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  background: var(--faded);
+  border: 1px solid var(--line-soft);
+  border-radius: 2px;
+}
+
+.sr-rating-title {
+  margin: 0;
+  font-family: var(--serif);
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.sr-rating-label {
+  margin: 4px 0 0;
+  color: var(--grade-text, var(--ink-soft));
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sr-rating[data-grade="A"],
+.sr-gauge[data-grade="A"] {
+  --grade: var(--sr-grade-a);
+  --grade-text: var(--sr-grade-a);
+}
+
+.sr-rating[data-grade="B"],
+.sr-gauge[data-grade="B"] {
+  --grade: var(--sr-grade-b);
+  --grade-text: var(--sr-grade-b-text);
+}
+
+.sr-rating[data-grade="C"],
+.sr-gauge[data-grade="C"] {
+  --grade: var(--sr-grade-c);
+  --grade-text: var(--sr-grade-c-text);
+}
+
+.sr-rating[data-grade="F"],
+.sr-gauge[data-grade="F"] {
+  --grade: var(--sr-grade-f);
+  --grade-text: var(--sr-grade-f);
+}
+
+.sr-gauge {
+  flex: none;
+  width: 92px;
+  height: 92px;
+}
+
+.sr-gauge-track,
+.sr-gauge-value {
+  fill: none;
+  stroke-width: 7;
+  stroke-linecap: round;
+}
+
+.sr-gauge-track {
+  stroke: #d9e1f2;
+}
+
+.sr-gauge-value {
+  stroke: var(--grade, var(--muted));
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: sr-draw 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+@keyframes sr-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* After the rule it overrides: at equal specificity the later one wins. */
+@media (prefers-reduced-motion: reduce) {
+  .sr-gauge-value {
+    animation: none;
+  }
+}
+
+.sr-gauge-letter {
+  fill: var(--grade-text, var(--muted));
+  font-family: var(--serif);
+  font-size: 30px;
+}
+
+.sr-gauge-score {
+  fill: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+/* ---- Sections ------------------------------------------------------------------ */
+
+.sr-section {
+  display: grid;
+  gap: 12px;
+}
+
+.sr-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--blue);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sr-count {
+  padding: 1px 7px;
+  background: var(--sr-info-bg);
+  border-radius: 999px;
+  color: var(--navy);
+  font-size: 11px;
+}
+
+.sr-caption {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.sr-muted {
+  color: var(--muted);
+}
+
+.sr-block {
+  display: block;
+}
+
+.sr-plain {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sr-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.sr-chip[data-tone="good"] {
+  background: var(--sr-good-bg);
+  color: var(--sr-good-fg);
+}
+
+.sr-chip[data-tone="warn"] {
+  background: var(--sr-warn-bg);
+  color: var(--sr-warn-fg);
+}
+
+.sr-chip[data-tone="bad"] {
+  background: var(--sr-bad-bg);
+  color: var(--sr-bad-fg);
+}
+
+.sr-chip[data-tone="neutral"] {
+  background: var(--sr-neutral-bg);
+  color: var(--sr-neutral-fg);
+}
+
+.sr-chip[data-tone="info"] {
+  background: var(--sr-info-bg);
+  color: var(--navy);
+}
+
+/* ---- How it matched --------------------------------------------------------------- */
+
+.sr-match {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.sr-match th,
+.sr-match td {
+  padding: 12px 12px 12px 0;
+  border-top: 1px solid var(--line-soft);
+  text-align: left;
+  vertical-align: top;
+}
+
+.sr-match thead th {
+  padding-top: 0;
+  border-top: 0;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.sr-match tbody th {
+  width: 1%;
+  color: var(--ink-soft);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Which side a column is: its label underlined in the side's colour. */
+.sr-match thead th:nth-child(2),
+.sr-match thead th:nth-child(3) {
+  padding-bottom: 14px;
+  text-decoration-line: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 6px;
+}
+
+.sr-match thead th:nth-child(2) {
+  text-decoration-color: var(--blue);
+}
+
+.sr-match thead th:nth-child(3) {
+  text-decoration-color: #64748b;
+}
+
+@media (max-width: 640px) {
+  .sr-match thead {
+    display: none;
+  }
+
+  .sr-match tr {
+    display: grid;
+    gap: 4px;
+    padding: 12px 0;
+    border-top: 1px solid var(--line-soft);
+  }
+
+  .sr-match th,
+  .sr-match td {
+    width: auto;
+    padding: 0;
+    border: 0;
+    white-space: normal;
+  }
+
+  .sr-match td::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+}
+
+/* ---- Facts, filings, people, lists ------------------------------------------------- */
+
+.sr-facts {
+  display: grid;
+  grid-template-columns: minmax(96px, 150px) minmax(0, 1fr);
+  gap: 10px 18px;
+  margin: 0;
+  font-size: 14px;
+}
+
+.sr-facts dt {
+  padding-top: 3px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.sr-facts dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.sr-facts-tight {
+  gap: 6px 14px;
+}
+
+.sr-address {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+@media (max-width: 480px) {
+  .sr-facts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .sr-facts dd {
+    margin-bottom: 8px;
+  }
+}
+
+.sr-filings,
+.sr-people,
+.sr-lists {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sr-filing {
+  display: flex;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--paper);
+  border: 1px solid var(--line-soft);
+  border-radius: 2px;
+}
+
+.sr-state {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  background: var(--navy);
+  border-radius: 2px;
+  color: #ffffff;
+  font-family: var(--mono);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+/* The state the business is domiciled in: its own filing, not a visit. */
+.sr-state[data-kind="domestic"] {
+  background: var(--sr-good-fg);
+}
+
+.sr-filing-body {
+  display: grid;
+  flex: 1;
+  gap: 10px;
+  min-width: 0;
+}
+
+/* The title on the left, how the filing stands on the right, both on one
+   baseline. */
+.sr-filing-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 12px;
+  margin: 0;
+  font-size: 15px;
+}
+
+.sr-filing-head strong {
+  font-weight: 500;
+}
+
+.sr-filing-status {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-left: auto;
+}
+
+/* The file number's pill hangs into the margin by its own padding, so its
+   text lines up with the values under it. */
+.sr-facts dd > code:first-child {
+  margin-left: -5px;
+}
+
+.sr-person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.sr-person:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.sr-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  background: var(--sr-info-bg);
+  border-radius: 50%;
+  color: var(--navy);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.sr-person-name {
+  display: grid;
+  flex: 1;
+  gap: 1px;
+  min-width: 0;
+  font-size: 14.5px;
+}
+
+.sr-person-name strong {
+  font-weight: 500;
+}
+
+.sr-tags {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.sr-tag {
+  padding: 1px 7px;
+  border: 1px solid var(--line-soft);
+  border-radius: 3px;
+  color: var(--ink-soft);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+
+.sr-tag[data-source] {
+  background: var(--sr-info-bg);
+  border-color: transparent;
+  color: var(--blue);
+}
+
+.sr-lists {
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+
+.sr-list {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 10px;
+  padding: 10px 12px;
+  background: var(--paper);
+  border: 1px solid var(--line-soft);
+  border-radius: 2px;
+}
+
+.sr-list[data-hit="true"] {
+  background: #fff7f7;
+  border-color: var(--sr-bad-fg);
+}
+
+.sr-list-code {
+  color: var(--navy);
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.sr-list-name {
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.sr-list-details {
+  grid-column: 1 / -1;
+  font-size: 13px;
+}
+
+.sr-list-details summary {
+  color: var(--blue);
+  cursor: pointer;
+}
+
+/* ---- After the report ---------------------------------------------------------------- */
+
+.sr-foot {
+  display: grid;
+  gap: 4px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+/* A grid item's minimum width is its content's, so without this the open
+   response, whose lines do not wrap, sets the track wider than the card. */
+.sr-raw {
+  min-width: 0;
+}
+
+.sr-raw summary {
+  color: var(--blue);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.sr-raw .demo-code {
+  max-height: 360px;
+  margin-top: 10px;
+  overflow: auto;
+}

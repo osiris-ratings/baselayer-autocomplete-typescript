@@ -762,9 +762,9 @@ export function Home() {
             </h2>
             <div>
               <p>
-                Paste a session token or an API key into the demo and watch
-                every mint, request and recovery the SDK makes, against
-                production.
+                Paste an API key into the demo and watch every mint, request and
+                recovery the SDK makes, then run the search a pick leads to,
+                against production.
               </p>
               <div className="hero-actions">
                 <a className="btn btn-primary" href={links.demo}>

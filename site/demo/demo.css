@@ -339,7 +339,6 @@
 .demo input[type="password"],
 .demo input[type="number"],
 .demo input:not([type]):not(.bl-ac-input),
-.demo textarea,
 .demo .select select {
   box-sizing: border-box;
   width: 100%;
@@ -354,17 +353,7 @@
   font-size: 14.5px;
 }
 
-.demo textarea {
-  height: auto;
-  padding: 10px 12px;
-  font-family: var(--mono);
-  font-size: 12px;
-  line-height: 1.5;
-  resize: vertical;
-}
-
 .demo input:not(.bl-ac-input):focus,
-.demo textarea:focus,
 .demo .select select:focus {
   border-color: var(--blue);
   outline: 1px solid var(--blue);
@@ -1099,20 +1088,6 @@
   outline-offset: 0;
 }
 
-.demo-pick {
-  margin-top: 18px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
-}
-
-.demo-pick p {
-  margin: 0 0 10px;
-}
-
-.demo-pick .mono-label {
-  color: var(--blue);
-}
-
 /* ---- Styling ------------------------------------------------------------ */
 
 .styling-export {
@@ -1401,6 +1376,11 @@
   color: #ffffff;
 }
 
+.net-kind[data-kind="search"] {
+  background: var(--navy);
+  color: #ffffff;
+}
+
 .net-method {
   flex: none;
   color: var(--muted);
@@ -1513,6 +1493,12 @@
   display: grid;
   gap: 10px;
   margin: 0;
+}
+
+/* A grid item's minimum width is its content's: without this the request body,
+   whose lines do not wrap, widens the row beyond the panel. */
+.net-detail dl > div {
+  min-width: 0;
 }
 
 .net-detail dt {

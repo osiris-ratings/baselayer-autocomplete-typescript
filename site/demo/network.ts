@@ -3,7 +3,7 @@
 // status and size, the server's own time, and whether a newer keystroke
 // aborted it. Credentials are redacted before anything is kept.
 
-export type NetworkKind = "mint" | "tier" | "other";
+export type NetworkKind = "mint" | "tier" | "search" | "other";
 export type NetworkOutcome = "pending" | "done" | "aborted" | "failed";
 
 export interface NetworkEntry {
@@ -26,28 +26,74 @@ export interface NetworkEntry {
   outcome: NetworkOutcome;
   requestHeaders: Record<string, string>;
   responseHeaders: Record<string, string>;
-  /** The response body, cut at 16 kB. */
+  /** What the request sent, when it sent text: credentials cut short. */
+  requestBody: string | null;
+  /** The response body, its tokens cut short, then cut at `maxBody(kind)`. */
   body: string | null;
 }
 
 const MAX_ENTRIES = 200;
-const MAX_BODY = 16_384;
 const DEV_PREFIX = "/_baselayer";
+
+/** A search's answer is a whole report, which 16 kB would cut off. */
+export function maxBody(kind: NetworkKind): number {
+  return kind === "search" ? 262_144 : 16_384;
+}
+
+/** A credential as the panels show it: the start of it, and how long it is. */
+export function cutShort(value: string): string {
+  return `${value.slice(0, 16)}… (${value.length} characters)`;
+}
 
 function redact(name: string, value: string): string {
   switch (name.toLowerCase()) {
     case "x-api-key":
       return "•••••• (redacted)";
     case "x-autocomplete-session":
-      return `${value.slice(0, 16)}… (${value.length} characters)`;
+      return cutShort(value);
     default:
       return value;
   }
 }
 
-function kindOf(path: string): NetworkKind {
+/**
+ * The string values of the keys that hold a credential: a mint's
+ * `session_token`, a search's `business_token`, and the `token` every row of
+ * the tier's answer carries, which is the same pick token.
+ */
+const TOKEN_VALUE =
+  /("(?:session_token|business_token|token)"\s*:\s*")([^"\\]*)(")/g;
+
+/**
+ * The tokens a body carries, cut short. It works on the text, so a body that
+ * is not JSON, or that is JSON cut off part-way, is covered the same way.
+ */
+export function redactTokens(text: string): string {
+  return text.replace(
+    TOKEN_VALUE,
+    (_all, open: string, value: string, close: string) =>
+      `${open}${cutShort(value)}${close}`,
+  );
+}
+
+/** A body as indented JSON. A body that is not JSON (or was cut off) stays as it is. */
+export function indentJson(text: string): string {
+  try {
+    return JSON.stringify(JSON.parse(text), null, 2);
+  } catch {
+    return text;
+  }
+}
+
+/** A request's body as the panels show it: tokens cut short, JSON indented. */
+export function redactBody(text: string): string {
+  return indentJson(redactTokens(text));
+}
+
+export function kindOf(path: string): NetworkKind {
   if (path.startsWith("/autocomplete/sessions")) return "mint";
   if (path.startsWith("/autocomplete/businesses")) return "tier";
+  if (path.startsWith("/searches")) return "search";
   return "other";
 }
 
@@ -68,8 +114,9 @@ export class NetworkLog {
 
   readonly getSnapshot = (): NetworkEntry[] => this.entries;
 
+  /** Empties the log, except for requests still out: their answers land here. */
   clear(): void {
-    this.entries = [];
+    this.entries = this.entries.filter(entry => entry.outcome === "pending");
     this.emit();
   }
 
@@ -100,9 +147,10 @@ export class NetworkLog {
     headers.forEach((value, name) => {
       requestHeaders[name] = redact(name, value);
     });
+    const kind = kindOf(pathname);
     const entry: NetworkEntry = {
       id,
-      kind: kindOf(pathname),
+      kind,
       method: (init.method ?? "GET").toUpperCase(),
       url: url.href,
       path: `${pathname}${url.search}`,
@@ -117,6 +165,7 @@ export class NetworkLog {
       outcome: "pending",
       requestHeaders,
       responseHeaders: {},
+      requestBody: typeof init.body === "string" ? redactBody(init.body) : null,
       body: null,
     };
     this.entries = [...this.entries, entry].slice(-MAX_ENTRIES);
@@ -146,10 +195,14 @@ export class NetworkLog {
       .clone()
       .text()
       .then(text => {
+        const limit = maxBody(kind);
+        // Tokens are cut before the body is cut: a body over the limit is no
+        // longer JSON, but the text still holds them.
+        const shown = redactTokens(text);
         this.patch(id, {
           endedAt: performance.now(),
           size: new TextEncoder().encode(text).length,
-          body: text.length > MAX_BODY ? `${text.slice(0, MAX_BODY)}\n…` : text,
+          body: shown.length > limit ? `${shown.slice(0, limit)}\n…` : shown,
           outcome: "done",
         });
       })

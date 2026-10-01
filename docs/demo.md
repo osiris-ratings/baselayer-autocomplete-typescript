@@ -1,10 +1,10 @@
 # Live demo
 
 The demo is the styled component against your own organization. You
-connect, type a business name with any filters, and restyle the component.
-Beside it, folded away until you want it, is what the SDK did about it: the
-session, every request on a network timeline with its timing and size, and
-the SDK's own log.
+connect, type a business name with any filters, run the search a pick leads
+to, and restyle the component. Beside it, folded away until you want it, is
+what the SDK did about it: the session, every request on a network timeline
+with its timing and size, and the SDK's own log.
 
 ![The demo with its debug panel open, typing "harbor concrete pum"](images/demo-split.png)
 
@@ -14,8 +14,8 @@ publishes from this repository's `main` to GitHub Pages, at
 
 The published page talks to the production API, `https://api.baselayer.com`,
 from the browser. That needs the autocomplete tier to answer CORS for the
-demo's origin and the API to accept its mint; where either does not, the
-browser refuses the call. Run locally, the demo needs neither (see
+demo's origin and the API to accept its mint and its search; where either
+does not, the browser refuses the call. Run locally, the demo needs neither (see
 [Running it locally](#running-it-locally)). The screenshots below are the
 demo answering from made-up businesses, so no real company or person
 appears in them.
@@ -24,10 +24,11 @@ appears in them.
 
 The page is the window's height and never scrolls itself. It has three panes,
 side by side, each scrolling on its own: the introduction, the controls (**01
-Connect** and **02 Try autocomplete here**), and Debug or Styling. The
-introduction folds to a **Live demo** tab with its **Hide**; opening Debug or
-Styling folds it too, to give that pane room, and the tab brings it back. On a
-narrow screen the panes stack and the page scrolls as any other does.
+Connect** and **02 Try autocomplete here**, and **03 Run a business search**
+once a business is picked), and Debug or Styling. The introduction folds to a
+**Live demo** tab with its **Hide**; opening Debug or Styling folds it too, to
+give that pane room, and the tab brings it back. On a narrow screen the panes
+stack and the page scrolls as any other does.
 
 The panes move as they change, so it is plain where each went. Opening one,
 its tab turns a quarter about the square at its top, where its icon is, as it
@@ -40,53 +41,33 @@ motion, or in a browser without view transitions, the panes change at once.
 
 ## Connecting
 
-Pick the environment, then one of two ways in, and press **Apply**. The button
-stays gray until there is something to apply. Apply tests what you gave it
-before the demo uses it, and says what was wrong: a key the API refused, a token
-the tier refused or that is bound to another page, or one that has expired (read
-from the token itself, before any call). Once it passes, Connect folds away to
-one line that says how you are connected and, at its right, a dot with how the
-session stands: pulsing green with the time it has left (`valid 2:56`), blue
-while it is `idle` or `minting`, and red once a pasted token has `expired`,
-while the SDK backs off (`retry in m:ss`) or once it is `unavailable`. With a
-key it reads `idle` until the component takes its first session (on the first
-keystroke, by default). A pasted token's connection ends when the token expires;
-a key's does not, since the next search mints a new session, and until then the
-line reads `renews on the next search`. Open Connect again to change anything.
-Run locally, the page starts on **Production, through this dev server**.
+Pick the environment, give an API key and press **Apply**. The button stays
+gray until there is something to apply. Apply tests the key before the demo
+uses it, and says what was wrong: a key the API does not recognize, one
+without the permission, or a sandbox application's. Once it passes, Connect
+folds away to one line that says how you are connected and, at its right, a
+dot with how the session stands: pulsing green with the time it has left
+(`valid 2:56`), blue while it is `idle` or `minting`, and red while the SDK
+backs off (`retry in m:ss`) or once it is `unavailable`. It reads `idle` until
+the component takes its first session (on the first keystroke, by default).
+When a session lapses the connection stays, since the next search mints a new
+one, and until then the line reads `renews on the next search`. Open Connect
+again to change anything. Run locally, the page starts on **Production,
+through this dev server**.
 
-**An API key.** The page mints for itself, the way your backend would. The key
-stays in the tab's memory, is sent only to the API host you picked (or to the
-local dev server, which forwards it there), and is never stored; the page loads
-no third-party code, and the published page ships a Content-Security-Policy that
+The page mints for itself, the way your backend would. The key stays in the
+tab's memory, is sent only to the API host you picked (or to the local dev
+server, which forwards it there), and is never stored; the page loads no
+third-party code, and the published page ships a Content-Security-Policy that
 allows none (`pnpm demo` adds none: its hot reload needs an inline script). An
-API key has no test but a mint, so Apply mints one session and the demo hands it
-to the component as its first: the test costs nothing the component's own first
-mint (on the first keystroke, by default) would not have. On the published page
-this mode needs the API to accept the demo's origin.
+API key has no test but a mint, so Apply mints one session and the demo hands
+it to the component as its first: the test costs nothing the component's own
+first mint (on the first keystroke, by default) would not have. On the
+published page this needs the API to accept the demo's origin.
 
-**A session token.** Mint a session from your terminal, bound to the demo's
-origin, and paste the token. Your API key never reaches the browser:
-
-```bash
-curl -s -X POST https://api.baselayer.com/autocomplete/sessions \
-  -H "X-API-Key: $BASELAYER_API_KEY" \
-  -H "Origin: <the demo's origin, shown on the page>" \
-  | jq -r .session_token
-```
-
-A session lasts a few minutes and carries its own request budget; paste a
-new one when it runs out. Its terms show in the debug panel once it is
-applied. Apply checks the token against the tier's
-`GET /autocomplete/version`, which verifies it (signature, expiry, the origin
-it is bound to) on a budget of its own, so the check spends none of the
-token's requests:
-
-![Connecting with a session token](images/demo-connect-token.png)
-
-Either way, every session is a real session on your organization's pool,
-and the key must belong to a production application: sessions are not
-minted for a sandbox application.
+Every session is a real session on your organization's pool, and the key must
+belong to a production application: sessions are not minted for a sandbox
+application.
 
 ## Running it locally
 
@@ -96,12 +77,12 @@ pnpm demo        # the site, opened on http://localhost:3000/demo/
 ```
 
 The page runs on `http://localhost:3000/demo/` and starts on **Production,
-through this dev server**: it calls `/_baselayer/autocomplete/…` on its own
-origin, and the dev server forwards those calls to production. That is the
-shape of a real integration, the dev server standing in for your backend,
-and it is why both modes work locally while production's CORS lists admit
-neither localhost nor the published page. The browser makes no cross-origin
-call at all.
+through this dev server**: it calls `/_baselayer/autocomplete/…` and
+`/_baselayer/searches` on its own origin, and the dev server forwards those
+calls to production. That is the shape of a real integration, the dev server
+standing in for your backend, and it is why the demo works locally while
+production's CORS lists do not admit localhost. The browser makes no
+cross-origin call at all.
 
 The session stays bound to the page. The mint's POST carries the page's
 `Origin`; the tier's GET, which a browser sends to its own origin without
@@ -109,9 +90,8 @@ one, is given the origin it came to. Point the forwarding at another API
 with `DEMO_API=https://… pnpm demo`.
 
 **Production (api.baselayer.com)** makes the calls from the browser, as the
-published page does: a session token from any origin, the API-key mode only
-from the published page's.
-For another environment, pick **Custom URL** and give its API host.
+published page does, which the API admits only from the published page's
+origin. For another environment, pick **Custom URL** and give its API host.
 
 ## The test form
 
@@ -122,9 +102,50 @@ in, an address) fold away behind **Add filters**, beside the title, which
 counts the ones set. The SDK holds them back until the business name (not the
 officer's) has as many characters as the session's `filter_min_stem` asks for,
 which the hint above the filters names, and the log says when it did. Pick a
-row and the form shows the business, where it is domiciled and registered, the
-time its `business_token` is good until (15 minutes after the pick), and the
-`POST /searches` body it belongs in, with the token cut short.
+row and the next step appears under the form.
+
+## Running a search
+
+**03 Run a business search** is the search the pick belongs in, and the page
+has no such step until you pick a row. Then the card names the business, says
+where it is domiciled and registered, and counts down the token's 15 minutes.
+**See the request body** folds out the `POST /searches` the pick belongs in,
+with the token cut short; **Run business search** sends it with the token alone
+(the API takes the name and address from it, and refuses it beside either), and
+the report appears below. A search is a real, billable search on your
+organization, so it never runs by itself. Change the name and the pick is gone,
+and the step with it.
+
+The call asks the API to hold it until the search ends (`Prefer: wait=90`) and
+names the pick's search with an `Idempotency-Key`. The key stays the same until
+a search comes back, so running again after a failure (an answer that never
+arrived, a 5xx, a wait that gave up) gets the search the first call made, not a
+second one to pay for. Running again after a report is a new search, with a new
+key. A search the API is still running after that wait is asked after every two
+seconds, for two minutes at most, and fetched whole when it ends. A question
+that fails in passing (the network, a 429, a 5xx) is asked again at the next
+turn; one that fails for good ends the wait, and the message says the search
+keeps running and where to find it. A search that finds no business is not an
+error: the API ends it as failed, with `No match found.`, and the report says
+so. The SDK does not submit searches; the call and its types are the demo's
+own, in `site/demo/searches.ts`.
+
+![The report for a search](images/demo-search.png)
+
+The report is one page of sections, and a section the search has nothing for is
+left out: the verdict (verified, not verified, a fraud hit or no match), the
+KYB and risk ratings, how the search matched (a picked business matches
+itself), the business, its Secretary of State filings, its officers, and the
+watchlists it was screened against. Under it, **View raw response** is the body
+as the API sent it, **See the request in Debug** opens the call on the network
+timeline, and **Open in the console** is the same search in Baselayer's
+console.
+
+Only an API key can run it: the session the typeahead holds opens the tier and
+nothing else. A pick's token lasts 15 minutes, and after that the card asks for
+a new pick. A refusal is put in words, with what to do about it: pick the
+business again for a token that expired or is another organization's, or fix
+the key. After a refusal of the pick, Run stays off until you pick again.
 
 ## Styling
 
@@ -216,13 +237,14 @@ the card.
 
 Network is the timeline of every request the page made: when it started,
 whether it was a mint (`mint`), a query (`tier`, with the query and any
-filters) or another call (`http`, such as the token check's
-`GET /autocomplete/version`), its status, the size of the body, and how long
-it took. It draws the last 60, under a line that counts the requests, the
-mints, the aborted ones and the bytes, beside a **Clear**. The waterfall puts
-them on one time axis, with the tier's own time (`Server-Timing`) drawn inside
-each round trip, and a request a newer keystroke aborted drawn hatched. Click
-a row for its URL, timings, headers and body; credentials are cut short before
+filters), a call of the search step (`search`: its `POST /searches` and the
+questions after it) or another call (`http`), its status, the size of the
+body, and how long it took. It draws the last 60, under a line that counts
+the requests, the mints, the aborted ones and the bytes, beside a **Clear**.
+The waterfall puts them on one time axis, with the tier's own time
+(`Server-Timing`) drawn inside each round trip, and a request a newer
+keystroke aborted drawn hatched. Click a row for its URL, timings, headers and
+the bodies it sent and got; credentials and tokens are cut short before
 anything is shown.
 
 ![A request's details](images/demo-network.png)

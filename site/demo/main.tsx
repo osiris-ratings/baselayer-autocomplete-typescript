@@ -3,6 +3,7 @@ import "@baselayer-sdk/autocomplete/react/styles.css";
 import "../shared/fonts";
 import "../shared/brand.css";
 import "./demo.css";
+import "./search.css";
 
 import { mount } from "../shared/mount";
 import { SiteHeader } from "../shared/SiteHeader";

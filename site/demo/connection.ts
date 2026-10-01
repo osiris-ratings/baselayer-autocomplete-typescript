@@ -20,28 +20,19 @@ export function formatRemaining(ms: number): string {
 }
 
 /**
- * A pasted token is the session itself, so its expiry ends the connection.
- * A key mints the next session on the next search, so a lapsed one does not.
+ * A key mints the next session on the next search, so a lapsed one does not
+ * end the connection.
  */
 export function connectionStatus(
-  mode: "token" | "key",
   session: SessionPhase,
   now: number,
-  /** Epoch ms the pasted token stops being honored (token mode). */
-  tokenExpiresAt: number | null,
 ): ConnectionStatus {
-  if (mode === "token" && tokenExpiresAt !== null && tokenExpiresAt <= now) {
-    return { state: "error", label: "expired" };
-  }
   switch (session.phase) {
     case "ready": {
       const left = session.grant.expiresAt - now;
-      if (left > 0) {
-        return { state: "ok", label: `valid ${formatRemaining(left)}` };
-      }
-      return mode === "key"
-        ? { state: "ok", label: "renews on the next search" }
-        : { state: "error", label: "expired" };
+      return left > 0
+        ? { state: "ok", label: `valid ${formatRemaining(left)}` }
+        : { state: "ok", label: "renews on the next search" };
     }
     case "minting":
       return { state: "pending", label: "minting" };
@@ -53,11 +44,6 @@ export function connectionStatus(
     case "unavailable":
       return { state: "error", label: "unavailable" };
     case "idle":
-      return tokenExpiresAt !== null
-        ? {
-            state: "ok",
-            label: `valid ${formatRemaining(tokenExpiresAt - now)}`,
-          }
-        : { state: "pending", label: "idle" };
+      return { state: "pending", label: "idle" };
   }
 }

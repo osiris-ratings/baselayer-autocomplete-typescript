@@ -200,7 +200,7 @@ tells you when that is the right move.
   your backend
 - [The site](docs/site.md): the overview, the generated API reference and
   the demo, and how to publish them
-- [Live demo](docs/demo.md): try it with your own key or a session token
+- [Live demo](docs/demo.md): try it with your own API key, and run the search
 
 ## Development
 

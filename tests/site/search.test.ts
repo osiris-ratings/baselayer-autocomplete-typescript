@@ -75,9 +75,10 @@ describe("the README's search body", () => {
 describe("the pages that show the body", () => {
   it("take it from the modules, and write none inline", () => {
     const app = page("demo/App.tsx");
+    const step = page("demo/SearchStep.tsx");
     const home = page("home/Home.tsx");
-    expect(app).toContain("searchExample(apiHost, picked.pick.businessToken)");
+    expect(step).toContain("searchExample(apiHost, picked.pick.businessToken)");
     expect(home).toContain("snippets={SEARCH_SNIPPET}");
-    expect(app + home).not.toMatch(/"business_token":/);
+    expect(app + step + home).not.toMatch(/"business_token":/);
   });
 });
