@@ -13,7 +13,7 @@ publishes from this repository's `main` to GitHub Pages, at
 <https://sdk.baselayer.com/autocomplete/demo/>.
 
 The published page talks to the production API, `https://api.baselayer.com`,
-from the browser. That needs the autocomplete tier to answer CORS for the
+from the browser. That needs the autocomplete service to answer CORS for the
 demo's origin and the API to accept its mint and its search; where either
 does not, the browser refuses the call. Run locally, the demo needs neither (see
 [Running it locally](#running-it-locally)). The screenshots below are the
@@ -85,9 +85,9 @@ production's CORS lists do not admit localhost. The browser makes no
 cross-origin call at all.
 
 The session stays bound to the page. The mint's POST carries the page's
-`Origin`; the tier's GET, which a browser sends to its own origin without
-one, is given the origin it came to. Point the forwarding at another API
-with `DEMO_API=https://… pnpm demo`.
+`Origin`; the autocomplete service's GET, which a browser sends to its own
+origin without one, is given the origin it came to. Point the forwarding at
+another API with `DEMO_API=https://… pnpm demo`.
 
 **Production (api.baselayer.com)** makes the calls from the browser, as the
 published page does, which the API admits only from the published page's
@@ -141,11 +141,12 @@ as the API sent it, **See the request in Debug** opens the call on the network
 timeline, and **Open in the console** is the same search in Baselayer's
 console.
 
-Only an API key can run it: the session the typeahead holds opens the tier and
-nothing else. A pick's token lasts 15 minutes, and after that the card asks for
-a new pick. A refusal is put in words, with what to do about it: pick the
-business again for a token that expired or is another organization's, or fix
-the key. After a refusal of the pick, Run stays off until you pick again.
+Only an API key can run it: the session the typeahead holds opens the
+autocomplete service and nothing else. A pick's token lasts 15 minutes, and
+after that the card asks for a new pick. A refusal is put in words, with what to
+do about it: pick the business again for a token that expired or is another
+organization's, or fix the key. After a refusal of the pick, Run stays off until
+you pick again.
 
 ## Styling
 
@@ -175,8 +176,8 @@ there are, up to the sample's eight. The characters, the pause and the session
 act only as you type. What a row fetches follows from its layout: place the
 address nowhere and the addresses are not asked for, place the people nowhere
 and the people (officers and agents) are not. Place neither and no `include`
-is sent, since the tier refuses an empty one, so its default, people and
-addresses, comes back all the same, only not drawn.
+is sent, since the autocomplete service refuses an empty one, so its default,
+people and addresses, comes back all the same, only not drawn.
 
 First come six presets, each a color theme drawn as a small row in its own
 colors: Light (the default, with matched ink in green), Baselayer, Midnight,
@@ -236,16 +237,16 @@ dot; and **SDK log**, counting its entries. What a tab holds scrolls inside
 the card.
 
 Network is the timeline of every request the page made: when it started,
-whether it was a mint (`mint`), a query (`tier`, with the query and any
+whether it was a mint (`mint`), a query (`autocomplete`, with the query and any
 filters), a call of the search step (`search`: its `POST /searches` and the
 questions after it) or another call (`http`), its status, the size of the
 body, and how long it took. It draws the last 60, under a line that counts
 the requests, the mints, the aborted ones and the bytes, beside a **Clear**.
-The waterfall puts them on one time axis, with the tier's own time
-(`Server-Timing`) drawn inside each round trip, and a request a newer
+The waterfall puts them on one time axis, with the autocomplete service's own
+time (`Server-Timing`) drawn inside each round trip, and a request a newer
 keystroke aborted drawn hatched. Click a row for its URL, timings, headers and
-the bodies it sent and got; credentials and tokens are cut short before
-anything is shown.
+the bodies it sent and got; credentials and tokens are cut short before anything
+is shown.
 
 ![A request's details](images/demo-network.png)
 
@@ -253,6 +254,6 @@ Session has its phase, the requests spent of its budget, when it expires, and
 the index that answered. Under those, what the session's token says beyond
 them: the origin it is bound to, how many characters of the name the officer,
 state and address filters wait for, and how often the name can be replaced by
-another before the tier wants a new session. SDK log is the SDK's own account
-of every mint, request, recovery and change of phase, newest first and the
-last 80 kept, with a **Clear** of its own.
+another before the autocomplete service wants a new session. SDK log is the
+SDK's own account of every mint, request, recovery and change of phase, newest
+first and the last 80 kept, with a **Clear** of its own.

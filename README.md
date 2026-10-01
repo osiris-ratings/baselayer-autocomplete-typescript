@@ -154,9 +154,9 @@ The first `mint` or `mintUrl` is kept for the component's life; a new
 - `onUnavailable({ unavailable })`: called when the deployment stops being
   able to mint (503 code 481), and again when it can; render your plain
   input meanwhile.
-- `include`: the related entities the tier expands for each row, by default
-  what `layout` places (`includeForLayout(layout)`). Rows you draw yourself
-  with `renderRow` name what they read: `include={["people"]}`.
+- `include`: the related entities the autocomplete service expands for each row,
+  by default what `layout` places (`includeForLayout(layout)`). Rows you draw
+  yourself with `renderRow` name what they read: `include={["people"]}`.
 - `label`: the text of the default `<label>`; without it none is drawn.
 - `name`, `inputRef`, `onFocus` and `onBlur`: the input's, passed through.
 - `look`, `layout`, `menuFollowsInputWidth`, `open`, `classNames`,

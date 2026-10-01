@@ -648,7 +648,7 @@ export function ArchitectureDiagram({ paused = false }: { paused?: boolean }) {
         The browser runs the SDK. It asks your backend&apos;s mint endpoint for
         a session; your backend mints it from Baselayer with your API key and
         the page&apos;s Origin. Keystrokes then go from the browser straight to
-        Baselayer&apos;s autocomplete tier with the session in a header,
+        Baselayer&apos;s autocomplete service with the session in a header,
         bypassing your backend. On pick, your form carries the business token to
         your backend, which sends it, and only it, to its search.
       </desc>

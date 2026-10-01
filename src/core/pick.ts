@@ -1,7 +1,8 @@
 /**
  * How long a `business_token` stays redeemable on `POST /searches`, from the
- * moment the tier sealed it. Advisory: the API is the one that refuses a stale
- * token (422 code 3042), and the recovery is the same as for any refusal.
+ * moment the autocomplete service sealed it. Advisory: the API is the one that
+ * refuses a stale token (422 code 3042), and the recovery is the same as for
+ * any refusal.
  */
 export const BUSINESS_TOKEN_TTL_SECONDS = 900;
 

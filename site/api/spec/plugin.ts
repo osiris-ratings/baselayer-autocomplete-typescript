@@ -19,7 +19,7 @@ import {
 const VIRTUAL = "virtual:api-reference";
 const RESOLVED = `\0${VIRTUAL}`;
 const SOURCES = {
-  tier: "contracts/tier-openapi.json",
+  autocomplete: "contracts/autocomplete-openapi.json",
   sessions: "contracts/sessions-openapi.json",
   overlay: "contracts/autocomplete.overlay.yaml",
 } as const;
@@ -48,7 +48,7 @@ export interface ApiReferenceData {
 export function buildReference(repoRoot: string): ApiReferenceData {
   const read = (path: string) => readFileSync(`${repoRoot}/${path}`, "utf8");
   const document = assembleReference({
-    tier: JSON.parse(read(SOURCES.tier)) as OpenApiDocument,
+    autocomplete: JSON.parse(read(SOURCES.autocomplete)) as OpenApiDocument,
     sessions: JSON.parse(read(SOURCES.sessions)) as OpenApiDocument,
     overlay: parse(read(SOURCES.overlay)) as Overlay,
   });

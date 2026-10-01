@@ -53,7 +53,10 @@ export interface TokenClaims {
   org: string;
 }
 
-/** The claims of a compact JWS, read without verifying (the tier verifies). */
+/**
+ * The claims of a compact JWS, read without verifying (the autocomplete service
+ * verifies).
+ */
 export function readClaims(token: string): TokenClaims | null {
   const [, payload] = token.trim().split(".");
   if (payload === undefined) {

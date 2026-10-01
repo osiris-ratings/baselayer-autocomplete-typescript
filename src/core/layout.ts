@@ -151,10 +151,10 @@ const FIELD_SOURCES: Partial<Record<RowField, Include>> = {
 };
 
 /**
- * What the tier is to expand for rows in this layout, in the tier's own
- * order: the placed fields decide what is fetched as well as what is drawn.
- * Takes a staged layout or a resolved one. Empty when no placed field needs
- * a related entity.
+ * What the autocomplete service is to expand for rows in this layout, in the
+ * autocomplete service's own order: the placed fields decide what is fetched as
+ * well as what is drawn. Takes a staged layout or a resolved one. Empty when no
+ * placed field needs a related entity.
  */
 export function includeForLayout(
   staged: RowLayoutInput | null = {},

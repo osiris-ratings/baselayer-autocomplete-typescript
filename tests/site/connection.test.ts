@@ -58,7 +58,7 @@ describe("connectionStatus", () => {
     });
   });
 
-  it("reports minting, a backoff's wait and an unavailable tier", () => {
+  it("reports minting, a backoff's wait and an unavailable autocomplete service", () => {
     expect(connectionStatus({ phase: "minting", reason: "cold" }, NOW)).toEqual(
       { state: "pending", label: "minting" },
     );

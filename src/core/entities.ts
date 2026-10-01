@@ -36,7 +36,7 @@ export interface RouteSpec {
   includes: readonly Relation[];
   /** What it expands when `include` is omitted. */
   defaultInclude: readonly Relation[];
-  /** Answered by the tier today. */
+  /** Answered by the autocomplete service today. */
   served: boolean;
 }
 

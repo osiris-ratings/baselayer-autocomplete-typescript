@@ -214,8 +214,8 @@ describe("getSession", () => {
         .mockResolvedValueOnce(refusal(429, TOO_MANY));
 
       const first = await client.getSession();
-      // Past the refresh point, well short of the expiry: the tier still
-      // honors grant-1 for another 20% of its TTL.
+      // Past the refresh point, well short of the expiry: the autocomplete
+      // service still honors grant-1 for another 20% of its TTL.
       const refreshPoint = MINTED_AT + TTL_MS * REFRESH_AT_FRACTION;
       at(refreshPoint);
 
@@ -278,25 +278,25 @@ describe("getSession", () => {
       expect(unavailable(client)).toBe(true);
     });
 
-    it("does not fall back to a grant the tier just refused", async () => {
+    it("does not fall back to a grant the autocomplete service just refused", async () => {
       mint
         .mockResolvedValueOnce(grant("grant-1"))
         .mockResolvedValueOnce(refusal(429, TOO_MANY));
 
       await client.getSession();
 
-      // `force` is the caller saying the tier refused this grant, so serving it
-      // again would only fail again.
+      // `force` is the caller saying the autocomplete service refused this
+      // grant, so serving it again would only fail again.
       await expect(client.getSession({ force: true })).rejects.toBeDefined();
     });
 
     it("a force arriving mid-refresh withdraws the fallback that refresh holds", async () => {
       // The refused grant survives in one more place than `cached`: the mint
       // already in the air is holding it as what it falls back on. A refresh
-      // starts at 80% of the TTL, so the tier's 401 lands while that refresh is
-      // still running, the forced caller single-flights onto it, and its
-      // failure path used to hand the refused grant straight back, re-cached,
-      // so every keystroke after it got the spent session too.
+      // starts at 80% of the TTL, so the autocomplete service's 401 lands while
+      // that refresh is still running, the forced caller single-flights onto
+      // it, and its failure path used to hand the refused grant straight back,
+      // re-cached, so every keystroke after it got the spent session too.
       const refresh = holdMint();
       mint
         .mockResolvedValueOnce(grant("grant-1"))
@@ -370,7 +370,7 @@ describe("getSession", () => {
   it("caps the backoff a Retry-After can impose", async () => {
     // An absurd Retry-After used to become an absurd setTimeout in the hook's
     // cooldown timer, which overflows past 2^31 ms into an immediate re-arm
-    // loop. The tier path caps its Retry-After the same way.
+    // loop. The autocomplete service path caps its Retry-After the same way.
     mint.mockResolvedValueOnce(
       refusal(429, TOO_MANY, { "retry-after": "99999999999" }),
     );

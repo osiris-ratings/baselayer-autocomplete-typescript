@@ -22,7 +22,8 @@ const cinder: BusinessSuggestion = {
   matched_name: "EMBERLINE",
   match: "strong",
   domicile_state: "DE",
-  // Sorted, as the tier returns them; the domicile is not first here on purpose.
+  // Sorted, as the autocomplete service returns them; the domicile is not first
+  // here on purpose.
   states: ["CA", "DE", "FL", "IL", "MA", "MO", "NY"],
   structure: "C_CORPORATION",
   related: {
@@ -58,8 +59,9 @@ const cinder: BusinessSuggestion = {
       count: 2,
       matched: null,
       truncated: false,
-      // In the tier's order: nothing filed in Delaware, so the ladder runs
-      // through the other states, own filings by role before the agent's.
+      // In the autocomplete service's order: nothing filed in Delaware, so the
+      // ladder runs through the other states, own filings by role before the
+      // agent's.
       items: [
         {
           type: "address",
@@ -133,7 +135,8 @@ const agentsOnly: BusinessSuggestion = {
   },
 };
 
-// Twelve officers on the family, three in the head (the tier's cap).
+// Twelve officers on the family, three in the head (the autocomplete service's
+// cap).
 const crowded: BusinessSuggestion = {
   ...cinder,
   token: "tok-crowded",
@@ -171,10 +174,11 @@ const crowded: BusinessSuggestion = {
 };
 
 describe("leadAddressOf", () => {
-  it("takes the tier's first address whatever its role, and nothing from an empty head", () => {
+  it("takes the autocomplete service's first address whatever its role, and nothing from an empty head", () => {
     expect(leadAddressOf(cinder)).toBe("412 Orchard Ln, Springfield, MO 65806");
-    // The tier ranks a registered agent's address last, but when it is all a
-    // family has, it is the family's lead address rather than nothing.
+    // The autocomplete service ranks a registered agent's address last, but
+    // when it is all a family has, it is the family's lead address rather than
+    // nothing.
     const agentAddressOnly: BusinessSuggestion = {
       ...cinder,
       related: {
@@ -223,15 +227,15 @@ describe("peopleLineOf", () => {
   });
 
   it("does not count the agents beyond the head against the officer line", () => {
-    // The tier lists officers before agents, so an agent inside the head
-    // means every officer is in the head too: the rest of the family are
-    // agents (cinder: count 4, head of three with one agent, so +1).
+    // The autocomplete service lists officers before agents, so an agent inside
+    // the head means every officer is in the head too: the rest of the family
+    // are agents (cinder: count 4, head of three with one agent, so +1).
     expect(peopleLineOf(cinder)).toEqual(
       expect.objectContaining({ role: "officer", more: 1 }),
     );
   });
 
-  it("falls back to the head when the tier sent no total", () => {
+  it("falls back to the head when the autocomplete service sent no total", () => {
     expect(
       peopleLineOf({
         ...crowded,
@@ -245,7 +249,7 @@ describe("peopleLineOf", () => {
 });
 
 describe("orderedStates", () => {
-  it("moves the domicile to the front and keeps the rest in the tier's order", () => {
+  it("moves the domicile to the front and keeps the rest in the autocomplete service's order", () => {
     expect(orderedStates(cinder)).toEqual([
       "DE",
       "CA",
@@ -259,7 +263,7 @@ describe("orderedStates", () => {
 });
 
 describe("structureLabel", () => {
-  it("draws each structure the tier knows as a short flag, and OTHER as none", () => {
+  it("draws each structure the autocomplete service knows as a short flag, and OTHER as none", () => {
     const flags: Record<(typeof BUSINESS_STRUCTURES)[number], string | null> = {
       SOLE_PROPRIETORSHIP: "Sole prop.",
       GENERAL_PARTNERSHIP: "GP",
@@ -292,9 +296,9 @@ describe("structureLabel", () => {
   });
 
   it("draws no flag for no structure, or for one this build has no label for", () => {
-    // `structure` is open: a newer tier's value is kept, and draws nothing
-    // until a build labels it. So does a value that happens to name a member
-    // of every object.
+    // `structure` is open: a newer autocomplete service's value is kept, and
+    // draws nothing until a build labels it. So does a value that happens to
+    // name a member of every object.
     for (const structure of [
       null,
       "FOUNDATION",
@@ -349,7 +353,7 @@ describe("formatFound", () => {
 });
 
 describe("queryTokens", () => {
-  it("tokenizes the query the way the tier does for the marks", () => {
+  it("tokenizes the query the way the autocomplete service does for the marks", () => {
     // `&` is the word `and`, `-` and `_` are spaces, other punctuation goes,
     // diacritics fold, case folds.
     expect(queryTokens("  Cin & Rig-ging, José  ")).toEqual([
@@ -378,8 +382,8 @@ describe("typedPrefixLength", () => {
 });
 
 describe("partsFor", () => {
-  // The tier's own shape, pinned by its unit test: two matched words with
-  // only whitespace between them are ONE part.
+  // The autocomplete service's own shape, pinned by its unit test: two matched
+  // words with only whitespace between them are ONE part.
   const parts = [
     { text: "CINDER RIGGING", matched: true },
     { text: ", INC.", matched: false },
@@ -402,9 +406,10 @@ describe("partsFor", () => {
     ]);
   });
 
-  it("grows back into the tier's whole-word span as the words are typed out", () => {
+  it("grows back into the autocomplete service's whole-word span as the words are typed out", () => {
     // Both words typed in full: the whitespace between them is marked with
-    // them, exactly the part the tier sent, so the two regions agree here.
+    // them, exactly the part the autocomplete service sent, so the two regions
+    // agree here.
     expect(
       partsFor("CINDER RIGGING, INC.", parts, "substring", [
         "cinder",
@@ -414,8 +419,8 @@ describe("partsFor", () => {
   });
 
   it("keeps a whole-word mark on a word the typed text no longer starts", () => {
-    // The rows were answered for an earlier query; the tier's mark is still
-    // the truth about why the row is there.
+    // The rows were answered for an earlier query; the autocomplete service's
+    // mark is still the truth about why the row is there.
     expect(
       partsFor("CINDER RIGGING, INC.", parts, "substring", ["cinder", "xyz"]),
     ).toEqual(parts);

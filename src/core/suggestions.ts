@@ -12,10 +12,10 @@ import type {
  */
 
 /**
- * The address the tier ranked first: the family's own filing in its domicile
- * state (principal, then mailing) when it has one, else an officer's or a
- * registered agent's address there, else the same ladder in its other
- * states. The tier owns that order; this reads the head.
+ * The address the autocomplete service ranked first: the family's own filing in
+ * its domicile state (principal, then mailing) when it has one, else an
+ * officer's or a registered agent's address there, else the same ladder in its
+ * other states. The autocomplete service owns that order; this reads the head.
  */
 export function leadAddressOf(suggestion: BusinessSuggestion): string | null {
   return suggestion.related.addresses.items[0]?.label ?? null;
@@ -38,10 +38,10 @@ export interface PeopleLine {
 /**
  * The people of `role` the family has beyond the first name shown: the rest
  * of the head, plus the people the head cap left out when they can only be
- * of this role. The tier lists officers before agents, so an agent inside
- * the head means every officer is already there and the people beyond the
- * head are agents; a head of officers alone says nothing about the roles
- * beyond it, and they are counted as more of the same. Without a total
+ * of this role. The autocomplete service lists officers before agents, so an
+ * agent inside the head means every officer is already there and the people
+ * beyond the head are agents; a head of officers alone says nothing about the
+ * roles beyond it, and they are counted as more of the same. Without a total
  * (`count` null) only the head can be counted.
  */
 function moreOf(
@@ -85,7 +85,10 @@ export function peopleLineOf(
   };
 }
 
-/** The domicile first, then the other states in the tier's (sorted) order. */
+/**
+ * The domicile first, then the other states in the autocomplete service's
+ * (sorted) order.
+ */
 export function orderedStates(suggestion: BusinessSuggestion): string[] {
   return [
     suggestion.domicile_state,
@@ -146,33 +149,35 @@ export function structureLabel(
   return label === undefined || label === "" ? null : label;
 }
 
-/** `found` is a floor when the tier stopped counting: `500+`. */
+/**
+ * `found` is a floor when the autocomplete service stopped counting: `500+`.
+ */
 export function formatFound(found: number, capped: boolean): string {
   return capped ? `${found}+` : `${found}`;
 }
 
 const COMBINING_MARK = /\p{M}/gu;
 const WORD_CHARACTER = /[\p{L}\p{N}']/u;
-// A word as the tier's `highlight` sees one (letters, digits and apostrophes)
-// or the run between two words.
+// A word as the autocomplete service's `highlight` sees one (letters, digits
+// and apostrophes) or the run between two words.
 const WORD_OR_GAP = /[\p{L}\p{N}']+|[^\p{L}\p{N}']+/gu;
 const WORD = /^[\p{L}\p{N}']+$/u;
 
 /**
- * The tier's `fold`, one character at a time: NFD, combining marks dropped,
- * lower-cased. Per character so that a folded prefix can be measured back
- * onto the displayed word — `É` folds to `e` and still counts as one.
+ * The autocomplete service's `fold`, one character at a time: NFD, combining
+ * marks dropped, lower-cased. Per character so that a folded prefix can be
+ * measured back onto the displayed word — `É` folds to `e` and still counts as
+ * one.
  */
 function foldChar(character: string): string {
   return character.normalize("NFD").replace(COMBINING_MARK, "").toLowerCase();
 }
 
 /**
- * The typed query as the tier tokenizes it for the marks: trimmed and
- * lower-cased, `&` as the word `and`, `-` and `_` as
- * spaces, every character that is not a letter, a digit or an apostrophe
- * dropped, diacritics folded. `Cin & Rig-ging, José` is `cin and rig ging
- * jose`.
+ * The typed query as the autocomplete service tokenizes it for the marks:
+ * trimmed and lower-cased, `&` as the word `and`, `-` and `_` as spaces, every
+ * character that is not a letter, a digit or an apostrophe dropped, diacritics
+ * folded. `Cin & Rig-ging, José` is `cin and rig ging jose`.
  */
 export function queryTokens(query: string): string[] {
   return query
@@ -214,12 +219,13 @@ export function typedPrefixLength(word: string, tokens: string[]): number {
 }
 
 /**
- * One marked part cut at the typed characters. The tier bridges whitespace
- * between two marked words into one part (`CINDER RIGGING` for `cin rig`), so
- * a marked part is a run of words, not one word: each word is cut on its own
- * at the typed prefix, the runs between words are unmarked, and a word no
- * typed token starts keeps its whole mark (the field has moved on since these
- * rows were answered; the tier's mark is still the truth about the row).
+ * One marked part cut at the typed characters. The autocomplete service bridges
+ * whitespace between two marked words into one part (`CINDER RIGGING` for
+ * `cin rig`), so a marked part is a run of words, not one word: each word is
+ * cut on its own at the typed prefix, the runs between words are unmarked, and
+ * a word no typed token starts keeps its whole mark (the field has moved on
+ * since these rows were answered; the autocomplete service's mark is still the
+ * truth about the row).
  */
 function cutMarked(text: string, tokens: string[]): HighlightPart[] {
   return (text.match(WORD_OR_GAP) ?? [text]).flatMap(piece => {
@@ -239,10 +245,11 @@ function cutMarked(text: string, tokens: string[]): HighlightPart[] {
 }
 
 /**
- * The tier's own tidy-up, mirrored (`merge_whitespace_between_matches`):
- * adjacent parts of one kind become one, and whitespace between two marked
- * parts is marked with them, so two words typed out in full are one span —
- * the substring region grows into the whole-word mark as the typing does.
+ * The autocomplete service's own tidy-up, mirrored
+ * (`merge_whitespace_between_matches`): adjacent parts of one kind become one,
+ * and whitespace between two marked parts is marked with them, so two words
+ * typed out in full are one span — the substring region grows into the
+ * whole-word mark as the typing does.
  */
 function mergeParts(parts: HighlightPart[]): HighlightPart[] {
   const pieces = parts.filter(part => part.text.length > 0);
@@ -266,13 +273,14 @@ function mergeParts(parts: HighlightPart[]): HighlightPart[] {
 /**
  * The parts to draw for `text`, or null to draw it as it is.
  *
- * The tier's parts spell exactly one of a row's names — the one the query
- * reached — so a line owns them when they spell its text and not otherwise:
- * parts for the alternative name never half-mark the label, and a row reached
- * through an officer or an address (no parts) is drawn plain. Under the
- * `token` region the parts are drawn as the tier sent them; under `substring`
- * each marked word is cut at the typed characters (`cutMarked`), and the
- * result is tidied the way the tier tidies its own (`mergeParts`).
+ * The autocomplete service's parts spell exactly one of a row's names — the one
+ * the query reached — so a line owns them when they spell its text and not
+ * otherwise: parts for the alternative name never half-mark the label, and a
+ * row reached through an officer or an address (no parts) is drawn plain. Under
+ * the `token` region the parts are drawn as the autocomplete service sent them;
+ * under `substring` each marked word is cut at the typed characters
+ * (`cutMarked`), and the result is tidied the way the autocomplete service
+ * tidies its own (`mergeParts`).
  */
 export function partsFor(
   text: string,

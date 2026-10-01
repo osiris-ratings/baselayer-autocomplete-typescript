@@ -24,21 +24,24 @@ export interface MintContext {
 
 /** What `POST /autocomplete/sessions` granted, camelCased. */
 export interface MintedGrant {
-  /** The compact JWS the tier verifies; opaque to the SDK. */
+  /** The compact JWS the autocomplete service verifies; opaque to the SDK. */
   sessionToken: string;
-  /** Seconds until the tier stops honoring the grant. */
+  /** Seconds until the autocomplete service stops honoring the grant. */
   expiresIn: number;
   /**
-   * The API's `expires_at`, as sent: when the tier stops honoring the grant, a
-   * UTC timestamp for display and logs. Absent when the API does not send it.
-   * Refresh is timed from `expiresIn`, which is right however far the local
-   * clock is off. Not `expiresAt`, which on a `Grant` is the same instant in
-   * epoch ms by the local clock.
+   * The API's `expires_at`, as sent: when the autocomplete service stops
+   * honoring the grant, a UTC timestamp for display and logs. Absent when the
+   * API does not send it. Refresh is timed from `expiresIn`, which is right
+   * however far the local clock is off. Not `expiresAt`, which on a `Grant` is
+   * the same instant in epoch ms by the local clock.
    */
   expiresAtUtc?: string;
   /** Requests the grant is good for, per route. */
   requestBudget: number;
-  /** Changes of query the tier allows before it refuses the session. */
+  /**
+   * Changes of query the autocomplete service allows before it refuses the
+   * session.
+   */
   pivotAllowance: number;
   /** Characters of `q` the narrowing filters wait for. */
   filterMinStem: number;

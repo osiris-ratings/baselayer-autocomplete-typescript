@@ -13,7 +13,7 @@
     "/autocomplete/sessions": {
       "post": {
         "summary": "Mint an autocomplete session",
-        "description": "Mints the grant every request to the autocomplete tier carries in ``X-Autocomplete-Session``. Minting writes one Order and is rate limited per organization, per ten-minute window and per rolling day, one pool drawn from by every caller in it; the keystrokes it admits write nothing. The grant is bound to the ``Origin`` it was minted with, expires after ``expires_in`` seconds (refresh at about 80% of it; ``expires_at`` is the same instant as a UTC timestamp, for display) and admits ``request_budget`` requests per route. A caller whose ``autocomplete.enabled`` override is off is answered 403; a locked organization is answered 402; a sandbox application is answered 422, since sandbox searches resolve against fixtures.",
+        "description": "Mints the grant every request to the autocomplete service carries in ``X-Autocomplete-Session``. Minting writes one Order and is rate limited per organization, per ten-minute window and per rolling day, one pool drawn from by every caller in it; the keystrokes it admits write nothing. The grant is bound to the ``Origin`` it was minted with, expires after ``expires_in`` seconds (refresh at about 80% of it; ``expires_at`` is the same instant as a UTC timestamp, for display) and admits ``request_budget`` requests per route. A caller whose ``autocomplete.enabled`` override is off is answered 403; a locked organization is answered 402; a sandbox application is answered 422, since sandbox searches resolve against fixtures.",
         "operationId": "mint_autocomplete_session_autocomplete_sessions_post",
         "responses": {
           "201": {
@@ -66,7 +66,7 @@
         "title": "HTTPValidationError"
       },
       "v1.AutocompleteSessionGrantResponse": {
-        "description": "The grant a caller presents to the autocomplete tier.",
+        "description": "The grant a caller presents to the autocomplete service.",
         "properties": {
           "session_token": {
             "description": "Opaque, signed session grant. Send it verbatim in the ``X-Autocomplete-Session`` header of every autocomplete request; it carries its own expiry and budget.",
@@ -94,7 +94,7 @@
             "type": "string"
           },
           "request_budget": {
-            "description": "Requests this session may make per autocomplete route. Past it the tier answers 429 with ``session_budget_spent``; the remedy is a new session, not a retry.",
+            "description": "Requests this session may make per autocomplete route. Past it the autocomplete service answers 429 with ``session_budget_spent``; the remedy is a new session, not a retry.",
             "examples": [
               150
             ],
@@ -102,7 +102,7 @@
             "type": "integer"
           },
           "pivot_allowance": {
-            "description": "How many times this session may change its query to a different name before the tier refuses it (429, code 482). Growing, trimming or correcting the name being typed never counts.",
+            "description": "How many times this session may change its query to a different name before the autocomplete service refuses it (429, code 482). Growing, trimming or correcting the name being typed never counts.",
             "examples": [
               5
             ],

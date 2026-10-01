@@ -707,7 +707,8 @@ export function Home() {
                 <h3>Bound to your origin</h3>
                 <p>
                   Baselayer seals the page&apos;s <code>Origin</code> into the
-                  session, and the tier refuses it from any other page.
+                  session, and the autocomplete service refuses it from any
+                  other page.
                 </p>
               </div>
               <div className="fact">
@@ -720,10 +721,11 @@ export function Home() {
               </div>
               <div className="fact">
                 <Icon name="nocookie" />
-                <h3>No cookies on the tier</h3>
+                <h3>No cookies on the autocomplete service</h3>
                 <p>
-                  The tier reads one credential, the session header, and never
-                  allows credentials, so no cookie is sent from any origin.
+                  The autocomplete service reads one credential, the session
+                  header, and never allows credentials, so no cookie is sent
+                  from any origin.
                 </p>
               </div>
             </div>

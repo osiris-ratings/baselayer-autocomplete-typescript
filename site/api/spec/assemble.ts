@@ -1,8 +1,9 @@
-// Builds the one OpenAPI document the API reference renders: the tier's
-// `GET /autocomplete/businesses` and the API's `POST /autocomplete/sessions`,
-// both vendored under contracts/, with the documentation the upstream
-// specs do not carry yet applied from an OpenAPI Overlay. No imports, so the
-// Vite plugin, the tests and the vendoring script can all load it.
+// Builds the one OpenAPI document the API reference renders: the autocomplete
+// service's `GET /autocomplete/businesses` and the API's
+// `POST /autocomplete/sessions`, both vendored under contracts/, with the
+// documentation the upstream specs do not carry yet applied from an OpenAPI
+// Overlay. No imports, so the Vite plugin, the tests and the vendoring script
+// can all load it.
 
 export interface JsonSchema {
   $ref?: string;
@@ -317,7 +318,7 @@ export function normalizeMarkdown(text: string): string {
 }
 
 export interface ReferenceSources {
-  tier: OpenApiDocument;
+  autocomplete: OpenApiDocument;
   sessions: OpenApiDocument;
   overlay: Overlay;
 }
@@ -340,15 +341,22 @@ function mergeRecords<T>(
 
 /** The published reference: the two routes, one document, the overlay applied. */
 export function assembleReference({
-  tier,
+  autocomplete,
   sessions,
   overlay,
 }: ReferenceSources): OpenApiDocument {
-  const businesses = extractOperation(tier, "/autocomplete/businesses", "get");
+  const businesses = extractOperation(
+    autocomplete,
+    "/autocomplete/businesses",
+    "get",
+  );
   const session = extractOperation(sessions, "/autocomplete/sessions", "post");
   const merged: OpenApiDocument = {
     openapi: "3.1.0",
-    info: { title: "Baselayer Autocomplete API", version: tier.info.version },
+    info: {
+      title: "Baselayer Autocomplete API",
+      version: autocomplete.info.version,
+    },
     servers: [{ url: "https://api.baselayer.com" }],
     paths: { ...session.paths, ...businesses.paths },
     components: {

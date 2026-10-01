@@ -10,7 +10,7 @@ export type LienStatus = "active" | "lapsed" | "terminated";
 
 /**
  * Narrowing filters on `GET /autocomplete/businesses`: exactly the set the
- * tier serves today, which answers 422 to any other parameter.
+ * autocomplete service serves today, which answers 422 to any other parameter.
  */
 export interface Filters {
   /** Any state the family is registered in; sent as ONE comma-joined `state`. */
@@ -76,9 +76,11 @@ export interface FiltersByRelation {
 export interface RouteQuery<R extends Relation> {
   /** The text as typed. */
   q: string;
-  /** 1 to 20; omitted, the tier answers 10. */
+  /** 1 to 20; omitted, the autocomplete service answers 10. */
   limit?: number;
-  /** Omitted, the tier expands the route's default relations. */
+  /**
+   * Omitted, the autocomplete service expands the route's default relations.
+   */
   include?: IncludeOf<R>[];
   /** Subject to the grant's `filterMinStem`; see `onShortStem`. */
   filters?: FiltersByRelation[R];
@@ -90,14 +92,17 @@ export type Query = RouteQuery<"businesses">;
 /** What to do with filters on a query shorter than the grant's filter stem. */
 export type ShortStemPolicy = "withhold" | "send" | "throw";
 
-/** The tier's own floor and ceiling on `q`. */
+/** The autocomplete service's own floor and ceiling on `q`. */
 export const MIN_Q_CHARS = 2;
 export const MAX_Q_CHARS = 256;
 export const MAX_LIMIT = 20;
 
 const METACHARACTERS = new Set(["%", "_", "*", "?"]);
 
-/** A character that is, or NFKC-folds to, one of the tier's pattern metacharacters. */
+/**
+ * A character that is, or NFKC-folds to, one of the autocomplete service's
+ * pattern metacharacters.
+ */
 function foldsToMetacharacter(character: string): boolean {
   if (METACHARACTERS.has(character)) {
     return true;
@@ -106,7 +111,10 @@ function foldsToMetacharacter(character: string): boolean {
   return folded.length === 1 && METACHARACTERS.has(folded);
 }
 
-/** `q` as the tier measures its floor: trimmed, pattern metacharacters removed. */
+/**
+ * `q` as the autocomplete service measures its floor: trimmed, pattern
+ * metacharacters removed.
+ */
 export function strippedQuery(q: string): string {
   return Array.from(q.trim())
     .filter(character => !foldsToMetacharacter(character))
@@ -117,9 +125,9 @@ const COMBINING_MARK = /\p{M}/gu;
 const ALPHANUMERIC = /[\p{L}\p{N}]/u;
 
 /**
- * The tier's `depunct`: folded (NFD, marks dropped, lower-cased), `&` read as
- * `and`, every run of non-alphanumerics one space, trimmed. The filter stem is
- * measured on this.
+ * The autocomplete service's `depunct`: folded (NFD, marks dropped,
+ * lower-cased), `&` read as `and`, every run of non-alphanumerics one space,
+ * trimmed. The filter stem is measured on this.
  */
 export function depunct(text: string): string {
   const folded = text
@@ -141,15 +149,18 @@ export function depunct(text: string): string {
   return out.trim();
 }
 
-/** Characters of `q` the tier compares against the grant's filter stem. */
+/**
+ * Characters of `q` the autocomplete service compares against the grant's
+ * filter stem.
+ */
 export function stemLength(q: string): number {
   return Array.from(depunct(strippedQuery(q))).length;
 }
 
 /**
  * Every filter parameter a route can take, in the one order they are sent.
- * The tier parses strictly (an unknown or repeated parameter is a 422), and
- * a fixed order keeps one query one URL.
+ * The autocomplete service parses strictly (an unknown or repeated parameter is
+ * a 422), and a fixed order keeps one query one URL.
  */
 const FILTER_PARAMS: {
   param: string;
@@ -216,8 +227,8 @@ export function hasFilters(filters: object | undefined): boolean {
 
 /**
  * The request URL for a route. Parameters are emitted once each, in a fixed
- * order, and only when set: the tier parses strictly and answers 422 to an
- * unknown or repeated one.
+ * order, and only when set: the autocomplete service parses strictly and
+ * answers 422 to an unknown or repeated one.
  */
 export function buildSuggestUrl<R extends Relation>(
   baseUrl: string,
@@ -253,11 +264,12 @@ export function buildBusinessesUrl(
 export type Recovery = "remint" | "wait" | "none";
 
 /**
- * What a failed reply asks the client to do, from the tier's contract: every
- * 401 means the grant is missing, invalid or expired, so re-mint; a spent
- * session budget (480) re-mints, and so does a session refused for changing
- * its query too many times (482): both say the session is done, not the
- * keystroke; `rate_limited` waits out `Retry-After`; anything else is final.
+ * What a failed reply asks the client to do, from the autocomplete service's
+ * contract: every 401 means the grant is missing, invalid or expired, so
+ * re-mint; a spent session budget (480) re-mints, and so does a session refused
+ * for changing its query too many times (482): both say the session is done,
+ * not the keystroke; `rate_limited` waits out `Retry-After`; anything else is
+ * final.
  */
 export function recoveryFor(status: number, reason: string | null): Recovery {
   if (status === 401) {

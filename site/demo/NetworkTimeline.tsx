@@ -46,7 +46,7 @@ function useNow(active: boolean): number {
 const VISIBLE = 60;
 const NOT_FILTERS = new Set(["q", "limit", "include"]);
 
-/** The filters a tier request carried, by parameter name. */
+/** The filters an autocomplete service request carried, by parameter name. */
 function filtersOf(entry: NetworkEntry): string[] {
   return [...new URL(entry.url).searchParams.keys()].filter(
     key => !NOT_FILTERS.has(key),
@@ -142,7 +142,7 @@ export function NetworkTimeline({ log }: { log: NetworkLog }) {
                       {entry.kind === "other" ? "http" : entry.kind}
                     </span>
                     <span className="net-path">
-                      {entry.kind === "tier" && entry.q !== null ? (
+                      {entry.kind === "autocomplete" && entry.q !== null ? (
                         <>
                           <q>{entry.q}</q>
                           {filtersOf(entry).length > 0 && (
@@ -225,7 +225,10 @@ export function NetworkTimeline({ log }: { log: NetworkLog }) {
                               : null,
                           )}
                           {entry.serverMs !== null && (
-                            <>, of which the tier spent {ms(entry.serverMs)}</>
+                            <>
+                              , of which the autocomplete service spent{" "}
+                              {ms(entry.serverMs)}
+                            </>
                           )}
                         </dd>
                       </div>

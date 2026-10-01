@@ -135,7 +135,7 @@ describe("parseSuggestResponse", () => {
     const row = {
       ...base("person", relations),
       match: "phonetic",
-      a_field_from_a_later_tier: true,
+      a_field_from_a_later_release: true,
     };
     const body = envelope(relations, [row]);
     (body.sources as Record<string, { status: string }>)["businesses"] = {
@@ -145,7 +145,7 @@ describe("parseSuggestResponse", () => {
     expect(parsed.suggestions[0]!.match).toBe("phonetic");
     expect(parsed.sources.businesses.status).toBe("degraded");
     expect(parsed.suggestions[0]).not.toHaveProperty(
-      "a_field_from_a_later_tier",
+      "a_field_from_a_later_release",
     );
   });
 

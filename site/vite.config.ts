@@ -98,9 +98,9 @@ function linkPreview(): Plugin {
  * cross-origin call, so no CORS list has to admit localhost, and the API key
  * goes where a customer's backend would send it.
  * The session stays bound to the page: the mint's POST carries the page's
- * `Origin`, and the tier's GET, which a browser sends same-origin without
- * one, is given the origin it came to (this server is plain http). The page
- * sends no `Referer`, on purpose, so that cannot stand in.
+ * `Origin`, and the autocomplete service's GET, which a browser sends
+ * same-origin without one, is given the origin it came to (this server is plain
+ * http). The page sends no `Referer`, on purpose, so that cannot stand in.
  */
 const throughDevServer: ProxyOptions = {
   target: process.env.DEMO_API ?? "https://api.baselayer.com",

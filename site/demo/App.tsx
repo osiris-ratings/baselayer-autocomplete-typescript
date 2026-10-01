@@ -228,7 +228,7 @@ function SessionMeters({ client }: { client: AutocompleteClient }) {
               <code>{facts.ori ?? "any origin"}</code>
               <span className="hint">
                 {facts.ori !== null
-                  ? "The tier answers this session only on pages from this origin."
+                  ? "The autocomplete service answers this session only on pages from this origin."
                   : "Minted without an Origin, so it works on any page."}
               </span>
             </dd>
@@ -249,9 +249,9 @@ function SessionMeters({ client }: { client: AutocompleteClient }) {
             <dd>
               {facts.piv}
               <span className="hint">
-                How often the name can be replaced by another before the tier
-                wants a new session. Typing on, backspacing and fixing a typo
-                are not changes.
+                How often the name can be replaced by another before the
+                autocomplete service wants a new session. Typing on, backspacing
+                and fixing a typo are not changes.
               </span>
             </dd>
           </div>

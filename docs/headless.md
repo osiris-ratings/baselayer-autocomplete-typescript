@@ -59,14 +59,15 @@ await client.suggest({
 
 `state` matches any state the family is registered in, `domicileState` only
 its root registration's state. The route's full set of filters is under
-[Filters](entities.md#filters); the tier answers any other parameter with a 422.
+[Filters](entities.md#filters); the autocomplete service answers any other
+parameter with a 422.
 
-The tier refuses filters until the name is long enough to be a name
-someone is typing (the session's `filterMinStem`, 5 characters by default).
-By default the client holds the filters back below that length and says so
-with `filtersWithheld: true`, so a field narrows from the fifth character
-without ever seeing a 422. `onShortStem: "send"` sends them anyway;
-`"throw"` rejects locally.
+The autocomplete service refuses filters until the name is long enough to be a
+name someone is typing (the session's `filterMinStem`, 5 characters by default).
+By default the client holds the filters back below that length and says so with
+`filtersWithheld: true`, so a field narrows from the fifth character without
+ever seeing a 422. `onShortStem: "send"` sends them anyway; `"throw"` rejects
+locally.
 
 ### Configuration
 
@@ -96,10 +97,10 @@ createAutocompleteClient({
 
 `session` and `request` are merged over `DEFAULT_SESSION_POLICY` and
 `DEFAULT_REQUEST_POLICY`, which hold these defaults, so name only what you
-change. `fetch` (a `FetchLike`, `globalThis.fetch` by default) sends the tier
-requests, always with `credentials: "omit"`; `defaultMint(url, { fetch })`
-takes its own for the mint. `now` (`Date.now` by default) is the epoch-ms
-clock behind refreshes, cooldowns and the brake.
+change. `fetch` (a `FetchLike`, `globalThis.fetch` by default) sends the
+autocomplete service requests, always with `credentials: "omit"`;
+`defaultMint(url, { fetch })` takes its own for the mint. `now` (`Date.now` by
+default) is the epoch-ms clock behind refreshes, cooldowns and the brake.
 
 `persistGrant: "sessionStorage"` keeps the session across reloads of the
 same tab, which saves a billable mint per reload, and costs a short-lived,
@@ -182,7 +183,7 @@ Its options past `query` and `enabled`:
 - `filters` and `include`: as on the client, compared by what they say, so a
   fresh object on every render does not refire the request
 - `limit` (`5`, `DEFAULT_LIMIT`): rows per keystroke, where a bare client
-  call gets the tier's 10
+  call gets the autocomplete service's 10
 - `minChars` (`3`, `MIN_QUERY_CHARS`): characters of trimmed text before it
   asks
 - `debounceMs` (`250`, `DEBOUNCE_MS`): the pause after each keystroke
@@ -193,8 +194,8 @@ Its state, besides `suggestions`, `isSearching` and `unavailable`:
 
 - `found` and `foundCapped`: the count, and whether it is a floor
   (`formatFound` draws `N+`)
-- `truncated`: the tier did not finish looking, so the rows may miss a match
-  and `found: 0` is not evidence of absence
+- `truncated`: the autocomplete service did not finish looking, so the rows may
+  miss a match and `found: 0` is not evidence of absence
 - `error`: what the footer says, or null
 - `errorKind`: the failure's `AutocompleteErrorKind`, set even when `error`
   is null (a window backoff, an invalid query)
@@ -231,5 +232,5 @@ a name, whole-word or cut at the typed prefix). To lay your rows out in the
 styled component's places, `drawnRowLayout(resolveRowLayout(layout))` is the
 field each place draws, as the component has it, `ROW_LINES` groups the
 places into each line's lead and trailing corner, and
-`includeForLayout(layout)` says what to ask the tier to expand for it (see
-[A row's places and fields](styling.md#5-a-rows-places-and-fields)).
+`includeForLayout(layout)` says what to ask the autocomplete service to expand
+for it (see [A row's places and fields](styling.md#5-a-rows-places-and-fields)).

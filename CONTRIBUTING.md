@@ -41,12 +41,12 @@ external so an application loads one copy of the core.
 
 The specs the Baselayer API publishes, vendored:
 
-| File                                        | What                          | From                        |
-| ------------------------------------------- | ----------------------------- | --------------------------- |
-| `contracts/tier-openapi.json`               | the tier's OpenAPI            | the tier's OpenAPI document |
-| `contracts/sessions-openapi.json`           | `POST /autocomplete/sessions` | the API's public OpenAPI    |
-| `contracts/mint-grant-response.schema.json` | the mint's 201 body           | the API's schema            |
-| `contracts/autocomplete.overlay.yaml`       | the reference's extra docs    | written here                |
+| File                                        | What                               | From                                        |
+| ------------------------------------------- | ---------------------------------- | ------------------------------------------- |
+| `contracts/autocomplete-openapi.json`       | the autocomplete service's OpenAPI | the autocomplete service's OpenAPI document |
+| `contracts/sessions-openapi.json`           | `POST /autocomplete/sessions`      | the API's public OpenAPI                    |
+| `contracts/mint-grant-response.schema.json` | the mint's 201 body                | the API's schema                            |
+| `contracts/autocomplete.overlay.yaml`       | the reference's extra docs         | written here                                |
 
 The wire tests read the first and the third. When the API changes, update
 the copy, adapt `src/core/wire.ts`, and say what changed in `CHANGELOG.md`.

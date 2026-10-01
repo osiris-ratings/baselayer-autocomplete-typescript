@@ -53,7 +53,10 @@ export type FetchLike = (
 ) => Promise<ResponseLike>;
 
 export interface AutocompleteClientConfig {
-  /** The API host the tier answers on, e.g. `https://api.baselayer.com`. */
+  /**
+   * The API host the autocomplete service answers on, e.g.
+   * `https://api.baselayer.com`.
+   */
   baseUrl: string;
   /** How a grant is obtained; see `defaultMint` and the host adapters. */
   mint: MintFunction;
@@ -97,11 +100,14 @@ export interface ClientSnapshot {
   session: SessionPhase;
   brake: BrakeState | null;
   usage: {
-    /** Tier requests on the current grant, counted here. */
+    /** Autocomplete requests on the current grant, counted here. */
     requestsSinceMint: number;
     requestBudget: number | null;
     pivotAllowance: number | null;
-    /** How many times the tier refused a session for pivoting (482). */
+    /**
+     * How many times the autocomplete service refused a session for pivoting
+     * (482).
+     */
     pivotsExceededEvents: number;
   };
   lastIndexTag: string | null;
@@ -139,8 +145,8 @@ export interface AutocompleteClient {
   ): Promise<SuggestResult>;
   /**
    * Suggestions for one keystroke on any route, recovering at most once. One
-   * session serves every route; its budget is counted per route by the tier.
-   * Only `businesses` is served today.
+   * session serves every route; its budget is counted per route by the
+   * autocomplete service. Only `businesses` is served today.
    */
   search<R extends Relation>(
     relation: R,
@@ -586,7 +592,7 @@ export function createAutocompleteClient(
       const recovery = recoveryFor(response.status, failure.reason);
       if (attempted !== "none" || recovery === "none") {
         // A re-mint that did not help is what the brake counts: the grant was
-        // fresh and the tier still refused it.
+        // fresh and the autocomplete service still refused it.
         if (attempted === "remint" && recovery === "remint") {
           recordAuthFailure();
         }

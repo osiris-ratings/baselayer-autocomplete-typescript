@@ -13,8 +13,8 @@ import {
 
 import { firstValidationMessage } from "../../src/core/wire";
 
-// The wire shape of `GET /autocomplete/businesses` as the tier serves it
-// today: every key present, nulls spelled out.
+// The wire shape of `GET /autocomplete/businesses` as the autocomplete service
+// serves it today: every key present, nulls spelled out.
 const suggestion = {
   type: "business",
   token: "tok-cinder-rigging",
@@ -100,7 +100,8 @@ describe("a business suggestion", () => {
   it("does not go dark over a related type or a grade it has never seen", () => {
     // The contract anticipates growth ("null only for type: person, until the
     // person entity ships"); nothing renders `type` or `match`, so a new value
-    // on the tier must degrade nothing, the way `sources.*.status` already does.
+    // on the autocomplete service must degrade nothing, the way
+    // `sources.*.status` already does.
     const grown = {
       ...suggestion,
       match: "fuzzy",
@@ -134,8 +135,9 @@ describe("a business suggestion", () => {
 
   it("reads an absent optional key as null, as the published contract allows", () => {
     // `openapi.json` leaves `matched_name`, `RelatedItem.token`, `role`,
-    // `RelatedSet.count` and `matched` out of `required`. The tier spells them
-    // as null today; a build that omits them instead is still on contract.
+    // `RelatedSet.count` and `matched` out of `required`. The autocomplete
+    // service spells them as null today; a build that omits them instead is
+    // still on contract.
     const withoutMatchedName: Partial<typeof suggestion> = { ...suggestion };
     delete withoutMatchedName.matched_name;
     const sparse = {
@@ -190,11 +192,12 @@ describe("a business suggestion", () => {
     expect(parsed.related.addresses.items[0]?.token).toBe(handle);
   });
 
-  it("drops a raw id a rolled-back tier still sends, and reads no handle", () => {
+  it("drops a raw id a rolled-back autocomplete service still sends, and reads no handle", () => {
     // The version-skew tripwire, which needs an `id` fed IN to mean anything:
     // asserting `not.toHaveProperty("id")` on a fixture that never had one
     // passes under any parser that drops unknown keys.
-    // 0.5.0 of the tier served `id` and no `token`; this is that wire shape.
+    // 0.5.0 of the autocomplete service served `id` and no `token`; this is
+    // that wire shape.
     const rolledBack = {
       ...suggestion,
       related: {
@@ -225,9 +228,9 @@ describe("a business suggestion", () => {
   });
 
   describe("structure", () => {
-    const tier = JSON.parse(
+    const autocomplete = JSON.parse(
       readFileSync(
-        join(__dirname, "../../contracts/tier-openapi.json"),
+        join(__dirname, "../../contracts/autocomplete-openapi.json"),
         "utf8",
       ),
     ) as {
@@ -236,13 +239,13 @@ describe("a business suggestion", () => {
       };
     };
 
-    it("knows every structure the tier's contract lists, in its order", () => {
+    it("knows every structure the autocomplete service's contract lists, in its order", () => {
       expect(BUSINESS_STRUCTURES).toEqual(
-        tier.components.schemas.BusinessStructure?.enum,
+        autocomplete.components.schemas.BusinessStructure?.enum,
       );
     });
 
-    it("reads the structure the tier sends", () => {
+    it("reads the structure the autocomplete service sends", () => {
       expect(parseSuggestion(suggestion).structure).toBe("C_CORPORATION");
       for (const structure of BUSINESS_STRUCTURES) {
         expect(parseSuggestion({ ...suggestion, structure }).structure).toBe(
@@ -251,11 +254,11 @@ describe("a business suggestion", () => {
       }
     });
 
-    it("reads an absent or null structure as null, as a tier that predates it sends it", () => {
-      // The contract leaves it out of `required`, and a tier that predates
-      // the field sends no such key at all.
+    it("reads an absent or null structure as null, as an autocomplete service that predates it sends it", () => {
+      // The contract leaves it out of `required`, and an autocomplete service
+      // that predates the field sends no such key at all.
       expect(
-        tier.components.schemas.BusinessSuggestion?.required,
+        autocomplete.components.schemas.BusinessSuggestion?.required,
       ).not.toContain("structure");
       const older: Partial<typeof suggestion> = { ...suggestion };
       delete older.structure;
@@ -280,7 +283,7 @@ describe("a business suggestion", () => {
   });
 
   describe("truncated", () => {
-    it("reads the flag the tier sends", () => {
+    it("reads the flag the autocomplete service sends", () => {
       expect(
         parseBusinessesResponse({ ...response, truncated: true }).truncated,
       ).toBe(true);
@@ -289,10 +292,10 @@ describe("a business suggestion", () => {
       ).toBe(false);
     });
 
-    it("survives a tier that predates the field, omitted or null", () => {
-      // The console can deploy ahead of the tier. An omitted key and an
-      // explicit null both have to parse, and both read as complete, rather
-      // than taking the whole typeahead down over one caveat.
+    it("survives an autocomplete service that predates the field, omitted or null", () => {
+      // The console can deploy ahead of the autocomplete service. An omitted
+      // key and an explicit null both have to parse, and both read as complete,
+      // rather than taking the whole typeahead down over one caveat.
       expect(parseBusinessesResponse(response).truncated).toBe(false);
       expect(
         parseBusinessesResponse({ ...response, truncated: null }).truncated,
@@ -371,7 +374,7 @@ describe("a business suggestion", () => {
     }
   });
 
-  it("hands back exactly the contract, whatever else the tier sent", () => {
+  it("hands back exactly the contract, whatever else the autocomplete service sent", () => {
     const parsed = parseBusinessesResponse({
       ...response,
       elapsed_ms: 4,
@@ -384,7 +387,7 @@ describe("a business suggestion", () => {
 });
 
 describe("parseErrorEnvelope", () => {
-  it("reads the catalog envelope the tier and the API refuse with", () => {
+  it("reads the catalog envelope the autocomplete service and the API refuse with", () => {
     expect(
       parseErrorEnvelope({
         code: 480,

@@ -25,7 +25,8 @@ const cinder: BusinessSuggestion = {
   matched_name: "EMBERLINE",
   match: "strong",
   domicile_state: "DE",
-  // Sorted, as the tier returns them; the domicile is not first here on purpose.
+  // Sorted, as the autocomplete service returns them; the domicile is not first
+  // here on purpose.
   states: ["CA", "DE", "FL", "IL", "MA", "MO", "NY"],
   structure: "C_CORPORATION",
   related: {
@@ -61,8 +62,9 @@ const cinder: BusinessSuggestion = {
       count: 2,
       matched: null,
       truncated: false,
-      // In the tier's order: nothing filed in Delaware, so the ladder runs
-      // through the other states, own filings by role before the agent's.
+      // In the autocomplete service's order: nothing filed in Delaware, so the
+      // ladder runs through the other states, own filings by role before the
+      // agent's.
       items: [
         {
           type: "address",
@@ -258,8 +260,9 @@ describe("BusinessAutocompleteView", () => {
   });
 
   it("counts the officers beyond the head in the +N, not just the head", () => {
-    // Twelve officers on the family, three in the head (the tier's cap). The
-    // head arithmetic alone said "+2"; the family says eleven more.
+    // Twelve officers on the family, three in the head (the autocomplete
+    // service's cap). The head arithmetic alone said "+2"; the family says
+    // eleven more.
     const crowded: BusinessSuggestion = {
       ...cinder,
       token: "tok-crowded",
@@ -671,8 +674,9 @@ const agentsOnly: BusinessSuggestion = {
   },
 };
 
-// The tier splits the name it matched into parts and marks the words a typed
-// token starts; concatenated, the parts spell that name. Here `cind` was typed.
+// The autocomplete service splits the name it matched into parts and marks the
+// words a typed token starts; concatenated, the parts spell that name. Here
+// `cind` was typed.
 const stableMarked: BusinessSuggestion = {
   ...stable,
   highlight: [
@@ -703,7 +707,8 @@ describe("the match marks", () => {
     expect(name).toHaveAttribute("data-emphasis", "underline");
     expect(root).toHaveAttribute("data-emphasis", "underline");
     expect(root).toHaveAttribute("data-region", "substring");
-    // "cind" typed: its characters, not the whole word the tier marked.
+    // "cind" typed: its characters, not the whole word the autocomplete service
+    // marked.
     expect(marksOf(row)).toEqual(["CIND"]);
     // The underline is the stylesheet's, keyed on the mark's class.
     expect(screen.getByTestId("business-suggestion-match")).toHaveClass(
@@ -745,9 +750,10 @@ describe("the match marks", () => {
   });
 
   it("marks nothing on a row the query reached some other way", () => {
-    // An officer or an address matched: the tier sends no parts. And parts
-    // that spell neither name belong to nothing on the row, so they are not
-    // drawn either: the name is shown as it is rather than half-marked.
+    // An officer or an address matched: the autocomplete service sends no
+    // parts. And parts that spell neither name belong to nothing on the row, so
+    // they are not drawn either: the name is shown as it is rather than
+    // half-marked.
     const unmarked: BusinessSuggestion = { ...stable, highlight: [] };
     renderTypeahead({ suggestions: [unmarked, cinder], found: 2 });
 
@@ -776,7 +782,8 @@ describe("the match marks", () => {
   });
 
   it("marks only the typed characters under the substring region", () => {
-    // `cind` is the value in the field; the tier marked the whole word.
+    // `cind` is the value in the field; the autocomplete service marked the
+    // whole word.
     const { root } = renderTypeahead({
       suggestions: [stableMarked],
       found: 1,
@@ -792,7 +799,8 @@ describe("the match marks", () => {
   });
 
   it("marks every typed word of a two-word match, whichever region", () => {
-    // `harbor concrete`: the tier bridges the two matched words into one part.
+    // `harbor concrete`: the autocomplete service bridges the two matched words
+    // into one part.
     const harbor: BusinessSuggestion = {
       ...stable,
       token: "tok-harbor",

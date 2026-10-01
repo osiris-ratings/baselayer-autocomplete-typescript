@@ -1,19 +1,20 @@
 /**
  * The wire shapes of `GET /autocomplete/{relation}` and the error envelope, as
- * the tier serves them: snake_case, nulls spelled out. Every route answers
- * the same envelope and the same row, and each entity type adds its own
- * fields to the row (see `entities.ts`; only businesses is served today).
+ * the autocomplete service serves them: snake_case, nulls spelled out. Every
+ * route answers the same envelope and the same row, and each entity type adds
+ * its own fields to the row (see `entities.ts`; only businesses is served
+ * today).
  *
  * Hand-written types and a small structural validator rather than a schema
  * library. Three shapes do not justify a validator dependency in a snippet
  * customers embed on their own pages, and every host would have to agree on
  * its version.
  *
- * Two liberties, both so a tier release never turns every keystroke into a
- * contract error over a new value or a field it adds. Closed enums
- * (`RelatedItem.type`, `match`, `sources.*.status`, `structure`) are read as
- * strings, so a value this build does not know is kept. And the keys the
- * tier's OpenAPI leaves out of `required` (`matched_name`,
+ * Two liberties, both so an autocomplete service release never turns every
+ * keystroke into a contract error over a new value or a field it adds. Closed
+ * enums (`RelatedItem.type`, `match`, `sources.*.status`, `structure`) are read
+ * as strings, so a value this build does not know is kept. And the keys the
+ * autocomplete service's OpenAPI leaves out of `required` (`matched_name`,
  * `RelatedItem.token`, `role`, `RelatedSet.count`, `RelatedSet.matched`,
  * `structure`) may be absent as well as null; either reads as null.
  */
@@ -50,8 +51,9 @@ export interface RelatedSet {
 }
 
 /**
- * One part of a name as the tier split it: a word a typed token starts, or
- * the text between such words. The parts concatenate to the name they mark.
+ * One part of a name as the autocomplete service split it: a word a typed token
+ * starts, or the text between such words. The parts concatenate to the name
+ * they mark.
  */
 export interface HighlightPart {
   text: string;
@@ -62,8 +64,8 @@ export interface HighlightPart {
 export interface SuggestionBase<T extends EntityType, R extends Relation> {
   type: T;
   /**
-   * An opaque handle for the entity, sealed by the tier. A business's is
-   * passed back verbatim as `business_token` on `POST /searches`.
+   * An opaque handle for the entity, sealed by the autocomplete service. A
+   * business's is passed back verbatim as `business_token` on `POST /searches`.
    */
   token: string;
   label: string;
@@ -79,7 +81,10 @@ export interface SuggestionBase<T extends EntityType, R extends Relation> {
   highlight: HighlightPart[];
 }
 
-/** The legal structures the tier knows, in the order its contract lists them. */
+/**
+ * The legal structures the autocomplete service knows, in the order its
+ * contract lists them.
+ */
 export const BUSINESS_STRUCTURES = [
   "SOLE_PROPRIETORSHIP",
   "GENERAL_PARTNERSHIP",
@@ -104,7 +109,7 @@ export const BUSINESS_STRUCTURES = [
 
 /**
  * A business's legal structure: one of `BUSINESS_STRUCTURES`, or a value a
- * newer tier sends, kept as the string it is.
+ * newer autocomplete service sends, kept as the string it is.
  */
 // `string & {}` admits any string and keeps the known values' completions.
 export type BusinessStructure =
@@ -118,7 +123,8 @@ export interface BusinessSuggestion extends SuggestionBase<
   states: string[];
   /**
    * The legal structure the domicile registration is filed under, as the
-   * tier spells it (`structureLabel` draws it); null when it is not known.
+   * autocomplete service spells it (`structureLabel` draws it); null when it is
+   * not known.
    */
   structure: BusinessStructure | null;
 }
@@ -174,9 +180,9 @@ export interface SuggestResponse<R extends Relation = "businesses"> {
   /** The count stopped at the cap: `found` is a floor, drawn as `500+`. */
   found_capped: boolean;
   /**
-   * The tier did not finish looking, so a matching entity may be missing.
-   * Absent or null reads as `false`: a tier that predates the field is
-   * complete by definition.
+   * The autocomplete service did not finish looking, so a matching entity may
+   * be missing. Absent or null reads as `false`: an autocomplete service that
+   * predates the field is complete by definition.
    */
   truncated: boolean;
   /** One per relation the route can expand; read it before an empty `related`. */
@@ -186,7 +192,10 @@ export interface SuggestResponse<R extends Relation = "businesses"> {
 
 export type BusinessesResponse = SuggestResponse<"businesses">;
 
-/** The catalog envelope the API and the tier answer refusals with. */
+/**
+ * The catalog envelope the API and the autocomplete service answer refusals
+ * with.
+ */
 export interface ErrorEnvelope {
   code: number;
   message: string;

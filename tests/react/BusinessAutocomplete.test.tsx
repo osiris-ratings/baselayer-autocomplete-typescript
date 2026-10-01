@@ -101,7 +101,7 @@ function businessesBody(q: string) {
   };
 }
 
-function isTierCall(url: string): boolean {
+function isAutocompleteCall(url: string): boolean {
   return url.startsWith(`${BASE_URL}/autocomplete/businesses`);
 }
 
@@ -109,10 +109,10 @@ function queryOf(url: string): string | null {
   return new URL(url).searchParams.get("q");
 }
 
-/** The tier: answers every keystroke with two rows. */
-function tierFetch() {
+/** The autocomplete service: answers every keystroke with two rows. */
+function autocompleteFetch() {
   return vi.fn<FetchLike>(async url => {
-    if (!isTierCall(url)) {
+    if (!isAutocompleteCall(url)) {
       throw new Error(`unexpected fetch ${url}`);
     }
     return jsonResponse(200, businessesBody(queryOf(url) ?? ""), {
@@ -185,8 +185,8 @@ afterEach(() => {
 describe("BusinessAutocomplete", () => {
   it("mints once for a burst of keystrokes and shows the rows", async () => {
     // The `mint` + `baseUrl` path: the component owns its client, and the
-    // tier is reached through the page's `fetch`.
-    const fetch = tierFetch();
+    // autocomplete service is reached through the page's `fetch`.
+    const fetch = autocompleteFetch();
     vi.stubGlobal("fetch", fetch);
     const mint = grantingMint();
     const user = userEvent.setup();
@@ -199,7 +199,7 @@ describe("BusinessAutocomplete", () => {
     expect(rows[0]).toHaveTextContent("CINDER RIGGING, INC.");
     expect(mint).toHaveBeenCalledTimes(1);
     expect(mint.mock.calls[0]?.[0].reason).toBe("cold");
-    // Nothing under the floor reached the tier.
+    // Nothing under the floor reached the autocomplete service.
     const queries = fetch.mock.calls.map(([url]) => queryOf(url));
     expect(queries).not.toContain("o");
     expect(queries).not.toContain("os");
@@ -209,8 +209,8 @@ describe("BusinessAutocomplete", () => {
     });
   });
 
-  it("asks the tier for what its layout shows, and no more", async () => {
-    const fetch = tierFetch();
+  it("asks the autocomplete service for what its layout shows, and no more", async () => {
+    const fetch = autocompleteFetch();
     vi.stubGlobal("fetch", fetch);
     const user = userEvent.setup();
     render(
@@ -228,8 +228,8 @@ describe("BusinessAutocomplete", () => {
     expect(url.searchParams.get("include")).toBe("people");
   });
 
-  it("leaves include to the tier when no placed field needs a related entity", async () => {
-    const fetch = tierFetch();
+  it("leaves include to the autocomplete service when no placed field needs a related entity", async () => {
+    const fetch = autocompleteFetch();
     vi.stubGlobal("fetch", fetch);
     const user = userEvent.setup();
     render(
@@ -243,13 +243,13 @@ describe("BusinessAutocomplete", () => {
     await user.type(input(), "cinder");
     await screen.findAllByTestId("business-suggestion");
 
-    // An empty include is refused by the tier, so none is sent.
+    // An empty include is refused by the autocomplete service, so none is sent.
     const url = new URL(fetch.mock.calls.at(-1)?.[0] ?? "");
     expect(url.searchParams.has("include")).toBe(false);
   });
 
-  it("asks the tier for what include names, whatever the layout places, for rows a host draws itself", async () => {
-    const fetch = tierFetch();
+  it("asks the autocomplete service for what include names, whatever the layout places, for rows a host draws itself", async () => {
+    const fetch = autocompleteFetch();
     vi.stubGlobal("fetch", fetch);
     const user = userEvent.setup();
     render(
@@ -273,8 +273,8 @@ describe("BusinessAutocomplete", () => {
     expect(row).toHaveTextContent("CINDER RIGGING, INC. ·");
   });
 
-  it("leaves include to the tier when include is empty", async () => {
-    const fetch = tierFetch();
+  it("leaves include to the autocomplete service when include is empty", async () => {
+    const fetch = autocompleteFetch();
     vi.stubGlobal("fetch", fetch);
     const user = userEvent.setup();
     render(
@@ -293,7 +293,7 @@ describe("BusinessAutocomplete", () => {
   });
 
   it("keeps its rows on screen after the field loses focus while held open", async () => {
-    vi.stubGlobal("fetch", tierFetch());
+    vi.stubGlobal("fetch", autocompleteFetch());
     const user = userEvent.setup();
     render(
       <>
@@ -315,7 +315,7 @@ describe("BusinessAutocomplete", () => {
   });
 
   it("draws each field where its layout places it, and asks for what it draws", async () => {
-    const fetch = tierFetch();
+    const fetch = autocompleteFetch();
     vi.stubGlobal("fetch", fetch);
     const user = userEvent.setup();
     render(
@@ -342,8 +342,8 @@ describe("BusinessAutocomplete", () => {
     expect(url.searchParams.get("include")).toBe("addresses");
   });
 
-  it("draws the structure the tier sends after the name", async () => {
-    vi.stubGlobal("fetch", tierFetch());
+  it("draws the structure the autocomplete service sends after the name", async () => {
+    vi.stubGlobal("fetch", autocompleteFetch());
     const user = userEvent.setup();
     render(
       <Host
@@ -363,7 +363,7 @@ describe("BusinessAutocomplete", () => {
   });
 
   it("hands the host the pick and its token, and does not query the picked name", async () => {
-    const fetch = tierFetch();
+    const fetch = autocompleteFetch();
     const mint = grantingMint();
     const client = createAutocompleteClient({ baseUrl: BASE_URL, mint, fetch });
     const onChange = vi.fn<BusinessAutocompleteProps["onChange"]>();
@@ -406,7 +406,7 @@ describe("BusinessAutocomplete", () => {
   });
 
   it("mints when the field takes focus under mintOn focus, and the first keystroke uses that grant", async () => {
-    const fetch = tierFetch();
+    const fetch = autocompleteFetch();
     const mint = grantingMint();
     const client = createAutocompleteClient({ baseUrl: BASE_URL, mint, fetch });
     const user = userEvent.setup();
@@ -424,7 +424,7 @@ describe("BusinessAutocomplete", () => {
   });
 
   it("mints on the first keystroke by default, not on focus", async () => {
-    const fetch = tierFetch();
+    const fetch = autocompleteFetch();
     const mint = grantingMint();
     const client = createAutocompleteClient({ baseUrl: BASE_URL, mint, fetch });
     const user = userEvent.setup();
@@ -446,7 +446,7 @@ describe("BusinessAutocomplete", () => {
   });
 
   it("mints with the first request, and not before, under mintOn request", async () => {
-    const fetch = tierFetch();
+    const fetch = autocompleteFetch();
     const mint = grantingMint();
     const client = createAutocompleteClient({ baseUrl: BASE_URL, mint, fetch });
     const user = userEvent.setup();
@@ -463,8 +463,8 @@ describe("BusinessAutocomplete", () => {
     expect(mint.mock.calls[0]?.[0].reason).toBe("cold");
   });
 
-  it("never mints, nor asks the tier, while disabled", async () => {
-    const fetch = tierFetch();
+  it("never mints, nor asks the autocomplete service, while disabled", async () => {
+    const fetch = autocompleteFetch();
     const mint = grantingMint();
     const client = createAutocompleteClient({ baseUrl: BASE_URL, mint, fetch });
     const onChange = vi.fn<BusinessAutocompleteProps["onChange"]>();
@@ -482,7 +482,7 @@ describe("BusinessAutocomplete", () => {
     expect(screen.queryAllByTestId("business-suggestion")).toHaveLength(0);
   });
 
-  it("tells the host when the deployment cannot mint, and never asks the tier", async () => {
+  it("tells the host when the deployment cannot mint, and never asks the autocomplete service", async () => {
     // The `mintUrl` path: `defaultMint` posts to the host's backend, which
     // passes the API's 503 with code 481 through.
     const fetch = vi.fn<
@@ -542,7 +542,7 @@ describe("useAutocompleteSession", () => {
     const client = createAutocompleteClient({
       baseUrl: BASE_URL,
       mint,
-      fetch: tierFetch(),
+      fetch: autocompleteFetch(),
     });
     render(<SessionProbe client={client} />);
     const session = screen.getByTestId("session");
@@ -570,7 +570,7 @@ describe("useAutocompleteSession", () => {
     const client = createAutocompleteClient({
       baseUrl: BASE_URL,
       mint,
-      fetch: tierFetch(),
+      fetch: autocompleteFetch(),
     });
     render(<SessionProbe client={client} />);
 

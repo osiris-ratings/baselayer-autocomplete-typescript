@@ -3,7 +3,7 @@
 // status and size, the server's own time, and whether a newer keystroke
 // aborted it. Credentials are redacted before anything is kept.
 
-export type NetworkKind = "mint" | "tier" | "search" | "other";
+export type NetworkKind = "mint" | "autocomplete" | "search" | "other";
 export type NetworkOutcome = "pending" | "done" | "aborted" | "failed";
 
 export interface NetworkEntry {
@@ -21,7 +21,7 @@ export interface NetworkEntry {
   status: number | null;
   /** Bytes of the decoded response body. */
   size: number | null;
-  /** `Server-Timing` `total`, the tier's own time. */
+  /** `Server-Timing` `total`, the autocomplete service's own time. */
   serverMs: number | null;
   outcome: NetworkOutcome;
   requestHeaders: Record<string, string>;
@@ -59,7 +59,7 @@ function redact(name: string, value: string): string {
 /**
  * The string values of the keys that hold a credential: a mint's
  * `session_token`, a search's `business_token`, and the `token` every row of
- * the tier's answer carries, which is the same pick token.
+ * the autocomplete service's answer carries, which is the same pick token.
  */
 const TOKEN_VALUE =
   /("(?:session_token|business_token|token)"\s*:\s*")([^"\\]*)(")/g;
@@ -92,7 +92,7 @@ export function redactBody(text: string): string {
 
 export function kindOf(path: string): NetworkKind {
   if (path.startsWith("/autocomplete/sessions")) return "mint";
-  if (path.startsWith("/autocomplete/businesses")) return "tier";
+  if (path.startsWith("/autocomplete/businesses")) return "autocomplete";
   if (path.startsWith("/searches")) return "search";
   return "other";
 }

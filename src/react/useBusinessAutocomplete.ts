@@ -15,7 +15,7 @@ import type {
 import { useResolvedClient } from "./context";
 import { resolveMessages, type AutocompleteMessages } from "./messages";
 
-/** Characters before a keystroke goes to the tier. */
+/** Characters before a keystroke goes to the autocomplete service. */
 export const MIN_QUERY_CHARS = 3;
 /** One window per keystroke; a keystroke inside it cancels the pending one. */
 export const DEBOUNCE_MS = 250;
@@ -49,8 +49,8 @@ export interface EntityAutocompleteState<R extends Relation> {
   found: number;
   foundCapped: boolean;
   /**
-   * The tier did not finish looking, so `suggestions` may be missing a match
-   * and `found: 0` is not evidence of absence.
+   * The autocomplete service did not finish looking, so `suggestions` may be
+   * missing a match and `found: 0` is not evidence of absence.
    */
   truncated: boolean;
   indexTag: string | null;
@@ -166,8 +166,9 @@ export function useEntityAutocomplete<R extends Relation>({
         Math.max(0, until - Date.now()) + 1,
       );
     // Learnt by an earlier keystroke or by the prewarm on focus: while the API
-    // cannot mint there is nothing to ask the tier with. Checked ahead of the
-    // length floor so the fallback does not flap with every short query.
+    // cannot mint there is nothing to ask the autocomplete service with.
+    // Checked ahead of the length floor so the fallback does not flap with
+    // every short query.
     const session = resolved.getSnapshot().session;
     if (enabled && session.phase === "unavailable") {
       setState(unavailableState<R>());
