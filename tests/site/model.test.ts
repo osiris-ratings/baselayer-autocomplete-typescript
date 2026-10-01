@@ -19,7 +19,7 @@ describe("the reference's fields for a suggestion", () => {
   const rows = fieldRows(schema!);
   const row = (path: string) => rows.find(candidate => candidate.path === path);
 
-  it("describes a structure the tier may leave null, with every value it takes", () => {
+  it("describes a structure the autocomplete service may leave null, with every value it takes", () => {
     // The contract writes it as `oneOf: [null, $ref]`, with the description
     // on the second variant and the values on the schema it points at.
     const structure = row("suggestions[].structure");

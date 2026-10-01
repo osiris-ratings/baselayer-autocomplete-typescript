@@ -25,15 +25,18 @@ export interface SessionPolicy {
 }
 
 export interface RequestPolicy {
-  /** The longest a tier `rate_limited` reply may hold a keystroke before replaying. */
+  /**
+   * The longest an autocomplete service `rate_limited` reply may hold a
+   * keystroke before replaying.
+   */
   maxRetryAfterMs: number;
   /** The wait when a `rate_limited` reply carries no `Retry-After`. */
   defaultRetryAfterMs: number;
   /**
-   * Consecutive calls whose re-minted grant the tier refused again before the
-   * client stops minting. Two, not one: a single grant can die between the
-   * mint and the replay, a second fresh one refused is the tier and the API
-   * disagreeing.
+   * Consecutive calls whose re-minted grant the autocomplete service refused
+   * again before the client stops minting. Two, not one: a single grant can die
+   * between the mint and the replay, a second fresh one refused is the
+   * autocomplete service and the API disagreeing.
    */
   authFailuresBeforeBrake: number;
   /** How long the brake holds. */

@@ -240,7 +240,7 @@ export const TEXT_MESSAGES = [
 
 export type TextMessage = (typeof TEXT_MESSAGES)[number];
 
-/** A structure the tier knows, which the Text fold lists. */
+/** A structure the autocomplete service knows, which the Text fold lists. */
 export type Structure = (typeof BUSINESS_STRUCTURES)[number];
 
 /** Each structure's flag as the SDK draws it; "" for none. */
@@ -354,7 +354,7 @@ export function changedMessages(state: StyleState): [TextMessage, string][] {
   ).map(key => [key, state.messages[key]]);
 }
 
-/** The structure flags relabeled, in the tier's order. */
+/** The structure flags relabeled, in the autocomplete service's order. */
 export function changedStructures(state: StyleState): [Structure, string][] {
   return BUSINESS_STRUCTURES.filter(
     structure => state.structures[structure] !== STRUCTURE_FLAGS[structure],

@@ -83,9 +83,10 @@ interface CommonProps {
    */
   layout?: RowLayoutInput;
   /**
-   * The related entities the tier expands for each row: by default what
-   * `layout` places (`includeForLayout(layout)`). A host drawing its own rows
-   * with `renderRow` names what they read. Empty leaves it to the tier.
+   * The related entities the autocomplete service expands for each row: by
+   * default what `layout` places (`includeForLayout(layout)`). A host drawing
+   * its own rows with `renderRow` names what they read. Empty leaves it to the
+   * autocomplete service.
    */
   include?: Include[];
   /**
@@ -178,7 +179,7 @@ function Connected({
   const [pickedLabel, setPickedLabel] = useState<string | null>(null);
   // The fields drawn decide what is fetched unless the host says: a field
   // placed nowhere is not asked for. With none needing a related entity the
-  // tier's default stands, since it refuses an empty include.
+  // autocomplete service's default stands, since it refuses an empty include.
   const include = includeGiven ?? includeForLayout(layout);
   const { unavailable, errorKind, filtersWithheld, requestId, ...state } =
     useBusinessAutocomplete({

@@ -72,7 +72,7 @@
             ]
           },
           "token": {
-            "description": "Opaque handle for the family: pass it back verbatim as `business_token` on\n`POST /searches` to pre-identify the business the search resolves to.\nSealed by the tier, so a client cannot read the id inside, and the same\nfamily gets a different token every time. Bound to the session's\norganization and good for fifteen minutes; `POST /searches` refuses it\nfrom another organization (422, code 3040) or past its expiry (422, code\n3042).",
+            "description": "Opaque handle for the family: pass it back verbatim as `business_token` on\n`POST /searches` to pre-identify the business the search resolves to.\nSealed by the autocomplete service, so a client cannot read the id inside, and the same\nfamily gets a different token every time. Bound to the session's\norganization and good for fifteen minutes; `POST /searches` refuses it\nfrom another organization (422, code 3040) or past its expiry (422, code\n3042).",
             "type": "string"
           },
           "type": {
@@ -118,7 +118,7 @@
             "type": "array"
           },
           "truncated": {
-            "description": "The search did not finish: a deadline fired or a scan budget was spent, so\na business that matches may be missing from `suggestions` entirely.\n\nThe distinction that matters to a client is that `found: 0` with this set\nis NOT evidence of absence \u2014 it means the tier stopped looking, usually\nbecause the pages it needed were cold. Rendered as a count (\"0 matches\")\nit tells the caller their business does not exist, which is a lie the UI\nused to tell. A complete answer, however few rows it has, leaves it false.",
+            "description": "The search did not finish: a deadline fired or a scan budget was spent, so\na business that matches may be missing from `suggestions` entirely.\n\nThe distinction that matters to a client is that `found: 0` with this set\nis NOT evidence of absence \u2014 it means the autocomplete service stopped looking, usually\nbecause the pages it needed were cold. Rendered as a count (\"0 matches\")\nit tells the caller their business does not exist, which is a lie the UI\nused to tell. A complete answer, however few rows it has, leaves it false.",
             "type": "boolean"
           }
         },
@@ -224,7 +224,7 @@
             ]
           },
           "token": {
-            "description": "Opaque handle for this person or address, sealed the same way the\nsuggestion's own `token` is and bound to the same organization and\ndeadline. Nothing redeems one yet \u2014 the route that resolves a person or an\naddress is still to come. The subject sealed inside names the corpus it\nwill be resolved from, so that route can be written against the handles\nthis build already mints \u2014 what survives is the FORMAT, not any handle:\nevery one of these expires a quarter of an hour after it is sealed.\nNull when the tier cannot name the row: its id was unreadable, or it\nbelongs to a corpus this build has no `Subject` for \u2014 a `people.anchor_kind`\na newer builder writes reaches an older tier as an unsealed item rather\nthan as a person resolved in the wrong table.",
+            "description": "Opaque handle for this person or address, sealed the same way the\nsuggestion's own `token` is and bound to the same organization and\ndeadline. Nothing redeems one yet \u2014 the route that resolves a person or an\naddress is still to come. The subject sealed inside names the corpus it\nwill be resolved from, so that route can be written against the handles\nthis build already mints \u2014 what survives is the FORMAT, not any handle:\nevery one of these expires a quarter of an hour after it is sealed.\nNull when the autocomplete service cannot name the row: its id was unreadable, or it\nbelongs to a corpus this build has no `Subject` for \u2014 a `people.anchor_kind`\na newer builder writes reaches an older autocomplete service as an unsealed item rather\nthan as a person resolved in the wrong table.",
             "type": [
               "string",
               "null"

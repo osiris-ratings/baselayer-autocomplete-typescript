@@ -277,7 +277,9 @@ interface DefaultRowProps {
   /** The layout as the row draws it (`drawnRowLayout`), one for every row. */
   layout: RowLayout;
   look: Look;
-  /** What was typed, as the tier tokenizes it (`queryTokens`). */
+  /**
+   * What was typed, as the autocomplete service tokenizes it (`queryTokens`).
+   */
   tokens: string[];
   text: AutocompleteMessages;
   cx: ClassFor;
@@ -491,8 +493,8 @@ export function BusinessAutocompleteView({
     hasFooter,
     open,
   });
-  // What was typed, as the tier tokenizes it, for cutting a marked word down
-  // to the typed characters under the `substring` region.
+  // What was typed, as the autocomplete service tokenizes it, for cutting a
+  // marked word down to the typed characters under the `substring` region.
   const tokens = queryTokens(value);
   const { hasRows, menuVisible, highlightedIndex } = combobox;
   const hasCountRow = combobox.isOpen && hasFooter;

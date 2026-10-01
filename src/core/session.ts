@@ -9,7 +9,7 @@ import type { SessionPolicy } from "./policy";
 
 /**
  * A grant as the client holds it: what the mint said, plus when to refresh it
- * and when the tier stops honoring it.
+ * and when the autocomplete service stops honoring it.
  */
 export interface Grant extends MintedGrant {
   /** Epoch ms of the mint. */
@@ -17,8 +17,8 @@ export interface Grant extends MintedGrant {
   /** Epoch ms after which the grant is refreshed before use. */
   refreshAt: number;
   /**
-   * Epoch ms at which the tier stops honoring the grant, by the local clock:
-   * the mint plus `expiresIn`, whatever `expiresAtUtc` says.
+   * Epoch ms at which the autocomplete service stops honoring the grant, by the
+   * local clock: the mint plus `expiresIn`, whatever `expiresAtUtc` says.
    */
   expiresAt: number;
 }
@@ -73,11 +73,12 @@ export class SessionManager {
   private inFlightReason: MintReason = "cold";
   /**
    * The grant an in-flight mint falls back on if it fails: the one it is
-   * replacing, for as long as the tier still honors it. A field rather than
-   * a closure capture so that `force` can WITHDRAW it: a refresh starts at 80 %
-   * of the TTL, the tier can refuse that same grant while the refresh is in
-   * the air, and a forced caller that joins the running mint must not be
-   * handed the refused grant back when that mint fails.
+   * replacing, for as long as the autocomplete service still honors it. A field
+   * rather than a closure capture so that `force` can WITHDRAW it: a refresh
+   * starts at 80 % of the TTL, the autocomplete service can refuse that same
+   * grant while the refresh is in the air, and a forced caller that joins the
+   * running mint must not be handed the refused grant back when that mint
+   * fails.
    */
   private fallback: Grant | null = null;
   private unavailableUntil = 0;
@@ -136,11 +137,11 @@ export class SessionManager {
   /**
    * The current grant, minting or refreshing when needed.
    *
-   * `force` discards the cached grant first (the tier just refused it), and
-   * withdraws it as the fallback of a mint already in flight, the only other
-   * place it survives. While the API has said it cannot mint (503 with the
-   * sessions-not-configured code) this rejects at once, without a request,
-   * until the cooldown has passed.
+   * `force` discards the cached grant first (the autocomplete service just
+   * refused it), and withdraws it as the fallback of a mint already in flight,
+   * the only other place it survives. While the API has said it cannot mint
+   * (503 with the sessions-not-configured code) this rejects at once, without a
+   * request, until the cooldown has passed.
    */
   getSession({
     force = false,
@@ -300,10 +301,10 @@ export class SessionManager {
       throw this.unavailableError(this.unavailableUntil);
     }
     // A refresh starts at 80 % of the TTL, so a mint can fail while the grant
-    // it was replacing is still one the tier honors, and the caller who walks
-    // into the mint limiter is exactly the one who has been typing. Serve it,
-    // and hold the next attempt off so the rest of its life is not one mint
-    // per keystroke.
+    // it was replacing is still one the autocomplete service honors, and the
+    // caller who walks into the mint limiter is exactly the one who has been
+    // typing. Serve it, and hold the next attempt off so the rest of its life
+    // is not one mint per keystroke.
     const refreshing = this.fallback;
     if (refreshing !== null && now < refreshing.expiresAt) {
       this.cached = {

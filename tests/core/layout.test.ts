@@ -428,7 +428,7 @@ describe("a layout drawn line by line", () => {
 });
 
 describe("includeForLayout", () => {
-  it("asks for the people and the addresses by default, in the tier's order", () => {
+  it("asks for the people and the addresses by default, in the autocomplete service's order", () => {
     expect(includeForLayout()).toEqual(["people", "addresses"]);
     expect(includeForLayout(DEFAULT_ROW_LAYOUT)).toEqual([
       "people",

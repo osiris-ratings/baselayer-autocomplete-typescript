@@ -104,7 +104,7 @@ function result(
   };
 }
 
-/** A failed tier request. */
+/** A failed autocomplete service request. */
 function requestFailed(
   status: number,
   message: string,
@@ -268,7 +268,7 @@ describe("useBusinessAutocomplete", () => {
     expect(hook.current.indexTag).toBeNull();
   });
 
-  it("shows the tier's own message and a short fallback for anything else", async () => {
+  it("shows the autocomplete service's own message and a short fallback for anything else", async () => {
     client.suggest
       .mockRejectedValueOnce(
         requestFailed(
@@ -421,7 +421,7 @@ describe("useBusinessAutocomplete", () => {
     expect(hook.current.suggestions).toHaveLength(1);
   });
 
-  it("does not reach the tier while the sessions are known to be unavailable", async () => {
+  it("does not reach the autocomplete service while the sessions are known to be unavailable", async () => {
     // The prewarm on focus already learnt it, before any keystroke.
     client.getSnapshot.mockReturnValue(
       snapshotWith({ phase: "unavailable", until: Date.now() + 60_000 }),
@@ -581,7 +581,7 @@ describe("useBusinessAutocomplete, the SDK's own failures", () => {
     expect(hook.current.errorKind).toBeNull();
   });
 
-  it("says nothing about a query the tier would refuse", async () => {
+  it("says nothing about a query the autocomplete service would refuse", async () => {
     client.suggest.mockRejectedValueOnce(
       new AutocompleteError({
         kind: "query_invalid",

@@ -54,7 +54,8 @@ staged look over them as the component does, and `MATCH_EMPHASES` and
 `MATCH_REGIONS` list the accepted values.
 
 `substring`, the default, marks only the characters typed of each word;
-`token` marks the whole word a typed token begins, as the tier sends it:
+`token` marks the whole word a typed token begins, as the autocomplete service
+sends it:
 
 ![Whole-word marks](images/typeahead-har-con-pum-token.png)
 
@@ -290,9 +291,9 @@ The placed fields also decide what is fetched: `address` asks for the
 addresses and `people` for the people (officers and registered agents),
 while the states and the structure come on the row itself.
 `includeForLayout(layout)` in the core says what a layout asks for. With
-neither placed, the tier refuses an empty `include`, so none is sent and its
-default, people and addresses, stands. A form that fills an address from
-the pick keeps the address placed. `include` on `BusinessAutocomplete` asks
+neither placed, the autocomplete service refuses an empty `include`, so none is
+sent and its default, people and addresses, stands. A form that fills an address
+from the pick keeps the address placed. `include` on `BusinessAutocomplete` asks
 for what it names instead, whatever the layout places: rows you draw with
 `renderRow` name what they read, `include={["people"]}`.
 
@@ -369,8 +370,8 @@ while `isSearching`, when `error` is set, or once `roundTripMs` is not null,
 so a preview with `roundTripMs={null}` has none. It reads "Searching…" while
 searching with no rows yet, `error`'s text in place of the count, or the
 `found` matches (`N+` with `foundCapped`); with `truncated`, a note that the
-tier did not finish looking takes the count's place. `onSelect` hands over
-the picked row and leaves the input to you. The view also takes the
+autocomplete service did not finish looking takes the count's place. `onSelect`
+hands over the picked row and leaves the input to you. The view also takes the
 component's `label`, `renderLabel`, `renderInput`, `renderRow`, `classNames`,
 `unstyled`, `layout`, `menuFollowsInputWidth` and `messages`, and `inputName`,
 `inputRef`, `onInputFocus` and `onInputBlur` for its input.

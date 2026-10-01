@@ -7,7 +7,8 @@
  * this module is them in code:
  *
  * 1. Forward the page's `Origin`. The API binds the grant to whatever Origin
- *    it receives, and the tier refuses the grant from any other page. A mint
+ * it receives, and the autocomplete service refuses the grant from any other
+ * page. A mint
  *    without one produces an unbound grant that works from anywhere.
  * 2. Pass the answer through unchanged: the status, the JSON body and
  *    `Retry-After`. The browser SDK reads all three to decide whether to wait

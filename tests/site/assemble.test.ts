@@ -22,7 +22,9 @@ const read = (path: string): unknown =>
     ),
   );
 
-const tier = read("contracts/tier-openapi.json") as OpenApiDocument;
+const autocomplete = read(
+  "contracts/autocomplete-openapi.json",
+) as OpenApiDocument;
 const sessions = read("contracts/sessions-openapi.json") as OpenApiDocument;
 const overlay = parse(
   readFileSync(
@@ -177,7 +179,7 @@ describe("normalizeMarkdown", () => {
 });
 
 describe("assembleReference", () => {
-  const reference = assembleReference({ tier, sessions, overlay });
+  const reference = assembleReference({ autocomplete, sessions, overlay });
 
   it("documents exactly the two public routes", () => {
     expect(

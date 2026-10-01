@@ -3,15 +3,16 @@
 ## What the browser holds
 
 A **session**: a signed token, minted by Baselayer for your organization,
-that the autocomplete tier accepts in the `X-Autocomplete-Session` header.
+that the autocomplete service accepts in the `X-Autocomplete-Session` header.
 
 - It expires in minutes (180 s by default) and carries its own request
   budget and pivot allowance, so a session copied out of a page is worth one
   person's typing, not a scan of the registry.
 - It is bound to the `Origin` your backend forwarded when it was minted. The
-  tier refuses it from any other page, and refuses it when a request carries
-  no `Origin` at all.
-- It is sent with `credentials: "omit"`: no cookie ever travels to the tier.
+  autocomplete service refuses it from any other page, and refuses it when a
+  request carries no `Origin` at all.
+- It is sent with `credentials: "omit"`: no cookie ever travels to the
+  autocomplete service.
 - By default it lives in memory, one per tab. `persistGrant:
 "sessionStorage"` keeps it across reloads of the same tab, never across
   tabs or origins.

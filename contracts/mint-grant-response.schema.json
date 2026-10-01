@@ -20,7 +20,7 @@
     "expires_in": {
       "type": "integer",
       "minimum": 1,
-      "description": "Seconds until the tier stops honouring the grant; refresh at about 80 %."
+      "description": "Seconds until the autocomplete service stops honouring the grant; refresh at about 80 %."
     },
     "expires_at": {
       "type": "string",

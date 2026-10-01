@@ -3,7 +3,10 @@
  * branch on `kind`; the other fields carry what the answer said.
  */
 export type AutocompleteErrorKind =
-  /** `q` or `limit` outside what the tier accepts; nothing was sent. */
+  /**
+   * `q` or `limit` outside what the autocomplete service accepts; nothing was
+   * sent.
+   */
   | "query_invalid"
   /** The deployment cannot mint sessions (503 code 481); `until` ends it. */
   | "session_unavailable"
@@ -13,7 +16,7 @@ export type AutocompleteErrorKind =
   | "mint_refused"
   /** Two fresh grants were refused in a row; minting is off until `until`. */
   | "auth_braked"
-  /** The tier refused and no recovery applied. */
+  /** The autocomplete service refused and no recovery applied. */
   | "request_failed"
   /** A body did not match the wire types. */
   | "contract";
@@ -27,7 +30,7 @@ export interface AutocompleteErrorFields {
   status?: number | null;
   /** The catalog code from the envelope. */
   code?: number | null;
-  /** The tier's `metadata.reason`. */
+  /** The autocomplete service's `metadata.reason`. */
   reason?: string | null;
   /** Epoch ms at which a cooldown ends. */
   until?: number | null;

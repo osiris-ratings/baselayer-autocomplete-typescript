@@ -63,7 +63,7 @@ describe("refusedThePin", () => {
 });
 
 describe("BUSINESS_TOKEN_TTL_SECONDS", () => {
-  it("is the fifteen minutes the tier seals a token for", () => {
+  it("is the fifteen minutes the autocomplete service seals a token for", () => {
     expect(BUSINESS_TOKEN_TTL_SECONDS).toBe(900);
   });
 });

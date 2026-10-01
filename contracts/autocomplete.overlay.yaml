@@ -1,10 +1,10 @@
 # OpenAPI Overlay 1.0.0 for the API reference the site publishes.
 #
 # The reference is generated from contracts/sessions-openapi.json and
-# contracts/tier-openapi.json, the specs the API publishes. This overlay
-# carries what those specs do not say yet. Every action says where upstream
-# its text belongs; once it is there, the action goes, and when this file is
-# empty the reference is the upstream specs alone.
+# contracts/autocomplete-openapi.json, the specs the API publishes. This
+# overlay carries what those specs do not say yet. Every action says where
+# upstream its text belongs; once it is there, the action goes, and when this
+# file is empty the reference is the upstream specs alone.
 #
 # A target that matches nothing fails the build (site/api/spec/assemble.ts),
 # so a route renamed upstream cannot leave stale text behind.
@@ -34,7 +34,7 @@ actions:
         - name: Errors
           x-traitTag: true
           description: |
-            Every refusal carries a `code`, a `message` a person can read, and `metadata` a program can act on. On the tier, `metadata.reason` names the refusal and `metadata.action` says whether to `mint` or `retry`. A 422 carries `{ "detail": [{ "type", "loc", "msg", "ctx" }] }` instead.
+            Every refusal carries a `code`, a `message` a person can read, and `metadata` a program can act on. On the autocomplete service, `metadata.reason` names the refusal and `metadata.action` says whether to `mint` or `retry`. A 422 carries `{ "detail": [{ "type", "loc", "msg", "ctx" }] }` instead.
 
             | Status | Code | Reason | What to do |
             | --- | --- | --- | --- |
@@ -88,9 +88,10 @@ actions:
           required: true
           description: >-
             The origin of the page that will use the session, forwarded from
-            the browser's request to your backend. The tier refuses the
-            session from any other origin. Without it the session is unbound
-            and works from anywhere, so never mint one of those for a browser.
+            the browser's request to your backend. The autocomplete service
+            refuses the session from any other origin. Without it the session
+            is unbound and works from anywhere, so never mint one of those for
+            a browser.
           schema:
             type: string
             examples: ["https://app.example.com"]
@@ -189,19 +190,19 @@ actions:
             // out.status, out.headers (Retry-After) and out.body, to pass through
 
   - target: $.paths['/autocomplete/businesses'].get.parameters[?(@.name=='address.postal_code')]
-    description: Belongs upstream, in the tier's parameter docs.
+    description: Belongs upstream, in the autocomplete service's parameter docs.
     update:
       description: Postal code prefix, at most 16 characters.
 
   - target: $.paths['/autocomplete/businesses'].get.parameters[?(@.name=='address.state')]
-    description: Belongs upstream, in the tier's parameter docs.
+    description: Belongs upstream, in the autocomplete service's parameter docs.
     update:
       description: The address's state code.
 
   - target: $.paths['/autocomplete/businesses'].get
     description: >-
-      Belongs upstream, in the tier's OpenAPI annotations: the public
-      description, the Origin header, per-status detail, the 504, and
+      Belongs upstream, in the autocomplete service's OpenAPI annotations: the
+      public description, the Origin header, per-status detail, the 504, and
       examples.
     update:
       tags: [Businesses]

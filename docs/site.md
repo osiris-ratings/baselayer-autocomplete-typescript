@@ -30,7 +30,7 @@ document's tags, its fields from the schemas, its refusals from the
 responses, and its examples from `examples` and `x-codeSamples`.
 
 ```text
-contracts/tier-openapi.json          GET /autocomplete/businesses ─┐
+contracts/autocomplete-openapi.json  GET /autocomplete/businesses ─┐
 contracts/sessions-openapi.json      POST /autocomplete/sessions  ─┤
 contracts/autocomplete.overlay.yaml  what the specs lack          ─┘
                                                                    │ assemble
@@ -86,4 +86,5 @@ this site.
 
 The demo on the published page calls the API from the browser, so its
 origin must be on the API's CORS allowlist, for the mint and for the search
-the demo's third step runs. The tier itself answers CORS for any origin.
+the demo's third step runs. The autocomplete service itself answers CORS for any
+origin.

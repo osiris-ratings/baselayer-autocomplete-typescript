@@ -1,6 +1,6 @@
 # Error states
 
-The SDK answers every refusal the API and the autocomplete tier can send,
+The SDK answers every refusal the API and the autocomplete service can send,
 so a typing user never hammers a refusing API and never sees a message
 they cannot act on. Hosts read `state.errorKind` (from the hook) or
 `error.kind` (from the client) when they want to do more.
@@ -35,7 +35,7 @@ component prewarms on the first character by default
 first request's mint is the one refused, and it is shown. A 403 with code 37
 means autocomplete is not enabled for your organization.
 
-## Asking the tier
+## Asking the autocomplete service
 
 | Answer                               | Recovery                                 | Shown                               |
 | ------------------------------------ | ---------------------------------------- | ----------------------------------- |
@@ -45,7 +45,7 @@ means autocomplete is not enabled for your organization.
 | 429, code 482 (too many pivots)      | re-mint once, replay                     | nothing                             |
 | 429, `rate_limited`                  | wait `Retry-After` (at most 2 s), replay | nothing                             |
 | 422                                  | none                                     | the validation message              |
-| 503                                  | none                                     | the tier's message                  |
+| 503                                  | none                                     | the autocomplete service's message  |
 | 500, 504                             | none                                     | "Autocomplete unavailable (HTTP n)" |
 | the network                          | none                                     | "Autocomplete unavailable"          |
 | a 2xx whose body is not the contract | none                                     | "Autocomplete unavailable"          |
@@ -60,12 +60,13 @@ ends the same way; a re-mint that fails ends as the mint table says.
 
 Each keystroke recovers at most once. When a freshly minted session is
 refused again on two keystrokes in a row, the client rejects every search
-with `kind: "auth_braked"` for 60 s, asking neither the mint nor the tier,
-and the footer shows `authUnavailable`. So a disagreement between the API
-and the tier does not become a mint per keystroke. Nothing brings the
-suggestions back on its own: the first keystroke after the 60 s asks again.
-A refusal with `metadata.detail: "origin_mismatch"` means your backend did
-not forward the page's `Origin` (see [the mint endpoint](mint-endpoint.md)).
+with `kind: "auth_braked"` for 60 s, asking neither the mint nor the
+autocomplete service, and the footer shows `authUnavailable`. So a disagreement
+between the API and the autocomplete service does not become a mint per
+keystroke. Nothing brings the suggestions back on its own: the first keystroke
+after the 60 s asks again. A refusal with `metadata.detail: "origin_mismatch"`
+means your backend did not forward the page's `Origin` (see
+[the mint endpoint](mint-endpoint.md)).
 
 ## Before any request
 
@@ -105,7 +106,7 @@ second bundled copy of the core. Beside `kind` and `message` it carries:
 | -------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | `status`       | the HTTP status; 0 for a network failure                                                                               |
 | `code`         | the catalog code from the answer's envelope                                                                            |
-| `reason`       | the tier's `metadata.reason`; on `auth_braked`, the client's `"auth_unavailable"`                                      |
+| `reason`       | the autocomplete service's `metadata.reason`; on `auth_braked`, the client's `"auth_unavailable"`                      |
 | `until`        | epoch ms at which a cooldown, a mint's floor or the brake ends                                                         |
 | `scope`        | on a mint's 429, the pool that refused: `"window"` or `"day"` (`MintScope`)                                            |
 | `retryAfterMs` | ms until the next mint may be tried (`mint_backoff`, `mint_refused`), or the answer's `Retry-After` (`request_failed`) |

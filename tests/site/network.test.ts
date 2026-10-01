@@ -21,7 +21,7 @@ afterEach(() => {
 describe("kindOf", () => {
   it.each([
     ["/autocomplete/sessions", "mint"],
-    ["/autocomplete/businesses", "tier"],
+    ["/autocomplete/businesses", "autocomplete"],
     ["/searches", "search"],
     ["/searches/5f0c2d3e/status", "search"],
     ["/autocomplete/version", "other"],
@@ -31,7 +31,7 @@ describe("kindOf", () => {
 
   it("keeps a whole search report, which is bigger than 16 kB", () => {
     expect(maxBody("search")).toBeGreaterThan(100_000);
-    expect(maxBody("tier")).toBe(16_384);
+    expect(maxBody("autocomplete")).toBe(16_384);
     expect(maxBody("mint")).toBe(16_384);
   });
 });
@@ -63,7 +63,7 @@ describe("redactBody", () => {
 });
 
 describe("redactTokens", () => {
-  it("cuts the token every row of the tier's answer carries", () => {
+  it("cuts the token every row of the autocomplete service's answer carries", () => {
     const answer = JSON.stringify({
       suggestions: [{ type: "business", token: TOKEN, label: "ACME" }],
       next_token: "stays",
@@ -155,7 +155,7 @@ describe("NetworkLog.fetch", () => {
     const log = setUp(JSON.stringify({ suggestions: rows }), 200);
     await log.fetch("https://api.baselayer.com/autocomplete/businesses?q=acme");
     const entry = await finished(log);
-    expect(entry.kind).toBe("tier");
+    expect(entry.kind).toBe("autocomplete");
     // Over 16 kB, so the body is cut and is no longer JSON; no token is whole.
     expect(entry.body?.endsWith("\n…")).toBe(true);
     expect(entry.body).not.toContain(TOKEN);

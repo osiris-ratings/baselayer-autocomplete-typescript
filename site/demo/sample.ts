@@ -39,8 +39,8 @@ export function person(label: string, role: "officer" | "agent"): RelatedItem {
 }
 
 /**
- * A name split as the tier splits it: each word a typed token starts is one
- * highlighted part, whole, and the text between words is another.
+ * A name split as the autocomplete service splits it: each word a typed token
+ * starts is one highlighted part, whole, and the text between words is another.
  */
 function highlight(name: string): HighlightPart[] {
   return name
@@ -170,8 +170,8 @@ const NOT_REQUESTED: RelatedSet = {
 /**
  * The sample rows as the knobs would have them come back: no more than
  * `limit`, and a relation no placed field asks for (`include`, from
- * `includeForLayout`) not sent, as the tier leaves it out. The other knobs
- * act on typing, which the sample has none of.
+ * `includeForLayout`) not sent, as the autocomplete service leaves it out. The
+ * other knobs act on typing, which the sample has none of.
  */
 export function sampleRows({
   limit,

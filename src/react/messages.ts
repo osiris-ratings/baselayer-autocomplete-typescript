@@ -3,9 +3,14 @@ import type { BusinessStructure } from "@baselayer-sdk/autocomplete";
 /** Every string the typeahead draws, overridable one at a time. */
 export interface AutocompleteMessages {
   searching: string;
-  /** The tier ran out of time or budget and found nothing yet. */
+  /**
+   * The autocomplete service ran out of time or budget and found nothing yet.
+   */
   truncatedNoRows: string;
-  /** The tier ran out of time or budget; the rows may be missing a match. */
+  /**
+   * The autocomplete service ran out of time or budget; the rows may be missing
+   * a match.
+   */
   truncatedRows: string;
   /** Footer noun for exactly one match. */
   match: string;
@@ -29,7 +34,7 @@ export interface AutocompleteMessages {
   unavailable: string;
   /** Two fresh sessions were refused in a row; minting is paused. */
   authUnavailable: string;
-  /** A tier refusal with no message of its own. */
+  /** An autocomplete service refusal with no message of its own. */
   httpFallback: (status: number) => string;
 }
 

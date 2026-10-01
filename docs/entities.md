@@ -44,8 +44,8 @@ const people = await client.search("people", {
 people.response.suggestions[0]?.related.businesses.count;
 ```
 
-One session serves every route; the tier counts its budget per route. Every
-recovery, cooldown and event works the same on each, and each
+One session serves every route; the autocomplete service counts its budget per
+route. Every recovery, cooldown and event works the same on each, and each
 `RequestEvent` names its `relation`.
 
 ## Rows
@@ -71,17 +71,17 @@ beside the name (see [Styling](styling.md#the-structures-flag)).
 
 Unknown fields are dropped and unknown enum values (`match`, `status`,
 `role`, `structure`, a source's status) are kept as the strings they are, so
-a tier that learns a new value never turns a keystroke into a contract
-error. A row of the wrong type on a route is one.
+an autocomplete service that learns a new value never turns a keystroke into a
+contract error. A row of the wrong type on a route is one.
 
 ## Filters
 
 Each route takes its own filters, typed by `FiltersByRelation`. A filter on
 a related entity is written as that relation, singular, with its field:
 `{ person: { name: "tim" } }` sends `person.name=tim`. Comma lists are
-arrays. The businesses route takes exactly what the tier serves today:
-`state`, `domicileState`, `person.name`, `person.role`, and `address.text`,
-`city`, `postalCode`, `state`.
+arrays. The businesses route takes exactly what the autocomplete service serves
+today: `state`, `domicileState`, `person.name`, `person.role`, and
+`address.text`, `city`, `postalCode`, `state`.
 
 ## React
 

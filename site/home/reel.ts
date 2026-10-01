@@ -1,6 +1,6 @@
-// What the overview's typeahead reel types, and what the tier answers each
-// stem with: three made-up businesses, typed a letter at a time and never
-// finished. None of these businesses, people or addresses is real.
+// What the overview's typeahead reel types, and what the autocomplete service
+// answers each stem with: three made-up businesses, typed a letter at a time
+// and never finished. None of these businesses, people or addresses is real.
 
 import { queryTokens } from "@baselayer-sdk/autocomplete";
 import type {
@@ -152,8 +152,9 @@ const LIMIT = 5;
 const FOUND_AT_THREE = 2840;
 
 /**
- * The words of `name` a token of `query` begins, marked whole, as the tier
- * marks them; the space between two marked words is marked with them.
+ * The words of `name` a token of `query` begins, marked whole, as the
+ * autocomplete service marks them; the space between two marked words is marked
+ * with them.
  */
 export function highlightFor(name: string, query: string): HighlightPart[] {
   const tokens = queryTokens(query);
@@ -192,10 +193,10 @@ function begins(row: BusinessSuggestion, token: string): boolean {
 }
 
 /**
- * The tier's answer to `typed`, a stem of the company's query: nothing under
- * three characters; else the rows every word but the one still being typed
- * begins, those it begins too first, and a count that narrows as the name
- * grows, down to the whole query's.
+ * The autocomplete service's answer to `typed`, a stem of the company's query:
+ * nothing under three characters; else the rows every word but the one still
+ * being typed begins, those it begins too first, and a count that narrows as
+ * the name grows, down to the whole query's.
  */
 export function answerFor(
   company: ReelCompany,

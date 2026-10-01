@@ -190,9 +190,9 @@ describe("buildBusinessesUrl", () => {
     );
   });
 
-  it("leaves the limit to the tier when none is given", () => {
-    // The console always sent `limit`, defaulting to 5; the tier's own default
-    // is 10, and the SDK does not second-guess it.
+  it("leaves the limit to the autocomplete service when none is given", () => {
+    // The console always sent `limit`, defaulting to 5; the autocomplete
+    // service's own default is 10, and the SDK does not second-guess it.
     expect(buildBusinessesUrl(BASE_URL, { q: "cind" })).toBe(
       "https://api.test/autocomplete/businesses?q=cind",
     );
@@ -221,7 +221,8 @@ describe("buildBusinessesUrl", () => {
     expect(url.origin + url.pathname).toBe(
       "https://api.test/autocomplete/businesses",
     );
-    // One entry per parameter: the tier answers 422 to a repeated one.
+    // One entry per parameter: the autocomplete service answers 422 to a
+    // repeated one.
     expect([...url.searchParams]).toEqual([
       ["q", "cinder"],
       ["limit", "5"],
@@ -306,10 +307,10 @@ describe("recoveryFor", () => {
   });
 });
 
-describe("the tier's measure of a query", () => {
-  it("depuncts the way the tier does", () => {
+describe("the autocomplete service's measure of a query", () => {
+  it("depuncts the way the autocomplete service does", () => {
     expect(depunct("Cinder & Co.")).toBe("cinder and co");
-    // The tier's own cases (`depunct_matches_the_wrapper`).
+    // The autocomplete service's own cases (`depunct_matches_the_wrapper`).
     expect(depunct("AT&T Corp.")).toBe("at and t corp");
     expect(depunct("Tri-City  o'brien")).toBe("tri city o brien");
     expect(depunct("  Café  ")).toBe("cafe");
@@ -337,7 +338,7 @@ describe("the tier's measure of a query", () => {
 });
 
 describe("client.suggest", () => {
-  it("sends the grant header and reads the index the tier answered from", async () => {
+  it("sends the grant header and reads the index the autocomplete service answered from", async () => {
     const { client, fetchImpl } = setup();
     fetchImpl.mockResolvedValue(
       reply(200, okBody, { [INDEX_HEADER]: "v1/202609131644" }),
@@ -393,7 +394,7 @@ describe("client.suggest", () => {
     expect(mintsFor(mint, "forced")).toBe(1);
   });
 
-  it("re-mints when the tier refused the session for changing its query too often", async () => {
+  it("re-mints when the autocomplete service refused the session for changing its query too often", async () => {
     const { client, fetchImpl, mint } = setup();
     fetchImpl
       .mockResolvedValueOnce(
@@ -427,7 +428,7 @@ describe("client.suggest", () => {
     expect(mint).toHaveBeenCalledTimes(1);
   });
 
-  it("waits a second on rate_limited when the tier sent no Retry-After", async () => {
+  it("waits a second on rate_limited when the autocomplete service sent no Retry-After", async () => {
     vi.useFakeTimers();
     const { client, fetchImpl } = setup();
     fetchImpl
@@ -537,7 +538,7 @@ describe("client.suggest", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(2);
   });
 
-  describe("the brake on a tier that keeps refusing fresh grants", () => {
+  describe("the brake on an autocomplete service that keeps refusing fresh grants", () => {
     // A key rotation out of step, or clock skew: every grant the API mints is
     // refused. Without a memory across keystrokes each debounce window would
     // mint again, and `POST /autocomplete/sessions` writes an Order per mint.
@@ -581,7 +582,8 @@ describe("client.suggest", () => {
         reason: "auth_unavailable",
         until: T0 + AUTH_BRAKE_MS,
       });
-      // Neither the tier nor the mint route heard from this keystroke.
+      // Neither the autocomplete service nor the mint route heard from this
+      // keystroke.
       expect(fetchImpl).toHaveBeenCalledTimes(2 * AUTH_FAILURES_BEFORE_BRAKE);
       expect(mint).toHaveBeenCalledTimes(1 + AUTH_FAILURES_BEFORE_BRAKE);
 
@@ -621,10 +623,11 @@ describe("client.suggest", () => {
     });
 
     it("does not count a rate limit waited out and then followed by an expiry", async () => {
-      // The brake means "the tier and the API disagree about a grant this client
-      // just minted". A `rate_limited` reply spends the one recovery on a wait,
-      // and a grant that expires during that wait is a grant dying of old age:
-      // nothing was ever re-minted, so nothing here says anything about auth.
+      // The brake means "the autocomplete service and the API disagree about a
+      // grant this client just minted". A `rate_limited` reply spends the one
+      // recovery on a wait, and a grant that expires during that wait is a
+      // grant dying of old age: nothing was ever re-minted, so nothing here
+      // says anything about auth.
       vi.useFakeTimers();
       const { client, fetchImpl, mint } = setup();
 
@@ -646,7 +649,7 @@ describe("client.suggest", () => {
       expect(mintsFor(mint, "forced")).toBe(0);
 
       // Past what would have armed the brake, the next keystroke still reaches
-      // the tier rather than failing with `auth_unavailable`.
+      // the autocomplete service rather than failing with `auth_unavailable`.
       fetchImpl.mockResolvedValue(reply(200, okBody));
       const before = fetchImpl.mock.calls.length;
       await expect(client.suggest({ q: "cinder" })).resolves.toMatchObject({
@@ -675,7 +678,7 @@ describe("client.suggest", () => {
         reason: null,
       });
       expect(fetchImpl).toHaveBeenCalledTimes(5);
-      // So the keystroke after it still reaches the tier.
+      // So the keystroke after it still reaches the autocomplete service.
       await expect(client.suggest({ q: "cinder " })).rejects.toMatchObject({
         kind: "request_failed",
       });
@@ -766,7 +769,7 @@ describe("client.suggest", () => {
     await expect(failure).rejects.toThrow(
       "Autocomplete unavailable (HTTP 502)",
     );
-    // Nothing the tier said is fit to show a user.
+    // Nothing the autocomplete service said is fit to show a user.
     await expect(failure).rejects.toMatchObject({
       status: 502,
       userMessage: null,
@@ -804,7 +807,7 @@ describe("client.suggest", () => {
       expect(events[0]?.filtersWithheld).toBe(true);
     });
 
-    it("measures the stem the way the tier does, not the raw length", async () => {
+    it("measures the stem the way the autocomplete service does, not the raw length", async () => {
       // Four characters typed, three once the metacharacter is stripped.
       const { client, fetchImpl } = setup({}, { filterMinStem: 4 });
       fetchImpl.mockResolvedValue(reply(200, okBody));
@@ -875,7 +878,7 @@ describe("client.suggest", () => {
     });
   });
 
-  describe("a query the tier would refuse", () => {
+  describe("a query the autocomplete service would refuse", () => {
     it.each<[string, Query]>([
       ["a one-character stem", { q: "o" }],
       ["one character once the metacharacters are gone", { q: " o% " }],

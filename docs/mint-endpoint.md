@@ -7,7 +7,7 @@ mints on the page's behalf with one small endpoint.
 ## The three rules
 
 1. **Forward the page's `Origin`.** Baselayer binds the session to the
-   `Origin` it receives, and the autocomplete tier then refuses that session
+   `Origin` it receives, and the autocomplete service then refuses that session
    from any other page. A mint without an `Origin` produces an unbound
    session that works from anywhere. Never do that for a browser.
 2. **Pass the answer through unchanged.** Return Baselayer's status, JSON
