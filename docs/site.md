@@ -85,9 +85,5 @@ and can be swapped for them in `site/shared/brand.css` if the license covers
 this site.
 
 The demo on the published page calls the API from the browser, so its
-origin must be allowed:
-
-- **Session-token mode** needs only the tier, which answers CORS for any
-  origin.
-- **API-key mode** also needs the page's origin on the API's CORS allowlist
-  for the mint.
+origin must be on the API's CORS allowlist, for the mint and for the search
+the demo's third step runs. The tier itself answers CORS for any origin.

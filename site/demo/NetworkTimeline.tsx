@@ -4,7 +4,7 @@
 
 import { Fragment, useEffect, useState, useSyncExternalStore } from "react";
 
-import type { NetworkEntry, NetworkLog } from "./network";
+import { indentJson, type NetworkEntry, type NetworkLog } from "./network";
 
 function bytes(n: number | null): string {
   if (n === null) return "–";
@@ -30,22 +30,6 @@ function statusText(entry: NetworkEntry): string {
   if (entry.outcome === "aborted") return "aborted";
   if (entry.outcome === "failed" && entry.status === null) return "failed";
   return entry.status === null ? "…" : String(entry.status);
-}
-
-/** The body as indented JSON, with a minted session's token cut short. */
-function prettyBody(body: string): string {
-  try {
-    return JSON.stringify(
-      JSON.parse(body),
-      (key, value: unknown) =>
-        key === "session_token" && typeof value === "string"
-          ? `${value.slice(0, 16)}… (${value.length} characters)`
-          : value,
-      2,
-    );
-  } catch {
-    return body;
-  }
 }
 
 /** Re-render while anything is in flight, so its bar grows. */
@@ -155,11 +139,7 @@ export function NetworkTimeline({ log }: { log: NetworkLog }) {
                   </span>
                   <span role="cell" className="net-name">
                     <span className="net-kind" data-kind={entry.kind}>
-                      {entry.kind === "mint"
-                        ? "mint"
-                        : entry.kind === "tier"
-                          ? "tier"
-                          : "http"}
+                      {entry.kind === "other" ? "http" : entry.kind}
                     </span>
                     <span className="net-path">
                       {entry.kind === "tier" && entry.q !== null ? (
@@ -174,6 +154,11 @@ export function NetworkTimeline({ log }: { log: NetworkLog }) {
                         </>
                       ) : entry.kind === "mint" ? (
                         "sessions"
+                      ) : entry.kind === "search" ? (
+                        <>
+                          <span className="net-method">{entry.method}</span>{" "}
+                          {entry.path}
+                        </>
                       ) : (
                         entry.path
                       )}
@@ -256,6 +241,14 @@ export function NetworkTimeline({ log }: { log: NetworkLog }) {
                           )}
                         </dd>
                       </div>
+                      {entry.requestBody !== null && (
+                        <div>
+                          <dt>Request body</dt>
+                          <dd>
+                            <pre className="net-body">{entry.requestBody}</pre>
+                          </dd>
+                        </div>
+                      )}
                       {Object.keys(entry.responseHeaders).length > 0 && (
                         <div>
                           <dt>Response headers</dt>
@@ -272,7 +265,7 @@ export function NetworkTimeline({ log }: { log: NetworkLog }) {
                       )}
                     </dl>
                     {entry.body !== null && (
-                      <pre className="net-body">{prettyBody(entry.body)}</pre>
+                      <pre className="net-body">{indentJson(entry.body)}</pre>
                     )}
                   </div>
                 )}

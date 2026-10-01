@@ -93,9 +93,10 @@ function linkPreview(): Plugin {
 
 /**
  * `pnpm demo` stands in for your backend: the page calls this dev server on
- * its own origin, and the dev server forwards the autocomplete routes to the
- * API. The browser makes no cross-origin call, so no CORS list has to admit
- * localhost, and the API key goes where a customer's backend would send it.
+ * its own origin, and the dev server forwards the autocomplete routes, and
+ * the search the demo's third step runs, to the API. The browser makes no
+ * cross-origin call, so no CORS list has to admit localhost, and the API key
+ * goes where a customer's backend would send it.
  * The session stays bound to the page: the mint's POST carries the page's
  * `Origin`, and the tier's GET, which a browser sends same-origin without
  * one, is given the origin it came to (this server is plain http). The page
@@ -145,7 +146,10 @@ export default defineConfig({
   server: {
     port: Number(process.env.SITE_PORT ?? 3000),
     strictPort: true,
-    proxy: { "/_baselayer/autocomplete": throughDevServer },
+    proxy: {
+      "/_baselayer/autocomplete": throughDevServer,
+      "/_baselayer/searches": throughDevServer,
+    },
   },
   build: {
     outDir: fileURLToPath(new URL("../site-dist", import.meta.url)),

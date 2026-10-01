@@ -1,6 +1,5 @@
-// The search a pick belongs in, as the demo shows it under the form. The
-// token goes on its own: `POST /searches` refuses it beside a name or an
-// address.
+// The search a pick belongs in, as the demo's search step shows it. The token
+// goes on its own: `POST /searches` refuses it beside a name or an address.
 
 /** How much of the token the example shows; the rest is only for the API. */
 const TOKEN_SHOWN = 24;

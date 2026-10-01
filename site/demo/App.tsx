@@ -24,15 +24,11 @@ import {
 import { flushSync } from "react-dom";
 
 import { Icon } from "../shared/icons";
-import {
-  testKey,
-  testToken,
-  withFirstGrant,
-  type CheckResult,
-} from "./connect";
+import { useNow } from "./clock";
+import { testKey, withFirstGrant, type CheckResult } from "./connect";
 import { connectionStatus, formatRemaining } from "./connection";
 import { Collapsible, FOLD_MS, Field, Select } from "./controls";
-import { keyMint, readClaims, tokenMint } from "./credentials";
+import { keyMint, readClaims } from "./credentials";
 import { NetworkLog } from "./network";
 import { NetworkCount, NetworkTimeline } from "./NetworkTimeline";
 import {
@@ -43,7 +39,7 @@ import {
 } from "./style-state";
 import { morph } from "./morph";
 import { SAMPLE_META, SAMPLE_QUERY, sampleRows } from "./sample";
-import { searchExample } from "./search";
+import { SearchStep } from "./SearchStep";
 import { StylingPanel } from "./StylingPanel";
 
 const PRODUCTION = "https://api.baselayer.com";
@@ -53,21 +49,10 @@ const PRODUCTION = "https://api.baselayer.com";
  */
 const DEV_SERVER_PATH = import.meta.env.DEV ? "/_baselayer" : null;
 type Environment = "dev-server" | "production" | "custom";
-type Mode = "token" | "key";
 /** What the right of the page shows, if anything: one or the other. */
 type Panel = "debug" | "styling";
 /** The session's phase by name: idle, minting, ready, backoff or unavailable. */
 type PhaseName = SessionPhase["phase"];
-
-/** The clock, ticking once a second, for the countdowns. */
-function useNow(): number {
-  const [now, setNow] = useState(Date.now());
-  useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, []);
-  return now;
-}
 
 type DebugTab = "network" | "session" | "log";
 
@@ -101,10 +86,9 @@ function clock(): string {
   return new Date().toLocaleTimeString([], { hour12: false });
 }
 
-/** What Apply accepted: the credential, where it goes, and the session its test minted. */
+/** What Apply accepted: the key, where it goes, and the session its test minted. */
 interface Applied {
   id: number;
-  mode: Mode;
   secret: string;
   baseUrl: string;
   environment: Environment;
@@ -116,13 +100,10 @@ function useClient(applied: Applied | null, network: NetworkLog) {
     if (applied === null) {
       return null;
     }
-    const mint =
-      applied.mode === "key"
-        ? withFirstGrant(
-            applied.firstGrant,
-            keyMint(applied.baseUrl, applied.secret, network.fetch),
-          )
-        : tokenMint(applied.secret);
+    const mint = withFirstGrant(
+      applied.firstGrant,
+      keyMint(applied.baseUrl, applied.secret, network.fetch),
+    );
     return createAutocompleteClient({
       baseUrl: applied.baseUrl,
       mint,
@@ -189,33 +170,16 @@ function useLog(client: AutocompleteClient | null): [LogLine[], () => void] {
   return [lines, () => setLines([])];
 }
 
-function SessionMeters({
-  client,
-  applied,
-}: {
-  client: AutocompleteClient;
-  applied: Applied;
-}) {
+function SessionMeters({ client }: { client: AutocompleteClient }) {
   const { snapshot } = useAutocompleteSession(client);
   const now = useNow();
   const session = snapshot.session;
   const usage = snapshot.usage;
-  // What the session's token says: the held grant's or, before the SDK has
-  // first used a pasted token, that token's.
-  const token =
-    session.phase === "ready"
-      ? session.grant.sessionToken
-      : applied.mode === "token"
-        ? applied.secret
-        : null;
+  // What the held grant's token says.
+  const token = session.phase === "ready" ? session.grant.sessionToken : null;
   const facts = token === null ? null : readClaims(token);
   const budget = usage.requestBudget ?? facts?.bud ?? null;
-  const expiresAt =
-    session.phase === "ready"
-      ? session.grant.expiresAt
-      : facts !== null
-        ? facts.exp * 1000
-        : null;
+  const expiresAt = session.phase === "ready" ? session.grant.expiresAt : null;
   // The held grant's expiry as the API stated it, when it did.
   const expiresAtUtc =
     session.phase === "ready" ? session.grant.expiresAtUtc : undefined;
@@ -299,24 +263,12 @@ function SessionMeters({
 
 /**
  * How many characters of the business name the filters wait for: the
- * session's `filter_min_stem`, from the held grant or, before the SDK has
- * used a pasted token, from the token itself.
+ * session's `filter_min_stem`, from the held grant.
  */
-function FilterStem({
-  client,
-  applied,
-}: {
-  client: AutocompleteClient;
-  applied: Applied;
-}) {
+function FilterStem({ client }: { client: AutocompleteClient }) {
   const { snapshot } = useAutocompleteSession(client);
   const session = snapshot.session;
-  const stem =
-    session.phase === "ready"
-      ? session.grant.filterMinStem
-      : applied.mode === "token"
-        ? (readClaims(applied.secret)?.stem ?? null)
-        : null;
+  const stem = session.phase === "ready" ? session.grant.filterMinStem : null;
   return (
     <>
       {stem === null ? "enough characters to narrow by" : `${stem} characters`}
@@ -327,23 +279,15 @@ function FilterStem({
 /** Folded Connect's far right: a dot for the connection and its timer. */
 function ConnectionIndicator({
   client,
-  applied,
   dotOnly = false,
 }: {
   client: AutocompleteClient;
-  applied: Applied;
   /** Only the dot, its state spelled out for screen readers (Debug's tab). */
   dotOnly?: boolean;
 }) {
   const { snapshot } = useAutocompleteSession(client);
   const now = useNow();
-  const claims = applied.mode === "token" ? readClaims(applied.secret) : null;
-  const status = connectionStatus(
-    applied.mode,
-    snapshot.session,
-    now,
-    claims === null ? null : claims.exp * 1000,
-  );
+  const status = connectionStatus(snapshot.session, now);
   if (dotOnly) {
     return (
       <span className="connection" data-state={status.state}>
@@ -377,7 +321,6 @@ export function App() {
   const requests = entries.length;
   const [environment, setEnvironment] = useState<Environment>(ENVIRONMENTS[0]!);
   const [customUrl, setCustomUrl] = useState("");
-  const [mode, setMode] = useState<Mode>("key");
   const [draft, setDraft] = useState("");
   const [applied, setApplied] = useState<Applied | null>(null);
   const [check, setCheck] = useState<CheckResult | "testing" | null>(null);
@@ -421,6 +364,12 @@ export function App() {
   const styling = panel === "styling";
   // Debug keeps its tab while Styling is up.
   const [debugTab, setDebugTab] = useState<DebugTab>("network");
+  // Debug on its network tab, from wherever the side pane stands.
+  const showDebug = () => {
+    setDebugTab("network");
+    if (panel === null) openSide("debug");
+    else if (panel === "styling") switchSide("debug");
+  };
   const debugTabsId = useId();
   const [name, setName] = useState("");
   const [picked, setPicked] = useState<{
@@ -465,7 +414,6 @@ export function App() {
   const unseenErrors = !debugOpen && lastErrorAt > seenAt;
   const isApplied =
     applied !== null &&
-    applied.mode === mode &&
     applied.secret === draft.trim() &&
     applied.baseUrl === baseUrl;
 
@@ -473,10 +421,7 @@ export function App() {
     const secret = draft.trim();
     setCheck("testing");
     setAnnounced("");
-    const result =
-      mode === "key"
-        ? await testKey(baseUrl, secret, network.fetch)
-        : await testToken(baseUrl, secret, network.fetch);
+    const result = await testKey(baseUrl, secret, network.fetch);
     if (!result.ok) {
       setCheck(result);
       return;
@@ -484,12 +429,14 @@ export function App() {
     appliedCount.current += 1;
     setApplied({
       id: appliedCount.current,
-      mode,
       secret,
       baseUrl,
       environment,
       ...(result.grant !== undefined ? { firstGrant: result.grant } : {}),
     });
+    // A pick's token belongs to the organization whose session received it:
+    // after another key, the search for it would be refused.
+    setPicked(null);
     setCheck(null);
     setAnnounced(result.message);
     setConnectOpen(false);
@@ -513,22 +460,15 @@ export function App() {
     address.trim(),
   ].filter(Boolean).length;
 
-  const curl = `curl -s -X POST ${apiHost || PRODUCTION}/autocomplete/sessions \\
-  -H "X-API-Key: $BASELAYER_API_KEY" \\
-  -H "Origin: ${origin}" | jq -r .session_token`;
-
   const connectSummary =
     applied === null ? (
       "Not connected"
     ) : (
       <>
         <span className="fold-summary-text">
-          {applied.mode === "key" ? "API key" : "Session token"} ·{" "}
-          {ENVIRONMENT_LABELS[applied.environment]}
+          API key · {ENVIRONMENT_LABELS[applied.environment]}
         </span>
-        {client !== null && (
-          <ConnectionIndicator client={client} applied={applied} />
-        )}
+        {client !== null && <ConnectionIndicator client={client} />}
       </>
     );
 
@@ -582,8 +522,8 @@ export function App() {
               </h1>
               <p className="lede">
                 Configure the component and watch every request it makes, as it
-                makes it. Every session this page mints is a real, billable
-                session on your organization&apos;s pool.
+                makes it. Every session this page mints, and every search it
+                runs, is real and billable on your organization.
               </p>
             </div>
           </section>
@@ -635,82 +575,32 @@ export function App() {
                 />
               </Field>
             )}
-            <div className="tabs" role="tablist">
-              <button
-                role="tab"
-                aria-selected={mode === "key"}
-                onClick={() => {
-                  setMode("key");
-                  setDraft("");
+            <p className="warning">
+              Your key stays in this tab&apos;s memory and is sent only to{" "}
+              {environment === "dev-server" ? (
+                <>
+                  this dev server, which forwards it to{" "}
+                  <code>{PRODUCTION}</code>
+                </>
+              ) : (
+                <code>{apiHost || "the API"}</code>
+              )}
+              . It is not stored, and this page loads no third-party code. In
+              your product, the key belongs on your backend (
+              <code>@baselayer-sdk/autocomplete/server</code>).
+            </p>
+            <Field label="API key">
+              <input
+                type="password"
+                autoComplete="off"
+                value={draft}
+                onChange={e => {
+                  setDraft(e.target.value);
                   setCheck(null);
                 }}
-              >
-                API key
-              </button>
-              <button
-                role="tab"
-                aria-selected={mode === "token"}
-                onClick={() => {
-                  setMode("token");
-                  setDraft("");
-                  setCheck(null);
-                }}
-              >
-                Session token
-              </button>
-            </div>
-            {mode === "token" ? (
-              <>
-                <p className="hint">
-                  Mint a session from your terminal, bound to this page, and
-                  paste it below. Your key never reaches the browser. A session
-                  lasts a few minutes.
-                </p>
-                <pre className="demo-code">{curl}</pre>
-                <Field label="Session token">
-                  <textarea
-                    value={draft}
-                    onChange={e => {
-                      setDraft(e.target.value);
-                      setCheck(null);
-                    }}
-                    rows={3}
-                    spellCheck={false}
-                    placeholder="eyJhbGciOiJFZERTQSIs…"
-                    data-testid="demo-token"
-                  />
-                </Field>
-              </>
-            ) : (
-              <>
-                <p className="warning">
-                  Your key stays in this tab&apos;s memory and is sent only to{" "}
-                  {environment === "dev-server" ? (
-                    <>
-                      this dev server, which forwards it to{" "}
-                      <code>{PRODUCTION}</code>
-                    </>
-                  ) : (
-                    <code>{apiHost || "the API"}</code>
-                  )}
-                  . It is not stored, and this page loads no third-party code.
-                  In your product, the key belongs on your backend (
-                  <code>@baselayer-sdk/autocomplete/server</code>).
-                </p>
-                <Field label="API key">
-                  <input
-                    type="password"
-                    autoComplete="off"
-                    value={draft}
-                    onChange={e => {
-                      setDraft(e.target.value);
-                      setCheck(null);
-                    }}
-                    data-testid="demo-key"
-                  />
-                </Field>
-              </>
-            )}
+                data-testid="demo-key"
+              />
+            </Field>
             <div className="apply-row">
               <button
                 type="button"
@@ -728,14 +618,10 @@ export function App() {
                   ? "Testing…"
                   : isApplied
                     ? "Applied"
-                    : mode === "key"
-                      ? "Apply API key"
-                      : "Apply session token"}
+                    : "Apply API key"}
               </button>
               <p className="hint apply-note">
-                {mode === "key"
-                  ? "Apply mints one session to test the key, and the demo uses it."
-                  : "Apply checks the token with the tier; none of its request budget is spent."}
+                Apply mints one session to test the key, and the demo uses it.
               </p>
             </div>
             {check !== null && check !== "testing" && (
@@ -779,10 +665,10 @@ export function App() {
             >
               <p className="hint" data-testid="demo-filters-hint">
                 Filters apply once the business name has{" "}
-                {client === null || applied === null ? (
+                {client === null ? (
                   "enough characters to narrow by"
                 ) : (
-                  <FilterStem client={client} applied={applied} />
+                  <FilterStem client={client} />
                 )}
                 . Until then the SDK holds them back, and says so in the log.
               </p>
@@ -909,24 +795,25 @@ export function App() {
                 </>
               )}
             </div>
-            {picked !== null && (
-              <div className="demo-pick" data-testid="demo-pick">
-                <p className="mono-label">The pick</p>
-                <p>
-                  <strong>{picked.suggestion.label}</strong>, domiciled in{" "}
-                  {picked.suggestion.domicile_state}, registered in{" "}
-                  {picked.suggestion.states.join(", ")}.
-                </p>
-                <p className="hint">
-                  Send the token with your search; it is good until{" "}
-                  {new Date(picked.pick.expiresAt).toLocaleTimeString()}.
-                </p>
-                <pre className="demo-code">
-                  {searchExample(apiHost, picked.pick.businessToken)}
-                </pre>
-              </div>
-            )}
           </section>
+
+          {/* The page has two steps until a business is picked. A new pick, or
+              a new key, starts this one over. */}
+          {applied !== null && picked !== null && (
+            <SearchStep
+              key={`${applied.id}:${picked.pick.businessToken}`}
+              apiKey={applied.secret}
+              baseUrl={applied.baseUrl}
+              // The host the applied connection reaches, not the form's: the
+              // request the step shows must be the one Run sends.
+              apiHost={
+                applied.environment === "custom" ? applied.baseUrl : PRODUCTION
+              }
+              picked={picked}
+              fetchImpl={network.fetch}
+              onShowDebug={showDebug}
+            />
+          )}
         </div>
 
         {panel === null ? (
@@ -1043,15 +930,9 @@ export function App() {
                       >
                         {label}
                         {tab === "network" && <NetworkCount log={network} />}
-                        {tab === "session" &&
-                          client !== null &&
-                          applied !== null && (
-                            <ConnectionIndicator
-                              client={client}
-                              applied={applied}
-                              dotOnly
-                            />
-                          )}
+                        {tab === "session" && client !== null && (
+                          <ConnectionIndicator client={client} dotOnly />
+                        )}
                         {tab === "log" && log.length > 0 && (
                           <span className="debug-count">{log.length}</span>
                         )}
@@ -1068,19 +949,16 @@ export function App() {
                       <NetworkTimeline log={network} />
                     )}
                     {debugTab === "session" &&
-                      (client === null || applied === null ? (
+                      (client === null ? (
                         <p className="hint" data-testid="demo-session">
                           Not connected.
                         </p>
                       ) : (
                         <div data-testid="demo-session">
                           <div className="debug-toolbar">
-                            <ConnectionIndicator
-                              client={client}
-                              applied={applied}
-                            />
+                            <ConnectionIndicator client={client} />
                           </div>
-                          <SessionMeters client={client} applied={applied} />
+                          <SessionMeters client={client} />
                         </div>
                       ))}
                     {debugTab === "log" && (

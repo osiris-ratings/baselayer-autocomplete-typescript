@@ -2,19 +2,15 @@
 //
 // An API key has no test but a mint: nothing else proves the API accepts it.
 // So Apply mints once and hands that session to the client as its first, and
-// the test costs nothing the first keystroke would not have. A session token
-// is tested against the tier's `GET /autocomplete/version`, which checks the
-// session (signature, expiry, the Origin it is bound to) and keeps its own
-// per-route budget, so none of the token's typing budget goes on it.
+// the test costs nothing the first keystroke would not have.
 
-import {
-  parseErrorEnvelope,
-  type MintFunction,
-  type MintOutcome,
-  type MintedGrant,
+import type {
+  MintFunction,
+  MintOutcome,
+  MintedGrant,
 } from "@baselayer-sdk/autocomplete";
 
-import { keyMint, readClaims } from "./credentials";
+import { keyMint } from "./credentials";
 
 type FetchImpl = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -99,60 +95,5 @@ export function withFirstGrant(
       }
     }
     return mint(context);
-  };
-}
-
-export async function testToken(
-  baseUrl: string,
-  token: string,
-  fetchImpl: FetchImpl,
-): Promise<CheckResult> {
-  const claims = readClaims(token);
-  if (claims === null) {
-    return { ok: false, message: "That is not a session token." };
-  }
-  if (claims.exp * 1000 <= Date.now()) {
-    return {
-      ok: false,
-      message: "This session token has expired; mint a new one.",
-    };
-  }
-  let response: Response;
-  try {
-    response = await fetchImpl(`${baseUrl}/autocomplete/version`, {
-      headers: {
-        Accept: "application/json",
-        "X-Autocomplete-Session": token.trim(),
-      },
-      credentials: "omit",
-    });
-  } catch {
-    return {
-      ok: false,
-      message:
-        "The tier did not answer this page (most likely CORS: it does not admit this origin).",
-    };
-  }
-  let body: unknown = null;
-  try {
-    body = await response.json();
-  } catch {
-    body = null;
-  }
-  if (response.ok) {
-    return { ok: true, message: "The tier accepts this token." };
-  }
-  const envelope = parseErrorEnvelope(body);
-  const detail = envelope?.metadata?.["detail"];
-  if (detail === "origin_mismatch") {
-    return {
-      ok: false,
-      message: `The token is bound to ${claims.ori ?? "another origin"}, not this page (${window.location.origin}). Mint one with this page's Origin.`,
-    };
-  }
-  return {
-    ok: false,
-    message:
-      envelope?.message ?? `The tier refused it: HTTP ${response.status}.`,
   };
 }
