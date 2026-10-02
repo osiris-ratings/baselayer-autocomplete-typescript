@@ -687,6 +687,7 @@ export function App() {
                   value={person}
                   onChange={e => setPerson(e.target.value)}
                   placeholder="dana"
+                  autoComplete="off"
                 />
               </Field>
               <Field
@@ -698,6 +699,7 @@ export function App() {
                   value={states}
                   onChange={e => setStates(e.target.value)}
                   placeholder="PA, OH"
+                  autoComplete="off"
                 />
               </Field>
               <Field label="Address" optional>
@@ -705,6 +707,7 @@ export function App() {
                   value={address}
                   onChange={e => setAddress(e.target.value)}
                   placeholder="1200 River Rd"
+                  autoComplete="off"
                 />
               </Field>
             </div>
