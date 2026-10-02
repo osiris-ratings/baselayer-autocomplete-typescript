@@ -83,6 +83,7 @@ function step(fetchImpl: FetchImpl) {
           matchedOn: [],
         },
         asked: [],
+        typed: { name: "", person: "", address: "" },
       }}
       fetchImpl={fetchImpl}
       onShowDebug={() => undefined}

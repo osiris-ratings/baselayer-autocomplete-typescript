@@ -269,6 +269,39 @@
   }
 }
 
+/* The third step goes the way a folded section does: it closes up and fades,
+   and is taken away after. Its slot stays in the column, empty and closed, so
+   taking the step away changes nothing: the gap the column keeps above it
+   belongs to the column, and would otherwise go with it. Opening is at once,
+   as it always was; only closing is slow. */
+.step-exit {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.step-exit[data-open="false"] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows 320ms ease,
+    opacity 220ms ease;
+}
+
+.step-exit-inner {
+  min-height: 0;
+}
+
+.step-exit[data-open="false"] > .step-exit-inner {
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-exit[data-open="false"] {
+    transition: none;
+  }
+}
+
 .fold-nested {
   margin: 0 0 14px;
   padding: 12px 14px;
@@ -1365,7 +1398,7 @@
   display: grid;
   grid-template-columns: 54px minmax(0, 1fr) 52px 60px 60px minmax(90px, 24%);
   gap: 10px;
-  align-items: center;
+  align-items: start;
   width: 100%;
   padding: 7px 8px;
   background: none;
@@ -1488,6 +1521,8 @@
 
 .net-waterfall {
   position: relative;
+  /* Level with the middle of the row's first line, which its figures share. */
+  margin-top: 2px;
   height: 14px;
   background: repeating-linear-gradient(
     90deg,

@@ -21,7 +21,12 @@ import {
   runSearch,
   type Search,
 } from "./searches";
-import { announcement, consoleHref, matchedOf } from "./search-view";
+import {
+  announcement,
+  consoleHref,
+  matchedOf,
+  type Typed,
+} from "./search-view";
 
 type Phase =
   | { kind: "idle" }
@@ -41,6 +46,8 @@ export interface SearchStepProps {
     pick: BusinessPick;
     /** The state codes the visitor had filtered by when they picked. */
     asked: readonly string[];
+    /** What else they had typed: the name, and the person and address filters. */
+    typed: Typed;
   };
   /** `fetch`, recording what it does. */
   fetchImpl: (input: string, init?: RequestInit) => Promise<Response>;
@@ -359,7 +366,11 @@ export function SearchStep({
             <SearchResult
               search={phase.search}
               elapsedMs={phase.elapsedMs}
-              matched={matchedOf(picked.pick.matchedOn, picked.asked)}
+              matched={matchedOf(
+                picked.pick.matchedOn,
+                picked.asked,
+                picked.typed,
+              )}
             />
           </div>
           <footer className="sr-foot">

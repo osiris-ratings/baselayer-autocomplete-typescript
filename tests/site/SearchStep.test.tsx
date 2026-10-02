@@ -27,6 +27,7 @@ function html(expiresInMs: number) {
           matchedOn: [],
         },
         asked: [],
+        typed: { name: "", person: "", address: "" },
       }}
       fetchImpl={() => Promise.reject(new Error("not called"))}
       onShowDebug={() => undefined}
@@ -100,7 +101,13 @@ describe("the demo's use of step 03", () => {
       "utf8",
     );
     expect(app.match(/<SearchStep/g)).toHaveLength(1);
-    expect(app).toMatch(/picked !== null && \(\s*<SearchStep/);
+    // It is drawn from the step that is shown: the pick under the connection
+    // that was applied, held for as long as the step closes after the pick goes.
+    expect(app).toMatch(/shownStep !== null && \(\s*<SearchStep/);
+    expect(app).toMatch(
+      /applied !== null && picked !== null \? \{ applied, picked \} : null/,
+    );
+    expect(app).toMatch(/useExit\(step, FOLD_MS\)/);
   });
 
   it("names the host of the connection that was applied, not the form's", () => {
@@ -109,8 +116,11 @@ describe("the demo's use of step 03", () => {
       "utf8",
     );
     // `apiHost` (the form's, which changes before Apply) is for the Connect
-    // card; the request Run sends goes to `applied.baseUrl`.
-    expect(app).toMatch(/apiHost=\{\s*applied\.environment === "custom"/);
+    // card; the request Run sends goes to the applied connection's
+    // `baseUrl`, the one the step was shown with.
+    expect(app).toMatch(
+      /apiHost=\{\s*shownStep\.applied\.environment === "custom"/,
+    );
     expect(app).not.toMatch(/apiHost=\{apiHost\}/);
   });
 

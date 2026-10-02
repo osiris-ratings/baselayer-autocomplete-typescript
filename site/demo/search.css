@@ -11,6 +11,9 @@
   --sr-neutral-bg: #eceef2;
   --sr-neutral-fg: #4a5160;
   --sr-info-bg: #e8eefb;
+  /* What the visitor typed, underlined where it matched: the typeahead's own
+     green. */
+  --sr-mark: #38a169;
   /* The console's grade colours, for the gauge's arc. Words and letters on the
      card take a darker B and C, which the console's own are too pale to read
      there (2.3:1 and 3.8:1; these are 5.0:1 and 5.8:1). */
@@ -191,6 +194,8 @@
 /* ---- The report ------------------------------------------------------------- */
 
 .sr {
+  /* The letters in a state's square and in an officer's avatar, one size. */
+  --sr-initials-size: 16px;
   display: grid;
   gap: 28px;
   margin-top: 22px;
@@ -199,19 +204,23 @@
 }
 
 .sr-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px 18px;
+  /* The title's size, which the verdict is set from as well. */
+  --sr-title-size: clamp(24px, 4vw, 30px);
+  min-width: 0;
   /* What the report scrolls to on arrival: the label and the verdict as well
      as the title. */
   scroll-margin-top: 16px;
 }
 
-.sr-head-main {
-  flex: 1 1 260px;
-  min-width: 0;
+/* The title and the verdict on one baseline: the verdict's text stands where
+   the first line of the title does, and drops under it when there is no room
+   beside it. */
+.sr-head-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 18px;
 }
 
 .sr-head .mono-label {
@@ -219,9 +228,11 @@
 }
 
 .sr-title {
+  flex: 1 1 260px;
+  min-width: 0;
   margin: 6px 0 8px;
   font-family: var(--serif);
-  font-size: clamp(24px, 4vw, 30px);
+  font-size: var(--sr-title-size);
   font-weight: 400;
   line-height: 1.15;
   overflow-wrap: anywhere;
@@ -297,18 +308,41 @@
   color: var(--blue);
 }
 
+/* Inline, not a flex row: a flex container stands on the baseline of its first
+   item, which would be the icon's bottom edge, and the text is what has to
+   stand on the title's.
+
+   The box spans the title's letters, from the top of its ascenders to the
+   bottom of its descenders, with the verdict's capitals centred in it and
+   standing on the title's baseline. It is then level with the title at both
+   ends, which is what makes it look centred on it, and its text is a label's
+   size (0.6 of the title's, so it keeps to that as the title shrinks) rather
+   than the title's own, which would be too large for the box to hold. Set
+   light, with the room around it that the padding leaves. The padding is in
+   em, solved so that the capitals are as far from the box's top as from the
+   baseline's bottom. */
 .sr-verdict {
-  display: inline-flex;
+  display: inline-block;
   flex: none;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
+  padding: 0.36em 0.78em 0.37em;
   border: 1px solid;
   border-radius: 2px;
   font-family: var(--mono);
-  font-size: 13px;
-  letter-spacing: 0.06em;
+  font-size: calc(var(--sr-title-size) * 0.6);
+  font-weight: 200;
+  line-height: 1;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  /* Below it, when it has dropped under the title; beside the title it
+     reaches no further down than the title's own margin does. */
+  margin-bottom: 6px;
+}
+
+.sr-verdict .icon {
+  width: 1.05em;
+  height: 1.05em;
+  margin-right: 0.4em;
+  vertical-align: -0.17em;
 }
 
 .sr-verdict[data-kind="verified"] {
@@ -624,6 +658,20 @@
   text-decoration-color: #64748b;
 }
 
+/* Where what was typed matched, as the typeahead's rows underline it. The
+   underline keeps its green on the grey of a name the business goes by. */
+.sr-mark {
+  text-decoration-line: underline;
+  text-decoration-color: var(--sr-mark);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+/* A name the business goes by, which is not its legal name. */
+.sr [data-dba="true"] {
+  color: var(--muted);
+}
+
 @media (max-width: 640px) {
   .sr-match thead {
     display: none;
@@ -691,6 +739,18 @@
   gap: 4px 8px;
 }
 
+/* An address's bullet: what stands there, in the muted ink, or in the warning
+   colour for a mail drop as its pill is. */
+.sr-address-icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--muted);
+}
+
+.sr-address-icon[data-kind="mail-drop"] {
+  color: var(--sr-warn-fg);
+}
+
 @media (max-width: 480px) {
   .sr-facts {
     grid-template-columns: minmax(0, 1fr);
@@ -731,8 +791,11 @@
   list-style: none;
 }
 
+/* The title, the standing and the pills share a baseline with the state in
+   the square. */
 .sr-filing {
   display: flex;
+  align-items: baseline;
   gap: 14px;
   padding: 14px 16px;
   background: var(--paper);
@@ -750,13 +813,31 @@
   border-radius: 2px;
   color: #ffffff;
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: var(--sr-initials-size);
   letter-spacing: 0.04em;
 }
 
 /* The state the business is domiciled in: its own filing, not a visit. */
 .sr-state[data-kind="domestic"] {
   background: var(--sr-good-fg);
+}
+
+/* A state the filter named, in the cloud of states and on its filing: the
+   square underlined in the green of every other match, a little below it as a
+   line of text is. */
+.sr-state[data-matched="true"] {
+  position: relative;
+}
+
+.sr-state[data-matched="true"]::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: -6px;
+  left: 0;
+  height: 2px;
+  background: var(--sr-mark);
+  border-radius: 1px;
 }
 
 .sr-filing-body {
@@ -778,7 +859,9 @@
   font-size: 15px;
 }
 
+/* The title is larger than the standing beside it and the facts below it. */
 .sr-filing-head strong {
+  font-size: 17px;
   font-weight: 500;
 }
 
@@ -795,9 +878,11 @@
   margin-left: -5px;
 }
 
+/* The name, the pill and the states and sources share a baseline with the
+   initials in the avatar. */
 .sr-person {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 12px;
   padding: 10px 0;
   border-top: 1px solid var(--line-soft);
@@ -818,7 +903,7 @@
   border-radius: 50%;
   color: var(--navy);
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: var(--sr-initials-size);
 }
 
 .sr-person-name {
@@ -826,10 +911,12 @@
   flex: 1;
   gap: 1px;
   min-width: 0;
-  font-size: 14.5px;
+  font-size: 15px;
 }
 
+/* The name leads its role, which is the muted line under it. */
 .sr-person-name strong {
+  font-size: 17px;
   font-weight: 500;
 }
 
@@ -863,7 +950,7 @@
 .sr-list {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
+  align-items: baseline;
   gap: 2px 10px;
   padding: 10px 12px;
   background: var(--paper);

@@ -4,12 +4,21 @@
 // all of it is on screen at once, and a section the search has nothing for is
 // left out. What each field says is in ./search-view; this only lays it out.
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import {
+  Fragment,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 import { Icon, type IconName } from "../shared/icons";
 import {
   NOTHING_MATCHED,
+  addressKind,
   addressesOnFile,
+  aliasesOnFile,
   deliveryChips,
   elapsedLabel,
   entityType,
@@ -18,6 +27,7 @@ import {
   glance,
   hitLines,
   leadingOnFile,
+  markWhole,
   matchRows,
   monthsLabel,
   officersOnFile,
@@ -30,10 +40,13 @@ import {
   statesOnFile,
   verdictOf,
   watchlistRows,
+  type AddressKind,
   type Chip,
   type Matched,
   type OnFile,
   type Rating,
+  type StateOnFile,
+  type Stretch,
   type VerdictKind,
 } from "./search-view";
 import type {
@@ -53,8 +66,31 @@ function ChipView({ chip }: { chip: Chip }) {
   );
 }
 
+/**
+ * A found text with what the visitor typed underlined where it matched, and
+ * the name the business goes by set apart from its legal name.
+ */
+function Stretches({ parts }: { parts: Stretch[] }) {
+  return parts.map((part, index) =>
+    part.matched || part.dba ? (
+      <span
+        key={index}
+        className={part.matched ? "sr-mark" : undefined}
+        data-dba={part.dba ? "true" : undefined}
+      >
+        {part.text}
+      </span>
+    ) : (
+      <Fragment key={index}>{part.text}</Fragment>
+    ),
+  );
+}
+
 /** What the pick matched, on an address, an officer or a filing in a state. */
 const MATCHED: Chip = { label: "Matched", tone: "good" };
+
+/** The business's primary address, which the pick need not have matched. */
+const PRIMARY: Chip = { label: "Primary", tone: "info" };
 
 const VERDICT_ICONS: Record<VerdictKind, IconName> = {
   verified: "check",
@@ -178,11 +214,34 @@ function Fact({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** An address as a line, with what is known about delivering to it. */
-function AddressLine({ address }: { address: Address }) {
+/** The bullet of each kind of address. */
+const ADDRESS_ICONS: Record<AddressKind, IconName> = {
+  commercial: "building",
+  residential: "home",
+  "mail-drop": "mail",
+  unknown: "address",
+};
+
+/**
+ * An address as a line, with what is known about delivering to it, and what
+ * was typed underlined where it matched. Its bullet is what stands there; the
+ * pills say it in words, so the bullet is only for the eye.
+ */
+function AddressLine({
+  address,
+  typed = "",
+}: {
+  address: Address;
+  typed?: string;
+}) {
+  const line = formatAddress(address);
+  const kind = addressKind(address);
   return (
     <span className="sr-address">
-      {formatAddress(address)}
+      <span className="sr-address-icon" data-kind={kind}>
+        <Icon name={ADDRESS_ICONS[kind]} size={18} />
+      </span>
+      {line === null ? null : <Stretches parts={markWhole(line, typed)} />}
       {deliveryChips(address).map(chip => (
         <ChipView key={chip.label} chip={chip} />
       ))}
@@ -195,8 +254,18 @@ function textOrNull(value: string | null | undefined): string | null {
   return typeof value === "string" && value !== "" ? value : null;
 }
 
-/** What the business is, as a list of facts; nothing at all when it has none. */
-function BusinessFacts({ business }: { business: Business }) {
+/**
+ * What the business is, as a list of facts; nothing at all when it has none.
+ * The name it goes by that the pick was found by is underlined, as it is in
+ * the table above.
+ */
+function BusinessFacts({
+  business,
+  matched,
+}: {
+  business: Business;
+  matched: Matched;
+}) {
   const type = entityType(business.structure);
   const incorporated = [
     textOrNull(business.incorporation_state),
@@ -205,7 +274,7 @@ function BusinessFacts({ business }: { business: Business }) {
       ? `(${monthsLabel(business.months_in_business)})`
       : null,
   ].filter(part => part !== null);
-  const aliases = business.alternative_names ?? [];
+  const aliases = aliasesOnFile(business, matched);
   const phones = business.phone_numbers ?? [];
   const email = textOrNull(business.email);
   const website = textOrNull(business.website);
@@ -234,7 +303,12 @@ function BusinessFacts({ business }: { business: Business }) {
         )}
         {aliases.length > 0 && (
           <Fact label="Also known as">
-            {aliases.map(alias => readable(alias)).join(", ")}
+            {aliases.map(({ item, matched: reached }, index) => (
+              <Fragment key={`${item}#${index}`}>
+                {index > 0 && ", "}
+                {reached ? <span className="sr-mark">{item}</span> : item}
+              </Fragment>
+            ))}
           </Fact>
         )}
         {phones.length > 0 && <Fact label="Phone">{phones.join(", ")}</Fact>}
@@ -269,9 +343,12 @@ function BusinessFacts({ business }: { business: Business }) {
 function Addresses({
   entries,
   primary,
+  typed,
 }: {
   entries: OnFile<AddressWithSources>[];
   primary: Address | null;
+  /** What was typed in the address filter. */
+  typed: string;
 }) {
   const primaryLine = formatAddress(primary);
   const { shown, hidden } = leadingOnFile(entries);
@@ -283,10 +360,10 @@ function Addresses({
             key={`${formatAddress(item)}#${index}`}
             data-matched={matched ? "true" : undefined}
           >
-            <AddressLine address={item} />
+            <AddressLine address={item} typed={matched ? typed : ""} />
             {matched && <ChipView chip={MATCHED} />}
             {primaryLine !== null && formatAddress(item) === primaryLine && (
-              <span className="sr-muted">Primary</span>
+              <ChipView chip={PRIMARY} />
             )}
           </li>
         ))}
@@ -301,16 +378,23 @@ function Addresses({
 }
 
 /**
- * The states the business is registered in, those the filter named first. Only
- * the squares: what a state matched is said on its filing, further down.
+ * The states the business is registered in, its domicile first and then those
+ * the filter named. Only the squares: the domicile is green as its filing is,
+ * a state the filter named is underlined as every other match is, and what it
+ * matched is said on its filing, further down.
  */
-function States({ entries }: { entries: OnFile<string>[] }) {
+function States({ entries }: { entries: StateOnFile[] }) {
   return (
     <Section title="States" count={entries.length}>
       <ul className="sr-states">
-        {entries.map(({ item }) => (
+        {entries.map(({ item, domicile, matched }) => (
           <li key={item}>
-            <span className="sr-state" aria-hidden="true">
+            <span
+              className="sr-state"
+              data-kind={domicile ? "domestic" : undefined}
+              data-matched={matched ? "true" : undefined}
+              aria-hidden="true"
+            >
               {item}
             </span>
           </li>
@@ -350,6 +434,7 @@ function Filing({
       <span
         className="sr-state"
         data-kind={registration.registration_type ?? undefined}
+        data-matched={matched ? "true" : undefined}
         aria-hidden="true"
       >
         {registration.state}
@@ -409,7 +494,16 @@ function initials(name: string): string {
     .join("");
 }
 
-function Person({ officer, matched }: { officer: Officer; matched: boolean }) {
+function Person({
+  officer,
+  matched,
+  typed,
+}: {
+  officer: Officer;
+  matched: boolean;
+  /** What was typed in the person filter. */
+  typed: string;
+}) {
   const role = titlesOf(officer.titles);
   return (
     <li className="sr-person" data-matched={matched ? "true" : undefined}>
@@ -417,7 +511,11 @@ function Person({ officer, matched }: { officer: Officer; matched: boolean }) {
         {initials(officer.name) || "?"}
       </span>
       <span className="sr-person-name">
-        <strong>{readable(officer.name)}</strong>
+        <strong>
+          <Stretches
+            parts={markWhole(readable(officer.name), matched ? typed : "")}
+          />
+        </strong>
         {role !== null && <span className="sr-muted">{role}</span>}
       </span>
       {matched && <ChipView chip={MATCHED} />}
@@ -521,32 +619,33 @@ export function SearchResult({
       data-state={search.state}
     >
       <header className="sr-head">
-        <div className="sr-head-main">
-          <p className="mono-label">
-            Search result
-            {elapsedMs !== null && ` · finished in ${elapsedLabel(elapsedMs)}`}
-          </p>
+        <p className="mono-label">
+          Search result
+          {elapsedMs !== null && ` · finished in ${elapsedLabel(elapsedMs)}`}
+        </p>
+        {/* The verdict stands on the title's baseline, so they share a row. */}
+        <div className="sr-head-title">
           <h3 className="sr-title" id={titleId} tabIndex={-1}>
             {readable(business?.name ?? search.name ?? "Business")}
           </h3>
-          {summary.length > 0 && (
-            <ul className="sr-glance">
-              {summary.map(part => (
-                <li key={part}>{part}</li>
-              ))}
-            </ul>
+          {verdict !== null && (
+            <span className="sr-verdict" data-kind={verdict.kind}>
+              <Icon name={VERDICT_ICONS[verdict.kind]} size={18} />
+              {verdict.label}
+            </span>
           )}
-          <p className="sr-meta">
-            <CopyId id={search.id} />
-            {searched !== null && <span>searched {searched}</span>}
-          </p>
         </div>
-        {verdict !== null && (
-          <span className="sr-verdict" data-kind={verdict.kind}>
-            <Icon name={VERDICT_ICONS[verdict.kind]} size={18} />
-            {verdict.label}
-          </span>
+        {summary.length > 0 && (
+          <ul className="sr-glance">
+            {summary.map(part => (
+              <li key={part}>{part}</li>
+            ))}
+          </ul>
         )}
+        <p className="sr-meta">
+          <CopyId id={search.id} />
+          {searched !== null && <span>searched {searched}</span>}
+        </p>
       </header>
 
       {!finished && (
@@ -604,7 +703,9 @@ export function SearchResult({
                 <tr key={row.key}>
                   <th scope="row">{row.label}</th>
                   <td data-label="Your search">{row.yours ?? "–"}</td>
-                  <td data-label="Matched business">{row.found ?? "–"}</td>
+                  <td data-label="Matched business">
+                    {row.found === null ? "–" : <Stretches parts={row.parts} />}
+                  </td>
                   <td data-label="Match">
                     {row.pill === null ? "–" : <ChipView chip={row.pill} />}
                   </td>
@@ -621,12 +722,13 @@ export function SearchResult({
         </Section>
       )}
 
-      {finished && <BusinessFacts business={business} />}
+      {finished && <BusinessFacts business={business} matched={matched} />}
 
       {finished && addresses.length > 0 && (
         <Addresses
           entries={addresses}
           primary={business.primary_address ?? null}
+          typed={matched.typed.address}
         />
       )}
 
@@ -653,6 +755,7 @@ export function SearchResult({
                 key={`${item.name}#${index}`}
                 officer={item}
                 matched={reached}
+                typed={matched.typed.person}
               />
             ))}
           </ul>
