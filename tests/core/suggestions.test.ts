@@ -8,6 +8,7 @@ import {
   orderedStates,
   partsFor,
   peopleLineOf,
+  pickedNameOf,
   queryTokens,
   structureLabel,
   typedPrefixLength,
@@ -433,5 +434,24 @@ describe("partsFor", () => {
       { text: "CINDER RIG", matched: true },
       { text: "GING, INC.", matched: false },
     ]);
+  });
+});
+
+describe("pickedNameOf", () => {
+  it("is the name the family goes by when the row matched that", () => {
+    expect(pickedNameOf(cinder)).toBe("EMBERLINE");
+  });
+
+  it("is the row's own name when that is what matched", () => {
+    expect(pickedNameOf(stable)).toBe("CINDER RACING STABLES, LLC");
+  });
+
+  it("is the row's own name for a matched name that says nothing", () => {
+    expect(pickedNameOf({ ...cinder, matched_name: "" })).toBe(
+      "CINDER RIGGING, INC.",
+    );
+    expect(pickedNameOf({ ...cinder, matched_name: "  " })).toBe(
+      "CINDER RIGGING, INC.",
+    );
   });
 });

@@ -112,6 +112,7 @@ export {
   orderedStates,
   partsFor,
   peopleLineOf,
+  pickedNameOf,
   queryTokens,
   structureLabel,
   typedPrefixLength,

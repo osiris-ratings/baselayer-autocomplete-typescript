@@ -47,12 +47,17 @@ function jsonResponse(
   };
 }
 
-function wireSuggestion(token: string, label: string, structure: string) {
+function wireSuggestion(
+  token: string,
+  label: string,
+  structure: string,
+  matchedName: string | null = null,
+) {
   return {
     type: "business",
     token,
     label,
-    matched_name: null,
+    matched_name: matchedName,
     match: "strong",
     domicile_state: "DE",
     states: ["DE"],
@@ -403,6 +408,51 @@ describe("BusinessAutocomplete", () => {
       expect(queried()).toContain("CINDER RACING STABLES, LL"),
     );
     expect(mint).toHaveBeenCalledTimes(1);
+  });
+
+  it("fills the name the row matched on: the one the business goes by, when the row matched that", async () => {
+    const fetch = vi.fn<FetchLike>(async url =>
+      jsonResponse(
+        200,
+        {
+          ...businessesBody(queryOf(url) ?? ""),
+          found: 1,
+          suggestions: [
+            wireSuggestion(
+              "tok-osiris",
+              "OSIRIS RATINGS, INC.",
+              "C_CORPORATION",
+              "BASELAYER",
+            ),
+          ],
+        },
+        { "X-Autocomplete-Index": "v9/202609140305" },
+      ),
+    );
+    const client = createAutocompleteClient({
+      baseUrl: BASE_URL,
+      mint: grantingMint(),
+      fetch,
+    });
+    const onChange = vi.fn<BusinessAutocompleteProps["onChange"]>();
+    const onPick = vi.fn<BusinessAutocompleteProps["onPick"]>();
+    const user = userEvent.setup();
+    render(<Host source={{ client }} onChange={onChange} onPick={onPick} />);
+
+    await user.type(input(), "baselaye");
+    await user.click(await screen.findByText("OSIRIS RATINGS, INC."));
+
+    expect(onChange).toHaveBeenLastCalledWith("BASELAYER");
+    expect(input()).toHaveValue("BASELAYER");
+    // The token is the business's, whichever name found it.
+    expect(onPick.mock.calls[0]![1].businessToken).toBe("tok-osiris");
+    expect(onPick.mock.calls[0]![0].label).toBe("OSIRIS RATINGS, INC.");
+
+    // The field holds the name that was picked, which is not a query.
+    await aMoment();
+    const queried = () => fetch.mock.calls.map(([url]) => queryOf(url));
+    expect(queried()).not.toContain("BASELAYER");
+    expect(screen.queryAllByTestId("business-suggestion")).toHaveLength(0);
   });
 
   it("searches the picked name again when a filter is edited after the pick", async () => {

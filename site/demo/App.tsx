@@ -1,6 +1,7 @@
 import {
   createAutocompleteClient,
   includeForLayout,
+  pickedNameOf,
   type AutocompleteClient,
   type BusinessSuggestion,
   type Filters,
@@ -743,7 +744,10 @@ export function App() {
                     value={name}
                     onChange={value => {
                       setName(value);
-                      if (picked !== null && value !== picked.suggestion.label)
+                      if (
+                        picked !== null &&
+                        value !== pickedNameOf(picked.suggestion)
+                      )
                         setPicked(null);
                     }}
                     onPick={(suggestion, pick) =>
