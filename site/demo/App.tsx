@@ -851,7 +851,10 @@ export function App() {
           {/* The page has two steps until a business is picked. A new pick, a
               new key, or a change to the name or a filter starts this one
               over: it closes up and goes. Its slot stays, empty, so that the
-              column does not change when the step is taken away. */}
+              column does not change when the step is taken away. Every pick is
+              a step of its own, the same business picked again included, so
+              that one made while the last is still closing does not take over
+              its run and its idempotency key. */}
           <div
             className="step-exit"
             data-open={step !== null ? "true" : "false"}
@@ -862,7 +865,7 @@ export function App() {
             <div className="step-exit-inner">
               {shownStep !== null && (
                 <SearchStep
-                  key={`${shownStep.applied.id}:${shownStep.picked.pick.businessToken}`}
+                  key={`${shownStep.applied.id}:${shownStep.picked.pick.businessToken}:${shownStep.picked.pick.pickedAt}`}
                   apiKey={shownStep.applied.secret}
                   baseUrl={shownStep.applied.baseUrl}
                   // The host the applied connection reaches, not the form's:
