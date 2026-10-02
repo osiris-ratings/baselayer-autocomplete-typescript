@@ -191,6 +191,20 @@ describe("the third step, when what it was made from changes", () => {
     expect(stepWrapper().hasAttribute("inert")).toBe(false);
   });
 
+  it("can be picked again once a filter is put back, without touching the name", async () => {
+    const user = await pickABusiness();
+    await user.type(screen.getByPlaceholderText("dana"), "x");
+    await user.clear(screen.getByPlaceholderText("dana"));
+    await waitFor(() => expect(step()).toBeNull(), { timeout: 1500 });
+
+    // The name is as it was picked, and its rows are back to pick from.
+    const rows = await screen.findAllByTestId("business-suggestion");
+    await user.click(rows[0]!);
+
+    await waitFor(() => expect(step()).not.toBeNull());
+    expect(isOpen()).toBe("true");
+  });
+
   it("is dropped, not kept, if the filter is put back as it was", async () => {
     const user = await pickABusiness();
 

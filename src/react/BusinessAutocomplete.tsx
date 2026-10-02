@@ -202,6 +202,13 @@ function Connected({
     name: string;
     filtersKey: string;
   } | null>(null);
+  // A pick is of the filters it was made under. Once they change it is over,
+  // and putting them back is not a return to it: the name is searched again,
+  // and its rows are wanted. Set during the render, so that no frame has the
+  // old pick holding the search off under the new filters.
+  if (picked !== null && picked.filtersKey !== filtersKey) {
+    setPicked(null);
+  }
   const justPicked =
     picked !== null &&
     picked.name === value &&

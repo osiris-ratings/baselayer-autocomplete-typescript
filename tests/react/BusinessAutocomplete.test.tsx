@@ -485,6 +485,43 @@ describe("BusinessAutocomplete", () => {
     expect(url.searchParams.get("person.name")).toBe("tima");
   });
 
+  it("searches the picked name again when the filters are put back as they were", async () => {
+    const fetch = autocompleteFetch();
+    const client = createAutocompleteClient({
+      baseUrl: BASE_URL,
+      mint: grantingMint(),
+      fetch,
+    });
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <Host source={{ client }} open filters={{ person: { name: "tim" } }} />,
+    );
+    await user.type(input(), "cind");
+    await screen.findAllByTestId("business-suggestion");
+    await user.click(screen.getByText("CINDER RACING STABLES, LLC"));
+    await aMoment();
+    rerender(
+      <Host source={{ client }} open filters={{ person: { name: "tima" } }} />,
+    );
+    await screen.findAllByTestId("business-suggestion");
+    const asked = fetch.mock.calls.length;
+
+    // A pick is of the filters it was made under. Once they changed it was
+    // over, and putting them back is not a return to it: the name is wanted
+    // again, with the rows it has under them.
+    rerender(
+      <Host source={{ client }} open filters={{ person: { name: "tim" } }} />,
+    );
+
+    await waitFor(() => expect(fetch.mock.calls.length).toBeGreaterThan(asked));
+    const url = new URL(fetch.mock.calls.at(-1)![0]);
+    expect(url.searchParams.get("q")).toBe("CINDER RACING STABLES, LLC");
+    expect(url.searchParams.get("person.name")).toBe("tim");
+    expect(
+      (await screen.findAllByTestId("business-suggestion")).length,
+    ).toBeGreaterThan(0);
+  });
+
   it("does not search the picked name again for the same filters in a new object", async () => {
     const fetch = autocompleteFetch();
     const client = createAutocompleteClient({

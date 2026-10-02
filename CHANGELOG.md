@@ -56,7 +56,9 @@ the name's own marks, and a reader and the pick carry the same answer.
   edited after the pick, so a host that holds the menu open while a filter is
   typed (`open`) sees the narrowed list, not an empty one. The pick used to
   switch the search off until the name itself was edited. Re-rendering the
-  same filters in a new object, and editing the name, behave as before.
+  same filters in a new object, and editing the name, behave as before. A pick
+  is of the filters it was made under, so putting them back as they were is not
+  a return to it: the name is searched again, and its rows are there to pick.
 
 ## [0.2.0] - 2026-09-28
 
