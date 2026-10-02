@@ -126,6 +126,8 @@ All of them are overridable through `messages`:
 | `match`, `matches`     | match, matches                                                                           |
 | `noAddress`            | No address on file                                                                       |
 | `agentSuffix`          | a space, then `· agent`                                                                  |
+| `officerAddressSuffix` | a space, then `· officer's address`, after an address an address filter matched          |
+| `agentAddressSuffix`   | a space, then `· agent's address`                                                        |
 | `more(n)`              | `+n`                                                                                     |
 | `structures`           | each structure's flag, one value at a time ([the flags](styling.md#the-structures-flag)) |
 | `dayLimit`             | Your plan's daily autocomplete limit is reached; suggestions return tomorrow.            |

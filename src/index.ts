@@ -104,8 +104,10 @@ export {
 } from "./core/policy";
 export type { Grant, MintEvent, SessionPhase } from "./core/session";
 export {
+  addressLineOf,
   formatFound,
   leadAddressOf,
+  matchedOn,
   officersOf,
   orderedStates,
   partsFor,
@@ -113,6 +115,9 @@ export {
   queryTokens,
   structureLabel,
   typedPrefixLength,
+  type AddressLine,
+  type AddressOwner,
+  type MatchedOn,
   type PeopleLine,
 } from "./core/suggestions";
 export {

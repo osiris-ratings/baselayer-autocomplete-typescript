@@ -225,7 +225,10 @@ client that has to mint again.
 ## Readers
 
 The row helpers the styled component uses are exported for your own rows:
-`leadAddressOf`, `officersOf`, `peopleLineOf`, `orderedStates`,
+`leadAddressOf`, `addressLineOf`, `officersOf`, `peopleLineOf`,
+`orderedStates`, `matchedOn` (what a row matched besides its name: officers,
+agents, addresses, states and the alias; see
+[What matched](styling.md#what-matched)),
 `structureLabel` (a structure's flag, `C-Corp` for `C_CORPORATION`),
 `formatFound`, `queryTokens` and `partsFor` (the highlight parts to draw for
 a name, whole-word or cut at the typed prefix). To lay your rows out in the

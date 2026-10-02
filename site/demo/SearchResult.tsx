@@ -1,6 +1,6 @@
 // The report a finished search is drawn as: the verdict, the two ratings, how
-// the search matched, the business, its filings, its people and the lists it
-// was screened against. One scrolling page of sections rather than tabs, so
+// the search matched, the business, its addresses, states, filings and people
+// (what the pick matched first) and the lists it was screened against. One scrolling page of sections rather than tabs, so
 // all of it is on screen at once, and a section the search has nothing for is
 // left out. What each field says is in ./search-view; this only lays it out.
 
@@ -8,6 +8,8 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 import { Icon, type IconName } from "../shared/icons";
 import {
+  NOTHING_MATCHED,
+  addressesOnFile,
   deliveryChips,
   elapsedLabel,
   entityType,
@@ -17,20 +19,25 @@ import {
   hitLines,
   matchRows,
   monthsLabel,
+  officersOnFile,
   orderedRegistrations,
   plural,
   ratingOf,
   readable,
   registrationKind,
   registrationStatus,
+  statesOnFile,
   verdictOf,
   watchlistRows,
   type Chip,
+  type Matched,
+  type OnFile,
   type Rating,
   type VerdictKind,
 } from "./search-view";
 import type {
   Address,
+  AddressWithSources,
   Business,
   Officer,
   Registration,
@@ -44,6 +51,9 @@ function ChipView({ chip }: { chip: Chip }) {
     </span>
   );
 }
+
+/** What the pick matched, on an address, an officer or a state of the business. */
+const MATCHED: Chip = { label: "Matched", tone: "good" };
 
 const VERDICT_ICONS: Record<VerdictKind, IconName> = {
   verified: "check",
@@ -179,8 +189,6 @@ function AddressLine({ address }: { address: Address }) {
   );
 }
 
-const OTHER_ADDRESSES = 4;
-
 /** A string the API sent, or null for none or an empty one. */
 function textOrNull(value: string | null | undefined): string | null {
   return typeof value === "string" && value !== "" ? value : null;
@@ -189,10 +197,6 @@ function textOrNull(value: string | null | undefined): string | null {
 /** What the business is, as a list of facts; nothing at all when it has none. */
 function BusinessFacts({ business }: { business: Business }) {
   const type = entityType(business.structure);
-  const primary = business.primary_address ?? business.addresses?.[0] ?? null;
-  const others = (business.addresses ?? []).filter(
-    address => formatAddress(address) !== formatAddress(primary),
-  );
   const incorporated = [
     textOrNull(business.incorporation_state),
     formatDay(business.incorporation_date),
@@ -212,7 +216,6 @@ function BusinessFacts({ business }: { business: Business }) {
   if (
     type === null &&
     incorporated.length === 0 &&
-    primary === null &&
     aliases.length === 0 &&
     phones.length === 0 &&
     email === null &&
@@ -227,29 +230,6 @@ function BusinessFacts({ business }: { business: Business }) {
         {type !== null && <Fact label="Entity type">{type}</Fact>}
         {incorporated.length > 0 && (
           <Fact label="Incorporated">{incorporated.join(" · ")}</Fact>
-        )}
-        {primary !== null && (
-          <Fact label="Address">
-            <AddressLine address={primary} />
-          </Fact>
-        )}
-        {others.length > 0 && (
-          <Fact label="Also on file">
-            <ul className="sr-plain">
-              {/* The API may list one address twice (under two sources), so the
-                  line alone is not a key. */}
-              {others.slice(0, OTHER_ADDRESSES).map((address, index) => (
-                <li key={`${formatAddress(address)}#${index}`}>
-                  <AddressLine address={address} />
-                </li>
-              ))}
-              {others.length > OTHER_ADDRESSES && (
-                <li className="sr-muted">
-                  and {others.length - OTHER_ADDRESSES} more
-                </li>
-              )}
-            </ul>
-          </Fact>
         )}
         {aliases.length > 0 && (
           <Fact label="Also known as">
@@ -275,6 +255,56 @@ function BusinessFacts({ business }: { business: Business }) {
           </Fact>
         )}
       </dl>
+    </Section>
+  );
+}
+
+/**
+ * Every address the business has on file: those the search matched first, with
+ * the pill, then its primary address, then the rest as the API sent them.
+ */
+function Addresses({
+  entries,
+  primary,
+}: {
+  entries: OnFile<AddressWithSources>[];
+  primary: Address | null;
+}) {
+  const primaryLine = formatAddress(primary);
+  return (
+    <Section title="Addresses on file" count={entries.length}>
+      <ul className="sr-plain sr-onfile">
+        {entries.map(({ item, matched }, index) => (
+          <li
+            key={`${formatAddress(item)}#${index}`}
+            data-matched={matched ? "true" : undefined}
+          >
+            <AddressLine address={item} />
+            {matched && <ChipView chip={MATCHED} />}
+            {primaryLine !== null && formatAddress(item) === primaryLine && (
+              <span className="sr-muted">Primary</span>
+            )}
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
+/** The states the business is registered in, those the filter named first. */
+function States({ entries }: { entries: OnFile<string>[] }) {
+  return (
+    <Section title="States" count={entries.length}>
+      <ul className="sr-states">
+        {entries.map(({ item, matched }) => (
+          <li key={item} data-matched={matched ? "true" : undefined}>
+            <span className="sr-state" aria-hidden="true">
+              {item}
+            </span>
+            {matched ? <ChipView chip={MATCHED} /> : null}
+          </li>
+        ))}
+      </ul>
     </Section>
   );
 }
@@ -361,10 +391,10 @@ function initials(name: string): string {
     .join("");
 }
 
-function Person({ officer }: { officer: Officer }) {
+function Person({ officer, matched }: { officer: Officer; matched: boolean }) {
   const role = titlesOf(officer.titles);
   return (
-    <li className="sr-person">
+    <li className="sr-person" data-matched={matched ? "true" : undefined}>
       <span className="sr-avatar" aria-hidden="true">
         {initials(officer.name) || "?"}
       </span>
@@ -372,6 +402,7 @@ function Person({ officer }: { officer: Officer }) {
         <strong>{readable(officer.name)}</strong>
         {role !== null && <span className="sr-muted">{role}</span>}
       </span>
+      {matched && <ChipView chip={MATCHED} />}
       <span className="sr-tags">
         {(officer.states ?? []).map(state => (
           <span className="sr-tag" key={state}>
@@ -438,10 +469,13 @@ function Watchlists({ search }: { search: Search }) {
 export function SearchResult({
   search,
   elapsedMs,
+  matched = NOTHING_MATCHED,
 }: {
   search: Search;
   /** How long the page waited for the search, when it knows. */
   elapsedMs: number | null;
+  /** What the pick behind the search matched on, which the lists lead with. */
+  matched?: Matched;
 }) {
   const titleId = useId();
   const business = search.business ?? null;
@@ -449,9 +483,11 @@ export function SearchResult({
   const ratings = [ratingOf(search, "kyb"), ratingOf(search, "risk")].filter(
     (rating): rating is Rating => rating !== null,
   );
-  const rows = matchRows(search);
+  const rows = matchRows(search, matched);
   const registrations = orderedRegistrations(business?.registrations);
-  const officers = business?.business_officers ?? [];
+  const addresses = addressesOnFile(business, search, matched);
+  const states = statesOnFile(business, matched);
+  const officers = officersOnFile(business, search, matched);
   const finished = search.state === "COMPLETED" && business !== null;
   const warnings = search.warnings ?? [];
   const summary = glance(search);
@@ -559,13 +595,24 @@ export function SearchResult({
             </tbody>
           </table>
           <p className="sr-caption">
-            A picked business is searched by its token alone, so the name and
-            address come from the pick and match themselves.
+            A picked business is searched by its token alone, so the name,
+            address and officer come from the pick and match themselves; the
+            states are the filter&apos;s, set against the business&apos;s
+            filings.
           </p>
         </Section>
       )}
 
       {finished && <BusinessFacts business={business} />}
+
+      {finished && addresses.length > 0 && (
+        <Addresses
+          entries={addresses}
+          primary={business.primary_address ?? null}
+        />
+      )}
+
+      {finished && states.length > 0 && <States entries={states} />}
 
       {finished && registrations.length > 0 && (
         <Section
@@ -583,8 +630,12 @@ export function SearchResult({
       {finished && officers.length > 0 && (
         <Section title="Officers" count={officers.length}>
           <ul className="sr-people">
-            {officers.map((officer, index) => (
-              <Person key={`${officer.name}#${index}`} officer={officer} />
+            {officers.map(({ item, matched: reached }, index) => (
+              <Person
+                key={`${item.name}#${index}`}
+                officer={item}
+                matched={reached}
+              />
             ))}
           </ul>
         </Section>

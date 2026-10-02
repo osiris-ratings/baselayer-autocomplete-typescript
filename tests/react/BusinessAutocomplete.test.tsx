@@ -405,6 +405,160 @@ describe("BusinessAutocomplete", () => {
     expect(mint).toHaveBeenCalledTimes(1);
   });
 
+  it("searches the picked name again when a filter is edited after the pick", async () => {
+    const fetch = autocompleteFetch();
+    const client = createAutocompleteClient({
+      baseUrl: BASE_URL,
+      mint: grantingMint(),
+      fetch,
+    });
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <Host source={{ client }} open filters={{ person: { name: "tim" } }} />,
+    );
+
+    await user.type(input(), "cind");
+    await screen.findAllByTestId("business-suggestion");
+    await user.click(screen.getByText("CINDER RACING STABLES, LLC"));
+    await aMoment();
+    expect(screen.queryAllByTestId("business-suggestion")).toHaveLength(0);
+    const asked = fetch.mock.calls.length;
+
+    rerender(
+      <Host source={{ client }} open filters={{ person: { name: "tima" } }} />,
+    );
+
+    await screen.findAllByTestId("business-suggestion");
+    expect(fetch.mock.calls.length).toBeGreaterThan(asked);
+    const url = new URL(fetch.mock.calls.at(-1)![0]);
+    expect(url.searchParams.get("q")).toBe("CINDER RACING STABLES, LLC");
+    expect(url.searchParams.get("person.name")).toBe("tima");
+  });
+
+  it("does not search the picked name again for the same filters in a new object", async () => {
+    const fetch = autocompleteFetch();
+    const client = createAutocompleteClient({
+      baseUrl: BASE_URL,
+      mint: grantingMint(),
+      fetch,
+    });
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <Host source={{ client }} open filters={{ person: { name: "tim" } }} />,
+    );
+
+    await user.type(input(), "cind");
+    await screen.findAllByTestId("business-suggestion");
+    await user.click(screen.getByText("CINDER RACING STABLES, LLC"));
+    await aMoment();
+    const asked = fetch.mock.calls.length;
+
+    rerender(
+      <Host source={{ client }} open filters={{ person: { name: "tim" } }} />,
+    );
+    await aMoment();
+
+    expect(fetch.mock.calls.length).toBe(asked);
+    expect(screen.queryAllByTestId("business-suggestion")).toHaveLength(0);
+  });
+
+  it("hands the host what the picked row matched on, by the filters its rows were fetched with", async () => {
+    const fetch = autocompleteFetch();
+    const client = createAutocompleteClient({
+      baseUrl: BASE_URL,
+      mint: grantingMint(),
+      fetch,
+    });
+    const onPick = vi.fn<BusinessAutocompleteProps["onPick"]>();
+    const user = userEvent.setup();
+    render(
+      <Host
+        source={{ client }}
+        onPick={onPick}
+        filters={{ state: ["DE", "TX"] }}
+      />,
+    );
+
+    await user.type(input(), "cind");
+    await screen.findAllByTestId("business-suggestion");
+    await user.click(screen.getByText("CINDER RACING STABLES, LLC"));
+
+    // Both rows are in Delaware; Texas is not among their states.
+    expect(onPick.mock.calls[0]![1].matchedOn).toEqual([
+      { kind: "state", states: ["DE"] },
+    ]);
+  });
+
+  it("hands the host no matches for a name-only pick", async () => {
+    const client = createAutocompleteClient({
+      baseUrl: BASE_URL,
+      mint: grantingMint(),
+      fetch: autocompleteFetch(),
+    });
+    const onPick = vi.fn<BusinessAutocompleteProps["onPick"]>();
+    const user = userEvent.setup();
+    render(<Host source={{ client }} onPick={onPick} />);
+
+    await user.type(input(), "cind");
+    await screen.findAllByTestId("business-suggestion");
+    await user.click(screen.getByText("CINDER RIGGING, INC."));
+
+    expect(onPick.mock.calls[0]![1].matchedOn).toEqual([]);
+  });
+
+  it("claims no state match when the client withheld the filters from a short query", async () => {
+    const fetch = autocompleteFetch();
+    const client = createAutocompleteClient({
+      baseUrl: BASE_URL,
+      mint: grantingMint(),
+      fetch,
+    });
+    const onPick = vi.fn<BusinessAutocompleteProps["onPick"]>();
+    const user = userEvent.setup();
+    render(
+      <Host
+        source={{ client }}
+        onPick={onPick}
+        filters={{ state: ["DE"] }}
+        minChars={1}
+      />,
+    );
+
+    // The grant's filter stem is three characters: two are asked without it.
+    await user.type(input(), "ci");
+    await screen.findAllByTestId("business-suggestion");
+    expect(
+      new URL(fetch.mock.calls.at(-1)?.[0] ?? "").searchParams.has("state"),
+    ).toBe(false);
+    await user.click(screen.getByText("CINDER RIGGING, INC."));
+
+    expect(onPick.mock.calls[0]![1].matchedOn).toEqual([]);
+  });
+
+  it("marks a matched state on the rows, and none where the filters were withheld", async () => {
+    vi.stubGlobal("fetch", autocompleteFetch());
+    const user = userEvent.setup();
+    render(
+      <Host
+        source={{ mint: grantingMint(), baseUrl: BASE_URL }}
+        mintOn="request"
+        filters={{ state: ["DE"] }}
+        minChars={1}
+      />,
+    );
+    const marked = () =>
+      screen
+        .getAllByTestId("business-suggestion-state")
+        .filter(square => square.hasAttribute("data-matched"));
+
+    await user.type(input(), "ci");
+    await screen.findAllByTestId("business-suggestion");
+    expect(marked()).toHaveLength(0);
+
+    await user.type(input(), "nd");
+    await waitFor(() => expect(marked()).toHaveLength(2));
+  });
+
   it("mints when the field takes focus under mintOn focus, and the first keystroke uses that grant", async () => {
     const fetch = autocompleteFetch();
     const mint = grantingMint();

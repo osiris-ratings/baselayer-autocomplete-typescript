@@ -21,8 +21,9 @@ import {
   type RowPlace,
 } from "@baselayer-sdk/autocomplete";
 import {
+  addressLineOf,
   formatFound,
-  leadAddressOf,
+  matchedOn,
   orderedStates,
   partsFor,
   peopleLineOf,
@@ -31,6 +32,7 @@ import {
 } from "@baselayer-sdk/autocomplete";
 import type {
   BusinessSuggestion,
+  Filters,
   HighlightPart,
 } from "@baselayer-sdk/autocomplete";
 
@@ -105,6 +107,13 @@ export interface BusinessAutocompleteViewProps {
    * `subtitle` empty, the field in `subtitleTrailing` takes its place.
    */
   layout?: RowLayoutInput | undefined;
+  /**
+   * The filters `suggestions` were fetched with (`appliedFilters` of
+   * `useBusinessAutocomplete`), none when there were none or the client withheld
+   * them. The rows read only the states from it: the wire flags what a person
+   * or an address filter matched, but not what a state filter did.
+   */
+  appliedFilters?: Filters | undefined;
   /**
    * The menu as wide as the input (the default), or, `false`, as wide as
    * `--bl-ac-menu-width` from 48em up.
@@ -224,16 +233,19 @@ function marked(
 
 function StateSquares({
   suggestion,
+  matched,
   cx,
   more,
   place,
 }: {
   suggestion: BusinessSuggestion;
+  /** The states a state filter matched: moved forward and marked. */
+  matched: readonly string[];
   cx: ClassFor;
   more: (count: number) => string;
   place: RowPlace;
 }) {
-  const states = orderedStates(suggestion);
+  const states = orderedStates(suggestion, matched);
   const shown = states.slice(0, STATE_SQUARES);
   const hidden = states.length - shown.length;
   return (
@@ -244,6 +256,7 @@ function StateSquares({
           className={cx("state", "bl-ac-state")}
           data-testid="business-suggestion-state"
           data-domicile={index === 0 ? "true" : undefined}
+          data-matched={matched.includes(state) ? "true" : undefined}
         >
           {state}
         </span>
@@ -283,6 +296,8 @@ interface DefaultRowProps {
   tokens: string[];
   text: AutocompleteMessages;
   cx: ClassFor;
+  /** The states the filters the rows were fetched with named, if any. */
+  stateFilter: readonly string[] | undefined;
 }
 
 /**
@@ -290,19 +305,50 @@ interface DefaultRowProps {
  * lead corner and its trailing corner, each holding its places' fields. The
  * first line's lead is the title: the name with its badge, then `also …`.
  */
-function DefaultRow({ item, layout, look, tokens, text, cx }: DefaultRowProps) {
+function DefaultRow({
+  item,
+  layout,
+  look,
+  tokens,
+  text,
+  cx,
+  stateFilter,
+}: DefaultRowProps) {
   const region = look.matchEmphasisRegion;
   // Plain draws none of the marks, which is no parts at all.
   const parts = look.matchEmphasis !== "plain" ? item.highlight : [];
   const markClass = cx("mark", "bl-ac-mark");
-  const address = leadAddressOf(item);
+  const address = addressLineOf(item);
   const people = peopleLineOf(item);
   const structure = structureLabel(item.structure, text.structures);
+  const matches = matchedOn(item, { state: stateFilter });
+  const matchedStates = matches.flatMap(match =>
+    match.kind === "state" ? match.states : [],
+  );
+  // A match with no parts of its own is marked whole, as the one part.
+  const wholeMark = (label: string, matched: boolean): ReactNode =>
+    matched && look.matchEmphasis !== "plain"
+      ? marked(label, [{ text: label, matched: true }], markClass)
+      : label;
+  const addressSuffix =
+    address === null || !address.matched
+      ? ""
+      : address.role === "officer"
+        ? text.officerAddressSuffix
+        : address.role === "agent"
+          ? text.agentAddressSuffix
+          : "";
   // Each field as drawn in a place: the same in any, the place deciding
   // where it sits and what gives way first.
   const fieldNode: Record<RowField, (place: RowPlace) => ReactNode> = {
     states: place => (
-      <StateSquares suggestion={item} cx={cx} more={text.more} place={place} />
+      <StateSquares
+        suggestion={item}
+        matched={matchedStates}
+        cx={cx}
+        more={text.more}
+        place={place}
+      />
     ),
     structure: place =>
       structure !== null && (
@@ -319,8 +365,17 @@ function DefaultRow({ item, layout, look, tokens, text, cx }: DefaultRowProps) {
         className={cx("address", "bl-ac-address")}
         data-place={place}
         data-testid="business-suggestion-address"
+        data-emphasis={look.matchEmphasis}
+        data-matched={address?.matched ? "true" : undefined}
       >
-        {address ?? text.noAddress}
+        {address === null ? (
+          text.noAddress
+        ) : (
+          <>
+            {wholeMark(address.label, address.matched)}
+            {addressSuffix}
+          </>
+        )}
       </span>
     ),
     people: place =>
@@ -330,8 +385,10 @@ function DefaultRow({ item, layout, look, tokens, text, cx }: DefaultRowProps) {
           data-place={place}
           data-testid="business-suggestion-officers"
           data-role={people.role}
+          data-emphasis={look.matchEmphasis}
+          data-matched={people.matched > 0 ? "true" : undefined}
         >
-          {people.names[0]}
+          {wholeMark(people.names[0] ?? "", people.matched > 0)}
           {people.more > 0 ? ` ${text.more(people.more)}` : ""}
           {people.role === "agent" ? text.agentSuffix : ""}
         </span>
@@ -468,6 +525,7 @@ export function BusinessAutocompleteView({
   error,
   open = false,
   layout: layoutInput,
+  appliedFilters,
   menuFollowsInputWidth = true,
   look: lookInput,
   messages: messageOverrides,
@@ -566,6 +624,7 @@ export function BusinessAutocompleteView({
                   tokens={tokens}
                   text={text}
                   cx={cx}
+                  stateFilter={appliedFilters?.state}
                 />
               );
               return (

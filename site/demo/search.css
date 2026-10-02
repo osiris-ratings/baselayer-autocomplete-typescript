@@ -702,6 +702,31 @@
   }
 }
 
+/* Every address on file: the line, then the pill and the primary tag, on one
+   line that wraps. */
+.sr-onfile > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+}
+
+/* Every state the business is in, a square each, the pill beside the matched. */
+.sr-states {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sr-states > li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .sr-filings,
 .sr-people,
 .sr-lists {

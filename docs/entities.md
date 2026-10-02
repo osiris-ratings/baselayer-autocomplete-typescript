@@ -64,6 +64,12 @@ and `highlight`. Each type adds its own fields:
 `sources` before an empty `related` entry: an empty list under a source that
 is not `ok` means "not looked", never "none".
 
+Each related entity says whether it is why the row is here (`matched`), and
+the set says how many were (`matched`, null when no filter applied): the
+officers and addresses a person or an address filter matched lead the lists.
+`matchedOn` reads those flags, with `matched_name` and the state filter, into
+what a row matched on (see [Styling](styling.md#what-matched)).
+
 A business's `structure` is its legal structure, one of
 `BUSINESS_STRUCTURES` (`LLC`, `C_CORPORATION`, …), or null when it is not
 known or the API does not send it. The styled component draws it as a flag

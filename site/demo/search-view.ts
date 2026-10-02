@@ -5,13 +5,16 @@
 import {
   structureLabel,
   type BusinessStructure,
+  type MatchedOn,
 } from "@baselayer-sdk/autocomplete";
 
 import type {
   Address,
   AddressMatchType,
+  AddressWithSources,
   Business,
   MatchType,
+  Officer,
   Registration,
   Search,
   WatchlistHit,
@@ -296,15 +299,221 @@ export function matchPill(
     : (MATCH_CHIPS[match] ?? null);
 }
 
+/** What the visitor's pick matched on, as the report sets it against what the search found. */
+export interface Matched {
+  /** The name the business goes by that the pick matched, when it matched one. */
+  alias: string | null;
+  /** The officers the pick's person filter matched, as the typeahead named them. */
+  officers: string[];
+  /** The addresses its address filter matched, as the typeahead drew them. */
+  addresses: string[];
+  /** The states the visitor filtered by, as typed. */
+  asked: string[];
+  /** Those of the business's states that the filter named. */
+  states: string[];
+}
+
+export const NOTHING_MATCHED: Matched = {
+  alias: null,
+  officers: [],
+  addresses: [],
+  asked: [],
+  states: [],
+};
+
+/**
+ * What a pick matched, read off the SDK's `matchedOn` and the state codes the
+ * visitor typed. Registered agents are people the filter reached, not officers.
+ */
+export function matchedOf(
+  matchedOn: readonly MatchedOn[],
+  asked: readonly string[] = [],
+): Matched {
+  const matched: Matched = {
+    alias: null,
+    officers: [],
+    addresses: [],
+    asked: [...new Set(asked.map(code => code.trim().toUpperCase()))].filter(
+      code => code !== "",
+    ),
+    states: [],
+  };
+  for (const match of matchedOn) {
+    switch (match.kind) {
+      case "alias":
+        matched.alias = match.name;
+        break;
+      case "officer":
+        matched.officers.push(...match.names);
+        break;
+      case "address":
+        matched.addresses.push(match.label);
+        break;
+      case "state":
+        matched.states.push(...match.states);
+        break;
+      case "agent":
+        break;
+    }
+  }
+  return matched;
+}
+
+/** A line of text as the letters and digits of it, so two spellings of one address meet. */
+function lineKey(text: string | null | undefined): string {
+  return (text ?? "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+/** A name's words that are not initials: `HARLOW, THOMAS` and `Thomas A. Harlow` share two. */
+function nameWords(name: string): string[] {
+  return name
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(word => word.length > 1);
+}
+
+/**
+ * Whether two officer names are one person's: every word of the shorter is in
+ * the longer, which a middle name or a suffix does not change, and a surname
+ * first does not either.
+ */
+export function sameOfficer(a: string, b: string): boolean {
+  const [short, long] = [nameWords(a), nameWords(b)].sort(
+    (x, y) => x.length - y.length,
+  ) as [string[], string[]];
+  return short.length >= 2 && short.every(word => long.includes(word));
+}
+
+export interface OnFile<T> {
+  item: T;
+  /** The pick matched it: the search's own address or officer, or what a filter reached. */
+  matched: boolean;
+}
+
+/** `items` with those that matched first, each group in the order it came. */
+function matchedFirst<T>(items: readonly OnFile<T>[]): OnFile<T>[] {
+  return [
+    ...items.filter(entry => entry.matched),
+    ...items.filter(entry => !entry.matched),
+  ];
+}
+
+/**
+ * Every address the business has on file, as the API sent them (one under two
+ * sources is drawn twice, as it is named), and its primary address when that
+ * is not among them. The ones the pick's address filter reached lead, the
+ * address the search carries first among them; then the primary, then the
+ * rest. A pick no address filter reached matched none: the address its search
+ * carries is the business's lead, not something it matched.
+ */
+export function addressesOnFile(
+  business: Business | null | undefined,
+  search: Search,
+  matched: Matched,
+): OnFile<AddressWithSources>[] {
+  if (business === null || business === undefined) {
+    return [];
+  }
+  const keysOf = (lines: readonly (string | null | undefined)[]) =>
+    new Set(lines.map(lineKey).filter(key => key !== ""));
+  const carried = keysOf([
+    formatAddress(search.search_address ?? null),
+    search.address,
+  ]);
+  const reached = keysOf(matched.addresses);
+  const filtered = reached.size > 0;
+  const primary = business.primary_address ?? null;
+  const primaryKey = lineKey(formatAddress(primary));
+  const listed = business.addresses ?? [];
+  const all =
+    primary !== null &&
+    !listed.some(address => lineKey(formatAddress(address)) === primaryKey)
+      ? [primary, ...listed]
+      : listed;
+  const entries = all.map(address => {
+    const key = lineKey(formatAddress(address));
+    return {
+      item: address,
+      carried: filtered && carried.has(key),
+      matched: reached.has(key) || (filtered && carried.has(key)),
+      primary: primaryKey !== "" && key === primaryKey,
+    };
+  });
+  return [
+    ...entries.filter(entry => entry.carried),
+    ...entries.filter(entry => entry.matched && !entry.carried),
+    ...entries.filter(entry => !entry.matched && entry.primary),
+    ...entries.filter(entry => !entry.matched && !entry.primary),
+  ].map(({ item, matched: reachedIt }) => ({ item, matched: reachedIt }));
+}
+
+/**
+ * Every officer the business has, the ones the search matched first: those it
+ * carries, and any the pick's person filter reached.
+ */
+export function officersOnFile(
+  business: Business | null | undefined,
+  search: Search,
+  matched: Matched,
+): OnFile<Officer>[] {
+  const asked = [...(search.officer_names ?? []), ...matched.officers];
+  return matchedFirst(
+    (business?.business_officers ?? []).map(officer => ({
+      item: officer,
+      matched: asked.some(name => sameOfficer(name, officer.name)),
+    })),
+  );
+}
+
+/**
+ * Every state the business is registered in, the ones the visitor's filter
+ * named first. A state is where a filing is, and the incorporation state even
+ * when its filing is not listed.
+ */
+export function statesOnFile(
+  business: Business | null | undefined,
+  matched: Matched,
+): OnFile<string>[] {
+  if (business === null || business === undefined) {
+    return [];
+  }
+  const states = [
+    ...new Set(
+      [
+        textOr(business.incorporation_state),
+        ...orderedRegistrations(business.registrations).map(
+          registration => registration.state,
+        ),
+      ].filter(state => state !== null),
+    ),
+  ];
+  return matchedFirst(
+    states.map(state => ({
+      item: state,
+      matched: matched.states.includes(state),
+    })),
+  );
+}
+
+function textOr(value: string | null | undefined): string | null {
+  return typeof value === "string" && value !== "" ? value : null;
+}
+
 export interface MatchRow {
-  key: "name" | "address";
+  key: "name" | "officer" | "address" | "states";
   label: string;
-  /** What the search asked for: for a pick, the business as the API recorded it. */
+  /** What the search asked for, or what the visitor's pick matched. */
   yours: string | null;
-  /** What the matched business is called. */
+  /** What the matched business has that it matched. */
   found: string | null;
   pill: Chip | null;
 }
+
+/** The pill for a match the API does not grade: the pick's own flag. */
+const MATCHED_PILL: Chip = { label: "Match", tone: "good" };
 
 /** The business's address as the report shows it: its primary, else its first. */
 export function primaryAddressLine(
@@ -316,30 +525,69 @@ export function primaryAddressLine(
 }
 
 /**
- * Your search against the business it found. A pick's search carries a name
- * and an address and nothing else to compare, so those are the rows; one with
- * neither on either side has no row.
+ * Your search against the business it found, a row for each thing the pick
+ * matched on: its name (or the name it goes by), the officer, the address and
+ * the states. A row with nothing on either side is left out. The API grades
+ * the name, the address and the officer; the states are the filter's own, so
+ * their pill is the pick's flag.
  */
-export function matchRows(search: Search): MatchRow[] {
+export function matchRows(
+  search: Search,
+  matched: Matched = NOTHING_MATCHED,
+): MatchRow[] {
   const business = search.business ?? null;
+  const alias = matched.alias === null ? null : readable(matched.alias);
+  const name =
+    typeof business?.name === "string" ? readable(business.name) : null;
+  const officers = search.officer_names ?? [];
+  const yourOfficer = officers[0] ?? matched.officers[0] ?? null;
+  const foundOfficer =
+    officersOnFile(business, search, matched).find(entry => entry.matched)?.item
+      .name ?? null;
+  const foundAddress = addressesOnFile(business, search, matched).find(
+    entry => entry.matched,
+  )?.item;
+  // The states the filter named that the business is in, as they were typed.
+  const typed = matched.asked.filter(code => matched.states.includes(code));
+  const foundStates = typed.length > 0 ? typed : matched.states;
   const rows: MatchRow[] = [
     {
       key: "name",
-      label: "Legal entity name",
-      yours: typeof search.name === "string" ? readable(search.name) : null,
-      found:
-        typeof business?.name === "string" ? readable(business.name) : null,
+      label: "Name",
+      yours:
+        alias ??
+        (typeof search.name === "string" ? readable(search.name) : null),
+      found: name === null || alias === null ? name : `${name} (DBA ${alias})`,
       pill: matchPill(search.business_name_match),
     },
     {
+      key: "officer",
+      label: "Officer",
+      yours: yourOfficer === null ? null : readable(yourOfficer),
+      found: foundOfficer === null ? null : readable(foundOfficer),
+      pill:
+        matchPill(search.business_officer_match) ??
+        (foundOfficer === null ? null : MATCHED_PILL),
+    },
+    {
       key: "address",
-      label: "Legal entity address",
+      label: "Address",
       yours:
         typeof search.address === "string"
           ? readableAddress(search.address)
           : null,
-      found: primaryAddressLine(business),
+      found:
+        foundAddress === undefined
+          ? primaryAddressLine(business)
+          : formatAddress(foundAddress),
       pill: matchPill(search.business_address_match),
+    },
+    {
+      key: "states",
+      label: "States",
+      yours: matched.asked.length > 0 ? matched.asked.join(", ") : null,
+      found: foundStates.length > 0 ? foundStates.join(", ") : null,
+      pill: foundStates.length > 0 ? MATCHED_PILL : null,
     },
   ];
   return rows.filter(row => row.yours !== null || row.found !== null);

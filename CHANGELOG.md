@@ -6,6 +6,48 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+A row says what a filter matched it on. A person, an address or a state filter
+narrows the suggestions, and the autocomplete service flags what each row
+matched; the SDK parsed those flags and drew none of them. A row now marks the
+officer, the address and the state that a filter matched, in the emphasis of
+the name's own marks, and a reader and the pick carry the same answer.
+
+### Added
+
+- `matchedOn(suggestion, { state })`: what a row matched on besides its name,
+  as `MatchedOn[]` (the alias, the officers and agents, the addresses with
+  whose they are, and the states a state filter named), or `[]` when only the
+  name matched. `addressLineOf(suggestion)`: the lead address, whether it
+  matched, and whose it is.
+- `look.matchEmphasis` marks what a filter matched as well: a matched officer
+  and a matched address, whole, and the squares of the states a state filter
+  named (a square is also ringed, since its fill and weight would hide a
+  mark). `data-matched="true"` says which. A matched address says whose it is,
+  after it: `· officer's address` or `· agent's address`, the messages
+  `officerAddressSuffix` and `agentAddressSuffix`.
+- `appliedFilters` on `useBusinessAutocomplete` and on
+  `BusinessAutocompleteView`: the filters the rows were fetched with, none
+  when there were none or the client withheld them from a short name.
+- `Pick.matchedOn`: what the picked row matched on besides its name, `[]` for
+  a pick the name alone reached.
+
+### Changed
+
+- **Breaking:** `Pick` requires `matchedOn`, and `EntityAutocompleteState`
+  requires `appliedFilters`, so a host that builds either needs them.
+- `peopleLineOf` leads with the people a person filter matched, and says how
+  many of its names did (`matched`). `orderedStates(suggestion, matched)`
+  moves the states a state filter matched up behind the domicile, so a matched
+  state is never left behind `+N`.
+
+### Fixed
+
+- `BusinessAutocomplete` searches the picked name again when a filter is
+  edited after the pick, so a host that holds the menu open while a filter is
+  typed (`open`) sees the narrowed list, not an empty one. The pick used to
+  switch the search off until the name itself was edited. Re-rendering the
+  same filters in a new object, and editing the name, behave as before.
+
 ## [0.2.0] - 2026-09-28
 
 A row's places are named for where they sit, a host picks the field each one

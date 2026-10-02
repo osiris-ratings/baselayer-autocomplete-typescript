@@ -1,6 +1,7 @@
 import {
   includeForLayout,
   leadAddressOf,
+  matchedOn,
   partsFor,
   peopleLineOf,
   structureLabel,
@@ -108,6 +109,28 @@ describe("the sample rows' fields", () => {
       true,
     );
     expect(people.some(line => line?.role === "agent")).toBe(true);
+  });
+
+  it("include a row an officer filter reached and one an officer's address did, among those the preview opens with", () => {
+    const found = shown.flatMap(row => matchedOn(row, {}));
+
+    expect(found.map(match => match.kind).sort()).toEqual([
+      "address",
+      "alias",
+      "officer",
+    ]);
+    expect(found).toContainEqual({
+      kind: "officer",
+      names: ["Priya Raman"],
+      of: 1,
+    });
+    expect(found).toContainEqual({
+      kind: "address",
+      label: "2210 Key Hwy, Baltimore, MD 21230",
+      role: "officer",
+    });
+    // The first the preview opens with is reached by its name alone.
+    expect(matchedOn(shown[0]!, {})).toEqual([]);
   });
 
   it("carry a spread of structures, one not known, each drawn as its own flag", () => {

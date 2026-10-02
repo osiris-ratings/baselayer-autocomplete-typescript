@@ -65,6 +65,13 @@ export interface EntityAutocompleteState<R extends Relation> {
   unavailable: boolean;
   errorKind: AutocompleteErrorKind | null;
   filtersWithheld: boolean;
+  /**
+   * The filters `suggestions` were fetched with: undefined when there were
+   * none or the client withheld them (`filtersWithheld`). Rows stay on screen
+   * while the next request is in flight, so this, not the filters the host
+   * holds now, says what the rows matched on.
+   */
+  appliedFilters: FiltersByRelation[R] | undefined;
   requestId: string | null;
 }
 
@@ -83,6 +90,7 @@ export const EMPTY_AUTOCOMPLETE_STATE: BusinessAutocompleteState =
     unavailable: false,
     errorKind: null,
     filtersWithheld: false,
+    appliedFilters: undefined,
     requestId: null,
   }) as BusinessAutocompleteState;
 
@@ -99,6 +107,11 @@ function emptyState<R extends Relation>(): EntityAutocompleteState<R> {
 
 function unavailableState<R extends Relation>(): EntityAutocompleteState<R> {
   return UNAVAILABLE_STATE as unknown as EntityAutocompleteState<R>;
+}
+
+/** What a set of filters says: the same content in a new object is the same key. */
+export function filtersKeyOf(filters: object | undefined): string {
+  return JSON.stringify(filters ?? null);
 }
 
 /** Debounced suggestions for a business-name field: the businesses route of `useEntityAutocomplete`. */
@@ -139,7 +152,7 @@ export function useEntityAutocomplete<R extends Relation>({
   const trimmedQuery = query.trim();
   // Filters and include arrive as fresh objects on every render; the effect
   // keys on what they say, not on their identity.
-  const filtersKey = JSON.stringify(filters ?? null);
+  const filtersKey = filtersKeyOf(filters);
   const includeKey = include?.join(",") ?? "";
   const stableFilters = useMemo(
     () =>
@@ -218,6 +231,7 @@ export function useEntityAutocomplete<R extends Relation>({
           unavailable: false,
           errorKind: null,
           filtersWithheld: result.filtersWithheld,
+          appliedFilters: result.filtersWithheld ? undefined : stableFilters,
           requestId: result.requestId,
         });
       } catch (error) {
