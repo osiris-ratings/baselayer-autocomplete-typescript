@@ -372,6 +372,27 @@ export const PLACE_LABELS: Record<RowPlace, string> = {
   subtitleTrailing: "Subtitle, right",
 };
 
+/**
+ * What each field reads off a row of the autocomplete service's answer, the
+ * fields of the response it is drawn from. The marks a filter earns read its
+ * flags: `matched` on the people and the addresses, and the request's state
+ * filter, which the service flags nowhere.
+ */
+export const FIELD_WIRE: Record<RowField, readonly string[]> = {
+  states: ["domicile_state", "states", "state filter"],
+  structure: ["structure"],
+  address: [
+    "related.addresses.items[0].label",
+    "related.addresses.items[0].matched",
+    "related.addresses.items[0].role",
+  ],
+  people: [
+    "related.people.items[].label",
+    "related.people.items[].matched",
+    "related.people.items[].role",
+  ],
+};
+
 /** Where a dragged field can land besides a place: out of the row. */
 export const TRAY = "tray";
 export type DropSpot = RowPlace | typeof TRAY;

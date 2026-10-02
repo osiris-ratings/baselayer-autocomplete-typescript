@@ -26,6 +26,13 @@
   --side-col: minmax(360px, 1fr);
 }
 
+/* Debug is tables, which use every pixel there is: its split screen is the
+   whole window, where Styling's keeps the site's wide measure, so a long
+   request is not cut off while the screen has room for it. */
+.demo-panes[data-panel="debug"] {
+  max-width: none;
+}
+
 /* A pane is its own scroller. The 6px inset keeps the focus rings of what
    sits flush with its edges inside what it clips. */
 .demo-pane {
@@ -832,6 +839,57 @@
   font-weight: 600;
 }
 
+/* What each field reads off the answer. Hairlines between rows, headings
+   aligned left, like the search report's tables. */
+.row-map-reads {
+  width: 100%;
+  margin-top: 12px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.row-map-reads caption {
+  padding-bottom: 6px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.row-map-reads th,
+.row-map-reads td {
+  padding: 6px 12px 6px 0;
+  border-top: 1px solid var(--line-soft);
+  text-align: left;
+  vertical-align: top;
+}
+
+.row-map-reads thead th {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.row-map-reads tbody th {
+  width: 1%;
+  color: var(--ink-soft);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.row-map-reads code {
+  display: inline-block;
+  margin: 0 8px 2px 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+
 /* The field in flight: the cell it was lifted from, at its size, held where
    it was grabbed, and tilted as if picked up. A face over nothing gets the
    menu's background, since the page shows through it otherwise. */
@@ -1354,8 +1412,9 @@
 
 .net-name {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
   min-width: 0;
 }
 
@@ -1388,10 +1447,13 @@
   font-size: 11.5px;
 }
 
+/* The whole request: beside its kind while the column has room for a
+   readable line of it, under the kind when it has not. A request's values are
+   what Debug is for, so none is cut off with an ellipsis. */
 .net-path {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1 1 14em;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .net-path q {
@@ -1673,12 +1735,25 @@
   transform: rotate(-135deg);
 }
 
+/* The filters side by side, as many to a row as fit, the note above them all. */
 .filters-panel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: start;
+  gap: 0 16px;
   margin: 0 0 18px;
   padding: 14px 16px 2px;
   background: var(--faded);
   border: 1px solid var(--line-soft);
   border-radius: 2px;
+}
+
+.filters-panel[hidden] {
+  display: none;
+}
+
+.filters-panel > .hint {
+  grid-column: 1 / -1;
 }
 
 .demo-preview .bl-ac-input:disabled {

@@ -99,10 +99,15 @@ origin. For another environment, pick **Custom URL** and give its API host.
 business name is always there; its suggestions open beneath it. The filters it
 can carry (an officer or agent's name, the states the business is registered
 in, an address) fold away behind **Add filters**, beside the title, which
-counts the ones set. The SDK holds them back until the business name (not the
-officer's) has as many characters as the session's `filter_min_stem` asks for,
-which the hint above the filters names, and the log says when it did. Pick a
-row and the next step appears under the form.
+counts the ones set; they sit side by side, and stack on a narrow pane. The SDK
+holds them back until the business name (not the officer's) has as many
+characters as the session's `filter_min_stem` asks for, which the hint above the
+filters names, and the log says when it did. The menu stays open while you type
+in a filter, and the list narrows as you do. A filter narrows the list, and the
+row says which one it matched: the officer or the address is marked, a state on
+its flag. Pick a row and the next step appears under the form.
+
+![A filter by officer: the officer each row matched is marked](images/demo-matched.png)
 
 ## Running a search
 
@@ -134,12 +139,17 @@ own, in `site/demo/searches.ts`.
 
 The report is one page of sections, and a section the search has nothing for is
 left out: the verdict (verified, not verified, a fraud hit or no match), the
-KYB and risk ratings, how the search matched (a picked business matches
-itself), the business, its Secretary of State filings, its officers, and the
-watchlists it was screened against. Under it, **View raw response** is the body
-as the API sent it, **See the request in Debug** opens the call on the network
-timeline, and **Open in the console** is the same search in Baselayer's
-console.
+KYB and risk ratings, how the search matched, the business, the addresses and
+states it has on file, its Secretary of State filings, its officers, and the
+watchlists it was screened against. **How it matched** sets what your pick
+matched against what the search found, a row for the name (the name it goes by,
+when you matched one), the officer, the address and the states: the address is
+the one on file that matched, not the business's primary, and the states are
+those you filtered by against those the business is in. The lists that follow
+lead with what matched, each marked **Matched**: the addresses, the states and
+the officers. Under it, **View raw response** is the body as the API sent it,
+**See the request in Debug** opens the call on the network timeline, and **Open
+in the console** is the same search in Baselayer's console.
 
 Only an API key can run it: the session the typeahead holds opens the
 autocomplete service and nothing else. A pick's token lasts 15 minutes, and
@@ -187,36 +197,38 @@ component has, in sections that start folded: the components a row shows, drawn
 as the row itself (the name, which always shows, then each line's two corners, a
 field and the badge pinned to its inner side; each place drawn as the field it
 holds, and as wide as where it sits, whatever it holds, so the two lines'
-columns line up and a chevron stays put. A field is dragged, by mouse or by
-finger, onto another place, where it swaps with what was there, or onto a tray
-of the fields the row leaves out. While it flies, tilted and drawn as the cell
-it left, every spot that takes it is lit. The fold shows only layouts the row
-can draw: a drop lands only where the field would stay; a place nothing can go
-in yet, a badge beside an empty field or the second line's right with no lead,
-is hidden, keeping its room; and a field that leaves the lead lets the right
-corner slide into it, as the row does. Each place's chevron is also a dropdown
-of what it can show, and picking a field from another place swaps it with what
-the place held, as a drop does), how matched words are highlighted (the
-emphasis, the region, and one color override for every emphasis) and whether the
-footer shows the round trip and the index that answered (`look.showDebugInfo`, a
-switch in the same fold), every color (the `look` prop's and the stylesheet's
-own variables, each with a swatch that opens a color picker), the font (the
-page's, the system's, a serif or a mono this page loads, or a stack of your own;
-the name's weight and the weight emphasis's two; and the HTML or CSS that loads
-a font of your own in the weights picked), shape and size, behavior (rows, 1 to
-20; the characters typed before it asks, 2 to 10 and 3 by default; the pause
-before asking; when the session is minted: on the first keystroke, as it is by
-default, on focus or with the first request; and whether the menu is as wide as
-the input, as it is by default), the text (the label, and every message that is
-a string: `more` and `httpFallback` are functions, so they keep their defaults;
-and each structure's flag, an empty one drawing none), and the markup switches
-(`classNames`, `unstyled`). Changes apply as you make them. A color changed from
-its preset's carries a reset inside its field, which puts back the value the
-last preset chosen gave it. **Your configuration** at the bottom is the code
-that reproduces the result, in a React tab and a CSS tab with a **Copy**: the
-props that differ from the defaults (the `layout` names only the places that
-differ from the SDK's), and the CSS variables to set. Its **Reset** puts the
-whole panel back as it opened: the Light preset and every default.
+columns line up and a chevron stays put. Under the row, a table says which
+fields of the autocomplete service's answer each field reads. A field is
+dragged, by mouse or by finger, onto another place, where it swaps with what was
+there, or onto a tray of the fields the row leaves out. While it flies, tilted
+and drawn as the cell it left, every spot that takes it is lit. The fold shows
+only layouts the row can draw: a drop lands only where the field would stay; a
+place nothing can go in yet, a badge beside an empty field or the second line's
+right with no lead, is hidden, keeping its room; and a field that leaves the
+lead lets the right corner slide into it, as the row does. Each place's chevron
+is also a dropdown of what it can show, and picking a field from another place
+swaps it with what the place held, as a drop does), how matched words are
+highlighted (the emphasis, the region, and one color override for every
+emphasis) and whether the footer shows the round trip and the index that
+answered (`look.showDebugInfo`, a switch in the same fold), every color (the
+`look` prop's and the stylesheet's own variables, each with a swatch that opens
+a color picker), the font (the page's, the system's, a serif or a mono this page
+loads, or a stack of your own; the name's weight and the weight emphasis's two;
+and the HTML or CSS that loads a font of your own in the weights picked), shape
+and size, behavior (rows, 1 to 20; the characters typed before it asks, 2 to 10
+and 3 by default; the pause before asking; when the session is minted: on the
+first keystroke, as it is by default, on focus or with the first request; and
+whether the menu is as wide as the input, as it is by default), the text (the
+label, and every message that is a string: `more` and `httpFallback` are
+functions, so they keep their defaults; and each structure's flag, an empty one
+drawing none), and the markup switches (`classNames`, `unstyled`). Changes apply
+as you make them. A color changed from its preset's carries a reset inside its
+field, which puts back the value the last preset chosen gave it. **Your
+configuration** at the bottom is the code that reproduces the result, in a React
+tab and a CSS tab with a **Copy**: the props that differ from the defaults (the
+`layout` names only the places that differ from the SDK's), and the CSS
+variables to set. Its **Reset** puts the whole panel back as it opened: the
+Light preset and every default.
 
 ![The styling panel](images/demo-styling.png)
 
@@ -227,7 +239,10 @@ whole panel back as it opened: the Light preset and every default.
 Its tab carries the number of requests so far. When a request is refused or
 fails, or the SDK logs an error, while the panel is not showing, a red dot
 pulses on the tab's bug (and on the switch's, while Styling is up) until you
-open it. Folded, the page is as wide as the site's other pages.
+open it. Folded, the page is as wide as the site's other pages; open, it is as
+wide as the window, so the network table has the room there is for a whole
+request. Where the pane is narrow, a request wraps under its kind rather than
+being cut off. Styling's page keeps the site's wide measure.
 
 ![The demo with its debug panel folded](images/demo-folded.png)
 

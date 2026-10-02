@@ -26,6 +26,7 @@ function html(expiresInMs: number) {
           expiresAt: Date.now() + expiresInMs,
           matchedOn: [],
         },
+        asked: [],
       }}
       fetchImpl={() => Promise.reject(new Error("not called"))}
       onShowDebug={() => undefined}

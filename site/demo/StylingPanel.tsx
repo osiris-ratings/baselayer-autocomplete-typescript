@@ -196,14 +196,20 @@ export function StylingPanel({
         )}
       >
         <div className="field-grid">
-          <Field label="Emphasis">
+          <Field
+            label="Emphasis"
+            hint="Marks the typed words of the name. An officer, an address or a state a filter matched is marked whole."
+          >
             <Select
               value={state.look.matchEmphasis}
               options={EMPHASES}
               onChange={value => setLook("matchEmphasis", value)}
             />
           </Field>
-          <Field label="Region">
+          <Field
+            label="Region"
+            hint="How much of a name's matched word is marked; a matched officer, address or state is always whole."
+          >
             <Select
               value={state.look.matchEmphasisRegion}
               options={REGIONS}

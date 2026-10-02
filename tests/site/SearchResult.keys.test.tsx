@@ -56,12 +56,8 @@ describe("a report with entries that read alike", () => {
       container.querySelectorAll('.sr-callout[data-tone="warn"] li'),
     ).toHaveLength(2);
     expect(container.querySelectorAll(".sr-list-details li")).toHaveLength(2);
-    const alsoOnFile = [...container.querySelectorAll("dt")].find(
-      dt => dt.textContent === "Also on file",
-    );
-    expect(alsoOnFile?.nextElementSibling?.querySelectorAll("li")).toHaveLength(
-      2,
-    );
+    // The primary address, which the list leaves out, and the one named twice.
+    expect(container.querySelectorAll(".sr-onfile > li")).toHaveLength(3);
   });
 
   it("gives no two of a list the same key", () => {

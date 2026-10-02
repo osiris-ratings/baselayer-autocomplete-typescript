@@ -3,7 +3,8 @@ import { describe, expect, it } from "vitest";
 
 import { SearchResult } from "../../site/demo/SearchResult";
 import { SAMPLE_SEARCH } from "../../site/demo/sample-search";
-import type { Search } from "../../site/demo/searches";
+import type { Matched } from "../../site/demo/search-view";
+import type { Address, Search } from "../../site/demo/searches";
 
 // The report a finished search is drawn as, from the made-up sample and from
 // searches with less to say: nothing may read `undefined` or `null`.
@@ -53,7 +54,7 @@ describe("the report for a completed search", () => {
   it("sets the search against the business, with its pills", () => {
     expect(words).toContain("Your search");
     expect(words).toContain("Matched business");
-    expect(words).toContain("Legal entity address");
+    expect(words).toContain("Address");
     expect(words).toContain("Exact match");
     expect(words).toContain("1200 River Rd, Pittsburgh, PA 15212");
   });
@@ -106,6 +107,92 @@ describe("the report for a completed search", () => {
     expect(words).toContain("Screened against 6 lists: no hits.");
     expect(words).toContain("OFAC");
     expect(words).toContain("No hits");
+  });
+
+  it("is clean of anything a missing field would leave behind", () => {
+    expectClean(markup);
+  });
+});
+
+describe("the report for a pick a filter reached", () => {
+  const MISSION: Address = {
+    street: "535 MISSION ST FL 14",
+    city: "SAN FRANCISCO",
+    state: "CA",
+    zip: "94105",
+    rdi: "Commercial",
+    deliverable: true,
+  };
+  const search: Search = {
+    ...SAMPLE_SEARCH,
+    address: "535 MISSION ST FL 14, SAN FRANCISCO, CA 94105",
+    search_address: MISSION,
+    officer_names: ["DANA WHITFIELD"],
+    business_officer_match: "EXACT",
+    business: {
+      ...SAMPLE_SEARCH.business!,
+      addresses: [
+        ...SAMPLE_SEARCH.business!.addresses!,
+        { ...MISSION, sources: ["SOS"] },
+      ],
+      business_officers: [
+        { name: "LUIS ORTEGA", titles: ["SECRETARY"], states: ["PA"] },
+        { name: "DANA WHITFIELD", titles: ["PRESIDENT"], states: ["PA"] },
+      ],
+    },
+  };
+  const matched: Matched = {
+    alias: "HARBOR PUMPING",
+    officers: ["Dana Whitfield"],
+    addresses: ["535 Mission St Fl 14, San Francisco, CA 94105"],
+    asked: ["OH", "AL"],
+    states: ["OH"],
+  };
+  const markup = renderToStaticMarkup(
+    <SearchResult search={search} elapsedMs={null} matched={matched} />,
+  );
+  const words = text(markup);
+
+  it("sets the name, the officer, the address and the states against what was found", () => {
+    expect(words).toContain(
+      "Name Harbor Pumping Harbor Concrete Pumping Co., Inc. (DBA Harbor Pumping) Exact match",
+    );
+    expect(words).toContain(
+      "Officer Dana Whitfield Dana Whitfield Exact match",
+    );
+    // The address on file that is the search's own, not the business's primary.
+    expect(words).toContain(
+      "Address 535 Mission St Fl 14, San Francisco, CA 94105 535 Mission St Fl 14, San Francisco, CA 94105 Exact match",
+    );
+    expect(words).toContain("States OH, AL OH Match");
+  });
+
+  it("lists every address on file, the one the search carries first with the pill", () => {
+    expect(words).toContain(
+      "Addresses on file 3 535 Mission St Fl 14, San Francisco, CA 94105 Deliverable Commercial Matched 1200 River Rd, Pittsburgh, PA 15212 Deliverable Commercial Primary PO Box 442",
+    );
+    expect(markup).toContain(
+      '<li data-matched="true"><span class="sr-address">',
+    );
+  });
+
+  it("lists the states and the officers the same way, the matched first", () => {
+    expect(words).toContain("States 3 OH Matched PA MD");
+    expect(words).toContain(
+      "Officers 2 DW Dana Whitfield President Matched PA LO Luis Ortega",
+    );
+  });
+
+  it("draws no pill and no order of its own for a pick no filter reached", () => {
+    const plain = html(SAMPLE_SEARCH);
+    const plainWords = text(plain);
+
+    expect(plain).not.toContain(">Matched</span>");
+    expect(plainWords).not.toContain("Officer Dana");
+    expect(plainWords).not.toContain("States OH");
+    expect(plainWords.indexOf("1200 River Rd")).toBeLessThan(
+      plainWords.indexOf("PO Box 442"),
+    );
   });
 
   it("is clean of anything a missing field would leave behind", () => {

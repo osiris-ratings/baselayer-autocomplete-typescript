@@ -128,8 +128,11 @@ export interface Search {
   /** For a pick: its first filed address, else its state's code. */
   address?: string;
   search_address?: Address | null;
+  /** The officers the search carries; for a pick, the one its token matched. */
+  officer_names?: string[] | null;
   business_name_match?: MatchType | null;
   business_address_match?: AddressMatchType | null;
+  business_officer_match?: MatchType | null;
   /** True when the business's KYB rating is an A or a B. */
   verified?: boolean | null;
   scores?: Score[] | null;

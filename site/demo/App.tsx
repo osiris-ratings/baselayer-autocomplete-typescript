@@ -29,6 +29,7 @@ import { testKey, withFirstGrant, type CheckResult } from "./connect";
 import { connectionStatus, formatRemaining } from "./connection";
 import { Collapsible, FOLD_MS, Field, Select } from "./controls";
 import { keyMint, readClaims } from "./credentials";
+import { useFocusWithin } from "./focus";
 import { NetworkLog } from "./network";
 import { NetworkCount, NetworkTimeline } from "./NetworkTimeline";
 import {
@@ -331,6 +332,9 @@ export function App() {
   const [connectOpen, setConnectOpen] = useState(true);
   const connectToggle = useRef<HTMLButtonElement>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // Focus is in a filter field: the menu stays open as the filter is typed, so
+  // the list narrowing is in view, rather than closing as the name loses focus.
+  const [filtering, filterFocus] = useFocusWithin();
   const [panel, setPanelState] = useState<Panel | null>(null);
   const [introOpen, setIntroOpen] = useState(true);
   // Opening either side pane folds the introduction, to give the pane room;
@@ -375,6 +379,8 @@ export function App() {
   const [picked, setPicked] = useState<{
     suggestion: BusinessSuggestion;
     pick: Pick;
+    /** The state codes the visitor had filtered by when they picked. */
+    asked: readonly string[];
   } | null>(null);
   const [person, setPerson] = useState("");
   const [states, setStates] = useState("");
@@ -491,6 +497,7 @@ export function App() {
         className={`demo-panes ${panel !== null ? "wrap-wide" : "wrap"}`}
         data-intro={introOpen ? "open" : "folded"}
         data-side={panel !== null ? "open" : "closed"}
+        data-panel={panel ?? undefined}
       >
         {introOpen ? (
           <section
@@ -662,6 +669,7 @@ export function App() {
               id="demo-filters"
               className="filters-panel"
               hidden={!filtersOpen}
+              {...filterFocus}
             >
               <p className="hint" data-testid="demo-filters-hint">
                 Filters apply once the business name has{" "}
@@ -670,7 +678,9 @@ export function App() {
                 ) : (
                   <FilterStem client={client} />
                 )}
-                . Until then the SDK holds them back, and says so in the log.
+                . Until then the SDK holds them back, and says so in the log. A
+                filter narrows the list, and the row says which one it matched:
+                the officer or the address is marked, a state on its flag.
               </p>
               <Field label="Officer or agent name" optional>
                 <input
@@ -734,7 +744,11 @@ export function App() {
                         setPicked(null);
                     }}
                     onPick={(suggestion, pick) =>
-                      setPicked({ suggestion, pick })
+                      setPicked({
+                        suggestion,
+                        pick,
+                        asked: filters?.state ?? [],
+                      })
                     }
                     look={{ ...changedLook(style) }}
                     limit={style.limit}
@@ -744,7 +758,7 @@ export function App() {
                     menuFollowsInputWidth={style.menuFollowsInputWidth}
                     messages={messages}
                     unstyled={style.unstyled}
-                    open={styling}
+                    open={styling || filtering}
                     layout={style.layout}
                     {...(style.pageInput
                       ? { classNames: { input: "demo-input" } }
@@ -782,6 +796,11 @@ export function App() {
                       messages={messages}
                       unstyled={style.unstyled}
                       layout={style.layout}
+                      // The sample rows answer to the filters above, so a state
+                      // typed there marks its flag on them.
+                      {...(filters !== undefined
+                        ? { appliedFilters: filters }
+                        : {})}
                       menuFollowsInputWidth={style.menuFollowsInputWidth}
                     />
                   </div>

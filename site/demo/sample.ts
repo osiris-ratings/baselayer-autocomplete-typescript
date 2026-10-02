@@ -2,7 +2,8 @@
 // before anything is typed: highlights, an alternative name that matched, the
 // domicile square and the overflow, a spread of structures (one on a name
 // that carries no suffix, and one not known), an address, officers with a +N,
-// and a registered agent. None of these businesses is real.
+// and a registered agent, and two rows a filter reached: by an officer, and by
+// an officer's address. None of these businesses is real.
 
 import { queryTokens } from "@baselayer-sdk/autocomplete";
 import type {
@@ -20,22 +21,29 @@ import type {
 export const SAMPLE_QUERY = "harbor concr";
 const TOKENS = queryTokens(SAMPLE_QUERY);
 
-export function set(items: RelatedItem[], count = items.length): RelatedSet {
-  return { count, matched: null, truncated: count > items.length, items };
+/** `matched` is how many of the set a relation filter matched; null without one. */
+export function set(
+  items: RelatedItem[],
+  count = items.length,
+  matched: number | null = null,
+): RelatedSet {
+  return { count, matched, truncated: count > items.length, items };
 }
 
-export function address(label: string): RelatedItem {
-  return {
-    type: "address",
-    token: null,
-    label,
-    role: "principal",
-    matched: false,
-  };
+export function address(
+  label: string,
+  role: "principal" | "officer" | "agent" = "principal",
+  matched = false,
+): RelatedItem {
+  return { type: "address", token: null, label, role, matched };
 }
 
-export function person(label: string, role: "officer" | "agent"): RelatedItem {
-  return { type: "person", token: null, label, role, matched: false };
+export function person(
+  label: string,
+  role: "officer" | "agent",
+  matched = false,
+): RelatedItem {
+  return { type: "person", token: null, label, role, matched };
 }
 
 /**
@@ -103,7 +111,8 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     states: ["CA", "DE", "FL", "TX", "WA"],
     structure: "S_CORPORATION",
     related: {
-      people: set([person("Priya Raman", "officer")]),
+      // An officer filter reached this row: the one it matched.
+      people: set([person("Priya Raman", "officer", true)], 3, 1),
       addresses: set([address("400 Bayfront Ave, Tampa, FL 33602")]),
       liens: set([], 0),
     },
@@ -124,7 +133,12 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     structure: "TRADE_NAME",
     related: {
       people: set([person("Grace Oduya", "officer")], 2),
-      addresses: set([address("2210 Key Hwy, Baltimore, MD 21230")]),
+      // An address filter reached this row, by an officer's address.
+      addresses: set(
+        [address("2210 Key Hwy, Baltimore, MD 21230", "officer", true)],
+        2,
+        1,
+      ),
       liens: set([], 0),
     },
   }),

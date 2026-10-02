@@ -4,6 +4,7 @@
 // what it can show. Pointer events, so a mouse and a finger drag the same way.
 
 import {
+  ROW_FIELDS,
   ROW_LINES,
   type RowField,
   type RowPlace,
@@ -22,6 +23,7 @@ import { createPortal } from "react-dom";
 import {
   CHOICE_LABELS,
   EMPTY_PLACE,
+  FIELD_WIRE,
   PLACE_LABELS,
   TRAY,
   canDrop,
@@ -350,7 +352,7 @@ export function RowMap({
           moving !== null && moving.field === field ? true : undefined
         }
         {...(field === null ? {} : handle(field))}
-        title={`${PLACE_LABELS[spot]} · layout.${spot}`}
+        title={`${PLACE_LABELS[spot]} · layout.${spot}${field === null ? "" : ` · reads ${FIELD_WIRE[field].join(", ")}`}`}
       >
         {field !== null && (
           <span
@@ -435,7 +437,7 @@ export function RowMap({
               key={field}
               className="row-map-chip"
               data-field={field}
-              title={`Drag ${CHOICE_LABELS[field]} onto a place`}
+              title={`Drag ${CHOICE_LABELS[field]} onto a place · reads ${FIELD_WIRE[field].join(", ")}`}
               {...handle(field)}
               data-dragged={moving?.field === field || undefined}
             >
@@ -444,6 +446,27 @@ export function RowMap({
           ))
         )}
       </div>
+      <table className="row-map-reads">
+        <caption>What each field reads</caption>
+        <thead>
+          <tr>
+            <th scope="col">Field</th>
+            <th scope="col">From the autocomplete service&apos;s answer</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ROW_FIELDS.map(field => (
+            <tr key={field} data-field={field}>
+              <th scope="row">{CHOICE_LABELS[field]}</th>
+              <td>
+                {FIELD_WIRE[field].map(source => (
+                  <code key={source}>{source}</code>
+                ))}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
       {moving !== null &&
         createPortal(<Ghost drag={moving} colors={colors} />, document.body)}
     </div>

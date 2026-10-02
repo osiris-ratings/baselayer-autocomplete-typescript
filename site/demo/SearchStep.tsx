@@ -21,7 +21,7 @@ import {
   runSearch,
   type Search,
 } from "./searches";
-import { announcement, consoleHref } from "./search-view";
+import { announcement, consoleHref, matchedOf } from "./search-view";
 
 type Phase =
   | { kind: "idle" }
@@ -36,7 +36,12 @@ export interface SearchStepProps {
   baseUrl: string;
   /** The API the search is for, as the request shown names it. */
   apiHost: string;
-  picked: { suggestion: BusinessSuggestion; pick: BusinessPick };
+  picked: {
+    suggestion: BusinessSuggestion;
+    pick: BusinessPick;
+    /** The state codes the visitor had filtered by when they picked. */
+    asked: readonly string[];
+  };
   /** `fetch`, recording what it does. */
   fetchImpl: (input: string, init?: RequestInit) => Promise<Response>;
   /** Opens Debug on its network tab. */
@@ -351,7 +356,11 @@ export function SearchStep({
       {phase.kind === "done" && (
         <>
           <div ref={report}>
-            <SearchResult search={phase.search} elapsedMs={phase.elapsedMs} />
+            <SearchResult
+              search={phase.search}
+              elapsedMs={phase.elapsedMs}
+              matched={matchedOf(picked.pick.matchedOn, picked.asked)}
+            />
           </div>
           <footer className="sr-foot">
             <details className="sr-raw">

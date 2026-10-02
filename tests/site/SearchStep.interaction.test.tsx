@@ -82,6 +82,7 @@ function step(fetchImpl: FetchImpl) {
           expiresAt: Date.now() + 10 * 60_000,
           matchedOn: [],
         },
+        asked: [],
       }}
       fetchImpl={fetchImpl}
       onShowDebug={() => undefined}
