@@ -3,7 +3,9 @@
 // its filings and watchlists are shown. The component only lays them out.
 
 import {
+  queryTokens,
   structureLabel,
+  typedPrefixLength,
   type BusinessStructure,
   type MatchedOn,
 } from "@baselayer-sdk/autocomplete";
@@ -299,6 +301,15 @@ export function matchPill(
     : (MATCH_CHIPS[match] ?? null);
 }
 
+/** What the visitor had typed when they picked: the business name, and the person and address filters. */
+export interface Typed {
+  name: string;
+  person: string;
+  address: string;
+}
+
+export const NOTHING_TYPED: Typed = { name: "", person: "", address: "" };
+
 /** What the visitor's pick matched on, as the report sets it against what the search found. */
 export interface Matched {
   /** The name the business goes by that the pick matched, when it matched one. */
@@ -311,6 +322,8 @@ export interface Matched {
   asked: string[];
   /** Those of the business's states that the filter named. */
   states: string[];
+  /** What was typed, which the report underlines where it matched. */
+  typed: Typed;
 }
 
 export const NOTHING_MATCHED: Matched = {
@@ -319,15 +332,18 @@ export const NOTHING_MATCHED: Matched = {
   addresses: [],
   asked: [],
   states: [],
+  typed: NOTHING_TYPED,
 };
 
 /**
- * What a pick matched, read off the SDK's `matchedOn` and the state codes the
- * visitor typed. Registered agents are people the filter reached, not officers.
+ * What a pick matched, read off the SDK's `matchedOn`, the state codes the
+ * visitor typed and the rest of what they typed. Registered agents are people
+ * the filter reached, not officers.
  */
 export function matchedOf(
   matchedOn: readonly MatchedOn[],
   asked: readonly string[] = [],
+  typed: Typed = NOTHING_TYPED,
 ): Matched {
   const matched: Matched = {
     alias: null,
@@ -337,6 +353,7 @@ export function matchedOf(
       code => code !== "",
     ),
     states: [],
+    typed,
   };
   for (const match of matchedOn) {
     switch (match.kind) {
@@ -357,6 +374,75 @@ export function matchedOf(
     }
   }
   return matched;
+}
+
+/** A stretch of a found text, and whether what the visitor typed matched it. */
+export interface Stretch {
+  text: string;
+  matched: boolean;
+  /** Part of the `(DBA …)` phrase: a name the business goes by, not its legal name. */
+  dba: boolean;
+}
+
+const WORD_OR_GAP = /[\p{L}\p{N}']+|[^\p{L}\p{N}']+/gu;
+const WORD = /^[\p{L}\p{N}']+$/u;
+
+/**
+ * `text` cut where what was typed stops matching it, the way the typeahead's
+ * own marks are: a word a typed token starts is matched as far as the token
+ * reaches (`baselaye` marks `Baselaye` of `Baselayer`, and `street` marks
+ * nothing of `St`), and the whitespace between two matched words is matched
+ * with them, so `353 Mission` is one underline. Nothing typed, nothing matched.
+ */
+export function markTyped(text: string, typed: string, dba = false): Stretch[] {
+  const tokens = queryTokens(typed);
+  const cut: { text: string; matched: boolean }[] = [];
+  for (const piece of text.match(WORD_OR_GAP) ?? []) {
+    const covered = WORD.test(piece) ? typedPrefixLength(piece, tokens) : 0;
+    const characters = Array.from(piece);
+    if (covered === 0) {
+      cut.push({ text: piece, matched: false });
+      continue;
+    }
+    cut.push({ text: characters.slice(0, covered).join(""), matched: true });
+    if (covered < characters.length) {
+      cut.push({ text: characters.slice(covered).join(""), matched: false });
+    }
+  }
+  cut.forEach((part, index) => {
+    if (
+      !part.matched &&
+      /^\s+$/.test(part.text) &&
+      cut[index - 1]?.matched === true &&
+      cut[index + 1]?.matched === true
+    ) {
+      part.matched = true;
+    }
+  });
+  const stretches: Stretch[] = [];
+  for (const part of cut) {
+    const last = stretches[stretches.length - 1];
+    if (last !== undefined && last.matched === part.matched) {
+      last.text += part.text;
+    } else {
+      stretches.push({ ...part, dba });
+    }
+  }
+  return stretches;
+}
+
+/**
+ * `text` underlined whole when what was typed matched any of it, and plain when
+ * it matched none: `baselaye` underlines all of `Baselayer`, and `jonathan` all
+ * of `Jonathan Awad`. What matched is the name, the officer or the address,
+ * not the letters that happened to be typed.
+ */
+export function markWhole(text: string, typed: string, dba = false): Stretch[] {
+  if (text === "") {
+    return [];
+  }
+  const matched = markTyped(text, typed).some(part => part.matched);
+  return [{ text, matched, dba }];
 }
 
 /** A line of text as the letters and digits of it, so two spellings of one address meet. */
@@ -451,6 +537,41 @@ export function addressesOnFile(
 }
 
 /**
+ * The names the business goes by, as the API sent them, the one the pick was
+ * found by first: when the row matched a DBA, that DBA is why the business is
+ * here. Two spellings of one name meet (`Baselayer` and `BASELAYER`).
+ */
+export function aliasesOnFile(
+  business: Business | null | undefined,
+  matched: Matched,
+): OnFile<string>[] {
+  const reached = lineKey(matched.alias);
+  return matchedFirst(
+    (business?.alternative_names ?? []).map(alias => ({
+      item: readable(alias),
+      matched: reached !== "" && lineKey(alias) === reached,
+    })),
+  );
+}
+
+/** How many addresses the report draws before it counts the rest. */
+export const ADDRESSES_SHOWN = 10;
+
+/**
+ * The first `limit` of a list the matched lead, and how many that leaves out.
+ * What matched is the point of the list, so it is never one of those left out:
+ * more than `limit` matched are all drawn.
+ */
+export function leadingOnFile<T>(
+  entries: readonly OnFile<T>[],
+  limit: number = ADDRESSES_SHOWN,
+): { shown: OnFile<T>[]; hidden: number } {
+  const matched = entries.filter(entry => entry.matched).length;
+  const shown = entries.slice(0, Math.max(limit, matched));
+  return { shown, hidden: entries.length - shown.length };
+}
+
+/**
  * Every officer the business has, the ones the search matched first: those it
  * carries, and any the pick's person filter reached.
  */
@@ -469,17 +590,37 @@ export function officersOnFile(
 }
 
 /**
- * Every state the business is registered in, the ones the visitor's filter
- * named first. A state is where a filing is, and the incorporation state even
- * when its filing is not listed.
+ * The state the business is domiciled in: where its domestic filing is, else
+ * where it is incorporated. The same state the filings list puts first and
+ * draws green, so the two cannot name different ones.
+ */
+export function domicileOf(
+  business: Business | null | undefined,
+): string | null {
+  const domestic = (business?.registrations ?? []).find(
+    registration => registration.registration_type === "domestic",
+  );
+  return textOr(domestic?.state) ?? textOr(business?.incorporation_state);
+}
+
+export interface StateOnFile extends OnFile<string> {
+  /** The state the business is domiciled in. */
+  domicile: boolean;
+}
+
+/**
+ * Every state the business is registered in: its domicile first, then the ones
+ * the visitor's filter named, then the rest. A state is where a filing is, and
+ * the incorporation state even when its filing is not listed.
  */
 export function statesOnFile(
   business: Business | null | undefined,
   matched: Matched,
-): OnFile<string>[] {
+): StateOnFile[] {
   if (business === null || business === undefined) {
     return [];
   }
+  const domicile = domicileOf(business);
   const states = [
     ...new Set(
       [
@@ -490,12 +631,16 @@ export function statesOnFile(
       ].filter(state => state !== null),
     ),
   ];
-  return matchedFirst(
-    states.map(state => ({
-      item: state,
-      matched: matched.states.includes(state),
-    })),
-  );
+  const entries = states.map(state => ({
+    item: state,
+    matched: matched.states.includes(state),
+    domicile: state === domicile,
+  }));
+  return [
+    ...entries.filter(entry => entry.domicile),
+    ...entries.filter(entry => !entry.domicile && entry.matched),
+    ...entries.filter(entry => !entry.domicile && !entry.matched),
+  ];
 }
 
 function textOr(value: string | null | undefined): string | null {
@@ -509,6 +654,8 @@ export interface MatchRow {
   yours: string | null;
   /** What the matched business has that it matched. */
   found: string | null;
+  /** `found`, underlined where what the visitor typed matched it, with the DBA set apart. */
+  parts: Stretch[];
   pill: Chip | null;
 }
 
@@ -550,6 +697,13 @@ export function matchRows(
   // The states the filter named that the business is in, as they were typed.
   const typed = matched.asked.filter(code => matched.states.includes(code));
   const foundStates = typed.length > 0 ? typed : matched.states;
+  const said = matched.typed;
+  const foundAddressLine =
+    foundAddress === undefined
+      ? primaryAddressLine(business)
+      : formatAddress(foundAddress);
+  const foundStatesLine =
+    foundStates.length > 0 ? foundStates.join(", ") : null;
   const rows: MatchRow[] = [
     {
       key: "name",
@@ -558,6 +712,21 @@ export function matchRows(
         alias ??
         (typeof search.name === "string" ? readable(search.name) : null),
       found: name === null || alias === null ? name : `${name} (DBA ${alias})`,
+      parts:
+        name === null
+          ? []
+          : [
+              // The row's own name is the one that matched unless a name the
+              // business goes by did, as the typeahead's row marks it.
+              ...markWhole(name, alias === null ? said.name : ""),
+              ...(alias === null
+                ? []
+                : [
+                    { text: " (DBA ", matched: false, dba: true },
+                    ...markWhole(alias, said.name, true),
+                    { text: ")", matched: false, dba: true },
+                  ]),
+            ],
       pill: matchPill(search.business_name_match),
     },
     {
@@ -565,6 +734,10 @@ export function matchRows(
       label: "Officer",
       yours: yourOfficer === null ? null : readable(yourOfficer),
       found: foundOfficer === null ? null : readable(foundOfficer),
+      parts:
+        foundOfficer === null
+          ? []
+          : markWhole(readable(foundOfficer), said.person),
       pill:
         matchPill(search.business_officer_match) ??
         (foundOfficer === null ? null : MATCHED_PILL),
@@ -576,17 +749,27 @@ export function matchRows(
         typeof search.address === "string"
           ? readableAddress(search.address)
           : null,
-      found:
-        foundAddress === undefined
-          ? primaryAddressLine(business)
-          : formatAddress(foundAddress),
+      found: foundAddressLine,
+      // Only an address the pick matched is underlined: the primary stands in
+      // for one when none did, and what was typed did not reach it.
+      parts:
+        foundAddressLine === null
+          ? []
+          : markWhole(
+              foundAddressLine,
+              foundAddress === undefined ? "" : said.address,
+            ),
       pill: matchPill(search.business_address_match),
     },
     {
       key: "states",
       label: "States",
       yours: matched.asked.length > 0 ? matched.asked.join(", ") : null,
-      found: foundStates.length > 0 ? foundStates.join(", ") : null,
+      found: foundStatesLine,
+      parts:
+        foundStatesLine === null
+          ? []
+          : markWhole(foundStatesLine, matched.asked.join(" ")),
       pill: foundStates.length > 0 ? MATCHED_PILL : null,
     },
   ];
@@ -624,6 +807,28 @@ export function entityType(
   return structureLabel(structure ?? null, ENTITY_TYPES);
 }
 
+/** What stands at an address, which its bullet draws. */
+export type AddressKind =
+  "commercial" | "residential" | "mail-drop" | "unknown";
+
+/**
+ * What the API says an address is: a mail drop when it is flagged one (that
+ * outweighs what the building is), else commercial or residential, else not
+ * known.
+ */
+export function addressKind(address: Address | null | undefined): AddressKind {
+  if (address?.cmra === true) {
+    return "mail-drop";
+  }
+  if (address?.rdi === "Commercial") {
+    return "commercial";
+  }
+  if (address?.rdi === "Residential") {
+    return "residential";
+  }
+  return "unknown";
+}
+
 /** What the API knows about delivery to an address, as chips. */
 export function deliveryChips(address: Address | null | undefined): Chip[] {
   if (address === null || address === undefined) {
@@ -656,6 +861,49 @@ export function orderedRegistrations(
       rank(a) - rank(b) ||
       (a.issue_date ?? "").localeCompare(b.issue_date ?? ""),
   );
+}
+
+export interface RegistrationOnFile extends OnFile<Registration> {
+  /**
+   * The filing in the state the business is domiciled in: the domestic one, or,
+   * where the API classifies none as domestic, the unclassified one in the
+   * domicile, so that it is the same state the squares lead with.
+   */
+  home: boolean;
+}
+
+/**
+ * The filings with the home one first, then those in a state the visitor's
+ * filter named, then the rest, each group in the order of
+ * `orderedRegistrations`: the report's list of states is only squares, and the
+ * filing is where a matched state is said.
+ */
+export function registrationsOnFile(
+  registrations: readonly Registration[] | undefined,
+  matched: Matched,
+  domicile: string | null = null,
+): RegistrationOnFile[] {
+  const classified = (registrations ?? []).some(
+    registration => registration.registration_type === "domestic",
+  );
+  const entries = orderedRegistrations(registrations).map(registration => {
+    const type = registration.registration_type ?? null;
+    return {
+      item: registration,
+      matched: matched.states.includes(registration.state),
+      home:
+        type === "domestic" ||
+        (!classified &&
+          type === null &&
+          domicile !== null &&
+          registration.state === domicile),
+    };
+  });
+  return [
+    ...entries.filter(entry => entry.home),
+    ...entries.filter(entry => !entry.home && entry.matched),
+    ...entries.filter(entry => !entry.home && !entry.matched),
+  ];
 }
 
 /** A filing's status as a chip. */

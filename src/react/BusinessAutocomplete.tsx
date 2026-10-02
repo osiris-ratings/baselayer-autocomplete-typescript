@@ -15,6 +15,7 @@ import { BUSINESS_TOKEN_TTL_SECONDS } from "@baselayer-sdk/autocomplete";
 import { includeForLayout, type Include } from "@baselayer-sdk/autocomplete";
 import {
   matchedOn,
+  pickedNameOf,
   type BusinessSuggestion,
   type MatchedOn,
 } from "@baselayer-sdk/autocomplete";
@@ -61,7 +62,10 @@ export interface Pick {
 interface CommonProps {
   id: string;
   value: string;
-  /** Typing only; a pick reports through `onPick`. */
+  /**
+   * Typing, and a pick's fill: the name the row matched on (`pickedNameOf`).
+   * The pick itself reports through `onPick`.
+   */
   onChange(value: string): void;
   onPick(suggestion: BusinessSuggestion, pick: Pick): void;
   onFocus?: () => void;
@@ -127,9 +131,10 @@ export type BusinessAutocompleteProps = CommonProps &
 
 /**
  * The typeahead, connected: it owns its client (unless given one), its
- * suggestions and its pick. A pick fills the field with the family's canonical
- * name and hands the host the `business_token`; editing the name afterwards
- * is the host's cue to drop it.
+ * suggestions and its pick. A pick fills the field with the name the row
+ * matched on (`pickedNameOf`: the family's name, or the name it goes by when
+ * the row matched that) and hands the host the `business_token`; editing the
+ * name afterwards is the host's cue to drop it.
  */
 export function BusinessAutocomplete(props: BusinessAutocompleteProps) {
   const { client, mint, mintUrl, baseUrl, ...common } = props;
@@ -188,18 +193,25 @@ function Connected({
   onUnavailable,
 }: CommonProps & { client: AutocompleteClient }) {
   const client = useResolvedClient(given);
-  // A pick writes the suggestion's label into the field; querying that exact
-  // label again would only reopen the menu on the row just chosen. Editing a
-  // filter afterwards is a new search for the same name, so the pick remembers
-  // the filters it was made under.
+  // A pick writes the name the row matched on into the field; querying that
+  // exact name again would only reopen the menu on the row just chosen.
+  // Editing a filter afterwards is a new search for the same name, so the pick
+  // remembers the filters it was made under.
   const filtersKey = filtersKeyOf(filters);
   const [picked, setPicked] = useState<{
-    label: string;
+    name: string;
     filtersKey: string;
   } | null>(null);
+  // A pick is of the filters it was made under. Once they change it is over,
+  // and putting them back is not a return to it: the name is searched again,
+  // and its rows are wanted. Set during the render, so that no frame has the
+  // old pick holding the search off under the new filters.
+  if (picked !== null && picked.filtersKey !== filtersKey) {
+    setPicked(null);
+  }
   const justPicked =
     picked !== null &&
-    picked.label === value &&
+    picked.name === value &&
     picked.filtersKey === filtersKey;
   // The fields drawn decide what is fetched unless the host says: a field
   // placed nowhere is not asked for. With none needing a related entity the
@@ -249,8 +261,9 @@ function Connected({
       }}
       onSelect={suggestion => {
         const pickedAt = Date.now();
-        setPicked({ label: suggestion.label, filtersKey });
-        onChange(suggestion.label);
+        const name = pickedNameOf(suggestion);
+        setPicked({ name, filtersKey });
+        onChange(name);
         onPick(suggestion, {
           businessToken: suggestion.token,
           pickedAt,

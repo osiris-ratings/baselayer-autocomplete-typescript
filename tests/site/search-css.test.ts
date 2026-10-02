@@ -51,6 +51,75 @@ describe("search.css", () => {
     expect(css).toMatch(/\.sr-raw\s*\{[^}]*min-width:\s*0/);
   });
 
+  it("sets a filing's title and pills, an officer's name and pills, and a watchlist's title and pill on one baseline with their first cell", () => {
+    // The state in its square, the initials in the avatar, the list's code:
+    // each is the first cell of its row, and the words beside it stand on its
+    // baseline rather than on its top or its middle.
+    for (const row of [".sr-filing", ".sr-person", ".sr-list"]) {
+      const block = new RegExp(
+        `${row.replace(".", "\\.")}\\s*\\{[^}]*\\}`,
+      ).exec(css);
+      expect(block, row).not.toBeNull();
+      expect(block![0], row).toMatch(/align-items:\s*baseline/);
+    }
+  });
+
+  it("pins the verdict to the title's row, centred on the title, and not to the header's corner", () => {
+    // The row is the title's and the verdict's alone, and centres what is in
+    // it; its text need not stand on the title's baseline.
+    expect(css).toMatch(/\.sr-head-title\s*\{[^}]*align-items:\s*center/);
+    // The title's margins are the row's, so that it is the title's own line
+    // the verdict is centred on, not the line and the room around it.
+    expect(css).toMatch(/\.sr-head-title\s*\{[^}]*margin:\s*6px 0 8px/);
+    expect(css).toMatch(/\.sr-title\s*\{[^}]*margin:\s*0;/);
+    // And the box is the one it always was: a label, not set from the title.
+    const verdict = /\.sr-verdict\s*\{[^}]*\}/.exec(css)?.[0] ?? "";
+    expect(verdict).toMatch(/font-size:\s*13px/);
+    expect(verdict).not.toMatch(/font-weight/);
+  });
+
+  it("sets the letters in a state's square and in an officer's avatar at one size", () => {
+    // Both read one custom property, so one cannot be changed without the
+    // other, and it is given on the report's root, which holds both.
+    const size = (selector: string) =>
+      new RegExp(`${selector}\\s*\\{[^}]*font-size:\\s*([^;]+);`).exec(
+        css,
+      )?.[1];
+    expect(size("\\.sr-state")).toBe("var(--sr-initials-size)");
+    expect(size("\\.sr-avatar")).toBe("var(--sr-initials-size)");
+    expect(css).toMatch(/\.sr\s*\{[^}]*--sr-initials-size:\s*\d+px/);
+  });
+
+  it("underlines the square of a state the filter named, in the cloud and on its filing", () => {
+    // One rule for every square, not the cloud's alone.
+    expect(css).toMatch(
+      /\.sr-state\[data-matched="true"\]::after\s*\{[^}]*background:\s*var\(--sr-mark\)/,
+    );
+    expect(css).not.toMatch(/\.sr-states \.sr-state\[data-matched/);
+    expect(css).toMatch(/--sr-mark:\s*#[0-9a-fA-F]{6}/);
+  });
+
+  it("closes the third step up the way a folded section closes, and only closes slowly", () => {
+    // Closing is a grid row going to 0fr with a fade, as `.fold-body` does,
+    // and the step is only clipped while it is closed.
+    expect(demoCss).toMatch(
+      /\.step-exit\[data-open="false"\]\s*\{[^}]*grid-template-rows:\s*0fr[^}]*opacity:\s*0[^}]*transition:\s*grid-template-rows 320ms/,
+    );
+    expect(demoCss).toMatch(
+      /\.step-exit\[data-open="false"\] > \.step-exit-inner\s*\{[^}]*overflow:\s*hidden/,
+    );
+    expect(demoCss).toMatch(
+      /prefers-reduced-motion: reduce\) \{\s*\.step-exit\[data-open="false"\]\s*\{\s*transition:\s*none/,
+    );
+    // Opening is at once, as it always was: only the closed state carries a
+    // transition, and a transition runs by the state it goes to.
+    const open = /\.step-exit\s*\{[^}]*\}/.exec(demoCss)?.[0] ?? "";
+    expect(open).toMatch(/grid-template-rows:\s*1fr/);
+    expect(open).not.toMatch(/transition/);
+    // As long as the collapse: the hook holds the step for FOLD_MS.
+    expect(read("demo/controls.tsx")).toMatch(/FOLD_MS\s*=\s*320/);
+  });
+
   it("lets the Network detail's request body shrink to the panel", () => {
     expect(demoCss).toMatch(/\.net-detail dl > div\s*\{[^}]*min-width:\s*0/);
   });

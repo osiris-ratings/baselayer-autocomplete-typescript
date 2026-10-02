@@ -119,8 +119,10 @@ where it is domiciled and registered, and counts down the token's 15 minutes.
 with the token cut short; **Run business search** sends it with the token alone
 (the API takes the name and address from it, and refuses it beside either), and
 the report appears below. A search is a real, billable search on your
-organization, so it never runs by itself. Change the name and the pick is gone,
-and the step with it.
+organization, so it never runs by itself. Change the name or any filter and the
+pick is gone, since it was made under them, and the step closes up and goes with
+it (the page stops waiting for a search still running, which goes on at the API);
+pick a row again for the next.
 
 The call asks the API to hold it until the search ends (`Prefer: wait=90`) and
 names the pick's search with an `Idempotency-Key`. The key stays the same until
@@ -146,11 +148,25 @@ watchlists it was screened against. **How it matched** sets what your pick
 matched against what the search found, a row for the name (the name it goes by,
 when you matched one), the officer, the address and the states: the address is
 the one on file that matched, not the business's primary, and the states are
-those you filtered by against those the business is in. The lists that follow
-lead with what matched, each marked **Matched**: the addresses, the states and
-the officers. Under it, **View raw response** is the body as the API sent it,
-**See the request in Debug** opens the call on the network timeline, and **Open
-in the console** is the same search in Baselayer's console.
+those you filtered by against those the business is in. What you typed is
+underlined in green where it matched, as the typeahead's rows underline it, but
+the whole of the name, officer or address it reached rather than the letters
+typed (`baselaye` underlines all of `Baselayer`, and `353 mission street` all of
+`353 Mission St Fl 14, San Francisco, CA 94105`, though `street` is not `St`).
+A name the business goes by reads `(DBA …)` in grey, beside its legal name, with
+the underline kept on the name you matched, and the business's **Also known as**
+leads with that name, underlined too. The lists that follow lead with what
+matched: the addresses (the first ten, then a count of the rest) and the
+officers, each marked **Matched** and underlined the same way. The Secretary of
+State filings lead with the domicile's, then the filing in a state you filtered
+by, marked **Matched** and its square underlined. The states are squares in the
+same order: the domicile's green, as its filing is, and the ones you filtered by
+underlined.
+Each address has a bullet for what stands there, an office block, a house, an
+envelope for a mail drop, or a pin where the API does not say, which the pills
+beside it say in words. Under it, **View raw response** is the body as the API
+sent it, **See the request in Debug** opens the call on the network timeline,
+and **Open in the console** is the same search in Baselayer's console.
 
 Only an API key can run it: the session the typeahead holds opens the
 autocomplete service and nothing else. A pick's token lasts 15 minutes, and

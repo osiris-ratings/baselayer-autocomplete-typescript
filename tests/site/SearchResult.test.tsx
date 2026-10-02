@@ -12,8 +12,14 @@ import type { Address, Search } from "../../site/demo/searches";
 const html = (search: Search, elapsedMs: number | null = 4_200) =>
   renderToStaticMarkup(<SearchResult search={search} elapsedMs={elapsedMs} />);
 
+// The words, with the underline and the grey of a matched name read through:
+// a tag becomes a space, and a mark can fall inside a word.
+const MARK =
+  /<span (?:class="sr-mark"(?: data-dba="true")?|data-dba="true")>([^<]*)<\/span>/g;
+
 const text = (markup: string) =>
   markup
+    .replace(MARK, "$1")
     .replace(/<[^>]*>/g, " ")
     .replace(/&amp;/g, "&")
     .replace(/&#x27;/g, "'")
@@ -35,6 +41,16 @@ describe("the report for a completed search", () => {
     expect(words).toContain("Verified");
     expect(words).toContain("finished in 4.2 s");
     expect(markup).toContain(SAMPLE_SEARCH.id);
+  });
+
+  it("pins the verdict to the title's row", () => {
+    expect(markup).toMatch(
+      /<div class="sr-head-title"><h3 class="sr-title"[^>]*>Harbor Concrete Pumping Co\., Inc\.<\/h3><span class="sr-verdict" data-kind="verified">/,
+    );
+    // The label above and the facts below are not part of that row.
+    expect(markup).toMatch(
+      /<p class="mono-label">Search result · finished in 4\.2 s<\/p><div class="sr-head-title">/,
+    );
   });
 
   it("sums the business up in a line under its name", () => {
@@ -147,6 +163,11 @@ describe("the report for a pick a filter reached", () => {
     addresses: ["535 Mission St Fl 14, San Francisco, CA 94105"],
     asked: ["OH", "AL"],
     states: ["OH"],
+    typed: {
+      name: "harbor pum",
+      person: "dana",
+      address: "535 mission street",
+    },
   };
   const markup = renderToStaticMarkup(
     <SearchResult search={search} elapsedMs={null} matched={matched} />,
@@ -167,6 +188,107 @@ describe("the report for a pick a filter reached", () => {
     expect(words).toContain("States OH, AL OH Match");
   });
 
+  it("underlines the whole name that was typed to, and greys the name the business goes by", () => {
+    // The name it was found by, set apart from the legal name, with the
+    // underline kept on the grey.
+    expect(markup).toContain(
+      '<td data-label="Matched business">Harbor Concrete Pumping Co., Inc.<span data-dba="true"> (DBA </span><span class="sr-mark" data-dba="true">Harbor Pumping</span><span data-dba="true">)</span></td>',
+    );
+    // The whole officer, the whole address (the filter's `street` is not the
+    // `St` on file, but the rest is the same), and the state codes typed.
+    expect(markup).toContain(
+      '<td data-label="Matched business"><span class="sr-mark">Dana Whitfield</span></td>',
+    );
+    expect(markup).toContain(
+      '<td data-label="Matched business"><span class="sr-mark">535 Mission St Fl 14, San Francisco, CA 94105</span></td>',
+    );
+    expect(markup).toContain(
+      '<td data-label="Matched business"><span class="sr-mark">OH</span></td>',
+    );
+  });
+
+  it("underlines it in the lists below too, on the entries that matched and no others", () => {
+    // After the bullet, which is the same on both.
+    const bullet =
+      '<span class="sr-address-icon" data-kind="[a-z-]+"><svg.*?</svg></span>';
+    expect(markup).toMatch(
+      new RegExp(
+        `<span class="sr-address">${bullet}<span class="sr-mark">535 Mission St Fl 14, San Francisco, CA 94105</span>`,
+      ),
+    );
+    expect(markup).toContain(
+      '<strong><span class="sr-mark">Dana Whitfield</span></strong>',
+    );
+    // The primary address and the other officer matched nothing.
+    expect(markup).toMatch(
+      new RegExp(`<span class="sr-address">${bullet}1200 River Rd`),
+    );
+    expect(markup).toContain("<strong>Luis Ortega</strong>");
+  });
+
+  it("underlines the name the business goes by that the pick was found by, among those it goes by", () => {
+    expect(markup).toContain(
+      '<dt>Also known as</dt><dd><span class="sr-mark">Harbor Pumping</span>, HCP Concrete</dd>',
+    );
+    // Whichever it is, it leads: it is why the business is here.
+    const other = renderToStaticMarkup(
+      <SearchResult
+        search={search}
+        elapsedMs={null}
+        matched={{ ...matched, alias: "HCP CONCRETE" }}
+      />,
+    );
+    expect(other).toContain(
+      '<dt>Also known as</dt><dd><span class="sr-mark">HCP Concrete</span>, Harbor Pumping</dd>',
+    );
+    // A pick the name itself found has no DBA to underline.
+    expect(
+      renderToStaticMarkup(
+        <SearchResult
+          search={search}
+          elapsedMs={null}
+          matched={{ ...matched, alias: null }}
+        />,
+      ),
+    ).toContain("<dt>Also known as</dt><dd>Harbor Pumping, HCP Concrete</dd>");
+  });
+
+  it("gives each address a bullet for what stands there: a building, a house, a mail drop or a pin", () => {
+    const at = (street: string, more: object) => ({
+      street,
+      city: "PITTSBURGH",
+      state: "PA",
+      zip: "15212",
+      ...more,
+    });
+    const kinds = renderToStaticMarkup(
+      <SearchResult
+        search={{
+          ...SAMPLE_SEARCH,
+          business: {
+            ...SAMPLE_SEARCH.business!,
+            primary_address: at("1 OFFICE PARK", { rdi: "Commercial" }),
+            addresses: [
+              at("1 OFFICE PARK", { rdi: "Commercial" }),
+              at("2 ELM ST", { rdi: "Residential" }),
+              at("PO BOX 3", { rdi: "Commercial", cmra: true }),
+              at("4 NOWHERE LN", {}),
+            ],
+          },
+        }}
+        elapsedMs={null}
+      />,
+    );
+
+    expect(
+      [...kinds.matchAll(/class="sr-address-icon" data-kind="([a-z-]+)"/g)].map(
+        match => match[1],
+      ),
+    ).toEqual(["commercial", "residential", "mail-drop", "unknown"]);
+    // Only for the eye: the pills say it in words.
+    expect(markup).toContain('<svg aria-hidden="true"');
+  });
+
   it("lists every address on file, the one the search carries first with the pill", () => {
     expect(words).toContain(
       "Addresses on file 3 535 Mission St Fl 14, San Francisco, CA 94105 Deliverable Commercial Matched 1200 River Rd, Pittsburgh, PA 15212 Deliverable Commercial Primary PO Box 442",
@@ -176,11 +298,127 @@ describe("the report for a pick a filter reached", () => {
     );
   });
 
+  it("marks the primary address with a pill, like the others, not a bare word", () => {
+    expect(markup).toContain(
+      '<span class="sr-chip" data-tone="info">Primary</span>',
+    );
+    expect(markup).not.toContain('<span class="sr-muted">Primary</span>');
+  });
+
+  it("says nothing of more addresses when they all fit", () => {
+    expect(words).not.toContain("more address");
+  });
+
+  it("stops at ten addresses and counts the rest, the matched one still at the top", () => {
+    const filler = Array.from({ length: 43 }, (_, index) => ({
+      street: `${100 + index} FILLER AVE`,
+      city: "PITTSBURGH",
+      state: "PA",
+      zip: "15212",
+      sources: ["Online"],
+    }));
+    const long = renderToStaticMarkup(
+      <SearchResult
+        search={{
+          ...search,
+          business: {
+            ...search.business!,
+            addresses: [...filler, ...search.business!.addresses!],
+          },
+        }}
+        elapsedMs={null}
+        matched={matched}
+      />,
+    );
+    const longWords = text(long);
+
+    expect(longWords).toContain("Addresses on file 46");
+    expect(longWords).toContain(
+      "Addresses on file 46 535 Mission St Fl 14, San Francisco, CA 94105 Deliverable Commercial Matched 1200 River Rd",
+    );
+    expect(long.match(/<li[^>]*><span class="sr-address">/g)).toHaveLength(10);
+    expect(longWords).toContain("36 more addresses");
+  });
+
   it("lists the states and the officers the same way, the matched first", () => {
-    expect(words).toContain("States 3 OH Matched PA MD");
+    // The squares only: what a state matched is said on its filing.
+    expect(words).toContain("States 3 PA OH MD");
     expect(words).toContain(
       "Officers 2 DW Dana Whitfield President Matched PA LO Luis Ortega",
     );
+  });
+
+  it("draws the domicile green and first among the squares, underlines the state the filter named, and says what it matched on its filing", () => {
+    const squares = markup.match(/<ul class="sr-states">.*?<\/ul>/)?.[0] ?? "";
+
+    expect(squares).toBe(
+      '<ul class="sr-states">' +
+        '<li><span class="sr-state" data-kind="domestic" aria-hidden="true">PA</span></li>' +
+        '<li><span class="sr-state" data-matched="true" aria-hidden="true">OH</span></li>' +
+        '<li><span class="sr-state" aria-hidden="true">MD</span></li>' +
+        "</ul>",
+    );
+    // The pill is for the filing, which follows the domestic one.
+    expect(squares).not.toContain("Matched");
+    expect(words).toContain(
+      "Secretary of State filings 3 PA Domestic filing in PA",
+    );
+    expect(words.indexOf("Domestic filing in PA")).toBeLessThan(
+      words.indexOf("Foreign filing in OH"),
+    );
+    expect(words.indexOf("Foreign filing in OH")).toBeLessThan(
+      words.indexOf("Foreign filing in MD"),
+    );
+    expect(words).toContain("Foreign filing in OH Matched Active");
+    expect(
+      markup.match(/<li class="sr-filing"[^>]*data-matched="true"/g),
+    ).toHaveLength(1);
+    // The filing's own square is underlined too, as the one among the states
+    // is: the OH ones, and no others.
+    expect(
+      markup.match(/<span class="sr-state"[^>]*data-matched="true"/g),
+    ).toHaveLength(2);
+    expect(markup).toContain(
+      '<span class="sr-state" data-kind="foreign" data-matched="true" aria-hidden="true">OH</span>',
+    );
+    expect(markup).toContain(
+      '<span class="sr-state" data-kind="foreign" aria-hidden="true">MD</span>',
+    );
+  });
+
+  it("names the same home state in the squares and in the filings when the API classifies no filing as domestic", () => {
+    const unclassified = (state: string) => ({
+      ...SAMPLE_SEARCH.business!.registrations![0]!,
+      id: state,
+      state,
+      registration_type: null,
+    });
+    const drawn = renderToStaticMarkup(
+      <SearchResult
+        search={{
+          ...SAMPLE_SEARCH,
+          business: {
+            ...SAMPLE_SEARCH.business!,
+            incorporation_state: "DE",
+            registrations: [unclassified("NY"), unclassified("DE")],
+          },
+        }}
+        elapsedMs={null}
+      />,
+    );
+    const squares = drawn.match(/<ul class="sr-states">.*?<\/ul>/)?.[0] ?? "";
+    const filings = drawn.match(/<ul class="sr-filings">.*<\/ul>/)?.[0] ?? "";
+    const home =
+      '<span class="sr-state" data-kind="domestic" aria-hidden="true">DE</span>';
+
+    // The incorporation state leads the squares, green, and so does its filing
+    // the filings, with the same green, though no filing says it is domestic.
+    expect(squares.startsWith(`<ul class="sr-states"><li>${home}`)).toBe(true);
+    expect(filings).toContain(home);
+    expect(filings.indexOf(">DE</span>")).toBeLessThan(
+      filings.indexOf(">NY</span>"),
+    );
+    expect(filings).not.toContain('data-kind="domestic" aria-hidden="true">NY');
   });
 
   it("draws no pill and no order of its own for a pick no filter reached", () => {
@@ -188,6 +426,11 @@ describe("the report for a pick a filter reached", () => {
     const plainWords = text(plain);
 
     expect(plain).not.toContain(">Matched</span>");
+    // The domicile is green whatever was filtered, and nothing is underlined.
+    expect(plain).toContain(
+      '<ul class="sr-states"><li><span class="sr-state" data-kind="domestic" aria-hidden="true">PA</span></li>',
+    );
+    expect(plain).not.toContain('data-matched="true"');
     expect(plainWords).not.toContain("Officer Dana");
     expect(plainWords).not.toContain("States OH");
     expect(plainWords.indexOf("1200 River Rd")).toBeLessThan(

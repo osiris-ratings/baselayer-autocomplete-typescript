@@ -2,19 +2,26 @@ import { describe, expect, it } from "vitest";
 
 import { SAMPLE_SEARCH } from "../../site/demo/sample-search";
 import {
+  ADDRESSES_SHOWN,
   NOTHING_MATCHED,
+  addressKind,
   addressesOnFile,
+  aliasesOnFile,
   announcement,
   consoleHref,
   deliveryChips,
+  domicileOf,
   elapsedLabel,
   entityType,
   formatAddress,
   formatDay,
   glance,
   hitLines,
+  leadingOnFile,
   matchPill,
   matchRows,
+  markTyped,
+  markWhole,
   matchedOf,
   monthsLabel,
   officersOnFile,
@@ -23,13 +30,19 @@ import {
   readable,
   readableAddress,
   registrationKind,
+  registrationsOnFile,
   registrationStatus,
   sameOfficer,
   statesOnFile,
   verdictOf,
   watchlistRows,
 } from "../../site/demo/search-view";
-import type { Address, Registration, Search } from "../../site/demo/searches";
+import type {
+  Address,
+  Business,
+  Registration,
+  Search,
+} from "../../site/demo/searches";
 
 // What the search report says: the words, the verdict, the pills and the order
 // things come in.
@@ -300,6 +313,14 @@ describe("matchRows", () => {
         label: "Name",
         yours: "Harbor Concrete Pumping Co., Inc.",
         found: "Harbor Concrete Pumping Co., Inc.",
+        // Nothing was typed, so nothing is underlined.
+        parts: [
+          {
+            text: "Harbor Concrete Pumping Co., Inc.",
+            matched: false,
+            dba: false,
+          },
+        ],
         pill: { label: "Exact match", tone: "good" },
       },
       {
@@ -307,6 +328,13 @@ describe("matchRows", () => {
         label: "Address",
         yours: "1200 River Rd, Pittsburgh, PA 15212",
         found: "1200 River Rd, Pittsburgh, PA 15212",
+        parts: [
+          {
+            text: "1200 River Rd, Pittsburgh, PA 15212",
+            matched: false,
+            dba: false,
+          },
+        ],
         pill: { label: "Exact match", tone: "good" },
       },
     ]);
@@ -631,6 +659,11 @@ const pickMatched = {
   addresses: ["535 Mission St Fl 14, San Francisco, CA 94105"],
   asked: ["NY", "OH", "AL"],
   states: ["OH"],
+  typed: {
+    name: "harbor pum",
+    person: "thomas harl",
+    address: "535 mission street",
+  },
 };
 
 describe("matchedOf", () => {
@@ -649,6 +682,7 @@ describe("matchedOf", () => {
           { kind: "state", states: ["DE", "NY"] },
         ],
         ["ny", " de", "AL", "NY", ""],
+        { name: "base", person: "thom", address: "535 mission" },
       ),
     ).toEqual({
       alias: "BASELAYER",
@@ -656,11 +690,173 @@ describe("matchedOf", () => {
       addresses: ["535 Mission St Fl 14, San Francisco, CA 94105"],
       asked: ["NY", "DE", "AL"],
       states: ["DE", "NY"],
+      typed: { name: "base", person: "thom", address: "535 mission" },
     });
   });
 
   it("has matched nothing for a pick the name alone reached", () => {
     expect(matchedOf([])).toEqual(NOTHING_MATCHED);
+  });
+});
+
+describe("addressKind", () => {
+  const at = (more: Partial<Address>): Address => ({
+    street: "1 MAIN ST",
+    city: "PITTSBURGH",
+    state: "PA",
+    zip: "15212",
+    ...more,
+  });
+
+  it("is what the API says stands there", () => {
+    expect(addressKind(at({ rdi: "Commercial" }))).toBe("commercial");
+    expect(addressKind(at({ rdi: "Residential" }))).toBe("residential");
+  });
+
+  it("is a mail drop when it is flagged one, whatever the building is", () => {
+    expect(addressKind(at({ cmra: true, rdi: "Commercial" }))).toBe(
+      "mail-drop",
+    );
+    expect(addressKind(at({ cmra: true }))).toBe("mail-drop");
+    expect(addressKind(at({ cmra: false, rdi: "Residential" }))).toBe(
+      "residential",
+    );
+  });
+
+  it("is not known when the API does not say, or sends nothing", () => {
+    expect(addressKind(at({}))).toBe("unknown");
+    expect(addressKind(at({ rdi: null, cmra: null }))).toBe("unknown");
+    expect(addressKind(null)).toBe("unknown");
+    expect(addressKind(undefined)).toBe("unknown");
+  });
+});
+
+describe("markTyped", () => {
+  const cut = (text: string, typed: string) =>
+    markTyped(text, typed).map(({ text, matched }) => [text, matched]);
+
+  it("underlines the words that are the same, with the space between them", () => {
+    expect(
+      cut(
+        "353 Mission St Fl 14, San Francisco, CA 94105",
+        "353 Mission street",
+      ),
+    ).toEqual([
+      ["353 Mission", true],
+      [" St Fl 14, San Francisco, CA 94105", false],
+    ]);
+    expect(cut("353 Mission St, San Francisco", "353 mission st")).toEqual([
+      ["353 Mission St", true],
+      [", San Francisco", false],
+    ]);
+  });
+
+  it("underlines as far as the word was typed", () => {
+    expect(cut("Baselayer", "baselaye")).toEqual([
+      ["Baselaye", true],
+      ["r", false],
+    ]);
+    expect(cut("Baselayer", "BASELAYER")).toEqual([["Baselayer", true]]);
+  });
+
+  it("reads a letter with an accent as the letter, and a typed & as and", () => {
+    expect(cut("José Núñez", "jose nun")).toEqual([
+      ["José Núñ", true],
+      ["ez", false],
+    ]);
+    expect(cut("Smith and Sons", "smith & sons")).toEqual([
+      ["Smith and Sons", true],
+    ]);
+  });
+
+  it("leaves what was not typed alone, and marks nothing when nothing was", () => {
+    expect(cut("Dana Whitfield", "")).toEqual([["Dana Whitfield", false]]);
+    expect(cut("Dana Whitfield", "zed")).toEqual([["Dana Whitfield", false]]);
+    expect(cut("", "dana")).toEqual([]);
+  });
+
+  it("does not bridge a gap that is more than space", () => {
+    expect(cut("Harbor, Concrete", "harbor concrete")).toEqual([
+      ["Harbor", true],
+      [", ", false],
+      ["Concrete", true],
+    ]);
+  });
+
+  it("carries whether the text is the name the business goes by", () => {
+    expect(markTyped("Baselayer", "base", true)).toEqual([
+      { text: "Base", matched: true, dba: true },
+      { text: "layer", matched: false, dba: true },
+    ]);
+  });
+});
+
+describe("markWhole", () => {
+  it("underlines the whole name when any of what was typed matched it", () => {
+    expect(markWhole("Baselayer", "baselaye")).toEqual([
+      { text: "Baselayer", matched: true, dba: false },
+    ]);
+    expect(markWhole("Jonathan Awad", "jon")).toEqual([
+      { text: "Jonathan Awad", matched: true, dba: false },
+    ]);
+    // `street` is not `St`, but `353 Mission` is the same: the address is.
+    expect(
+      markWhole("353 Mission St Fl 14, San Francisco", "353 Mission street"),
+    ).toEqual([
+      {
+        text: "353 Mission St Fl 14, San Francisco",
+        matched: true,
+        dba: false,
+      },
+    ]);
+  });
+
+  it("leaves a name plain that nothing typed reached, or when nothing was typed", () => {
+    expect(markWhole("Jonathan Awad", "zed")).toEqual([
+      { text: "Jonathan Awad", matched: false, dba: false },
+    ]);
+    expect(markWhole("Jonathan Awad", "")).toEqual([
+      { text: "Jonathan Awad", matched: false, dba: false },
+    ]);
+    expect(markWhole("", "jon")).toEqual([]);
+  });
+
+  it("carries whether the text is the name the business goes by", () => {
+    expect(markWhole("Baselayer", "base", true)).toEqual([
+      { text: "Baselayer", matched: true, dba: true },
+    ]);
+  });
+});
+
+describe("domicileOf", () => {
+  const business = SAMPLE_SEARCH.business!;
+
+  it("is where the domestic filing is", () => {
+    expect(domicileOf(business)).toBe("PA");
+    // The filing is the record of it: the field it was incorporated in
+    // cannot name another state beside it.
+    expect(domicileOf({ ...business, incorporation_state: "DE" })).toBe("PA");
+  });
+
+  it("is the incorporation state when no domestic filing is listed", () => {
+    expect(
+      domicileOf({
+        ...business,
+        incorporation_state: "DE",
+        registrations: [],
+      }),
+    ).toBe("DE");
+  });
+
+  it("is not known without either, or without a business", () => {
+    expect(
+      domicileOf({ ...business, incorporation_state: null, registrations: [] }),
+    ).toBeNull();
+    expect(
+      domicileOf({ ...business, incorporation_state: "", registrations: [] }),
+    ).toBeNull();
+    expect(domicileOf(null)).toBeNull();
+    expect(domicileOf(undefined)).toBeNull();
   });
 });
 
@@ -685,6 +881,18 @@ describe("matchRows, for a pick", () => {
         label: "Name",
         yours: "Harbor Pumping",
         found: "Harbor Concrete Pumping Co., Inc. (DBA Harbor Pumping)",
+        // The name it was found by, all of it, underlined and set apart from
+        // the legal name; the row's own name is not, since it did not match.
+        parts: [
+          {
+            text: "Harbor Concrete Pumping Co., Inc.",
+            matched: false,
+            dba: false,
+          },
+          { text: " (DBA ", matched: false, dba: true },
+          { text: "Harbor Pumping", matched: true, dba: true },
+          { text: ")", matched: false, dba: true },
+        ],
         pill: { label: "Exact match", tone: "good" },
       },
       {
@@ -692,6 +900,7 @@ describe("matchRows, for a pick", () => {
         label: "Officer",
         yours: "Thomas Harlow",
         found: "Thomas A Harlow",
+        parts: [{ text: "Thomas A Harlow", matched: true, dba: false }],
         pill: { label: "Exact match", tone: "good" },
       },
       {
@@ -699,6 +908,13 @@ describe("matchRows, for a pick", () => {
         label: "Address",
         yours: "535 Mission St Fl 14, San Francisco, CA 94105",
         found: formatAddress(MISSION),
+        parts: [
+          {
+            text: "535 Mission St Fl 14, San Francisco, CA 94105",
+            matched: true,
+            dba: false,
+          },
+        ],
         pill: { label: "Exact match", tone: "good" },
       },
       {
@@ -706,6 +922,7 @@ describe("matchRows, for a pick", () => {
         label: "States",
         yours: "NY, OH, AL",
         found: "OH",
+        parts: [{ text: "OH", matched: true, dba: false }],
         pill: { label: "Match", tone: "good" },
       },
     ]);
@@ -849,16 +1066,188 @@ describe("what the business has on file, the matched first", () => {
     ]);
   });
 
-  it("lists every state the business is in, the ones the filter named first", () => {
+  it("lists the names the business goes by, the one the pick was found by first", () => {
+    const business = pickedSearch.business!;
+
     expect(
-      statesOnFile(pickedSearch.business, pickMatched).map(
+      aliasesOnFile(business, pickMatched).map(({ item, matched }) => [
+        item,
+        matched,
+      ]),
+    ).toEqual([
+      ["Harbor Pumping", true],
+      ["HCP Concrete", false],
+    ]);
+    // Wherever it was sent, and in whatever case.
+    expect(
+      aliasesOnFile(business, { ...pickMatched, alias: "hcp  concrete" }).map(
         ({ item, matched }) => [item, matched],
       ),
     ).toEqual([
-      ["OH", true],
+      ["HCP Concrete", true],
+      ["Harbor Pumping", false],
+    ]);
+  });
+
+  it("marks no name the business goes by for a pick the DBA did not find, or one not among them", () => {
+    const business = pickedSearch.business!;
+
+    expect(
+      aliasesOnFile(business, NOTHING_MATCHED).map(entry => entry.matched),
+    ).toEqual([false, false]);
+    expect(
+      aliasesOnFile(business, { ...pickMatched, alias: "SOMEONE ELSE" }).map(
+        entry => entry.matched,
+      ),
+    ).toEqual([false, false]);
+    expect(aliasesOnFile(null, pickMatched)).toEqual([]);
+    const nameless: Business = { ...business };
+    delete nameless.alternative_names;
+    expect(aliasesOnFile(nameless, pickMatched)).toEqual([]);
+  });
+
+  it("lists every state the business is in: its domicile first, then the ones the filter named", () => {
+    const flags = (matched: typeof pickMatched) =>
+      statesOnFile(pickedSearch.business, matched).map(
+        ({ item, matched, domicile }) => [item, matched, domicile],
+      );
+
+    expect(flags(pickMatched)).toEqual([
+      ["PA", false, true],
+      ["OH", true, false],
+      ["MD", false, false],
+    ]);
+    // The domicile that the filter named is still first, and once.
+    expect(flags({ ...pickMatched, states: ["PA", "MD"] })).toEqual([
+      ["PA", true, true],
+      ["MD", true, false],
+      ["OH", false, false],
+    ]);
+  });
+
+  it("takes the incorporation state for the domicile when no domestic filing is listed", () => {
+    const business: Business = {
+      ...pickedSearch.business!,
+      incorporation_state: "DE",
+      registrations: pickedSearch.business!.registrations!.filter(
+        registration => registration.registration_type !== "domestic",
+      ),
+    };
+
+    expect(
+      statesOnFile(business, pickMatched).map(({ item, matched, domicile }) => [
+        item,
+        matched,
+        domicile,
+      ]),
+    ).toEqual([
+      ["DE", false, true],
+      ["OH", true, false],
+      ["MD", false, false],
+    ]);
+  });
+
+  it("stops a long list at ten and counts the rest, the matched staying at the top", () => {
+    const many = Array.from({ length: 44 }, (_, index) => ({
+      item: index,
+      matched: index < 2,
+    }));
+
+    const { shown, hidden } = leadingOnFile(many);
+
+    expect(ADDRESSES_SHOWN).toBe(10);
+    expect(shown.map(entry => entry.item)).toEqual([
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+    ]);
+    expect(shown.slice(0, 2).every(entry => entry.matched)).toBe(true);
+    expect(hidden).toBe(34);
+  });
+
+  it("never leaves a matched entry out, even past ten", () => {
+    const all = Array.from({ length: 14 }, (_, index) => ({
+      item: index,
+      matched: index < 12,
+    }));
+
+    expect(leadingOnFile(all)).toEqual({ shown: all.slice(0, 12), hidden: 2 });
+  });
+
+  it("leaves nothing out of a short list", () => {
+    const few = [{ item: "a", matched: false }];
+
+    expect(leadingOnFile(few)).toEqual({ shown: few, hidden: 0 });
+    expect(leadingOnFile([])).toEqual({ shown: [], hidden: 0 });
+  });
+
+  it("lists the filings with the domestic one first, then the ones in a state the filter named", () => {
+    const business = pickedSearch.business!;
+
+    expect(
+      registrationsOnFile(business.registrations, pickMatched).map(
+        ({ item, matched }) => [item.state, matched],
+      ),
+    ).toEqual([
       ["PA", false],
+      ["OH", true],
       ["MD", false],
     ]);
+    // The domestic filing that the filter named is first, and marked.
+    expect(
+      registrationsOnFile(business.registrations, {
+        ...pickMatched,
+        states: ["PA", "MD"],
+      }).map(({ item, matched }) => [item.state, matched]),
+    ).toEqual([
+      ["PA", true],
+      ["MD", true],
+      ["OH", false],
+    ]);
+    // A filter that named none leaves them as orderedRegistrations has them.
+    expect(
+      registrationsOnFile(business.registrations, NOTHING_MATCHED).map(
+        ({ item, matched }) => [item.state, matched],
+      ),
+    ).toEqual([
+      ["PA", false],
+      ["OH", false],
+      ["MD", false],
+    ]);
+    expect(registrationsOnFile(undefined, pickMatched)).toEqual([]);
+  });
+
+  it("leads with the filing in the domicile, and calls it home, when the API classifies none as domestic", () => {
+    const unclassified = (state: string): Registration => ({
+      ...SAMPLE_SEARCH.business!.registrations![0]!,
+      id: state,
+      state,
+      registration_type: null,
+    });
+    const filings = [
+      unclassified("NY"),
+      unclassified("DE"),
+      unclassified("CA"),
+    ];
+
+    expect(
+      registrationsOnFile(filings, NOTHING_MATCHED, "DE").map(
+        ({ item, home }) => [item.state, home],
+      ),
+    ).toEqual([
+      ["DE", true],
+      ["NY", false],
+      ["CA", false],
+    ]);
+    // Told of no domicile, nothing leads or is home.
+    expect(
+      registrationsOnFile(filings, NOTHING_MATCHED).map(({ home }) => home),
+    ).toEqual([false, false, false]);
+    // A filing the API says is foreign is not the home one, whatever its state.
+    const foreign = [{ ...unclassified("DE"), registration_type: "foreign" }];
+    expect(
+      registrationsOnFile(foreign as Registration[], NOTHING_MATCHED, "DE").map(
+        ({ home }) => home,
+      ),
+    ).toEqual([false]);
   });
 
   it("has nothing on file for a search with no business", () => {

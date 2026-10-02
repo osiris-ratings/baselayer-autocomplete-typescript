@@ -21,6 +21,17 @@ export function leadAddressOf(suggestion: BusinessSuggestion): string | null {
   return suggestion.related.addresses.items[0]?.label ?? null;
 }
 
+/**
+ * What a pick fills into the name field: the name the row matched on. That is
+ * the row's `label`, or the name the family goes by (a DBA) when the row
+ * matched that, so `baselaye` completes to `BASELAYER` rather than to the legal
+ * name the row leads with. The pick's token is the family's either way.
+ */
+export function pickedNameOf(suggestion: BusinessSuggestion): string {
+  const alias = suggestion.matched_name;
+  return alias !== null && alias.trim() !== "" ? alias : suggestion.label;
+}
+
 /** Whose address a related address is: the family's own filing, or a person's. */
 export type AddressOwner = "officer" | "agent" | "principal";
 

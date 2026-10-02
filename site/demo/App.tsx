@@ -1,6 +1,7 @@
 import {
   createAutocompleteClient,
   includeForLayout,
+  pickedNameOf,
   type AutocompleteClient,
   type BusinessSuggestion,
   type Filters,
@@ -29,7 +30,9 @@ import { testKey, withFirstGrant, type CheckResult } from "./connect";
 import { connectionStatus, formatRemaining } from "./connection";
 import { Collapsible, FOLD_MS, Field, Select } from "./controls";
 import { keyMint, readClaims } from "./credentials";
+import { useExit } from "./exit";
 import { useFocusWithin } from "./focus";
+import type { Typed } from "./search-view";
 import { NetworkLog } from "./network";
 import { NetworkCount, NetworkTimeline } from "./NetworkTimeline";
 import {
@@ -381,6 +384,8 @@ export function App() {
     pick: Pick;
     /** The state codes the visitor had filtered by when they picked. */
     asked: readonly string[];
+    /** What else they had typed: the name, and the person and address filters. */
+    typed: Typed;
   } | null>(null);
   const [person, setPerson] = useState("");
   const [states, setStates] = useState("");
@@ -465,6 +470,15 @@ export function App() {
     parseStates(states).join(""),
     address.trim(),
   ].filter(Boolean).length;
+
+  // The third step is for the pick it was made from: when the name or a filter
+  // changes the pick goes, and the step closes up before it is taken away. It
+  // is kept whole while it does, with the key and the pick it ran under.
+  const step = useMemo(
+    () => (applied !== null && picked !== null ? { applied, picked } : null),
+    [applied, picked],
+  );
+  const { shown: shownStep } = useExit(step, FOLD_MS);
 
   const connectSummary =
     applied === null ? (
@@ -685,7 +699,10 @@ export function App() {
               <Field label="Officer or agent name" optional>
                 <input
                   value={person}
-                  onChange={e => setPerson(e.target.value)}
+                  onChange={e => {
+                    setPerson(e.target.value);
+                    setPicked(null);
+                  }}
                   placeholder="dana"
                   autoComplete="off"
                 />
@@ -697,7 +714,10 @@ export function App() {
               >
                 <input
                   value={states}
-                  onChange={e => setStates(e.target.value)}
+                  onChange={e => {
+                    setStates(e.target.value);
+                    setPicked(null);
+                  }}
                   placeholder="PA, OH"
                   autoComplete="off"
                 />
@@ -705,7 +725,10 @@ export function App() {
               <Field label="Address" optional>
                 <input
                   value={address}
-                  onChange={e => setAddress(e.target.value)}
+                  onChange={e => {
+                    setAddress(e.target.value);
+                    setPicked(null);
+                  }}
                   placeholder="1200 River Rd"
                   autoComplete="off"
                 />
@@ -743,7 +766,10 @@ export function App() {
                     value={name}
                     onChange={value => {
                       setName(value);
-                      if (picked !== null && value !== picked.suggestion.label)
+                      if (
+                        picked !== null &&
+                        value !== pickedNameOf(picked.suggestion)
+                      )
                         setPicked(null);
                     }}
                     onPick={(suggestion, pick) =>
@@ -751,6 +777,9 @@ export function App() {
                         suggestion,
                         pick,
                         asked: filters?.state ?? [],
+                        // The field holds the pick's fill by now; the closure
+                        // still holds what was typed to find it.
+                        typed: { name, person, address },
                       })
                     }
                     look={{ ...changedLook(style) }}
@@ -819,23 +848,40 @@ export function App() {
             </div>
           </section>
 
-          {/* The page has two steps until a business is picked. A new pick, or
-              a new key, starts this one over. */}
-          {applied !== null && picked !== null && (
-            <SearchStep
-              key={`${applied.id}:${picked.pick.businessToken}`}
-              apiKey={applied.secret}
-              baseUrl={applied.baseUrl}
-              // The host the applied connection reaches, not the form's: the
-              // request the step shows must be the one Run sends.
-              apiHost={
-                applied.environment === "custom" ? applied.baseUrl : PRODUCTION
-              }
-              picked={picked}
-              fetchImpl={network.fetch}
-              onShowDebug={showDebug}
-            />
-          )}
+          {/* The page has two steps until a business is picked. A new pick, a
+              new key, or a change to the name or a filter starts this one
+              over: it closes up and goes. Its slot stays, empty, so that the
+              column does not change when the step is taken away. Every pick is
+              a step of its own, the same business picked again included, so
+              that one made while the last is still closing does not take over
+              its run and its idempotency key. */}
+          <div
+            className="step-exit"
+            data-open={step !== null ? "true" : "false"}
+            aria-hidden={step !== null ? undefined : "true"}
+            inert={step === null}
+            data-testid="demo-step-exit"
+          >
+            <div className="step-exit-inner">
+              {shownStep !== null && (
+                <SearchStep
+                  key={`${shownStep.applied.id}:${shownStep.picked.pick.businessToken}:${shownStep.picked.pick.pickedAt}`}
+                  apiKey={shownStep.applied.secret}
+                  baseUrl={shownStep.applied.baseUrl}
+                  // The host the applied connection reaches, not the form's:
+                  // the request the step shows must be the one Run sends.
+                  apiHost={
+                    shownStep.applied.environment === "custom"
+                      ? shownStep.applied.baseUrl
+                      : PRODUCTION
+                  }
+                  picked={shownStep.picked}
+                  fetchImpl={network.fetch}
+                  onShowDebug={showDebug}
+                />
+              )}
+            </div>
+          </div>
         </div>
 
         {panel === null ? (

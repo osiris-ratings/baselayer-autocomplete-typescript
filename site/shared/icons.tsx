@@ -22,7 +22,10 @@ export type IconName =
   | "alert"
   | "copy"
   | "external"
-  | "search";
+  | "search"
+  | "building"
+  | "home"
+  | "mail";
 
 const PATHS: Record<IconName, string> = {
   caret: "M9 6h6M9 18h6M12 6v12",
@@ -51,6 +54,12 @@ const PATHS: Record<IconName, string> = {
   copy: "M9 9h11v11H9zM5 15V4h11",
   external: "M14 4h6v6M20 4l-9.5 9.5M18 14v6H4V6h6",
   search: "M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM20 20l-4.2-4.2",
+  // An address by what stands there: an office block with its annex, a house
+  // with a chimney, and the envelope of a mail drop.
+  building:
+    "M5 21V4h9v17M14 9h5v12M3 21h18M8.5 8h2M8.5 12h2M8.5 16h2M16.5 13h.01M16.5 17h.01",
+  home: "M3 11.5L12 4l9 7.5M5.5 10v10h13V10M10 20v-5h4v5M16 7.33V5h2.5v4.42",
+  mail: "M3.5 6h17v12h-17zM4 7l8 6 8-6",
 };
 
 export function Icon({ name, size = 22 }: { name: IconName; size?: number }) {

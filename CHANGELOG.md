@@ -30,11 +30,21 @@ the name's own marks, and a reader and the pick carry the same answer.
   when there were none or the client withheld them from a short name.
 - `Pick.matchedOn`: what the picked row matched on besides its name, `[]` for
   a pick the name alone reached.
+- `pickedNameOf(suggestion)`: what a pick fills into the name field, the name
+  the row matched on: its `matched_name` (a name the business goes by) when it
+  matched that, else its `label`.
 
 ### Changed
 
 - **Breaking:** `Pick` requires `matchedOn`, and `EntityAutocompleteState`
   requires `appliedFilters`, so a host that builds either needs them.
+- A pick on `BusinessAutocomplete` fills the field with the name the row
+  matched on, not always the row's `label`: typing `baselaye` and picking
+  `OSIRIS RATINGS, INC. also BASELAYER` now leaves `BASELAYER` in the field
+  rather than replacing it with a name the typed text is not part of. A row
+  that matched its own name fills it as before. The business token is the
+  same either way. A host that compares the field with `label` after a pick
+  compares with `pickedNameOf` instead.
 - `peopleLineOf` leads with the people a person filter matched, and says how
   many of its names did (`matched`). `orderedStates(suggestion, matched)`
   moves the states a state filter matched up behind the domicile, so a matched
@@ -46,7 +56,9 @@ the name's own marks, and a reader and the pick carry the same answer.
   edited after the pick, so a host that holds the menu open while a filter is
   typed (`open`) sees the narrowed list, not an empty one. The pick used to
   switch the search off until the name itself was edited. Re-rendering the
-  same filters in a new object, and editing the name, behave as before.
+  same filters in a new object, and editing the name, behave as before. A pick
+  is of the filters it was made under, so putting them back as they were is not
+  a return to it: the name is searched again, and its rows are there to pick.
 
 ## [0.2.0] - 2026-09-28
 
