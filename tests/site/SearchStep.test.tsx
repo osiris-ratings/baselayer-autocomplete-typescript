@@ -24,6 +24,7 @@ function html(expiresInMs: number) {
           businessToken: "token",
           pickedAt: Date.now(),
           expiresAt: Date.now() + expiresInMs,
+          matchedOn: [],
         },
       }}
       fetchImpl={() => Promise.reject(new Error("not called"))}

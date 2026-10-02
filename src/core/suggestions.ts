@@ -21,6 +21,47 @@ export function leadAddressOf(suggestion: BusinessSuggestion): string | null {
   return suggestion.related.addresses.items[0]?.label ?? null;
 }
 
+/** Whose address a related address is: the family's own filing, or a person's. */
+export type AddressOwner = "officer" | "agent" | "principal";
+
+export interface AddressLine {
+  label: string;
+  /** The address satisfied an address filter: it is why the row is here. */
+  matched: boolean;
+  /**
+   * Whose it is: `principal` for the family's own filing (its principal or
+   * mailing address), `officer` or `agent` for a person's; null for a role
+   * this build does not know.
+   */
+  role: AddressOwner | null;
+}
+
+function ownerOf(role: string | null): AddressOwner | null {
+  switch (role) {
+    case "officer":
+    case "agent":
+      return role;
+    case "principal":
+    case "mailing":
+      return "principal";
+    default:
+      return null;
+  }
+}
+
+/**
+ * The lead address with what the autocomplete service says of it: whether it
+ * matched, and whose it is. The same address as `leadAddressOf`, the head.
+ */
+export function addressLineOf(
+  suggestion: BusinessSuggestion,
+): AddressLine | null {
+  const lead = suggestion.related.addresses.items[0];
+  return lead === undefined
+    ? null
+    : { label: lead.label, matched: lead.matched, role: ownerOf(lead.role) };
+}
+
 /** The family's officers as named in the index; registered agents are not people. */
 export function officersOf(suggestion: BusinessSuggestion): string[] {
   return suggestion.related.people.items
@@ -29,10 +70,16 @@ export function officersOf(suggestion: BusinessSuggestion): string[] {
 }
 
 export interface PeopleLine {
+  /** Matched people first, each group in the autocomplete service's order. */
   names: string[];
   role: "officer" | "agent";
   /** How many more of this role the family has beyond the first name shown. */
   more: number;
+  /**
+   * How many of `names` satisfied a person filter. They lead `names`, so the
+   * first name shown is a match when this is above zero.
+   */
+  matched: number;
 }
 
 /**
@@ -56,44 +103,131 @@ function moreOf(
   return inHead.length - 1 + beyondHeadOfRole;
 }
 
-/**
- * Who the people field names: the officers when the family has any in the
- * head, otherwise its registered agents, marked as such so a corporation's
- * name is not read as a person's. Nothing when it has neither.
- */
-export function peopleLineOf(
+/** The head's people of `role`, the ones that matched first. */
+function peopleOfRole(
   suggestion: BusinessSuggestion,
-): PeopleLine | null {
-  const officers = officersOf(suggestion);
-  if (officers.length > 0) {
-    return {
-      names: officers,
-      role: "officer",
-      more: moreOf(suggestion, officers, "officer"),
-    };
-  }
-  const agents = suggestion.related.people.items
-    .filter(item => item.role === "agent")
-    .map(item => item.label);
-  if (agents.length === 0) {
-    return null;
-  }
+  role: PeopleLine["role"],
+): { names: string[]; matched: number } {
+  const items = suggestion.related.people.items.filter(
+    item => item.role === role,
+  );
+  const matched = items.filter(item => item.matched);
+  const rest = items.filter(item => !item.matched);
   return {
-    names: agents,
-    role: "agent",
-    more: moreOf(suggestion, agents, "agent"),
+    names: [...matched, ...rest].map(item => item.label),
+    matched: matched.length,
   };
 }
 
 /**
- * The domicile first, then the other states in the autocomplete service's
- * (sorted) order.
+ * Who the people field names: the officers when the family has any in the
+ * head, otherwise its registered agents, marked as such so a corporation's
+ * name is not read as a person's. The people a person filter matched come
+ * first. Nothing when it has neither.
  */
-export function orderedStates(suggestion: BusinessSuggestion): string[] {
+export function peopleLineOf(
+  suggestion: BusinessSuggestion,
+): PeopleLine | null {
+  for (const role of ["officer", "agent"] as const) {
+    const { names, matched } = peopleOfRole(suggestion, role);
+    if (names.length > 0) {
+      return {
+        names,
+        role,
+        more: moreOf(suggestion, names, role),
+        matched,
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * The domicile first, then the states a state filter matched, then the other
+ * states in the autocomplete service's (sorted) order. A matched state is
+ * never left behind a `+N` while any other state is shown. `matched` is the
+ * `states` of `matchedOn`'s state entry.
+ */
+export function orderedStates(
+  suggestion: BusinessSuggestion,
+  matched: readonly string[] = [],
+): string[] {
+  const rest = suggestion.states.filter(
+    state => state !== suggestion.domicile_state,
+  );
   return [
     suggestion.domicile_state,
-    ...suggestion.states.filter(state => state !== suggestion.domicile_state),
+    ...rest.filter(state => matched.includes(state)),
+    ...rest.filter(state => !matched.includes(state)),
   ];
+}
+
+/**
+ * What a row matched on besides its name, as the autocomplete service says.
+ * The name's own match is the `highlight` the name draws, and is not here.
+ */
+export type MatchedOn =
+  /** A name the family goes by (a DBA) matched; `matched_name`. */
+  | { kind: "alias"; name: string }
+  /** Officers a person filter matched, and how many matched in all. */
+  | { kind: "officer"; names: string[]; of: number | null }
+  /** Registered agents a person filter matched, and how many matched in all. */
+  | { kind: "agent"; names: string[]; of: number | null }
+  /** An address an address filter matched, and whose it is. */
+  | { kind: "address"; label: string; role: AddressOwner | null }
+  /** The states of the family that a state filter named. */
+  | { kind: "state"; states: string[] };
+
+/**
+ * What a suggestion matched on besides its name, in this order: the alias,
+ * the officers, the agents, the addresses, the states. Empty when only the
+ * name matched, which its emphasis already says.
+ *
+ * The autocomplete service flags what a person or an address filter matched on
+ * the row's related people and addresses (`matched`), and leads the head with
+ * them. A state filter has no flag: it matched when the row's states include
+ * one of `request.state`, so pass the filters the rows were fetched with, and
+ * none when the client withheld them (`filtersWithheld`).
+ */
+export function matchedOn(
+  suggestion: BusinessSuggestion,
+  request: { state?: readonly string[] | undefined } = {},
+): MatchedOn[] {
+  const found: MatchedOn[] = [];
+  if (suggestion.matched_name !== null) {
+    found.push({ kind: "alias", name: suggestion.matched_name });
+  }
+  const { items, matched } = suggestion.related.people;
+  const people = (["officer", "agent"] as const).map(role => ({
+    role,
+    names: items
+      .filter(item => item.matched && item.role === role)
+      .map(item => item.label),
+  }));
+  const roles = people.filter(({ names }) => names.length > 0);
+  for (const { role, names } of roles) {
+    // The total counts every role; it names this one only when it is alone.
+    found.push({ kind: role, names, of: roles.length === 1 ? matched : null });
+  }
+  for (const item of suggestion.related.addresses.items) {
+    if (item.matched) {
+      found.push({
+        kind: "address",
+        label: item.label,
+        role: ownerOf(item.role),
+      });
+    }
+  }
+  const requested = new Set(
+    (request.state ?? []).map(state => state.trim().toUpperCase()),
+  );
+  const states = orderedStates(suggestion).filter(state =>
+    requested.has(state.toUpperCase()),
+  );
+  if (states.length > 0) {
+    found.push({ kind: "state", states });
+  }
+  return found;
 }
 
 /** Each structure's flag, short and shaped like the suffix a name carries. */

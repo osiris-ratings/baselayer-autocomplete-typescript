@@ -20,6 +20,10 @@ export interface AutocompleteMessages {
   noAddress: string;
   /** Appended to a registered agent's name in the people field. */
   agentSuffix: string;
+  /** Appended to the lead address when an address filter matched an officer's. */
+  officerAddressSuffix: string;
+  /** Appended to the lead address when an address filter matched an agent's. */
+  agentAddressSuffix: string;
   /** The overflow count beside the first officer or the third state. */
   more: (count: number) => string;
   /**
@@ -46,6 +50,8 @@ export const DEFAULT_MESSAGES: Readonly<AutocompleteMessages> = Object.freeze({
   matches: "matches",
   noAddress: "No address on file",
   agentSuffix: " · agent",
+  officerAddressSuffix: " · officer's address",
+  agentAddressSuffix: " · agent's address",
   more: (count: number) => `+${count}`,
   structures: Object.freeze({}),
   dayLimit:

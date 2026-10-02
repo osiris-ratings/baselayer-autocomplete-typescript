@@ -1,4 +1,10 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -106,6 +112,48 @@ const stable: BusinessSuggestion = {
     people: { count: 0, matched: null, truncated: false, items: [] },
     addresses: { count: 0, matched: null, truncated: false, items: [] },
     liens: { count: null, matched: null, truncated: false, items: [] },
+  },
+};
+
+/**
+ * The first row as the autocomplete service answers a person filter and an
+ * address filter: the officer and the address that matched lead their heads,
+ * flagged, ahead of what the family has besides.
+ */
+const filtered: BusinessSuggestion = {
+  ...cinder,
+  related: {
+    ...cinder.related,
+    people: {
+      count: 4,
+      matched: 1,
+      truncated: false,
+      items: [
+        {
+          type: "person",
+          token: null,
+          label: "Ada Fox",
+          role: "officer",
+          matched: true,
+        },
+        ...cinder.related.people.items.filter(item => item.label !== "Ada Fox"),
+      ],
+    },
+    addresses: {
+      count: 3,
+      matched: 1,
+      truncated: false,
+      items: [
+        {
+          type: "address",
+          token: "tok-9f1a2c3d",
+          label: "301 Mission St, San Francisco, CA 94105",
+          role: "officer",
+          matched: true,
+        },
+        ...cinder.related.addresses.items,
+      ],
+    },
   },
 };
 
@@ -1635,5 +1683,133 @@ describe("the row's places and fields", () => {
     expect(
       second!.querySelector('[data-testid="business-suggestion-structure"]'),
     ).toBeNull();
+  });
+});
+
+describe("what a row matched on", () => {
+  function rowOf(
+    first: BusinessSuggestion,
+    props: Partial<BusinessAutocompleteViewProps> = {},
+  ) {
+    // Some of these draw several rows in a test; each starts on a bare page.
+    cleanup();
+    renderTypeahead({ suggestions: [first, stable], ...props });
+    return screen.getAllByTestId("business-suggestion")[0]!;
+  }
+  const marks = (element: Element) =>
+    [...element.querySelectorAll(".bl-ac-mark")].map(mark => mark.textContent);
+  const addressesOf = (role: string, matched: boolean): BusinessSuggestion => ({
+    ...cinder,
+    related: {
+      ...cinder.related,
+      addresses: {
+        ...cinder.related.addresses,
+        matched: matched ? 1 : null,
+        items: [{ ...cinder.related.addresses.items[0]!, role, matched }],
+      },
+    },
+  });
+
+  it("adds no line and no mark for a row that only its name, or an alias, matched", () => {
+    // `cinder` is reached by its name and carries an alternative name.
+    const row = rowOf(cinder);
+
+    expect(row.querySelectorAll(".bl-ac-line")).toHaveLength(2);
+    expect(row.querySelector("[data-matched]")).toBeNull();
+    expect(
+      within(row).getByTestId("business-suggestion-also"),
+    ).toHaveTextContent("also EMBERLINE");
+  });
+
+  it("leads the people line with the matched officer and marks it", () => {
+    const row = rowOf(filtered);
+    const people = within(row).getByTestId("business-suggestion-officers");
+
+    expect(row.querySelectorAll(".bl-ac-line")).toHaveLength(2);
+    expect(people).toHaveTextContent("Ada Fox");
+    expect(people).toHaveAttribute("data-matched", "true");
+    expect(marks(people)).toEqual(["Ada Fox"]);
+    expect(
+      within(rowOf(cinder)).getByTestId("business-suggestion-officers"),
+    ).not.toHaveAttribute("data-matched");
+  });
+
+  it("marks the matched address and says whose it is", () => {
+    const address = within(rowOf(filtered)).getByTestId(
+      "business-suggestion-address",
+    );
+
+    expect(address).toHaveTextContent(
+      "301 Mission St, San Francisco, CA 94105 · officer's address",
+    );
+    expect(address).toHaveAttribute("data-matched", "true");
+    expect(marks(address)).toEqual(["301 Mission St, San Francisco, CA 94105"]);
+  });
+
+  it("calls a matched agent's address an agent's, and an address the family filed itself nothing", () => {
+    const addressOf = (row: BusinessSuggestion) =>
+      within(rowOf(row)).getByTestId("business-suggestion-address");
+
+    expect(addressOf(addressesOf("agent", true))).toHaveTextContent(
+      "412 Orchard Ln, Springfield, MO 65806 · agent's address",
+    );
+    const own = addressOf(addressesOf("principal", true));
+    expect(own).toHaveTextContent("412 Orchard Ln, Springfield, MO 65806");
+    expect(own).not.toHaveTextContent("·");
+    expect(marks(own)).toEqual(["412 Orchard Ln, Springfield, MO 65806"]);
+  });
+
+  it("says nothing of whose an address is that no filter matched", () => {
+    const address = within(rowOf(addressesOf("officer", false))).getByTestId(
+      "business-suggestion-address",
+    );
+
+    expect(address).not.toHaveTextContent("·");
+    expect(address).not.toHaveAttribute("data-matched");
+    expect(marks(address)).toEqual([]);
+  });
+
+  it("draws the matched fields plain under the plain emphasis", () => {
+    const row = rowOf(filtered, { look: { matchEmphasis: "plain" } });
+
+    expect(marks(row)).toEqual([]);
+    expect(
+      within(row).getByTestId("business-suggestion-officers"),
+    ).toHaveTextContent("Ada Fox");
+    expect(
+      within(row).getByTestId("business-suggestion-address"),
+    ).toHaveAttribute("data-matched", "true");
+  });
+
+  it("draws the states a state filter named, the matched one forward and marked", () => {
+    const row = rowOf(cinder, { appliedFilters: { state: ["ny", "IL"] } });
+    const squares = within(row).getAllByTestId("business-suggestion-state");
+
+    // The domicile, the matched states in the family's order, then `+N`.
+    expect(squares.map(square => square.textContent)).toEqual([
+      "DE",
+      "IL",
+      "NY",
+    ]);
+    expect(squares.map(square => square.getAttribute("data-matched"))).toEqual([
+      null,
+      "true",
+      "true",
+    ]);
+    expect(
+      within(row).getByTestId("business-suggestion-more-states"),
+    ).toHaveTextContent("+4");
+  });
+
+  it("marks nothing for a state the family is not in, or no state filter", () => {
+    for (const appliedFilters of [{ state: ["TX"] }, {}, undefined]) {
+      const row = rowOf(cinder, { appliedFilters });
+
+      expect(
+        within(row)
+          .getAllByTestId("business-suggestion-state")
+          .map(square => square.getAttribute("data-matched")),
+      ).toEqual([null, null, null]);
+    }
   });
 });

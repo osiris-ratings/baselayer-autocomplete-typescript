@@ -65,6 +65,13 @@ export interface EntityAutocompleteState<R extends Relation> {
   unavailable: boolean;
   errorKind: AutocompleteErrorKind | null;
   filtersWithheld: boolean;
+  /**
+   * The filters `suggestions` were fetched with: undefined when there were
+   * none or the client withheld them (`filtersWithheld`). Rows stay on screen
+   * while the next request is in flight, so this, not the filters the host
+   * holds now, says what the rows matched on.
+   */
+  appliedFilters: FiltersByRelation[R] | undefined;
   requestId: string | null;
 }
 
@@ -83,6 +90,7 @@ export const EMPTY_AUTOCOMPLETE_STATE: BusinessAutocompleteState =
     unavailable: false,
     errorKind: null,
     filtersWithheld: false,
+    appliedFilters: undefined,
     requestId: null,
   }) as BusinessAutocompleteState;
 
@@ -218,6 +226,7 @@ export function useEntityAutocomplete<R extends Relation>({
           unavailable: false,
           errorKind: null,
           filtersWithheld: result.filtersWithheld,
+          appliedFilters: result.filtersWithheld ? undefined : stableFilters,
           requestId: result.requestId,
         });
       } catch (error) {

@@ -671,6 +671,67 @@ describe("useBusinessAutocomplete, the SDK's own failures", () => {
     });
   });
 
+  it("says which filters the rows on screen were fetched with, not the ones held now", async () => {
+    client.suggest.mockResolvedValue(result("cinder"));
+    const { result: hook, rerender } = renderHook(
+      (props: { filters: Filters }) =>
+        useBusinessAutocomplete({
+          query: "cinder",
+          enabled: true,
+          client,
+          filters: props.filters,
+        }),
+      { initialProps: { filters: { state: ["DE"] } as Filters } },
+    );
+    await settle();
+    expect(hook.current.appliedFilters).toEqual({ state: ["DE"] });
+
+    // The host's filters change; the rows stay until the next reply, and
+    // still answer to the filters that fetched them.
+    let resolveNext: (value: SuggestResult) => void = () => undefined;
+    client.suggest.mockImplementationOnce(
+      () =>
+        new Promise<SuggestResult>(resolve => {
+          resolveNext = resolve;
+        }),
+    );
+    rerender({ filters: { state: ["FL"] } });
+    act(() => {
+      vi.advanceTimersByTime(DEBOUNCE_MS);
+    });
+    expect(hook.current.isSearching).toBe(true);
+    expect(hook.current.suggestions).toEqual([suggestion]);
+    expect(hook.current.appliedFilters).toEqual({ state: ["DE"] });
+
+    await act(async () => {
+      resolveNext(result("cinder"));
+      await Promise.resolve();
+    });
+    expect(hook.current.appliedFilters).toEqual({ state: ["FL"] });
+  });
+
+  it("reports no applied filters when there were none or the client withheld them", async () => {
+    client.suggest.mockResolvedValue(result("cinder"));
+    const { result: without } = renderQuery("cinder");
+    await settle();
+    expect(without.current.appliedFilters).toBeUndefined();
+
+    client.suggest.mockResolvedValue(
+      result("cinder", { filtersWithheld: true }),
+    );
+    const { result: withheld } = renderHook(() =>
+      useBusinessAutocomplete({
+        query: "cinder",
+        enabled: true,
+        client,
+        filters: { state: ["DE"] },
+      }),
+    );
+    await settle();
+    expect(withheld.current.filtersWithheld).toBe(true);
+    expect(withheld.current.appliedFilters).toBeUndefined();
+  });
+
   it("reads the client from the provider", async () => {
     client.suggest.mockResolvedValue(result("cinder"));
     const wrapper = ({ children }: { children: ReactNode }) => (

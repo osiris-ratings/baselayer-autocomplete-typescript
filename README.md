@@ -186,6 +186,11 @@ the search refuses it (expired, or the business is gone), drop the token and
 search by the `name` and `address` as typed: `refusedThePin(status, code)`
 tells you when that is the right move.
 
+The `pick` also carries `matchedOn`: what the row matched on besides its name,
+when the visitor narrowed by an officer, an address or a state (see
+[What matched](docs/styling.md#what-matched)); `[]` for a pick the name alone
+reached.
+
 ## Documentation
 
 - [Mint endpoint contract](docs/mint-endpoint.md): the three rules, and

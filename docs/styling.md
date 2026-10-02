@@ -48,7 +48,11 @@ emphasis) keeps its default too.
 
 Colors are hex: `#rgb`, `#rrggbb` or `#rrggbbaa`. `plain` draws no marks,
 `weight` sets the matched words bolder than the rest of the name, `ink`
-darker, `underline` underlines them and `background` fills behind them.
+darker, `underline` underlines them and `background` fills behind them. The
+same treatment marks what a filter matched: an officer and an address, whole,
+since the autocomplete service sends no parts for them, and a state's square
+(see [what matched](#what-matched)). `matchEmphasisRegion` applies to the
+name's words only.
 `DEFAULT_LOOK` in the core holds these defaults, `resolveLook(look)` lays a
 staged look over them as the component does, and `MATCH_EMPHASES` and
 `MATCH_REGIONS` list the accepted values.
@@ -172,8 +176,11 @@ tie; a selector two classes deep wins against a base rule. States and
 variants add an attribute or a pseudo-class (`.bl-ac-row[data-highlighted]`,
 `.bl-ac-input:focus-visible`), and the marks sit under the emphasis of the
 name or the alternative name
-(`.bl-ac-name[data-emphasis="underline"] .bl-ac-mark`): restyle those with a
-selector at least as specific as theirs, loaded after the stylesheet.
+(`.bl-ac-name[data-emphasis="underline"] .bl-ac-mark`), as do those of a
+matched officer or address (`.bl-ac-people[data-emphasis="underline"]
+.bl-ac-mark`) and the squares of a matched state (`.bl-ac[data-emphasis=
+"underline"] .bl-ac-state[data-matched]`): restyle those with a selector at
+least as specific as theirs, loaded after the stylesheet.
 
 ## 4. `unstyled`
 
@@ -181,14 +188,16 @@ selector at least as specific as theirs, loaded after the stylesheet.
 (`data-open` on the menu, and `data-width="fixed"` with
 `menuFollowsInputWidth={false}`; `data-highlighted` on a row; `data-domicile`
 on the domicile's square; `data-emphasis` and `data-region` on the root and
-the name, `data-emphasis` on the alternative name, and `data-mark-color` on
-the root when `look.matchEmphasisColor` is set; `data-place` on the title
+the name, `data-emphasis` on the alternative name, the address and the
+people, and `data-mark-color` on the root when `look.matchEmphasisColor` is
+set; `data-place` on the title
 and on every field, naming the place it is drawn in, and `data-corner`,
 `data-text` and `data-flag` on the corners (see
 [A row's places and fields](#5-a-rows-places-and-fields)), and
-`data-role="officer"` or `"agent"` on the people; `data-rows` on the footer
-when rows sit above it), and `classNames` still applies, so you can style
-every slot yourself. Position the menu yourself too: it is the
+`data-role="officer"` or `"agent"` on the people; `data-matched="true"` on
+the people, the address and the state squares a filter matched; `data-rows`
+on the footer when rows sit above it), and `classNames` still applies, so you
+can style every slot yourself. Position the menu yourself too: it is the
 element with `data-testid="autocomplete-menu"`.
 
 Past that, drop the component and build on the hooks: see
@@ -296,6 +305,60 @@ sent and its default, people and addresses, stands. A form that fills an address
 from the pick keeps the address placed. `include` on `BusinessAutocomplete` asks
 for what it names instead, whatever the layout places: rows you draw with
 `renderRow` name what they read, `include={["people"]}`.
+
+### What matched
+
+A visitor can narrow the suggestions by officer, address and state, and the
+autocomplete service says what each row matched: it flags the officers and
+addresses a person or address filter matched, and leads the lists with them.
+The row says so where it already shows them, and adds no line:
+
+| The visitor narrowed by | The row                                                               |
+| ----------------------- | --------------------------------------------------------------------- |
+| an officer              | leads the people with the matched one, marked                         |
+| an address              | marks the lead address and says whose it is (`· officer's address`)   |
+| a state                 | moves the matched state's square up behind the domicile, and marks it |
+| an alias typed          | `also …`, as before                                                   |
+| only the name           | nothing added: the name's marks say it                                |
+
+The marks follow `look.matchEmphasis`, drawn on the whole officer, address or
+square, since the autocomplete service sends no parts for them; `plain` draws
+none, and `matchEmphasisRegion` does not apply. A square already has a fill and
+a weight, so under every other emphasis a matched one is ringed in
+`--bl-ac-pill-primary-border` (`--bl-ac-mark`, when `matchEmphasisColor` is
+set), and `underline` and `weight` add their own. The suffix after a matched
+address is one of `messages`: `officerAddressSuffix` or `agentAddressSuffix`; an
+address the business filed itself has none.
+
+The core says the same in data. `matchedOn(suggestion, { state })` returns
+what matched besides the name, in this order:
+
+```ts
+type MatchedOn =
+  | { kind: "alias"; name: string }
+  | { kind: "officer"; names: string[]; of: number | null }
+  | { kind: "agent"; names: string[]; of: number | null }
+  | {
+      kind: "address";
+      label: string;
+      role: "officer" | "agent" | "principal" | null;
+    }
+  | { kind: "state"; states: string[] };
+```
+
+`of` is how many of the family's people the service says matched, `null`
+when it does not say or both roles matched; a `principal` address is one the
+business filed itself, its principal or mailing address. The wire flags
+nothing for a state: the entry is the family's states that `state` names, so
+pass the filters the rows were fetched with, which `useBusinessAutocomplete`
+returns as `appliedFilters` (none while the client withholds the filters from
+a short name). `<BusinessAutocomplete>` does that itself, and hands a pick
+the same answer as `pick.matchedOn`. A search placed from the pick's token
+needs none of it: the API records the address the pick matched and, when you
+send no `officer_names`, the officer.
+`orderedStates(suggestion, matched)`, `peopleLineOf` (matched people first, and
+`matched`, how many of the names) and `addressLineOf` (the lead address,
+whether it matched, and whose it is) are the readers the row draws from.
 
 ### The structure's flag
 

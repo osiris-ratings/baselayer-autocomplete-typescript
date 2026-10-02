@@ -13,7 +13,11 @@ import type { LookInput, RowLayoutInput } from "@baselayer-sdk/autocomplete";
 import { defaultMint, type MintFunction } from "@baselayer-sdk/autocomplete";
 import { BUSINESS_TOKEN_TTL_SECONDS } from "@baselayer-sdk/autocomplete";
 import { includeForLayout, type Include } from "@baselayer-sdk/autocomplete";
-import type { BusinessSuggestion } from "@baselayer-sdk/autocomplete";
+import {
+  matchedOn,
+  type BusinessSuggestion,
+  type MatchedOn,
+} from "@baselayer-sdk/autocomplete";
 
 import {
   BusinessAutocompleteView,
@@ -42,6 +46,13 @@ export interface Pick {
   pickedAt: number;
   /** Advisory: `pickedAt + BUSINESS_TOKEN_TTL_SECONDS`. */
   expiresAt: number;
+  /**
+   * What the picked row matched on besides its name (`matchedOn`): the
+   * officers, the address, the states. Empty when only the name matched. A
+   * search made from the token needs none of it: the officer a person filter
+   * matched is recorded from the token itself.
+   */
+  matchedOn: MatchedOn[];
 }
 
 interface CommonProps {
@@ -181,18 +192,24 @@ function Connected({
   // placed nowhere is not asked for. With none needing a related entity the
   // autocomplete service's default stands, since it refuses an empty include.
   const include = includeGiven ?? includeForLayout(layout);
-  const { unavailable, errorKind, filtersWithheld, requestId, ...state } =
-    useBusinessAutocomplete({
-      client,
-      query: value,
-      enabled: enabled && value !== pickedLabel,
-      ...(filters !== undefined ? { filters } : {}),
-      ...(limit !== undefined ? { limit } : {}),
-      ...(include.length > 0 ? { include } : {}),
-      ...(minChars !== undefined ? { minChars } : {}),
-      ...(debounceMs !== undefined ? { debounceMs } : {}),
-      ...(messages !== undefined ? { messages } : {}),
-    });
+  const {
+    unavailable,
+    errorKind,
+    filtersWithheld,
+    appliedFilters,
+    requestId,
+    ...state
+  } = useBusinessAutocomplete({
+    client,
+    query: value,
+    enabled: enabled && value !== pickedLabel,
+    ...(filters !== undefined ? { filters } : {}),
+    ...(limit !== undefined ? { limit } : {}),
+    ...(include.length > 0 ? { include } : {}),
+    ...(minChars !== undefined ? { minChars } : {}),
+    ...(debounceMs !== undefined ? { debounceMs } : {}),
+    ...(messages !== undefined ? { messages } : {}),
+  });
   void errorKind;
   void filtersWithheld;
   void requestId;
@@ -225,6 +242,7 @@ function Connected({
           businessToken: suggestion.token,
           pickedAt,
           expiresAt: pickedAt + BUSINESS_TOKEN_TTL_SECONDS * 1000,
+          matchedOn: matchedOn(suggestion, { state: appliedFilters?.state }),
         });
       }}
       onInputFocus={() => {
@@ -235,6 +253,7 @@ function Connected({
       }}
       onInputBlur={onBlur}
       {...state}
+      appliedFilters={appliedFilters}
       look={look}
       messages={messages}
       label={label}

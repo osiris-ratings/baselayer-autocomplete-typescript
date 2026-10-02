@@ -87,7 +87,9 @@ function row(overrides: Partial<BusinessSuggestion>): BusinessSuggestion {
 
 // Made-up rows, each long where a real one can be: a long name that matched
 // under another, many states, a long address, a long agent's name; and the
-// rows that lack a field: no structure, no people, no address.
+// rows that lack a field: no structure, no people, no address. The last was
+// reached by a person filter and an address filter, with long answers, so what
+// matched is long too.
 const ROWS: BusinessSuggestion[] = [
   row({
     label: "CINDER RIGGING AND HEAVY EQUIPMENT HAULING COMPANY, INC.",
@@ -175,6 +177,43 @@ const ROWS: BusinessSuggestion[] = [
       liens: { count: null, matched: null, truncated: false, items: [] },
     },
   }),
+  row({
+    label: "CINDER MARINE SALVAGE AND TOWING, LLC",
+    structure: "LLC",
+    states: ["CA", "DE", "FL", "IL", "NY", "TX", "WA"],
+    related: {
+      people: {
+        ...related("person", [
+          {
+            token: null,
+            label: "Marguerite Okonkwo-Lindqvist",
+            role: "officer",
+            matched: true,
+          },
+          { token: null, label: "Ada Fox", role: "officer", matched: true },
+          {
+            token: null,
+            label: "Wesley Crane",
+            role: "officer",
+            matched: false,
+          },
+        ]),
+        matched: 4,
+      },
+      addresses: {
+        ...related("address", [
+          {
+            token: "tok-a5",
+            label: "4120 Orchard Lane Suite 1400, Springfield, MO 65806",
+            role: "officer",
+            matched: true,
+          },
+        ]),
+        matched: 1,
+      },
+      liens: { count: null, matched: null, truncated: false, items: [] },
+    },
+  }),
 ];
 
 let host: HTMLDivElement;
@@ -213,6 +252,8 @@ function draw(layout: RowLayoutInput, width: number) {
         error={null}
         open
         layout={layout}
+        // A state filter reached every row: the states it named lead theirs.
+        appliedFilters={{ state: ["IL", "TX", "ID"] }}
       />,
     ),
   );
@@ -316,6 +357,28 @@ describe("the rows, laid out", () => {
       expect(DRAWN_LAYOUTS).toHaveLength(541);
     },
   );
+
+  it("moves the states a filter matched ahead of the overflow, marked, whatever the width", () => {
+    for (const width of WIDTHS) {
+      draw({}, width);
+      const squares = [
+        ...host
+          .querySelectorAll(".bl-ac-row")[4]!
+          .querySelectorAll<HTMLElement>(".bl-ac-state"),
+      ];
+      // The domicile, then the two states the filter named that it has.
+      expect(squares.map(square => square.textContent)).toEqual([
+        "DE",
+        "IL",
+        "TX",
+      ]);
+      expect(squares.map(square => square.dataset.matched)).toEqual([
+        undefined,
+        "true",
+        "true",
+      ]);
+    }
+  });
 
   it("pins the name's badge to the end of the name", () => {
     draw({}, 560);

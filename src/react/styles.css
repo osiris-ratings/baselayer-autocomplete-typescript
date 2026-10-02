@@ -320,10 +320,15 @@
  * The marks, one treatment per emphasis, on the name and on the alternative
  * name, each of which carries the emphasis. The name owns its weight; the
  * alternative name stays at the subtitle's color and normal weight. With the
- * weight emphasis, a matched word on either takes `--bl-ac-weight-mark`.
+ * weight emphasis, a matched word on either takes `--bl-ac-weight-mark`. The
+ * address and the people, muted like the alternative name, take its treatment
+ * when a filter matched them: the wire has no parts for those, so the whole
+ * label is the mark.
  */
 .bl-ac-name[data-emphasis="underline"] .bl-ac-mark,
-.bl-ac-also[data-emphasis="underline"] .bl-ac-mark {
+.bl-ac-also[data-emphasis="underline"] .bl-ac-mark,
+.bl-ac-address[data-emphasis="underline"] .bl-ac-mark,
+.bl-ac-people[data-emphasis="underline"] .bl-ac-mark {
   text-decoration: underline;
   text-decoration-color: var(--bl-ac-mark, var(--bl-ac-underline));
   text-decoration-thickness: 1.5px;
@@ -331,7 +336,9 @@
 }
 
 .bl-ac-name[data-emphasis="background"] .bl-ac-mark,
-.bl-ac-also[data-emphasis="background"] .bl-ac-mark {
+.bl-ac-also[data-emphasis="background"] .bl-ac-mark,
+.bl-ac-address[data-emphasis="background"] .bl-ac-mark,
+.bl-ac-people[data-emphasis="background"] .bl-ac-mark {
   margin: 0 -0.125rem;
   padding: 0 0.125rem;
   background: var(--bl-ac-mark, var(--bl-ac-marker));
@@ -350,7 +357,9 @@
   color: var(--bl-ac-mark);
 }
 
-.bl-ac-also[data-emphasis="weight"] .bl-ac-mark {
+.bl-ac-also[data-emphasis="weight"] .bl-ac-mark,
+.bl-ac-address[data-emphasis="weight"] .bl-ac-mark,
+.bl-ac-people[data-emphasis="weight"] .bl-ac-mark {
   font-weight: var(--bl-ac-weight-mark);
   color: var(--bl-ac-mark, var(--bl-ac-also-mark));
 }
@@ -363,6 +372,33 @@
   color: var(--bl-ac-mark, var(--bl-ac-ink-mark, var(--bl-ac-title)));
 }
 
-.bl-ac-also[data-emphasis="ink"] .bl-ac-mark {
+.bl-ac-also[data-emphasis="ink"] .bl-ac-mark,
+.bl-ac-address[data-emphasis="ink"] .bl-ac-mark,
+.bl-ac-people[data-emphasis="ink"] .bl-ac-mark {
   color: var(--bl-ac-mark, var(--bl-ac-also-mark));
+}
+
+/*
+ * A state a state filter matched is ringed in the primary pill border, or in
+ * the color override, under every emphasis but plain: a square has a fill and
+ * a weight of its own, so the marks the name takes would barely show on it.
+ * The underline emphasis underlines its text as well, and the weight emphasis
+ * sets it bolder still. The emphasis is the root's.
+ */
+.bl-ac[data-emphasis="underline"] .bl-ac-state[data-matched],
+.bl-ac[data-emphasis="background"] .bl-ac-state[data-matched],
+.bl-ac[data-emphasis="weight"] .bl-ac-state[data-matched],
+.bl-ac[data-emphasis="ink"] .bl-ac-state[data-matched] {
+  box-shadow: 0 0 0 1.5px var(--bl-ac-mark, var(--bl-ac-pill-primary-border));
+}
+
+.bl-ac[data-emphasis="underline"] .bl-ac-state[data-matched] {
+  text-decoration: underline;
+  text-decoration-color: var(--bl-ac-mark, var(--bl-ac-underline));
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 2px;
+}
+
+.bl-ac[data-emphasis="weight"] .bl-ac-state[data-matched] {
+  font-weight: var(--bl-ac-weight-mark);
 }

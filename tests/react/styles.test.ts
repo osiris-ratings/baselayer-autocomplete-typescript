@@ -45,6 +45,38 @@ describe("ink emphasis", () => {
   });
 });
 
+describe("the emphasis of what a filter matched", () => {
+  const EMPHASES = ["underline", "background", "weight", "ink"] as const;
+
+  it("marks a matched officer and address as it marks the alternative name", () => {
+    for (const emphasis of EMPHASES) {
+      for (const field of [".bl-ac-address", ".bl-ac-people"]) {
+        const marked = `${field}[data-emphasis="${emphasis}"] .bl-ac-mark`;
+        const alias = `.bl-ac-also[data-emphasis="${emphasis}"] .bl-ac-mark`;
+        expect(rule(marked), marked).toBe(rule(alias));
+      }
+    }
+  });
+
+  it("rings a matched state's square under each emphasis, as a fill and a weight it already has would not show", () => {
+    for (const emphasis of EMPHASES) {
+      const square = `.bl-ac[data-emphasis="${emphasis}"] .bl-ac-state[data-matched]`;
+      expect(rule(square), square).toContain("box-shadow: 0 0 0 1.5px");
+    }
+    // Plain is no treatment at all.
+    expect(css).not.toContain('data-emphasis="plain"');
+  });
+
+  it("underlines a matched state's text under the underline emphasis, and sets it bolder under weight", () => {
+    expect(
+      rule('.bl-ac[data-emphasis="underline"] .bl-ac-state[data-matched]'),
+    ).toContain("text-decoration: underline;");
+    expect(
+      rule('.bl-ac[data-emphasis="weight"] .bl-ac-state[data-matched]'),
+    ).toContain("font-weight: var(--bl-ac-weight-mark);");
+  });
+});
+
 describe("the menu's width", () => {
   it("is the input's, whatever the screen", () => {
     expect(rule(".bl-ac-menu")).toContain("width: 100%;");

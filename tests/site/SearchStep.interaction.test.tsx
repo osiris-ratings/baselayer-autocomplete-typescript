@@ -80,6 +80,7 @@ function step(fetchImpl: FetchImpl) {
           businessToken: "token",
           pickedAt: Date.now(),
           expiresAt: Date.now() + 10 * 60_000,
+          matchedOn: [],
         },
       }}
       fetchImpl={fetchImpl}

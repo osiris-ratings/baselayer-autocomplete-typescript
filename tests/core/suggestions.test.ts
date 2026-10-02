@@ -211,11 +211,13 @@ describe("peopleLineOf", () => {
       names: ["Wesley Crane", "Ada Fox"],
       role: "officer",
       more: 1,
+      matched: 0,
     });
     expect(peopleLineOf(agentsOnly)).toEqual({
       names: ["NORTHGATE AGENT SERVICES, INC", "LAKESIDE FILING AGENTS"],
       role: "agent",
       more: 1,
+      matched: 0,
     });
     expect(peopleLineOf(stable)).toBeNull();
   });
