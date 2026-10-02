@@ -1215,6 +1215,41 @@ describe("what the business has on file, the matched first", () => {
     expect(registrationsOnFile(undefined, pickMatched)).toEqual([]);
   });
 
+  it("leads with the filing in the domicile, and calls it home, when the API classifies none as domestic", () => {
+    const unclassified = (state: string): Registration => ({
+      ...SAMPLE_SEARCH.business!.registrations![0]!,
+      id: state,
+      state,
+      registration_type: null,
+    });
+    const filings = [
+      unclassified("NY"),
+      unclassified("DE"),
+      unclassified("CA"),
+    ];
+
+    expect(
+      registrationsOnFile(filings, NOTHING_MATCHED, "DE").map(
+        ({ item, home }) => [item.state, home],
+      ),
+    ).toEqual([
+      ["DE", true],
+      ["NY", false],
+      ["CA", false],
+    ]);
+    // Told of no domicile, nothing leads or is home.
+    expect(
+      registrationsOnFile(filings, NOTHING_MATCHED).map(({ home }) => home),
+    ).toEqual([false, false, false]);
+    // A filing the API says is foreign is not the home one, whatever its state.
+    const foreign = [{ ...unclassified("DE"), registration_type: "foreign" }];
+    expect(
+      registrationsOnFile(foreign as Registration[], NOTHING_MATCHED, "DE").map(
+        ({ home }) => home,
+      ),
+    ).toEqual([false]);
+  });
+
   it("has nothing on file for a search with no business", () => {
     const bare: Search = { id: "a", state: "FAILED" };
 

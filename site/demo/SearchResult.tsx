@@ -20,6 +20,7 @@ import {
   addressesOnFile,
   aliasesOnFile,
   deliveryChips,
+  domicileOf,
   elapsedLabel,
   entityType,
   formatAddress,
@@ -413,9 +414,12 @@ function titlesOf(titles: readonly string[] | undefined): string | null {
 function Filing({
   registration,
   matched,
+  home,
 }: {
   registration: Registration;
   matched: boolean;
+  /** The filing in the domicile, which is green as the domicile's square is. */
+  home: boolean;
 }) {
   const status = registrationStatus(registration);
   const kind = registrationKind(registration);
@@ -433,7 +437,9 @@ function Filing({
     <li className="sr-filing" data-matched={matched ? "true" : undefined}>
       <span
         className="sr-state"
-        data-kind={registration.registration_type ?? undefined}
+        data-kind={
+          home ? "domestic" : (registration.registration_type ?? undefined)
+        }
         data-matched={matched ? "true" : undefined}
         aria-hidden="true"
       >
@@ -600,7 +606,11 @@ export function SearchResult({
     (rating): rating is Rating => rating !== null,
   );
   const rows = matchRows(search, matched);
-  const registrations = registrationsOnFile(business?.registrations, matched);
+  const registrations = registrationsOnFile(
+    business?.registrations,
+    matched,
+    domicileOf(business),
+  );
   const addresses = addressesOnFile(business, search, matched);
   const states = statesOnFile(business, matched);
   const officers = officersOnFile(business, search, matched);
@@ -740,8 +750,13 @@ export function SearchResult({
           count={registrations.length}
         >
           <ul className="sr-filings">
-            {registrations.map(({ item, matched: reached }) => (
-              <Filing key={item.id} registration={item} matched={reached} />
+            {registrations.map(({ item, matched: reached, home }) => (
+              <Filing
+                key={item.id}
+                registration={item}
+                matched={reached}
+                home={home}
+              />
             ))}
           </ul>
         </Section>

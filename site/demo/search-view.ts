@@ -863,8 +863,17 @@ export function orderedRegistrations(
   );
 }
 
+export interface RegistrationOnFile extends OnFile<Registration> {
+  /**
+   * The filing in the state the business is domiciled in: the domestic one, or,
+   * where the API classifies none as domestic, the unclassified one in the
+   * domicile, so that it is the same state the squares lead with.
+   */
+  home: boolean;
+}
+
 /**
- * The filings with the domestic one first, then those in a state the visitor's
+ * The filings with the home one first, then those in a state the visitor's
  * filter named, then the rest, each group in the order of
  * `orderedRegistrations`: the report's list of states is only squares, and the
  * filing is where a matched state is said.
@@ -872,17 +881,28 @@ export function orderedRegistrations(
 export function registrationsOnFile(
   registrations: readonly Registration[] | undefined,
   matched: Matched,
-): OnFile<Registration>[] {
-  const entries = orderedRegistrations(registrations).map(registration => ({
-    item: registration,
-    matched: matched.states.includes(registration.state),
-  }));
-  const home = (entry: OnFile<Registration>) =>
-    entry.item.registration_type === "domestic";
+  domicile: string | null = null,
+): RegistrationOnFile[] {
+  const classified = (registrations ?? []).some(
+    registration => registration.registration_type === "domestic",
+  );
+  const entries = orderedRegistrations(registrations).map(registration => {
+    const type = registration.registration_type ?? null;
+    return {
+      item: registration,
+      matched: matched.states.includes(registration.state),
+      home:
+        type === "domestic" ||
+        (!classified &&
+          type === null &&
+          domicile !== null &&
+          registration.state === domicile),
+    };
+  });
   return [
-    ...entries.filter(home),
-    ...entries.filter(entry => !home(entry) && entry.matched),
-    ...entries.filter(entry => !home(entry) && !entry.matched),
+    ...entries.filter(entry => entry.home),
+    ...entries.filter(entry => !entry.home && entry.matched),
+    ...entries.filter(entry => !entry.home && !entry.matched),
   ];
 }
 

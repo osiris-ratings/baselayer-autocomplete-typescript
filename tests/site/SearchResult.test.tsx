@@ -386,6 +386,41 @@ describe("the report for a pick a filter reached", () => {
     );
   });
 
+  it("names the same home state in the squares and in the filings when the API classifies no filing as domestic", () => {
+    const unclassified = (state: string) => ({
+      ...SAMPLE_SEARCH.business!.registrations![0]!,
+      id: state,
+      state,
+      registration_type: null,
+    });
+    const drawn = renderToStaticMarkup(
+      <SearchResult
+        search={{
+          ...SAMPLE_SEARCH,
+          business: {
+            ...SAMPLE_SEARCH.business!,
+            incorporation_state: "DE",
+            registrations: [unclassified("NY"), unclassified("DE")],
+          },
+        }}
+        elapsedMs={null}
+      />,
+    );
+    const squares = drawn.match(/<ul class="sr-states">.*?<\/ul>/)?.[0] ?? "";
+    const filings = drawn.match(/<ul class="sr-filings">.*<\/ul>/)?.[0] ?? "";
+    const home =
+      '<span class="sr-state" data-kind="domestic" aria-hidden="true">DE</span>';
+
+    // The incorporation state leads the squares, green, and so does its filing
+    // the filings, with the same green, though no filing says it is domestic.
+    expect(squares.startsWith(`<ul class="sr-states"><li>${home}`)).toBe(true);
+    expect(filings).toContain(home);
+    expect(filings.indexOf(">DE</span>")).toBeLessThan(
+      filings.indexOf(">NY</span>"),
+    );
+    expect(filings).not.toContain('data-kind="domestic" aria-hidden="true">NY');
+  });
+
   it("draws no pill and no order of its own for a pick no filter reached", () => {
     const plain = html(SAMPLE_SEARCH);
     const plainWords = text(plain);
