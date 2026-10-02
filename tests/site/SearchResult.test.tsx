@@ -43,7 +43,7 @@ describe("the report for a completed search", () => {
     expect(markup).toContain(SAMPLE_SEARCH.id);
   });
 
-  it("puts the verdict in the title's row, which stands them on one baseline", () => {
+  it("pins the verdict to the title's row", () => {
     expect(markup).toMatch(
       /<div class="sr-head-title"><h3 class="sr-title"[^>]*>Harbor Concrete Pumping Co\., Inc\.<\/h3><span class="sr-verdict" data-kind="verified">/,
     );

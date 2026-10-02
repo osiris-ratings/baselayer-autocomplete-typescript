@@ -64,36 +64,18 @@ describe("search.css", () => {
     }
   });
 
-  it("stands the verdict on the title's baseline, as text rather than a flex row", () => {
-    expect(css).toMatch(/\.sr-head-title\s*\{[^}]*align-items:\s*baseline/);
-    // A flex container stands on the baseline of its first item, which here
-    // would be the icon's bottom edge, not the text beside it.
+  it("pins the verdict to the title's row, centred on the title, and not to the header's corner", () => {
+    // The row is the title's and the verdict's alone, and centres what is in
+    // it; its text need not stand on the title's baseline.
+    expect(css).toMatch(/\.sr-head-title\s*\{[^}]*align-items:\s*center/);
+    // The title's margins are the row's, so that it is the title's own line
+    // the verdict is centred on, not the line and the room around it.
+    expect(css).toMatch(/\.sr-head-title\s*\{[^}]*margin:\s*6px 0 8px/);
+    expect(css).toMatch(/\.sr-title\s*\{[^}]*margin:\s*0;/);
+    // And the box is the one it always was: a label, not set from the title.
     const verdict = /\.sr-verdict\s*\{[^}]*\}/.exec(css)?.[0] ?? "";
-    expect(verdict).not.toMatch(/display:\s*(inline-)?flex/);
-    expect(verdict).toMatch(/display:\s*inline-block/);
-  });
-
-  it("sets the verdict from the title's size, so its box keeps to the title's bounds, and light", () => {
-    // Both read the title's size, so they cannot drift apart as it shrinks;
-    // the verdict takes a fraction of it, a label's size, not the title's own.
-    expect(/\.sr-title\s*\{[^}]*font-size:\s*([^;]+);/.exec(css)?.[1]).toBe(
-      "var(--sr-title-size)",
-    );
-    const size = /\.sr-verdict\s*\{[^}]*font-size:\s*([^;]+);/.exec(css)?.[1];
-    const factor = /^calc\(var\(--sr-title-size\) \* (0\.\d+)\)$/.exec(
-      size ?? "",
-    )?.[1];
-    expect(factor, size).toBeDefined();
-    expect(Number(factor)).toBeGreaterThanOrEqual(0.5);
-    expect(Number(factor)).toBeLessThanOrEqual(0.7);
-    expect(css).toMatch(/--sr-title-size:\s*clamp\(/);
-    // Light, and loaded: a weight the page does not load is drawn as the
-    // nearest one it does, which would be the heavy one.
-    const weight = /\.sr-verdict\s*\{[^}]*font-weight:\s*(\d+);/.exec(css)?.[1];
-    expect(Number(weight)).toBeLessThanOrEqual(300);
-    expect(read("shared/fonts.ts")).toContain(
-      `@fontsource/geist-mono/${weight}.css`,
-    );
+    expect(verdict).toMatch(/font-size:\s*13px/);
+    expect(verdict).not.toMatch(/font-weight/);
   });
 
   it("sets the letters in a state's square and in an officer's avatar at one size", () => {

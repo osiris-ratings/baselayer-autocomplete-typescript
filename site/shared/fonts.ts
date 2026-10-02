@@ -6,9 +6,6 @@ import "@fontsource/uncut-sans/600.css";
 // The weight emphasis marks a match in 700; without it, 600 stood in.
 import "@fontsource/uncut-sans/700.css";
 import "@fontsource-variable/newsreader/opsz.css";
-// The report's verdict is set in this: light enough for the size the title asks
-// of it, and as light as its icon's line (lighter, and the letters fade).
-import "@fontsource/geist-mono/200.css";
 import "@fontsource/geist-mono/400.css";
 import "@fontsource/geist-mono/500.css";
 

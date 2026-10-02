@@ -204,23 +204,23 @@
 }
 
 .sr-head {
-  /* The title's size, which the verdict is set from as well. */
-  --sr-title-size: clamp(24px, 4vw, 30px);
   min-width: 0;
   /* What the report scrolls to on arrival: the label and the verdict as well
      as the title. */
   scroll-margin-top: 16px;
 }
 
-/* The title and the verdict on one baseline: the verdict's text stands where
-   the first line of the title does, and drops under it when there is no room
-   beside it. */
+/* The verdict is pinned to the title's row, at its right, and centred on the
+   title: its text need not stand on the title's baseline. It drops under the
+   title when there is no room beside it. The title's margins are the row's, so
+   that it is the title's line the verdict is centred on. */
 .sr-head-title {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
-  gap: 0 18px;
+  gap: 8px 18px;
+  margin: 6px 0 8px;
 }
 
 .sr-head .mono-label {
@@ -230,9 +230,9 @@
 .sr-title {
   flex: 1 1 260px;
   min-width: 0;
-  margin: 6px 0 8px;
+  margin: 0;
   font-family: var(--serif);
-  font-size: var(--sr-title-size);
+  font-size: clamp(24px, 4vw, 30px);
   font-weight: 400;
   line-height: 1.15;
   overflow-wrap: anywhere;
@@ -308,41 +308,18 @@
   color: var(--blue);
 }
 
-/* Inline, not a flex row: a flex container stands on the baseline of its first
-   item, which would be the icon's bottom edge, and the text is what has to
-   stand on the title's.
-
-   The box spans the title's letters, from the top of its ascenders to the
-   bottom of its descenders, with the verdict's capitals centred in it and
-   standing on the title's baseline. It is then level with the title at both
-   ends, which is what makes it look centred on it, and its text is a label's
-   size (0.6 of the title's, so it keeps to that as the title shrinks) rather
-   than the title's own, which would be too large for the box to hold. Set
-   light, with the room around it that the padding leaves. The padding is in
-   em, solved so that the capitals are as far from the box's top as from the
-   baseline's bottom. */
 .sr-verdict {
-  display: inline-block;
+  display: inline-flex;
   flex: none;
-  padding: 0.36em 0.78em 0.37em;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
   border: 1px solid;
   border-radius: 2px;
   font-family: var(--mono);
-  font-size: calc(var(--sr-title-size) * 0.6);
-  font-weight: 200;
-  line-height: 1;
-  letter-spacing: 0.08em;
+  font-size: 13px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  /* Below it, when it has dropped under the title; beside the title it
-     reaches no further down than the title's own margin does. */
-  margin-bottom: 6px;
-}
-
-.sr-verdict .icon {
-  width: 1.05em;
-  height: 1.05em;
-  margin-right: 0.4em;
-  vertical-align: -0.17em;
 }
 
 .sr-verdict[data-kind="verified"] {

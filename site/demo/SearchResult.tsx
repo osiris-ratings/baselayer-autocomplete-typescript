@@ -623,7 +623,7 @@ export function SearchResult({
           Search result
           {elapsedMs !== null && ` · finished in ${elapsedLabel(elapsedMs)}`}
         </p>
-        {/* The verdict stands on the title's baseline, so they share a row. */}
+        {/* The verdict is pinned to the title's row, centred on the title. */}
         <div className="sr-head-title">
           <h3 className="sr-title" id={titleId} tabIndex={-1}>
             {readable(business?.name ?? search.name ?? "Business")}
