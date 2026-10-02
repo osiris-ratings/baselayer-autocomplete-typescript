@@ -40,6 +40,14 @@ the name's own marks, and a reader and the pick carry the same answer.
   moves the states a state filter matched up behind the domicile, so a matched
   state is never left behind `+N`.
 
+### Fixed
+
+- `BusinessAutocomplete` searches the picked name again when a filter is
+  edited after the pick, so a host that holds the menu open while a filter is
+  typed (`open`) sees the narrowed list, not an empty one. The pick used to
+  switch the search off until the name itself was edited. Re-rendering the
+  same filters in a new object, and editing the name, behave as before.
+
 ## [0.2.0] - 2026-09-28
 
 A row's places are named for where they sit, a host picks the field each one

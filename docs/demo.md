@@ -103,9 +103,10 @@ counts the ones set; they sit side by side, and stack on a narrow pane. The SDK
 holds them back until the business name (not the officer's) has as many
 characters as the session's `filter_min_stem` asks for, which the hint above the
 filters names, and the log says when it did. The menu stays open while you type
-in a filter, and the list narrows as you do. A filter narrows the list, and the
-row says which one it matched: the officer or the address is marked, a state on
-its flag. Pick a row and the next step appears under the form.
+in a filter, and the list narrows as you do, after a pick too: editing a filter
+searches the picked name again. A filter narrows the list, and the row says
+which one it matched: the officer or the address is marked, a state on its
+flag. Pick a row and the next step appears under the form.
 
 ![A filter by officer: the officer each row matched is marked](images/demo-matched.png)
 

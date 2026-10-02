@@ -26,7 +26,10 @@ import {
 } from "./BusinessAutocompleteView";
 import { useAutocompleteClient, useResolvedClient } from "./context";
 import type { AutocompleteMessages } from "./messages";
-import { useBusinessAutocomplete } from "./useBusinessAutocomplete";
+import {
+  filtersKeyOf,
+  useBusinessAutocomplete,
+} from "./useBusinessAutocomplete";
 
 /**
  * When the component mints its session. `focus` (the default) mints as the
@@ -186,8 +189,18 @@ function Connected({
 }: CommonProps & { client: AutocompleteClient }) {
   const client = useResolvedClient(given);
   // A pick writes the suggestion's label into the field; querying that exact
-  // label again would only reopen the menu on the row just chosen.
-  const [pickedLabel, setPickedLabel] = useState<string | null>(null);
+  // label again would only reopen the menu on the row just chosen. Editing a
+  // filter afterwards is a new search for the same name, so the pick remembers
+  // the filters it was made under.
+  const filtersKey = filtersKeyOf(filters);
+  const [picked, setPicked] = useState<{
+    label: string;
+    filtersKey: string;
+  } | null>(null);
+  const justPicked =
+    picked !== null &&
+    picked.label === value &&
+    picked.filtersKey === filtersKey;
   // The fields drawn decide what is fetched unless the host says: a field
   // placed nowhere is not asked for. With none needing a related entity the
   // autocomplete service's default stands, since it refuses an empty include.
@@ -202,7 +215,7 @@ function Connected({
   } = useBusinessAutocomplete({
     client,
     query: value,
-    enabled: enabled && value !== pickedLabel,
+    enabled: enabled && !justPicked,
     ...(filters !== undefined ? { filters } : {}),
     ...(limit !== undefined ? { limit } : {}),
     ...(include.length > 0 ? { include } : {}),
@@ -228,7 +241,7 @@ function Connected({
       inputName={name}
       inputRef={inputRef}
       onInputChange={next => {
-        setPickedLabel(null);
+        setPicked(null);
         if (mintOn === "keystroke" && enabled && next !== "") {
           client.prewarm();
         }
@@ -236,7 +249,7 @@ function Connected({
       }}
       onSelect={suggestion => {
         const pickedAt = Date.now();
-        setPickedLabel(suggestion.label);
+        setPicked({ label: suggestion.label, filtersKey });
         onChange(suggestion.label);
         onPick(suggestion, {
           businessToken: suggestion.token,

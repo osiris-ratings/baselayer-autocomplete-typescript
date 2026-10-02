@@ -405,6 +405,63 @@ describe("BusinessAutocomplete", () => {
     expect(mint).toHaveBeenCalledTimes(1);
   });
 
+  it("searches the picked name again when a filter is edited after the pick", async () => {
+    const fetch = autocompleteFetch();
+    const client = createAutocompleteClient({
+      baseUrl: BASE_URL,
+      mint: grantingMint(),
+      fetch,
+    });
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <Host source={{ client }} open filters={{ person: { name: "tim" } }} />,
+    );
+
+    await user.type(input(), "cind");
+    await screen.findAllByTestId("business-suggestion");
+    await user.click(screen.getByText("CINDER RACING STABLES, LLC"));
+    await aMoment();
+    expect(screen.queryAllByTestId("business-suggestion")).toHaveLength(0);
+    const asked = fetch.mock.calls.length;
+
+    rerender(
+      <Host source={{ client }} open filters={{ person: { name: "tima" } }} />,
+    );
+
+    await screen.findAllByTestId("business-suggestion");
+    expect(fetch.mock.calls.length).toBeGreaterThan(asked);
+    const url = new URL(fetch.mock.calls.at(-1)![0]);
+    expect(url.searchParams.get("q")).toBe("CINDER RACING STABLES, LLC");
+    expect(url.searchParams.get("person.name")).toBe("tima");
+  });
+
+  it("does not search the picked name again for the same filters in a new object", async () => {
+    const fetch = autocompleteFetch();
+    const client = createAutocompleteClient({
+      baseUrl: BASE_URL,
+      mint: grantingMint(),
+      fetch,
+    });
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <Host source={{ client }} open filters={{ person: { name: "tim" } }} />,
+    );
+
+    await user.type(input(), "cind");
+    await screen.findAllByTestId("business-suggestion");
+    await user.click(screen.getByText("CINDER RACING STABLES, LLC"));
+    await aMoment();
+    const asked = fetch.mock.calls.length;
+
+    rerender(
+      <Host source={{ client }} open filters={{ person: { name: "tim" } }} />,
+    );
+    await aMoment();
+
+    expect(fetch.mock.calls.length).toBe(asked);
+    expect(screen.queryAllByTestId("business-suggestion")).toHaveLength(0);
+  });
+
   it("hands the host what the picked row matched on, by the filters its rows were fetched with", async () => {
     const fetch = autocompleteFetch();
     const client = createAutocompleteClient({

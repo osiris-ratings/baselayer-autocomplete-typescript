@@ -109,6 +109,11 @@ function unavailableState<R extends Relation>(): EntityAutocompleteState<R> {
   return UNAVAILABLE_STATE as unknown as EntityAutocompleteState<R>;
 }
 
+/** What a set of filters says: the same content in a new object is the same key. */
+export function filtersKeyOf(filters: object | undefined): string {
+  return JSON.stringify(filters ?? null);
+}
+
 /** Debounced suggestions for a business-name field: the businesses route of `useEntityAutocomplete`. */
 export function useBusinessAutocomplete(
   options: UseBusinessAutocompleteOptions,
@@ -147,7 +152,7 @@ export function useEntityAutocomplete<R extends Relation>({
   const trimmedQuery = query.trim();
   // Filters and include arrive as fresh objects on every render; the effect
   // keys on what they say, not on their identity.
-  const filtersKey = JSON.stringify(filters ?? null);
+  const filtersKey = filtersKeyOf(filters);
   const includeKey = include?.join(",") ?? "";
   const stableFilters = useMemo(
     () =>
