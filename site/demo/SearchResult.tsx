@@ -17,14 +17,15 @@ import {
   formatDay,
   glance,
   hitLines,
+  leadingOnFile,
   matchRows,
   monthsLabel,
   officersOnFile,
-  orderedRegistrations,
   plural,
   ratingOf,
   readable,
   registrationKind,
+  registrationsOnFile,
   registrationStatus,
   statesOnFile,
   verdictOf,
@@ -52,7 +53,7 @@ function ChipView({ chip }: { chip: Chip }) {
   );
 }
 
-/** What the pick matched, on an address, an officer or a state of the business. */
+/** What the pick matched, on an address, an officer or a filing in a state. */
 const MATCHED: Chip = { label: "Matched", tone: "good" };
 
 const VERDICT_ICONS: Record<VerdictKind, IconName> = {
@@ -260,8 +261,10 @@ function BusinessFacts({ business }: { business: Business }) {
 }
 
 /**
- * Every address the business has on file: those the search matched first, with
- * the pill, then its primary address, then the rest as the API sent them.
+ * The addresses the business has on file: those the search matched first, with
+ * the pill, then its primary address, then the rest as the API sent them. A
+ * long list stops short and counts what it leaves out; the count in the
+ * heading is of all of them.
  */
 function Addresses({
   entries,
@@ -271,10 +274,11 @@ function Addresses({
   primary: Address | null;
 }) {
   const primaryLine = formatAddress(primary);
+  const { shown, hidden } = leadingOnFile(entries);
   return (
     <Section title="Addresses on file" count={entries.length}>
       <ul className="sr-plain sr-onfile">
-        {entries.map(({ item, matched }, index) => (
+        {shown.map(({ item, matched }, index) => (
           <li
             key={`${formatAddress(item)}#${index}`}
             data-matched={matched ? "true" : undefined}
@@ -287,21 +291,28 @@ function Addresses({
           </li>
         ))}
       </ul>
+      {hidden > 0 && (
+        <p className="sr-caption">
+          {plural(hidden, "more address", "more addresses")}
+        </p>
+      )}
     </Section>
   );
 }
 
-/** The states the business is registered in, those the filter named first. */
+/**
+ * The states the business is registered in, those the filter named first. Only
+ * the squares: what a state matched is said on its filing, further down.
+ */
 function States({ entries }: { entries: OnFile<string>[] }) {
   return (
     <Section title="States" count={entries.length}>
       <ul className="sr-states">
-        {entries.map(({ item, matched }) => (
-          <li key={item} data-matched={matched ? "true" : undefined}>
+        {entries.map(({ item }) => (
+          <li key={item}>
             <span className="sr-state" aria-hidden="true">
               {item}
             </span>
-            {matched ? <ChipView chip={MATCHED} /> : null}
           </li>
         ))}
       </ul>
@@ -315,7 +326,13 @@ function titlesOf(titles: readonly string[] | undefined): string | null {
   return list.length > 0 ? list.join(", ") : null;
 }
 
-function Filing({ registration }: { registration: Registration }) {
+function Filing({
+  registration,
+  matched,
+}: {
+  registration: Registration;
+  matched: boolean;
+}) {
   const status = registrationStatus(registration);
   const kind = registrationKind(registration);
   const filed = formatDay(registration.issue_date);
@@ -329,7 +346,7 @@ function Filing({ registration }: { registration: Registration }) {
       ? said
       : null;
   return (
-    <li className="sr-filing">
+    <li className="sr-filing" data-matched={matched ? "true" : undefined}>
       <span
         className="sr-state"
         data-kind={registration.registration_type ?? undefined}
@@ -347,6 +364,7 @@ function Filing({ registration }: { registration: Registration }) {
             {standing !== null && (
               <span className="sr-muted">{readable(standing)}</span>
             )}
+            {matched && <ChipView chip={MATCHED} />}
             <ChipView chip={status} />
           </span>
         </p>
@@ -484,7 +502,7 @@ export function SearchResult({
     (rating): rating is Rating => rating !== null,
   );
   const rows = matchRows(search, matched);
-  const registrations = orderedRegistrations(business?.registrations);
+  const registrations = registrationsOnFile(business?.registrations, matched);
   const addresses = addressesOnFile(business, search, matched);
   const states = statesOnFile(business, matched);
   const officers = officersOnFile(business, search, matched);
@@ -620,8 +638,8 @@ export function SearchResult({
           count={registrations.length}
         >
           <ul className="sr-filings">
-            {registrations.map(registration => (
-              <Filing key={registration.id} registration={registration} />
+            {registrations.map(({ item, matched: reached }) => (
+              <Filing key={item.id} registration={item} matched={reached} />
             ))}
           </ul>
         </Section>

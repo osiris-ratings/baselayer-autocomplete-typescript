@@ -711,20 +711,14 @@
   gap: 4px 10px;
 }
 
-/* Every state the business is in, a square each, the pill beside the matched. */
+/* Every state the business is in, a square each. */
 .sr-states {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 20px;
+  gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.sr-states > li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .sr-filings,

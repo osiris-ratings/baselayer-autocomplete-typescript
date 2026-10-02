@@ -176,11 +176,65 @@ describe("the report for a pick a filter reached", () => {
     );
   });
 
+  it("says nothing of more addresses when they all fit", () => {
+    expect(words).not.toContain("more address");
+  });
+
+  it("stops at ten addresses and counts the rest, the matched one still at the top", () => {
+    const filler = Array.from({ length: 43 }, (_, index) => ({
+      street: `${100 + index} FILLER AVE`,
+      city: "PITTSBURGH",
+      state: "PA",
+      zip: "15212",
+      sources: ["Online"],
+    }));
+    const long = renderToStaticMarkup(
+      <SearchResult
+        search={{
+          ...search,
+          business: {
+            ...search.business!,
+            addresses: [...filler, ...search.business!.addresses!],
+          },
+        }}
+        elapsedMs={null}
+        matched={matched}
+      />,
+    );
+    const longWords = text(long);
+
+    expect(longWords).toContain("Addresses on file 46");
+    expect(longWords).toContain(
+      "Addresses on file 46 535 Mission St Fl 14, San Francisco, CA 94105 Deliverable Commercial Matched 1200 River Rd",
+    );
+    expect(long.match(/<li[^>]*><span class="sr-address">/g)).toHaveLength(10);
+    expect(longWords).toContain("36 more addresses");
+  });
+
   it("lists the states and the officers the same way, the matched first", () => {
-    expect(words).toContain("States 3 OH Matched PA MD");
+    // The squares only: what a state matched is said on its filing.
+    expect(words).toContain("States 3 OH PA MD");
     expect(words).toContain(
       "Officers 2 DW Dana Whitfield President Matched PA LO Luis Ortega",
     );
+  });
+
+  it("says a matched state on its filing, which leads the filings, and not among the squares", () => {
+    expect(markup).toMatch(
+      /<ul class="sr-states"><li><span class="sr-state" aria-hidden="true">OH<\/span><\/li>/,
+    );
+    expect(markup.match(/<ul class="sr-states">.*?<\/ul>/)?.[0]).not.toContain(
+      "Matched",
+    );
+    expect(words).toContain(
+      "Secretary of State filings 3 OH Foreign filing in OH Matched Active",
+    );
+    expect(words.indexOf("Foreign filing in OH")).toBeLessThan(
+      words.indexOf("Domestic filing in PA"),
+    );
+    expect(
+      markup.match(/<li class="sr-filing"[^>]*data-matched="true"/g),
+    ).toHaveLength(1);
   });
 
   it("draws no pill and no order of its own for a pick no filter reached", () => {

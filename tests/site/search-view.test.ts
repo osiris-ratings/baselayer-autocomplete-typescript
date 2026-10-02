@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { SAMPLE_SEARCH } from "../../site/demo/sample-search";
 import {
+  ADDRESSES_SHOWN,
   NOTHING_MATCHED,
   addressesOnFile,
   announcement,
@@ -13,6 +14,7 @@ import {
   formatDay,
   glance,
   hitLines,
+  leadingOnFile,
   matchPill,
   matchRows,
   matchedOf,
@@ -23,6 +25,7 @@ import {
   readable,
   readableAddress,
   registrationKind,
+  registrationsOnFile,
   registrationStatus,
   sameOfficer,
   statesOnFile,
@@ -859,6 +862,63 @@ describe("what the business has on file, the matched first", () => {
       ["PA", false],
       ["MD", false],
     ]);
+  });
+
+  it("stops a long list at ten and counts the rest, the matched staying at the top", () => {
+    const many = Array.from({ length: 44 }, (_, index) => ({
+      item: index,
+      matched: index < 2,
+    }));
+
+    const { shown, hidden } = leadingOnFile(many);
+
+    expect(ADDRESSES_SHOWN).toBe(10);
+    expect(shown.map(entry => entry.item)).toEqual([
+      0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+    ]);
+    expect(shown.slice(0, 2).every(entry => entry.matched)).toBe(true);
+    expect(hidden).toBe(34);
+  });
+
+  it("never leaves a matched entry out, even past ten", () => {
+    const all = Array.from({ length: 14 }, (_, index) => ({
+      item: index,
+      matched: index < 12,
+    }));
+
+    expect(leadingOnFile(all)).toEqual({ shown: all.slice(0, 12), hidden: 2 });
+  });
+
+  it("leaves nothing out of a short list", () => {
+    const few = [{ item: "a", matched: false }];
+
+    expect(leadingOnFile(few)).toEqual({ shown: few, hidden: 0 });
+    expect(leadingOnFile([])).toEqual({ shown: [], hidden: 0 });
+  });
+
+  it("lists the filings in their order, the ones in a state the filter named first", () => {
+    const business = pickedSearch.business!;
+
+    expect(
+      registrationsOnFile(business.registrations, pickMatched).map(
+        ({ item, matched }) => [item.state, matched],
+      ),
+    ).toEqual([
+      ["OH", true],
+      ["PA", false],
+      ["MD", false],
+    ]);
+    // A filter that named none leaves them as orderedRegistrations has them.
+    expect(
+      registrationsOnFile(business.registrations, NOTHING_MATCHED).map(
+        ({ item, matched }) => [item.state, matched],
+      ),
+    ).toEqual([
+      ["PA", false],
+      ["OH", false],
+      ["MD", false],
+    ]);
+    expect(registrationsOnFile(undefined, pickMatched)).toEqual([]);
   });
 
   it("has nothing on file for a search with no business", () => {

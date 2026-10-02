@@ -450,6 +450,23 @@ export function addressesOnFile(
   ].map(({ item, matched: reachedIt }) => ({ item, matched: reachedIt }));
 }
 
+/** How many addresses the report draws before it counts the rest. */
+export const ADDRESSES_SHOWN = 10;
+
+/**
+ * The first `limit` of a list the matched lead, and how many that leaves out.
+ * What matched is the point of the list, so it is never one of those left out:
+ * more than `limit` matched are all drawn.
+ */
+export function leadingOnFile<T>(
+  entries: readonly OnFile<T>[],
+  limit: number = ADDRESSES_SHOWN,
+): { shown: OnFile<T>[]; hidden: number } {
+  const matched = entries.filter(entry => entry.matched).length;
+  const shown = entries.slice(0, Math.max(limit, matched));
+  return { shown, hidden: entries.length - shown.length };
+}
+
 /**
  * Every officer the business has, the ones the search matched first: those it
  * carries, and any the pick's person filter reached.
@@ -655,6 +672,23 @@ export function orderedRegistrations(
     (a, b) =>
       rank(a) - rank(b) ||
       (a.issue_date ?? "").localeCompare(b.issue_date ?? ""),
+  );
+}
+
+/**
+ * The filings in the order of `orderedRegistrations`, those in a state the
+ * visitor's filter named first: the report's list of states is only squares,
+ * and the filing is where a matched state is said.
+ */
+export function registrationsOnFile(
+  registrations: readonly Registration[] | undefined,
+  matched: Matched,
+): OnFile<Registration>[] {
+  return matchedFirst(
+    orderedRegistrations(registrations).map(registration => ({
+      item: registration,
+      matched: matched.states.includes(registration.state),
+    })),
   );
 }
 
