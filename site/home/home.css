@@ -633,7 +633,7 @@
   color: #ffffff;
 }
 
-/* Not served yet: muted, and dashed like the graph's coming-soon branch. */
+/* Not served yet: muted, behind a dashed border. */
 .entity-chips li[data-live="false"] {
   border: 1px dashed #c9ced8;
   color: var(--muted);
