@@ -136,8 +136,7 @@
         "enum": [
           "business",
           "person",
-          "address",
-          "lien"
+          "address"
         ],
         "type": "string"
       },
@@ -194,17 +193,13 @@
           "addresses": {
             "$ref": "#/components/schemas/RelatedSet"
           },
-          "liens": {
-            "$ref": "#/components/schemas/RelatedSet"
-          },
           "people": {
             "$ref": "#/components/schemas/RelatedSet"
           }
         },
         "required": [
           "people",
-          "addresses",
-          "liens"
+          "addresses"
         ],
         "type": "object"
       },
@@ -301,17 +296,13 @@
           "addresses": {
             "$ref": "#/components/schemas/Source"
           },
-          "liens": {
-            "$ref": "#/components/schemas/Source"
-          },
           "people": {
             "$ref": "#/components/schemas/Source"
           }
         },
         "required": [
           "people",
-          "addresses",
-          "liens"
+          "addresses"
         ],
         "type": "object"
       },
@@ -489,7 +480,7 @@
             }
           },
           {
-            "description": "Comma list of `people`, `addresses`, `liens`; default `people,addresses`.",
+            "description": "Comma list of `people`, `addresses`; default `people,addresses`.",
             "in": "query",
             "name": "include",
             "required": false,

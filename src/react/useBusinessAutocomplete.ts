@@ -23,7 +23,7 @@ export const DEBOUNCE_MS = 250;
 export const DEFAULT_LIMIT = 5;
 
 export interface UseEntityAutocompleteOptions<R extends Relation> {
-  /** The route to ask: `businesses` today; people, addresses and liens to come. */
+  /** The route to ask: `businesses` today; people and addresses to come. */
   relation: R;
   /** The text as typed. */
   query: string;

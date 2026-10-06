@@ -11,7 +11,7 @@
 ![The overview](images/site-overview.png)
 
 The overview leads with what the autocomplete searches (businesses today;
-people, addresses and liens, coming soon, run past beside it) and the
+people and addresses, coming soon, run past beside it) and the
 component itself, playing: the real `BusinessAutocompleteView`, fed made-up
 rows (`site/home/reel.ts`), types three business names a letter at a time
 and picks the first row of each. It plays only while on screen, holds still

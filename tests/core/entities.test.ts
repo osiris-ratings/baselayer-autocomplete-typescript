@@ -53,25 +53,22 @@ describe("the entity model", () => {
   });
 
   it("serves businesses only, and keeps the spec's include sets", () => {
+    expect(Object.keys(ROUTES)).toEqual(["businesses", "people", "addresses"]);
     expect(
       Object.entries(ROUTES)
         .filter(([, route]) => route.served)
         .map(([relation]) => relation),
     ).toEqual(["businesses"]);
-    expect(ROUTES.businesses.includes).toEqual([
-      "people",
-      "addresses",
-      "liens",
-    ]);
+    expect(ROUTES.businesses.includes).toEqual(["people", "addresses"]);
+    expect(ROUTES.people.includes).toEqual(["businesses", "addresses"]);
     expect(ROUTES.people.defaultInclude).toEqual(["businesses"]);
     expect(ROUTES.addresses.includes).toEqual(["businesses", "people"]);
-    expect(ROUTES.liens.defaultInclude).toEqual(["businesses", "people"]);
   });
 });
 
 describe("parseSuggestResponse", () => {
   it("reads a person row with the people route's relations", () => {
-    const relations = ["businesses", "addresses", "liens"];
+    const relations = ["businesses", "addresses"];
     const parsed = parseSuggestResponse(
       "people",
       envelope(relations, [base("person", relations)]),
@@ -102,26 +99,8 @@ describe("parseSuggestResponse", () => {
     expect(parsed.suggestions[0]!.components).toEqual(row.components);
   });
 
-  it("reads a lien row's filing", () => {
-    const relations = ["businesses", "people", "addresses"];
-    const row = {
-      ...base("lien", relations),
-      filing_type: "UCC1",
-      filing_number: "2023-A-0099887",
-      filing_state: "DE",
-      status: "active",
-    };
-    const parsed = parseSuggestResponse("liens", envelope(relations, [row]));
-    expect(parsed.suggestions[0]).toMatchObject({
-      filing_type: "UCC1",
-      filing_number: "2023-A-0099887",
-      filing_state: "DE",
-      status: "active",
-    });
-  });
-
   it("refuses a row of another type on a route", () => {
-    const relations = ["businesses", "addresses", "liens"];
+    const relations = ["businesses", "addresses"];
     expect(() =>
       parseSuggestResponse(
         "people",
@@ -131,7 +110,7 @@ describe("parseSuggestResponse", () => {
   });
 
   it("tolerates enum values and fields it has never seen", () => {
-    const relations = ["businesses", "addresses", "liens"];
+    const relations = ["businesses", "addresses"];
     const row = {
       ...base("person", relations),
       match: "phonetic",
@@ -150,7 +129,7 @@ describe("parseSuggestResponse", () => {
   });
 
   it("is what parseBusinessesResponse is, for businesses", () => {
-    const relations = ["people", "addresses", "liens"];
+    const relations = ["people", "addresses"];
     const body = envelope(relations, [
       { ...base("business", relations), domicile_state: "DE", states: ["DE"] },
     ]);
@@ -187,34 +166,32 @@ describe("buildSuggestUrl", () => {
     const url = new URL(
       buildSuggestUrl("https://api.test/", "people", {
         q: "tim",
-        include: ["businesses", "liens"],
+        include: ["businesses", "addresses"],
         filters: {
           business: { name: "apple", state: ["CA", "DE"] },
           address: { state: ["CA"] },
-          lien: { status: ["active"] },
         },
       }),
     );
     expect(url.pathname).toBe("/autocomplete/people");
     expect([...url.searchParams]).toEqual([
       ["q", "tim"],
-      ["include", "businesses,liens"],
+      ["include", "businesses,addresses"],
       ["business.name", "apple"],
       ["business.state", "CA,DE"],
       ["address.state", "CA"],
-      ["lien.status", "active"],
     ]);
   });
 
   it("counts any route's filters as filters", () => {
     expect(hasFilters({ business: { name: "apple" } })).toBe(true);
-    expect(hasFilters({ lien: { status: [] } })).toBe(false);
+    expect(hasFilters({ business: { state: [] } })).toBe(false);
   });
 });
 
 describe("client.search", () => {
   it("asks the route it is given and parses its rows", async () => {
-    const relations = ["businesses", "addresses", "liens"];
+    const relations = ["businesses", "addresses"];
     const fetch: Mock<FetchLike> = vi.fn<FetchLike>(
       async (): Promise<ResponseLike> => ({
         ok: true,
@@ -249,7 +226,7 @@ describe("client.search", () => {
   });
 
   it("keeps suggest as the businesses search", async () => {
-    const relations = ["people", "addresses", "liens"];
+    const relations = ["people", "addresses"];
     const fetch = vi.fn<FetchLike>(async (): Promise<ResponseLike> => ({
       ok: true,
       status: 200,

@@ -12,6 +12,11 @@ matched; the SDK parsed those flags and drew none of them. A row now marks the
 officer, the address and the state that a filter matched, in the emphasis of
 the name's own marks, and a reader and the pick carry the same answer.
 
+Liens are gone. Autocomplete will not search them, so the SDK no longer
+carries a lien route, row, relation or filter, and a response no longer has a
+`liens` source or relation to send. Removing exported types is a breaking
+change: this ships as a minor release.
+
 ### Added
 
 - `matchedOn(suggestion, { state })`: what a row matched on besides its name,
@@ -49,6 +54,20 @@ the name's own marks, and a reader and the pick carry the same answer.
   many of its names did (`matched`). `orderedStates(suggestion, matched)`
   moves the states a state filter matched up behind the domicile, so a matched
   state is never left behind `+N`.
+- A response needs no `sources.liens` and no `related.liens`, and a row's
+  `related` and the response's `sources` carry `people` and `addresses` only.
+  A response that still carries a relation the route does not expand parses,
+  the relation dropped like any other field the SDK does not know.
+- The vendored autocomplete contract, the API reference, the overview, the
+  demo's sample rows and the docs say nothing of liens.
+
+### Removed
+
+- **Breaking:** `LienSuggestion`, `LiensFilters`, `LienStatus` and
+  `LienPartyRole`; `lien` from `EntityType` and `RELATION_OF`, `liens` from
+  `Relation`, `ENTITY_OF`, `ROUTES`, `SuggestionByRelation`,
+  `FiltersByRelation` and every route's `includes`; and the `lien` filter on
+  the people route, which sent `lien.state`, `lien.status` and `lien.role`.
 
 ### Fixed
 

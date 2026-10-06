@@ -241,7 +241,6 @@ actions:
                     sources:
                       people: { status: ok }
                       addresses: { status: ok }
-                      liens: { status: unavailable }
                     suggestions:
                       - type: business
                         token: A4uYMdTtN1PuVsmNF8…
@@ -272,7 +271,6 @@ actions:
                                 label: 1200 River Rd, Pittsburgh, PA 15212
                                 role: principal
                                 matched: false
-                          liens: { count: null, matched: null, truncated: false, items: [] }
                         highlight:
                           - { text: HARBOR CONCRETE, matched: true }
                           - { text: " PUMPING CO., INC.", matched: false }

@@ -78,7 +78,6 @@ function row(overrides: Partial<BusinessSuggestion>): BusinessSuggestion {
     related: {
       people: related("person", []),
       addresses: related("address", []),
-      liens: { count: null, matched: null, truncated: false, items: [] },
     },
     highlight: [],
     ...overrides,
@@ -109,7 +108,6 @@ const ROWS: BusinessSuggestion[] = [
           matched: false,
         },
       ]),
-      liens: { count: null, matched: null, truncated: false, items: [] },
     },
     highlight: [
       { text: "CINDER", matched: true },
@@ -138,7 +136,6 @@ const ROWS: BusinessSuggestion[] = [
           matched: false,
         },
       ]),
-      liens: { count: null, matched: null, truncated: false, items: [] },
     },
   }),
   row({
@@ -156,7 +153,6 @@ const ROWS: BusinessSuggestion[] = [
           matched: false,
         },
       ]),
-      liens: { count: null, matched: null, truncated: false, items: [] },
     },
   }),
   row({
@@ -174,7 +170,6 @@ const ROWS: BusinessSuggestion[] = [
         { token: null, label: "Wesley Crane", role: "officer", matched: false },
       ]),
       addresses: related("address", []),
-      liens: { count: null, matched: null, truncated: false, items: [] },
     },
   }),
   row({
@@ -211,7 +206,6 @@ const ROWS: BusinessSuggestion[] = [
         ]),
         matched: 1,
       },
-      liens: { count: null, matched: null, truncated: false, items: [] },
     },
   }),
 ];

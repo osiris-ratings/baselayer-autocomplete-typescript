@@ -21,8 +21,6 @@ export interface ReelCompany {
   found: number;
 }
 
-const NO_LIENS: RelatedSet = set([], 0);
-
 function business(
   label: string,
   fields: Pick<
@@ -46,7 +44,6 @@ function business(
     related: {
       people: fields.people,
       addresses: set([address(fields.address)]),
-      liens: NO_LIENS,
     },
   };
 }

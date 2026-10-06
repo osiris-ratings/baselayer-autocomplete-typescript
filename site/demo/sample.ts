@@ -92,7 +92,6 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
         4,
       ),
       addresses: set([address("1200 River Rd, Pittsburgh, PA 15212")]),
-      liens: set([], 0),
     },
   }),
   row("NORTHSHORE PUMPING, LLC", {
@@ -103,7 +102,6 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     related: {
       people: set([person("MERIDIAN REGISTERED AGENTS, LLC", "agent")]),
       addresses: set([address("88 Canal St, Akron, OH 44308")]),
-      liens: set([], 0),
     },
   }),
   row("HARBOR VIEW CONCRETE, INC.", {
@@ -114,7 +112,6 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
       // An officer filter reached this row: the one it matched.
       people: set([person("Priya Raman", "officer", true)], 3, 1),
       addresses: set([address("400 Bayfront Ave, Tampa, FL 33602")]),
-      liens: set([], 0),
     },
   }),
   row("HARBOR CONCRETE SUPPLY, INC.", {
@@ -124,7 +121,6 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     related: {
       people: set([]),
       addresses: set([address("15 Ferry St, Newark, NJ 07105")]),
-      liens: set([], 0),
     },
   }),
   row("HARBOR CONCRETE & MASONRY", {
@@ -139,7 +135,6 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
         2,
         1,
       ),
-      liens: set([], 0),
     },
   }),
   row("CONCRETE HARBOR PARTNERS, LP", {
@@ -149,7 +144,6 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     related: {
       people: set([person("Silverline Agent Services, Inc.", "agent")]),
       addresses: set([address("700 Harborside Dr, Galveston, TX 77550")]),
-      liens: set([], 0),
     },
   }),
   row("HARBOR CONCRETE FORMING, INC.", {
@@ -159,7 +153,6 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     related: {
       people: set([person("Tomas Lindqvist", "officer")]),
       addresses: set([address("3100 Marine View Dr, Tacoma, WA 98422")]),
-      liens: set([], 0),
     },
   }),
   row("BAYSIDE HARBOR CONCRETE, INC.", {
@@ -169,7 +162,6 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     related: {
       people: set([person("Maya Castellanos", "officer")], 3),
       addresses: set([address("55 Embarcadero W, Oakland, CA 94607")]),
-      liens: set([], 0),
     },
   }),
 ];
@@ -201,7 +193,6 @@ export function sampleRows({
     related: {
       people: asked("people", row.related.people),
       addresses: asked("addresses", row.related.addresses),
-      liens: asked("liens", row.related.liens),
     },
   }));
 }

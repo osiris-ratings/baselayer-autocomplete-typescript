@@ -53,7 +53,6 @@ const suggestion = {
         },
       ],
     },
-    liens: { count: null, matched: null, truncated: false, items: [] },
   },
   highlight: [{ text: "CINDER", matched: true }],
 };
@@ -65,7 +64,6 @@ const response = {
   sources: {
     people: { status: "ok" },
     addresses: { status: "ok" },
-    liens: { status: "unavailable" },
   },
   suggestions: [],
 };
@@ -107,15 +105,15 @@ describe("a business suggestion", () => {
       match: "fuzzy",
       related: {
         ...suggestion.related,
-        liens: {
+        addresses: {
           count: 1,
           matched: null,
           truncated: false,
           items: [
             {
-              type: "ucc_filing",
+              type: "parcel",
               token: "tok-8f1a2c3d",
-              label: "UCC-1 2024-001",
+              label: "PARCEL 12-004-118",
               role: null,
               matched: false,
             },
@@ -128,7 +126,7 @@ describe("a business suggestion", () => {
     expect(() =>
       parseBusinessesResponse({
         ...response,
-        sources: { ...response.sources, liens: { status: "degraded" } },
+        sources: { ...response.sources, addresses: { status: "degraded" } },
       }),
     ).not.toThrow();
   });
@@ -148,7 +146,6 @@ describe("a business suggestion", () => {
           items: [{ type: "person", label: "Wesley Crane", matched: true }],
         },
         addresses: { truncated: false, items: [] },
-        liens: { truncated: false, items: [] },
       },
     };
 
@@ -324,7 +321,6 @@ describe("a business suggestion", () => {
         sources: {
           people: { status: "ok" },
           addresses: { status: "ok" },
-          liens: { status: "unavailable" },
         },
         suggestions: [],
       }),
@@ -359,12 +355,12 @@ describe("a business suggestion", () => {
   });
 
   it("refuses a missing relation, a fractional count and a body that is not an object", () => {
-    const twoRelations: Partial<typeof suggestion.related> = {
+    const oneRelation: Partial<typeof suggestion.related> = {
       ...suggestion.related,
     };
-    delete twoRelations.liens;
+    delete oneRelation.addresses;
     expect(() =>
-      parseSuggestion({ ...suggestion, related: twoRelations }),
+      parseSuggestion({ ...suggestion, related: oneRelation }),
     ).toThrow(ContractViolation);
     expect(() => parseBusinessesResponse({ ...response, found: 1.5 })).toThrow(
       ContractViolation,
@@ -383,6 +379,33 @@ describe("a business suggestion", () => {
 
     expect(parsed).not.toHaveProperty("elapsed_ms");
     expect(parsed.suggestions[0]).not.toHaveProperty("score");
+  });
+
+  it("drops a relation the route does not expand, from sources and related", () => {
+    const parsed = parseBusinessesResponse({
+      ...response,
+      sources: { ...response.sources, vehicles: { status: "unavailable" } },
+      suggestions: [
+        {
+          ...suggestion,
+          related: {
+            ...suggestion.related,
+            vehicles: {
+              count: null,
+              matched: null,
+              truncated: false,
+              items: [],
+            },
+          },
+        },
+      ],
+    });
+
+    expect(Object.keys(parsed.sources)).toEqual(["people", "addresses"]);
+    expect(Object.keys(parsed.suggestions[0]!.related)).toEqual([
+      "people",
+      "addresses",
+    ]);
   });
 });
 

@@ -17,8 +17,8 @@ export function SiteFooter() {
             </a>
             <p>
               Entity autocomplete for your own product, from Baselayer&apos;s
-              registry: businesses today, people, addresses and liens soon, each
-              linked to the rest.
+              registry: businesses today, people and addresses soon, each linked
+              to the rest.
             </p>
           </div>
           <nav aria-labelledby="footer-sdk">

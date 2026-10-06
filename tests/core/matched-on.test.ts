@@ -71,7 +71,6 @@ const harbor: BusinessSuggestion = {
       address("12 Wharf Rd, Wilmington, DE 19801", "principal"),
       address("900 Pier Ave, Oakland, CA 94607", "mailing"),
     ]),
-    liens: { count: null, matched: null, truncated: false, items: [] },
   },
   highlight: [
     { text: "HARBOR", matched: true },

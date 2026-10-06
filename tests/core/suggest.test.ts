@@ -98,7 +98,6 @@ const suggestion = {
       ],
     },
     addresses: { count: 2, matched: 0, truncated: false, items: [] },
-    liens: { count: null, matched: null, truncated: false, items: [] },
   },
   highlight: [{ text: "CINDER", matched: true }],
 };
@@ -110,7 +109,6 @@ const okBody = {
   sources: {
     people: { status: "ok" },
     addresses: { status: "not_requested" },
-    liens: { status: "unavailable" },
   },
   suggestions: [suggestion],
 };
@@ -203,7 +201,7 @@ describe("buildBusinessesUrl", () => {
       buildBusinessesUrl(BASE_URL, {
         q: "cinder",
         limit: 5,
-        include: ["people", "addresses", "liens"],
+        include: ["people", "addresses"],
         filters: {
           address: {
             state: "CA",
@@ -226,7 +224,7 @@ describe("buildBusinessesUrl", () => {
     expect([...url.searchParams]).toEqual([
       ["q", "cinder"],
       ["limit", "5"],
-      ["include", "people,addresses,liens"],
+      ["include", "people,addresses"],
       ["state", "DE,CA"],
       ["domicile_state", "DE"],
       ["person.name", "Wesley Crane"],
@@ -247,10 +245,10 @@ describe("buildBusinessesUrl", () => {
       new URL(
         buildBusinessesUrl(BASE_URL, {
           q: "cind",
-          include: ["addresses", "liens"],
+          include: ["addresses", "people"],
         }),
       ).searchParams.getAll("include"),
-    ).toEqual(["addresses,liens"]);
+    ).toEqual(["addresses,people"]);
   });
 
   it("leaves out a filter with nothing in it", () => {

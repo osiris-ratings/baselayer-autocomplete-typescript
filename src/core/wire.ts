@@ -31,7 +31,7 @@ import {
 export type Include = IncludeOf<"businesses">;
 
 export interface RelatedItem {
-  /** `business`, `person`, `address`, `lien` today; open. */
+  /** `business`, `person`, `address` today; open. */
   type: string;
   /** An opaque handle for the person or address; nothing redeems one yet. */
   token: string | null;
@@ -148,22 +148,10 @@ export interface AddressSuggestion extends SuggestionBase<
   components: AddressComponents;
 }
 
-/** Not served yet: the working specification's row. */
-export interface LienSuggestion extends SuggestionBase<"lien", "liens"> {
-  /** `UCC1`, `UCC3`, …; open. */
-  filing_type: string;
-  /** Unique only within `filing_state`. */
-  filing_number: string;
-  filing_state: string;
-  /** `active`, `lapsed`, `terminated` today; open. */
-  status: string;
-}
-
 export interface SuggestionByRelation {
   businesses: BusinessSuggestion;
   people: PersonSuggestion;
   addresses: AddressSuggestion;
-  liens: LienSuggestion;
 }
 
 /** A row from any route. */
@@ -344,12 +332,6 @@ const OWN_FIELDS: {
   people: () => ({}),
   addresses: (o, path) => ({
     components: addressComponents(o.components, `${path}.components`),
-  }),
-  liens: (o, path) => ({
-    filing_type: string(o.filing_type, `${path}.filing_type`),
-    filing_number: string(o.filing_number, `${path}.filing_number`),
-    filing_state: string(o.filing_state, `${path}.filing_state`),
-    status: string(o.status, `${path}.status`),
   }),
 };
 

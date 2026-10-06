@@ -64,7 +64,7 @@ describe("the Styling preview's sample rows", () => {
 });
 
 describe("the sample rows under Behavior", () => {
-  const all = ["people", "addresses", "liens"] as const;
+  const all = ["people", "addresses"] as const;
 
   it("shows as many rows as Rows asks for, up to the sample's own", () => {
     expect(sampleRows({ limit: 2, include: [...all] })).toHaveLength(2);
