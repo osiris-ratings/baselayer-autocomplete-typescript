@@ -10,23 +10,21 @@
  */
 
 /** The singular value on a row: what the row is. */
-export type EntityType = "business" | "person" | "address" | "lien";
+export type EntityType = "business" | "person" | "address";
 
 /** The plural token: the route's path segment, an `include` value, a `sources` key. */
-export type Relation = "businesses" | "people" | "addresses" | "liens";
+export type Relation = "businesses" | "people" | "addresses";
 
 export const RELATION_OF = {
   business: "businesses",
   person: "people",
   address: "addresses",
-  lien: "liens",
 } as const satisfies Record<EntityType, Relation>;
 
 export const ENTITY_OF = {
   businesses: "business",
   people: "person",
   addresses: "address",
-  liens: "lien",
 } as const satisfies Record<Relation, EntityType>;
 
 export interface RouteSpec {
@@ -44,14 +42,14 @@ export const ROUTES = {
   businesses: {
     path: "/autocomplete/businesses",
     entity: "business",
-    includes: ["people", "addresses", "liens"],
+    includes: ["people", "addresses"],
     defaultInclude: ["people", "addresses"],
     served: true,
   },
   people: {
     path: "/autocomplete/people",
     entity: "person",
-    includes: ["businesses", "addresses", "liens"],
+    includes: ["businesses", "addresses"],
     defaultInclude: ["businesses"],
     served: false,
   },
@@ -60,13 +58,6 @@ export const ROUTES = {
     entity: "address",
     includes: ["businesses", "people"],
     defaultInclude: ["businesses"],
-    served: false,
-  },
-  liens: {
-    path: "/autocomplete/liens",
-    entity: "lien",
-    includes: ["businesses", "people", "addresses"],
-    defaultInclude: ["businesses", "people"],
     served: false,
   },
 } as const satisfies Record<Relation, RouteSpec>;

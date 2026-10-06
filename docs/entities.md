@@ -2,16 +2,15 @@
 
 Autocomplete grows by entity. Each entity type has its own route, its own
 row, and its own set of related entities; every route answers the same
-envelope and the same base row. Businesses is served today. People,
-addresses and liens are the ones to come, and the SDK already carries their
-shapes, so a route going live does not change the shape of your code.
+envelope and the same base row. Businesses is served today. People and
+addresses are the ones to come, and the SDK already carries their shapes, so
+a route going live does not change the shape of your code.
 
-| Route                      | Row type             | Relations it expands          | Default `include`  | Served  |
-| -------------------------- | -------------------- | ----------------------------- | ------------------ | ------- |
-| `/autocomplete/businesses` | `BusinessSuggestion` | people, addresses, liens      | people, addresses  | yes     |
-| `/autocomplete/people`     | `PersonSuggestion`   | businesses, addresses, liens  | businesses         | not yet |
-| `/autocomplete/addresses`  | `AddressSuggestion`  | businesses, people            | businesses         | not yet |
-| `/autocomplete/liens`      | `LienSuggestion`     | businesses, people, addresses | businesses, people | not yet |
+| Route                      | Row type             | Relations it expands  | Default `include` | Served  |
+| -------------------------- | -------------------- | --------------------- | ----------------- | ------- |
+| `/autocomplete/businesses` | `BusinessSuggestion` | people, addresses     | people, addresses | yes     |
+| `/autocomplete/people`     | `PersonSuggestion`   | businesses, addresses | businesses        | not yet |
+| `/autocomplete/addresses`  | `AddressSuggestion`  | businesses, people    | businesses        | not yet |
 
 The table is `ROUTES` in the core, with each route's default `include`. The
 shapes of the routes not served yet are Baselayer's working specification
@@ -58,7 +57,6 @@ and `highlight`. Each type adds its own fields:
 | `business` | `domicile_state`, `states`, `structure`                        |
 | `person`   | nothing: a person has no jurisdiction of its own               |
 | `address`  | `components`: `line1`, `line2`, `city`, `state`, `postal_code` |
-| `lien`     | `filing_type`, `filing_number`, `filing_state`, `status`       |
 
 `related` and `sources` carry one key per relation the route expands. Read
 `sources` before an empty `related` entry: an empty list under a source that

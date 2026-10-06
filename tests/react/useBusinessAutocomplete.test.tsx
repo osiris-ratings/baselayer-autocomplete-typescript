@@ -72,7 +72,6 @@ const suggestion: BusinessSuggestion = {
   related: {
     people: { count: 1, matched: 0, truncated: false, items: [] },
     addresses: { count: 1, matched: 0, truncated: false, items: [] },
-    liens: { count: null, matched: null, truncated: false, items: [] },
   },
   highlight: [],
 };
@@ -90,7 +89,6 @@ function result(
       sources: {
         people: { status: "ok" },
         addresses: { status: "ok" },
-        liens: { status: "unavailable" },
       },
       suggestions: [suggestion],
     },

@@ -130,7 +130,7 @@ describe("resolveRowLayout", () => {
   it("counts a value this build cannot use as left out", () => {
     // Staged from an untyped config, or for a field a later build adds.
     const staged = {
-      titleBadge: "liens",
+      titleBadge: "nickname",
       subtitle: 3,
       subtitleTrailing: undefined,
     } as unknown as RowLayoutInput;

@@ -795,6 +795,12 @@ main[data-motion="paused"] .entity-lane-track {
   background: var(--paper);
 }
 
+/* What is live takes the whole first row, and what is coming pairs up under
+   it, so the grid has no empty cell. */
+.entity-card[data-live="true"] {
+  grid-column: 1 / -1;
+}
+
 .entity-card[data-live="false"] {
   background: #f7f8fa;
 }
@@ -992,11 +998,6 @@ main[data-motion="paused"] .entity-lane-track {
   font-size: 11px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-}
-
-.graph-branches > li[data-soon="true"] .graph-branch {
-  padding: 8px 10px;
-  border: 1px dashed #c9d2e4;
 }
 
 .graph-source {

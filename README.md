@@ -6,8 +6,8 @@ canonical entity already linked to the entities around it: a business
 arrives with its registered states, officers, agents and addresses, and a
 `business_token` that pins your Baselayer search to exactly that business.
 
-It searches businesses today; people, addresses and liens are coming, each
-linked to the rest.
+It searches businesses today; people and addresses are coming, each linked to
+the rest.
 
 > **Pre-release.** Until 1.0, a breaking change bumps the minor version.
 > 1.0 freezes the API.
@@ -196,8 +196,8 @@ reached.
 - [Mint endpoint contract](docs/mint-endpoint.md): the three rules, and
   examples for Next.js, Express and curl
 - [Headless use](docs/headless.md): the hooks, and the core without React
-- [Entities beyond businesses](docs/entities.md): people, addresses and
-  liens, the routes to come, and `search`
+- [Entities beyond businesses](docs/entities.md): people and addresses, the
+  routes to come, and `search`
 - [Styling](docs/styling.md): CSS variables, class names, render props,
   `unstyled`
 - [Error states](docs/error-states.md): what the SDK does with every answer

@@ -78,7 +78,6 @@ function wireSuggestion(
           },
         ],
       },
-      liens: { count: null, matched: null, truncated: false, items: [] },
     },
     highlight: [],
   };
@@ -93,7 +92,6 @@ function businessesBody(q: string) {
     sources: {
       people: { status: "ok" },
       addresses: { status: "ok" },
-      liens: { status: "not_requested" },
     },
     suggestions: [
       wireSuggestion(

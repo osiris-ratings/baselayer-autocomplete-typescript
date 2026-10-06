@@ -38,12 +38,6 @@ const ENTITIES: {
     live: false,
     links: "Registered addresses, with the businesses and people at them.",
   },
-  {
-    name: "Liens",
-    icon: "lien",
-    live: false,
-    links: "Liens, with the businesses they name.",
-  },
 ];
 
 /** One suggestion for `harbor concrete`, and what it links to (made up). */
@@ -117,11 +111,6 @@ function EntityGraph() {
               </li>
             ))}
           </ul>
-        </li>
-        <li data-soon="true">
-          <p className="graph-branch">
-            <code>related.liens</code> <span>coming soon</span>
-          </p>
         </li>
       </ul>
       <p className="graph-source">

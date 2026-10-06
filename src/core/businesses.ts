@@ -2,11 +2,8 @@ import { ROUTES, type IncludeOf, type Relation } from "./entities";
 
 /** A person's role on a business: what `sos_officers` records. */
 export type PersonRole = "officer" | "agent";
-/** Which side of a lien a party is on. */
-export type LienPartyRole = "debtor" | "secured_party";
 /** What an address is to the entity that holds it. */
 export type AddressRole = "principal" | "mailing" | "agent" | "officer";
-export type LienStatus = "active" | "lapsed" | "terminated";
 
 /**
  * Narrowing filters on `GET /autocomplete/businesses`: exactly the set the
@@ -44,7 +41,6 @@ export interface PeopleFilters {
   state?: string[];
   business?: BusinessRelationFilter;
   address?: AddressRelationFilter;
-  lien?: { state?: string[]; status?: LienStatus[]; role?: LienPartyRole[] };
 }
 
 /** Not served yet: the working specification's filters on `/autocomplete/addresses`. */
@@ -54,22 +50,10 @@ export interface AddressesFilters {
   person?: { name?: string; role?: PersonRole[] };
 }
 
-/** Not served yet: the working specification's filters on `/autocomplete/liens`. */
-export interface LiensFilters {
-  /** The filing state. */
-  state?: string[];
-  business?: BusinessRelationFilter;
-  person?: { name?: string; role?: LienPartyRole[] };
-  address?: AddressRelationFilter;
-  /** The row's own status: on this route the lien is the row. */
-  lien?: { status?: LienStatus[] };
-}
-
 export interface FiltersByRelation {
   businesses: Filters;
   people: PeopleFilters;
   addresses: AddressesFilters;
-  liens: LiensFilters;
 }
 
 /** One keystroke's query on a route. */
@@ -177,9 +161,6 @@ const FILTER_PARAMS: {
   { param: "address.postal_code", path: ["address", "postalCode"] },
   { param: "address.state", path: ["address", "state"] },
   { param: "address.role", path: ["address", "role"] },
-  { param: "lien.state", path: ["lien", "state"] },
-  { param: "lien.status", path: ["lien", "status"] },
-  { param: "lien.role", path: ["lien", "role"] },
 ];
 
 /** The value a parameter carries: trimmed text, or a non-empty comma list. */

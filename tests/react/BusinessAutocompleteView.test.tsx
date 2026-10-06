@@ -95,7 +95,6 @@ const cinder: BusinessSuggestion = {
         },
       ],
     },
-    liens: { count: null, matched: null, truncated: false, items: [] },
   },
   highlight: [{ text: "CINDER", matched: true }],
 };
@@ -111,7 +110,6 @@ const stable: BusinessSuggestion = {
   related: {
     people: { count: 0, matched: null, truncated: false, items: [] },
     addresses: { count: 0, matched: null, truncated: false, items: [] },
-    liens: { count: null, matched: null, truncated: false, items: [] },
   },
 };
 

@@ -30,7 +30,6 @@ const ROW = {
   related: {
     people: { count: 0, matched: null, truncated: false, items: [] },
     addresses: { count: 0, matched: null, truncated: false, items: [] },
-    liens: { count: null, matched: null, truncated: false, items: [] },
   },
   highlight: [],
 };
@@ -57,7 +56,6 @@ export const fakeApi = vi.fn(async (input: RequestInfo | URL) => {
       sources: {
         people: { status: "ok" },
         addresses: { status: "ok" },
-        liens: { status: "not_requested" },
       },
       suggestions: [ROW],
     });
