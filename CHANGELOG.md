@@ -6,6 +6,8 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-06
+
 A row says what a filter matched it on. A person, an address or a state filter
 narrows the suggestions, and the autocomplete service flags what each row
 matched; the SDK parsed those flags and drew none of them. A row now marks the
