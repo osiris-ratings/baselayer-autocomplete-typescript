@@ -1,7 +1,7 @@
 // The Components fold's row: a menu row drawn as its lines and their places,
 // in the look being styled, and the row's whole configuration. A line kind is
 // dragged by its handle onto the row to list it, or onto Not shown to leave
-// it out, and its toggle says whether a pick can be made on it. A field is
+// it out, and its toggle enables or disables it. A field is
 // dragged by its place onto another place of its line, or onto the tray of
 // fields the row leaves out; each place's chevron is a dropdown of what it can
 // show. Pointer events, so a mouse and a finger drag the same way.
@@ -34,7 +34,7 @@ import {
   lineFields,
   lineKinds,
   withListed,
-  withPickable,
+  withEnabled,
   type RowEditor,
   type StyleState,
 } from "./style-state";
@@ -363,8 +363,8 @@ function Ghost({
 /**
  * The Components fold's row for one search: a business's, a person's or an
  * address's, each editing its own row in the style state. What the row lists
- * and what can be picked change only through `withListed` and `withPickable`,
- * which keep a line the row does not draw from being picked.
+ * and which lines are enabled change only through `withListed` and
+ * `withEnabled`, which keep a line the row does not draw from being enabled.
  */
 export function RowMap({
   state,
@@ -379,11 +379,11 @@ export function RowMap({
   const lines = {
     route,
     list: row.list,
-    pickable: row.pickable,
+    enabled: row.enabled,
     onList: (relation: Relation, listed: boolean) =>
       onChange(withListed(state, route, relation as IncludeOf<Route>, listed)),
-    onPick: (entity: EntityType, on: boolean) =>
-      onChange(withPickable(state, route, entity, on)),
+    onEnable: (entity: EntityType, on: boolean) =>
+      onChange(withEnabled(state, route, entity, on)),
     colors: rowMapColors(state),
   };
   switch (route) {
@@ -466,9 +466,9 @@ function KindRowMap<P extends string, F extends string>({
   editor,
   route,
   list,
-  pickable,
+  enabled,
   onList,
-  onPick,
+  onEnable,
   layout,
   onLayout,
   colors,
@@ -477,10 +477,10 @@ function KindRowMap<P extends string, F extends string>({
   route: Route;
   /** The relations the row lists: their lines are drawn, the others are not. */
   list: readonly Relation[];
-  /** The entities a pick can be made on. */
-  pickable: readonly EntityType[];
+  /** The entities whose lines are enabled. */
+  enabled: readonly EntityType[];
   onList(relation: Relation, listed: boolean): void;
-  onPick(entity: EntityType, on: boolean): void;
+  onEnable(entity: EntityType, on: boolean): void;
   layout: LayoutOf<P, F>;
   onLayout(layout: LayoutOf<P, F>): void;
   colors: CSSProperties;
@@ -652,8 +652,8 @@ function KindRowMap<P extends string, F extends string>({
                 )}
                 <PickToggle
                   name={name}
-                  on={pickable.includes(kind.entity)}
-                  onToggle={on => onPick(kind.entity, on)}
+                  on={enabled.includes(kind.entity)}
+                  onToggle={on => onEnable(kind.entity, on)}
                 />
               </span>
               <div className="row-map-kind-lines">

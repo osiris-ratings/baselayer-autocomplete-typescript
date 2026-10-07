@@ -278,8 +278,8 @@ export interface RowState<R extends Route, L> {
   layout: L;
   /** The relations listed under each row, a line per item (`list`). */
   list: IncludeOf<R>[];
-  /** What a pick can be: the head, and the lines' entities (`pickable`). */
-  pickable: EntityType[];
+  /** The lines a visitor can choose: the head, and the lines' entities (`enabledLines`). */
+  enabled: EntityType[];
 }
 
 /** Each search's row. */
@@ -319,17 +319,17 @@ export const DEFAULT_STYLE: StyleState = {
     businesses: {
       layout: resolveLayout(BUSINESS_ROW),
       list: [...DEFAULT_LIST.businesses] as IncludeOf<"businesses">[],
-      pickable: [...DEFAULT_ENABLED_LINES],
+      enabled: [...DEFAULT_ENABLED_LINES],
     },
     people: {
       layout: resolveLayout(PERSON_ROW),
       list: [...DEFAULT_LIST.people] as IncludeOf<"people">[],
-      pickable: [...DEFAULT_ENABLED_LINES],
+      enabled: [...DEFAULT_ENABLED_LINES],
     },
     addresses: {
       layout: resolveLayout(ADDRESS_ROW),
       list: [...DEFAULT_LIST.addresses] as IncludeOf<"addresses">[],
-      pickable: [...DEFAULT_ENABLED_LINES],
+      enabled: [...DEFAULT_ENABLED_LINES],
     },
   },
   vars: Object.fromEntries(
@@ -433,7 +433,7 @@ export interface RowEditor<P extends string, F extends string> {
   lineNames: Record<string, { long: string; short: string }>;
   /**
    * Each line kind's name, by the relation it lists or `head`, as a sentence
-   * names it: its handle shows or hides it, its toggle picks it.
+   * names it: its handle shows or hides it, its toggle enables it.
    */
   kindNames: Record<string, string>;
 }
@@ -723,7 +723,7 @@ export const { canDrop, moveField, placeOptions, unplacedFields, withPlaced } =
 export interface LineKind {
   /** The relation it lists; null on the head. */
   relation: Relation | null;
-  /** The entity it draws, which its pick toggle names in `pickable`. */
+  /** The entity it draws, which its toggle names in `enabledLines`. */
   entity: EntityType;
   /** The model's lines that draw it: a business's head is its title and subtitle. */
   lines: readonly RowLine<string, string>[];
@@ -793,7 +793,7 @@ function withRow<R extends Route>(
 
 /**
  * The state with a line kind listed under a search's rows, or not, in the
- * row's own order. A line the row stops drawing cannot be picked either.
+ * row's own order. A line the row stops drawing is disabled too.
  */
 export function withListed<R extends Route>(
   state: StyleState,
@@ -810,42 +810,39 @@ export function withListed<R extends Route>(
     list: ROUTES[route].includes.filter(each =>
       each === relation ? listed : list.includes(each),
     ) as IncludeOf<R>[],
-    pickable: listed
-      ? row.pickable
-      : row.pickable.filter(type => type !== entity),
+    enabled: listed ? row.enabled : row.enabled.filter(type => type !== entity),
   });
 }
 
 /**
- * The state with a line's entity pickable on a search's rows, or not, in the
- * order the row draws its lines. A line the row does not draw keeps the state.
+ * The state with a line's entity enabled on a search's rows, or disabled, in
+ * the order the row draws its lines. A line the row does not draw keeps the
+ * state.
  */
-export function withPickable<R extends Route>(
+export function withEnabled<R extends Route>(
   state: StyleState,
   route: R,
   entity: EntityType,
-  pickable: boolean,
+  enabled: boolean,
 ): StyleState {
   const row: RowStates[R] = state.rows[route];
   if (
     !shownEntities(route, state).includes(entity) ||
-    row.pickable.includes(entity) === pickable
+    row.enabled.includes(entity) === enabled
   ) {
     return state;
   }
   return withRow(state, route, {
     ...row,
-    pickable: lineKinds(route)
+    enabled: lineKinds(route)
       .map(kind => kind.entity)
-      .filter(type =>
-        type === entity ? pickable : row.pickable.includes(type),
-      ),
+      .filter(type => (type === entity ? enabled : row.enabled.includes(type))),
   });
 }
 
 /**
  * What each search's component is handed for its row, as a host writes it:
- * the layout, the relations listed under each row, and what can be picked.
+ * the layout, the relations listed under each row, and the lines enabled.
  */
 export interface ComponentProps {
   businesses: {
@@ -874,8 +871,8 @@ export function componentProps<R extends Route>(
   state: StyleState,
   route: R,
 ): ComponentProps[R] {
-  const { layout, list, pickable } = state.rows[route];
-  return { layout, list, enabledLines: pickable } as ComponentProps[R];
+  const { layout, list, enabled } = state.rows[route];
+  return { layout, list, enabledLines: enabled } as ComponentProps[R];
 }
 
 /** The preview's stylesheet: the changed variables, on the demo's component only. */
@@ -925,15 +922,15 @@ export function changedRowLayout(
 
 /**
  * How many things the Components fold changed, on every search's row: the
- * places the map draws, what each row lists and what can be picked on it.
+ * places the map draws, what each row lists and which of its lines are enabled.
  */
 export function componentChanges(state: StyleState): number {
   const routes: Route[] = ["businesses", "people", "addresses"];
   return routes.reduce((count, route) => {
-    const { list, enabledLines: pickable } = componentProps(state, route);
+    const { list, enabledLines } = componentProps(state, route);
     const lists: [readonly string[], readonly string[]][] = [
       [list, DEFAULT_LIST[route]],
-      [pickable, DEFAULT_ENABLED_LINES],
+      [enabledLines, DEFAULT_ENABLED_LINES],
     ];
     return (
       count +
@@ -1010,14 +1007,15 @@ export function exportCode(
       `layout={{\n${layout.map(([place, field]) => `    ${place}: ${field === null ? "null" : JSON.stringify(field)},`).join("\n")}\n  }}`,
     );
   }
-  // What the row lists and what can be picked, as the component is handed them;
-  // a pick that is not a business needs somewhere to go.
-  const { list, enabledLines: pickable } = componentProps(state, route);
+  // What the row lists and which lines are enabled, as the component is handed
+  // them; an enabled line that is not a business needs somewhere for its pick
+  // to go.
+  const { list, enabledLines } = componentProps(state, route);
   props.push(
     ...listProp("list", list, DEFAULT_LIST[route]),
-    ...listProp("enabledLines", pickable, DEFAULT_ENABLED_LINES),
+    ...listProp("enabledLines", enabledLines, DEFAULT_ENABLED_LINES),
   );
-  if (pickable.some(type => type !== "business")) {
+  if (enabledLines.some(type => type !== "business")) {
     props.push("onPickEntity={pick => …}");
   }
   if (state.limit !== DEFAULT_STYLE.limit) props.push(`limit={${state.limit}}`);

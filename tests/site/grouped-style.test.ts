@@ -17,7 +17,7 @@ import {
   editorOps,
   exportCode,
   withListed,
-  withPickable,
+  withEnabled,
   type StyleState,
 } from "../../site/demo/style-state";
 
@@ -33,8 +33,8 @@ describe("the People and Addresses tabs' rows", () => {
       expect(state.rows.addresses.layout).toEqual(addressDefault);
       expect(state.rows.people.list).toEqual(["businesses"]);
       expect(state.rows.addresses.list).toEqual(["businesses"]);
-      expect(state.rows.people.pickable).toEqual(["business"]);
-      expect(state.rows.addresses.pickable).toEqual(["business"]);
+      expect(state.rows.people.enabled).toEqual(["business"]);
+      expect(state.rows.addresses.enabled).toEqual(["business"]);
     }
   });
 
@@ -46,7 +46,7 @@ describe("the People and Addresses tabs' rows", () => {
         people: {
           layout: { ...personDefault, headBadge: null },
           list: ["businesses", "addresses"],
-          pickable: ["business", "address"],
+          enabled: ["business", "address"],
         },
       },
     };
@@ -142,7 +142,7 @@ describe("the exported configuration of a person or an address field", () => {
         people: {
           layout: { ...personDefault, headBadge: null },
           list: ["businesses", "addresses"],
-          pickable: ["business", "address"],
+          enabled: ["business", "address"],
         },
       },
     };
@@ -200,7 +200,7 @@ describe("the exported configuration follows the row map", () => {
   });
 
   it("writes the lines a business lists, with somewhere for a person to go", () => {
-    const state = withPickable(
+    const state = withEnabled(
       withListed(DEFAULT_STYLE, "businesses", "people", true),
       "businesses",
       "person",
@@ -215,19 +215,19 @@ describe("the exported configuration follows the row map", () => {
   });
 
   it("writes what the component is handed: one reading of the row", () => {
-    const state = withPickable(
+    const state = withEnabled(
       withListed(DEFAULT_STYLE, "addresses", "people", true),
       "addresses",
       "person",
       true,
     );
-    const { list, enabledLines: pickable } = componentProps(state, "addresses");
+    const { list, enabledLines } = componentProps(state, "addresses");
     const { tsx } = exportCode(state, "addresses");
     expect(tsx).toContain(
       `list={${JSON.stringify(list).replaceAll(",", ", ")}}`,
     );
     expect(tsx).toContain(
-      `enabledLines={${JSON.stringify(pickable).replaceAll(",", ", ")}}`,
+      `enabledLines={${JSON.stringify(enabledLines).replaceAll(",", ", ")}}`,
     );
   });
 });

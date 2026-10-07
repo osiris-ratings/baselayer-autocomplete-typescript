@@ -5,7 +5,7 @@ import {
   lineKinds,
   shownEntities,
   withListed,
-  withPickable,
+  withEnabled,
 } from "../../site/demo/style-state";
 
 describe("a row's line kinds", () => {
@@ -44,21 +44,21 @@ describe("listing a line kind", () => {
     expect(both.rows.people).toBe(DEFAULT_STYLE.rows.people);
   });
 
-  it("takes it out of what can be picked when it leaves the row: a line not drawn cannot be picked", () => {
-    const listed = withPickable(
+  it("disables it when it leaves the row: a line not drawn cannot be enabled", () => {
+    const listed = withEnabled(
       withListed(DEFAULT_STYLE, "people", "addresses", true),
       "people",
       "address",
       true,
     );
-    expect(listed.rows.people.pickable).toEqual(["business", "address"]);
+    expect(listed.rows.people.enabled).toEqual(["business", "address"]);
 
     const hidden = withListed(listed, "people", "addresses", false);
     expect(hidden.rows.people.list).toEqual(["businesses"]);
-    expect(hidden.rows.people.pickable).toEqual(["business"]);
+    expect(hidden.rows.people.enabled).toEqual(["business"]);
   });
 
-  it("brings a line back unpickable, whatever it was before", () => {
+  it("brings a line back disabled, whatever it was before", () => {
     const back = withListed(
       withListed(DEFAULT_STYLE, "addresses", "businesses", false),
       "addresses",
@@ -66,7 +66,7 @@ describe("listing a line kind", () => {
       true,
     );
     expect(back.rows.addresses.list).toEqual(["businesses"]);
-    expect(back.rows.addresses.pickable).toEqual([]);
+    expect(back.rows.addresses.enabled).toEqual([]);
   });
 
   it("changes nothing when the line is already where it is asked to be", () => {
@@ -79,42 +79,42 @@ describe("listing a line kind", () => {
   });
 });
 
-describe("a line's pick toggle", () => {
-  it("picks the head, on or off, on every row", () => {
-    const person = withPickable(DEFAULT_STYLE, "people", "person", true);
-    expect(person.rows.people.pickable).toEqual(["person", "business"]);
-    const business = withPickable(
+describe("a line's toggle", () => {
+  it("enables or disables the head, on every row", () => {
+    const person = withEnabled(DEFAULT_STYLE, "people", "person", true);
+    expect(person.rows.people.enabled).toEqual(["person", "business"]);
+    const business = withEnabled(
       DEFAULT_STYLE,
       "businesses",
       "business",
       false,
     );
-    expect(business.rows.businesses.pickable).toEqual([]);
+    expect(business.rows.businesses.enabled).toEqual([]);
   });
 
   it("does nothing for a line the row does not draw", () => {
-    expect(withPickable(DEFAULT_STYLE, "businesses", "person", true)).toBe(
+    expect(withEnabled(DEFAULT_STYLE, "businesses", "person", true)).toBe(
       DEFAULT_STYLE,
     );
-    expect(withPickable(DEFAULT_STYLE, "people", "address", true)).toBe(
+    expect(withEnabled(DEFAULT_STYLE, "people", "address", true)).toBe(
       DEFAULT_STYLE,
     );
   });
 
-  it("keeps what can be picked in the order the row draws its lines", () => {
+  it("keeps the enabled lines in the order the row draws them", () => {
     const listed = withListed(
       withListed(DEFAULT_STYLE, "businesses", "addresses", true),
       "businesses",
       "people",
       true,
     );
-    const picked = withPickable(
-      withPickable(listed, "businesses", "address", true),
+    const enabled = withEnabled(
+      withEnabled(listed, "businesses", "address", true),
       "businesses",
       "person",
       true,
     );
-    expect(picked.rows.businesses.pickable).toEqual([
+    expect(enabled.rows.businesses.enabled).toEqual([
       "business",
       "person",
       "address",

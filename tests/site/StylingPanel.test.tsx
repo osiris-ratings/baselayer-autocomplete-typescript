@@ -83,9 +83,9 @@ describe("the Components fold's searches", () => {
         <output data-testid="lists">
           {JSON.stringify([
             state.rows.people.list,
-            state.rows.people.pickable,
+            state.rows.people.enabled,
             state.rows.addresses.list,
-            state.rows.addresses.pickable,
+            state.rows.addresses.enabled,
           ])}
         </output>
         <StylingPanel
@@ -128,7 +128,7 @@ describe("the Components fold's searches", () => {
   const exported = () =>
     document.querySelector(".styling-export")!.textContent ?? "";
 
-  it("lists a person's addresses, and makes the person pickable, from the row map", () => {
+  it("lists a person's addresses, and enables the person, from the row map", () => {
     render(<RoutedPanel start="people" />);
 
     fireEvent.click(handle("their addresses"));
@@ -142,7 +142,7 @@ describe("the Components fold's searches", () => {
     ]);
   });
 
-  it("lists the people at an address, and makes them pickable instead of its businesses", () => {
+  it("lists the people at an address, and enables them instead of its businesses", () => {
     render(<RoutedPanel start="addresses" />);
 
     fireEvent.click(handle("people there"));
@@ -179,7 +179,7 @@ describe("the Components fold's searches", () => {
     ).toBeNull();
   });
 
-  it("lists a business's officers and makes them pickable, as the other rows do", () => {
+  it("lists a business's officers and enables them, as the other rows do", () => {
     render(<RoutedPanel start="businesses" />);
 
     expect(document.querySelector('[data-drop="titleBadge"]')).not.toBeNull();

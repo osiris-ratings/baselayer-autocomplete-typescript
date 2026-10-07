@@ -9,7 +9,7 @@ import { RowMap } from "../../site/demo/RowMap";
 import {
   DEFAULT_STYLE,
   withListed,
-  withPickable,
+  withEnabled,
   type StyleState,
 } from "../../site/demo/style-state";
 
@@ -587,7 +587,7 @@ describe("the row map as the row's configuration", () => {
   });
 
   it("takes a hidden line's pick with it", () => {
-    const picked = withPickable(
+    const picked = withEnabled(
       withListed(DEFAULT_STYLE, "people", "addresses", true),
       "people",
       "address",
@@ -601,7 +601,7 @@ describe("the row map as the row's configuration", () => {
 
     const next = onChange.mock.calls[0]![0];
     expect(next.rows.people.list).toEqual(["businesses"]);
-    expect(next.rows.people.pickable).toEqual(["business"]);
+    expect(next.rows.people.enabled).toEqual(["business"]);
   });
 
   it("moves a line kind from the keyboard, or with a click, through its handle", () => {
@@ -624,12 +624,12 @@ describe("the row map as the row's configuration", () => {
         `.row-map-pick[aria-label="${label}"]`,
       )!;
     fireEvent.click(pick("Pick the person"));
-    expect(onChange.mock.calls[0]![0].rows.people.pickable).toEqual([
+    expect(onChange.mock.calls[0]![0].rows.people.enabled).toEqual([
       "person",
       "business",
     ]);
     fireEvent.click(pick("Pick businesses"));
-    expect(onChange.mock.calls[1]![0].rows.people.pickable).toEqual([]);
+    expect(onChange.mock.calls[1]![0].rows.people.enabled).toEqual([]);
   });
 
   it("does not move a line kind a drag only nudged, nor once a drag has dropped it", () => {
