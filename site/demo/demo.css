@@ -650,53 +650,56 @@
   min-width: 100%;
 }
 
-/* Each edge there is more beyond is shadowed, over the lines, where they go
-   under the grips or the Disabled column. */
 .row-map-scroll-frame {
   position: relative;
   /* A grid item as narrow as the card, so the lines scroll inside it. */
   min-width: 0;
 }
 
-.row-map-scroll-frame::before,
-.row-map-scroll-frame::after {
+/* Where a line's places go under the grip or the Disabled column, while
+   there is more of them beyond that edge, its box takes a soft shade there,
+   rounded as the box is, in the look's ink: on the line alone, never on a
+   heading or between lines. */
+.row-map-kind .row-map-grip-cell::after,
+.row-map-kind .row-map-check-cell::before {
   position: absolute;
-  z-index: 4;
   top: 0;
   bottom: 0;
-  width: 14px;
+  width: 12px;
   content: "";
   opacity: 0;
   pointer-events: none;
   transition: opacity 120ms ease;
 }
 
-.row-map-scroll-frame::before {
-  left: var(--map-grip-cell);
+.row-map-kind .row-map-grip-cell::after {
+  left: 100%;
   background: linear-gradient(
     to right,
-    color-mix(in srgb, var(--map-ink) 45%, transparent),
+    color-mix(in srgb, var(--map-ink) 22%, transparent),
     transparent
   );
+  border-radius: var(--map-line-radius) 0 0 var(--map-line-radius);
 }
 
-.row-map-scroll-frame::after {
-  right: var(--map-check-cell);
+.row-map-kind .row-map-check-cell::before {
+  right: 100%;
   background: linear-gradient(
     to left,
-    color-mix(in srgb, var(--map-ink) 45%, transparent),
+    color-mix(in srgb, var(--map-ink) 22%, transparent),
     transparent
   );
+  border-radius: 0 var(--map-line-radius) var(--map-line-radius) 0;
 }
 
-.row-map-scroll-frame[data-more-before]::before,
-.row-map-scroll-frame[data-more-after]::after {
+.row-map-scroll-frame[data-more-before] .row-map-grip-cell::after,
+.row-map-scroll-frame[data-more-after] .row-map-check-cell::before {
   opacity: 1;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .row-map-scroll-frame::before,
-  .row-map-scroll-frame::after {
+  .row-map-kind .row-map-grip-cell::after,
+  .row-map-kind .row-map-check-cell::before {
     transition: none;
   }
 }
@@ -709,6 +712,7 @@
   /* A line's box's padding: a drawer's title and note start where its
      chips do. */
   --map-box-pad: 6px;
+  --map-line-radius: 8px;
 }
 
 /* The grip's and the checkbox's columns with their gutters, on the card,
@@ -768,7 +772,7 @@
   gap: 8px;
   min-width: 0;
   padding: 4px var(--map-box-pad);
-  border-radius: 6px;
+  border-radius: var(--map-line-radius);
 }
 
 .row-map-kind[data-state="enabled"] .row-map-kind-lines {

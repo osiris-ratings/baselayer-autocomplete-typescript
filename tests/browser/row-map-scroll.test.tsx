@@ -57,13 +57,43 @@ const settle = () =>
 /** Lets a shadow finish fading in or out. */
 const faded = () => new Promise(resolve => setTimeout(resolve, 200));
 
-/** Whether the shadow at an edge of a scroller's frame is drawn. */
-function shadow(scroller: HTMLElement, edge: "before" | "after"): boolean {
-  const style = getComputedStyle(
-    scroller.closest(".row-map-scroll-frame")!,
-    `::${edge}`,
+/**
+ * The shade each line's box takes at an edge where its places are cut off:
+ * at the grip's side, or at the Disabled column's.
+ */
+function shades(scroller: HTMLElement, edge: "before" | "after") {
+  return [...scroller.querySelectorAll<HTMLElement>(".row-map-kind")].map(
+    kind => {
+      const cell = kind.querySelector<HTMLElement>(
+        edge === "before" ? ".row-map-grip-cell" : ".row-map-check-cell",
+      )!;
+      const style = getComputedStyle(
+        cell,
+        edge === "before" ? "::after" : "::before",
+      );
+      const box = cell.getBoundingClientRect();
+      const width = parseFloat(style.width);
+      return {
+        drawn: style.content !== "none" && Number(style.opacity) > 0.5,
+        width,
+        // Where the shade lies: beside its cell, as tall as the cell.
+        top: box.top + parseFloat(style.top),
+        bottom: box.bottom - parseFloat(style.bottom),
+        line: kind
+          .querySelector(".row-map-kind-lines")!
+          .getBoundingClientRect(),
+      };
+    },
   );
-  return Number(style.opacity) > 0.5 && parseFloat(style.width) >= 12;
+}
+
+/** Whether every line's shade at an edge is drawn. */
+function shadow(scroller: HTMLElement, edge: "before" | "after"): boolean {
+  const all = shades(scroller, edge);
+  const drawn = all.filter(shade => shade.drawn).length;
+  // Every line or none: a shade is the drawer's, not one line's.
+  expect([0, all.length]).toContain(drawn);
+  return drawn > 0;
 }
 
 describe("a drawer that scrolls sideways", () => {
@@ -83,6 +113,43 @@ describe("a drawer that scrolls sideways", () => {
         true,
       ]);
       expect(await at(shown.scrollWidth)).toEqual([true, false]);
+    } finally {
+      done();
+    }
+  });
+
+  it("shades each line's box softly, within it, and nothing above or between the lines", async () => {
+    const { shown, done } = mount(everyLine("people"), "people", 320);
+    try {
+      shown.scrollLeft = (shown.scrollWidth - shown.clientWidth) / 2;
+      shown.dispatchEvent(new Event("scroll"));
+      await faded();
+      for (const edge of ["before", "after"] as const) {
+        for (const shade of shades(shown, edge)) {
+          expect(shade.drawn).toBe(true);
+          expect(shade.width).toBeGreaterThanOrEqual(10);
+          expect(shade.width).toBeLessThanOrEqual(14);
+          expect(shade.top).toBeGreaterThanOrEqual(shade.line.top - 0.5);
+          expect(shade.bottom).toBeLessThanOrEqual(shade.line.bottom + 0.5);
+        }
+      }
+      // The headings carry no shade, at either edge.
+      for (const heading of shown.querySelectorAll(
+        ".row-map-head, .row-map-head *",
+      )) {
+        for (const pseudo of ["::before", "::after"]) {
+          const style = getComputedStyle(heading, pseudo);
+          expect(
+            style.content === "none" || Number(style.opacity) === 0,
+            `${heading.className}${pseudo}`,
+          ).toBe(true);
+        }
+      }
+      // The drawer's frame carries none either.
+      const frame = shown.closest(".row-map-scroll-frame")!;
+      for (const pseudo of ["::before", "::after"]) {
+        expect(getComputedStyle(frame, pseudo).content).toBe("none");
+      }
     } finally {
       done();
     }

@@ -826,8 +826,7 @@ function KindRowMap<P extends string, F extends string>({
             );
           })}
         </div>
-        {/* A hidden line is not drawn, so is no choice either: no checkbox. */}
-        {isListed && (
+        {isListed ? (
           <span className="row-map-check-cell">
             <input
               type="checkbox"
@@ -838,6 +837,10 @@ function KindRowMap<P extends string, F extends string>({
               onChange={event => onEnable(kind.entity, !event.target.checked)}
             />
           </span>
+        ) : (
+          // A hidden line is not drawn, so is no choice either: no checkbox,
+          // but the column's ground, where its places go under.
+          <span className="row-map-check-cell" aria-hidden="true" />
         )}
       </div>
     );
