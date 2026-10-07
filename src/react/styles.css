@@ -401,7 +401,7 @@
   :is(.bl-ac-address, .bl-ac-role, .bl-ac-icon) {
   color: var(
     --bl-ac-disabled-text,
-    color-mix(in srgb, var(--bl-ac-subtitle) 48.3%, var(--bl-ac-bg))
+    color-mix(in srgb, var(--bl-ac-subtitle) 48.4%, var(--bl-ac-bg))
   );
 }
 

@@ -20,18 +20,29 @@ export const DISABLED_TEXT_KEEPS = 0.4;
 /** The least its other text and its icon keep, by the formula. */
 export const DISABLED_TEXT_FLOOR = 1.8;
 
-/** A look's `#rgb`, `#rrggbb` or `#rrggbbaa`, its alpha left out. */
-function rgbOf(hex: string): Rgb {
+/** A look's `#rgb`, `#rrggbb` or `#rrggbbaa`: its colour, and its alpha. */
+function parse(hex: string): { rgb: Rgb; alpha: number } {
   const digits = hex.slice(1);
   const full =
     digits.length === 3
       ? [...digits].map(digit => digit + digit).join("")
-      : digits.slice(0, 6);
-  return [0, 2, 4].map(at => parseInt(full.slice(at, at + 2), 16)) as [
-    number,
-    number,
-    number,
-  ];
+      : digits;
+  const channel = (at: number) => parseInt(full.slice(at, at + 2), 16);
+  return {
+    rgb: [channel(0), channel(2), channel(4)],
+    alpha: full.length === 8 ? channel(6) / 255 : 1,
+  };
+}
+
+/** A colour as it is drawn on `ground`: a translucent one shows the ground. */
+function drawnOn(hex: string, ground: Rgb): Rgb {
+  const { rgb, alpha } = parse(hex);
+  return rounded(mix(ground, rgb, alpha));
+}
+
+/** A colour's channels as whole numbers, as a hex colour holds them. */
+function rounded(rgb: Rgb): Rgb {
+  return rgb.map(channel => Math.round(channel)) as unknown as Rgb;
 }
 
 function hexOf(rgb: Rgb): string {
@@ -63,8 +74,9 @@ function contrast(a: Rgb, b: Rgb): number {
  * `floor`; none when it is at or under the floor already.
  */
 function fadeShare(ink: Rgb, ground: Rgb, most: number, floor: number) {
+  // Judged as drawn: the hex a share rounds to must keep the floor.
   const holds = (toward: number) =>
-    contrast(mix(ink, ground, toward), ground) >= floor;
+    contrast(rounded(mix(ink, ground, toward)), ground) >= floor;
   if (!holds(0)) return 0;
   if (holds(most)) return most;
   let [low, high] = [0, most];
@@ -100,10 +112,12 @@ export interface DisabledInks {
  */
 export function disabledInks(look: Look): DisabledInks {
   const dim = look.disabledDim;
-  const ground = rgbOf(look.backgroundColor);
+  // A translucent ground shows whatever is under the menu, which is not known
+  // here: its own colour stands in, and the floors hold only on that.
+  const ground = parse(look.backgroundColor).rgb;
   const round = (value: number) => Math.round(value * 1000) / 1000;
   const faded = (color: string, floor: number) => {
-    const ink = rgbOf(color);
+    const ink = drawnOn(color, ground);
     const share = fadeShare(ink, ground, dim, floor);
     return {
       hex: hexOf(mix(ink, ground, share)),
@@ -115,7 +129,8 @@ export function disabledInks(look: Look): DisabledInks {
     look.subtitleColor,
     Math.max(
       DISABLED_TEXT_FLOOR,
-      contrast(rgbOf(look.subtitleColor), ground) * DISABLED_TEXT_KEEPS,
+      contrast(drawnOn(look.subtitleColor, ground), ground) *
+        DISABLED_TEXT_KEEPS,
     ),
   );
   return {

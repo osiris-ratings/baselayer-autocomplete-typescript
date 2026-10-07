@@ -292,18 +292,21 @@ the role as wide as the menu's longest (`--bl-ac-role-chars`) and a step
 quieter, so the squares start at one edge down the group.
 
 A disabled line under a row reads as inactive: all of it loses its colour
-(`--bl-ac-disabled-filter`), its name and its other text fade toward the
-menu's ground (`--bl-ac-disabled-name`, `--bl-ac-disabled-text`, the icon with
-the text), and its state squares dim (`--bl-ac-disabled-opacity`).
-`look.disabledDim` sets how far, 0 for none, and the component works the
-inks out from the look's colours. WCAG exempts an inactive component from its
+(`--bl-ac-disabled-filter`), its name and its other text fade toward the menu's
+ground (`--bl-ac-disabled-name`, `--bl-ac-disabled-text`, the icon with the
+text), and its state squares dim (`--bl-ac-disabled-opacity`).
+`look.disabledDim` sets how far, 0 for none, and the component works the inks
+out from the look's colours. WCAG exempts an inactive component from its
 contrast minimum, so the fade is deliberately strong, with floors that keep it
-legible on any colours: a disabled name keeps 4.6:1 by the formula, which
-draws at 3:1 or more once antialiasing has its share, and the rest keeps 40%
-of its contrast and at least 1.8:1, drawing at half an enabled line's or
-less. A colour set only in CSS, not through `look`, fades by the default
-look's shares (`color-mix`), without the floors. A pick and the row's head do
-not fade, and nothing fades under forced colours.
+legible on any colours: a disabled name keeps 4.6:1 by the formula, which draws
+at 3:1 or more once antialiasing has its share, and the rest keeps 40% of its
+contrast and at least 1.8:1, drawing at about half an enabled line's. A colour
+set only in CSS, not through `look`, fades by the default look's shares
+(`color-mix`), without the floors. A translucent title or subtitle is faded as
+it is drawn on the ground; a translucent background shows whatever is under the
+menu, which the component cannot know, so the floors then hold only on the
+background's own colour. A pick and the row's head do not fade, and nothing
+fades under forced colours.
 
 After a pick from a line under a row, the line under the field
 (`bl-ac-selection`, `data-type` the picked line's type) names what was
