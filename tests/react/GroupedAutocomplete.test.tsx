@@ -857,8 +857,10 @@ describe("the selection line", () => {
     await user.click(
       await screen.findByRole("option", { name: /Cobalt Tile Supply LLC/ }),
     );
-    // Still what was typed: the pick is kept for the name to come.
+    // Still what was typed: the pick is kept for the name to come, and the
+    // line waits for it too.
     expect(input().value).toBe("dana");
+    expect(selection()).toBeNull();
     await aMoment();
 
     expect(input().value).toBe("Dana Whitfield");
