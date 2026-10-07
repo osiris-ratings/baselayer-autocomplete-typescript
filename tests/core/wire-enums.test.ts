@@ -239,6 +239,11 @@ describe("the closed values on the wire", () => {
         people: { count: null, matched: null, truncated: false, items: [] },
       },
     };
+    const bare = {
+      ...address,
+      token: "tok-bare",
+      components: { line1: null, line2: null, state: "PA" },
+    };
 
     const parsed = parseSuggestResponse("addresses", {
       query: "pier 9",
@@ -249,7 +254,7 @@ describe("the closed values on the wire", () => {
         businesses: { status: "ok" },
         people: { status: "not_requested" },
       },
-      suggestions: [address],
+      suggestions: [address, bare],
     });
 
     expect(parsed.suggestions[0]!.components).toEqual({
@@ -257,6 +262,14 @@ describe("the closed values on the wire", () => {
       line2: null,
       city: "Erie",
       state: null,
+      postal_code: null,
+    });
+    // No street and no city: the street is null, the city absent.
+    expect(parsed.suggestions[1]!.components).toEqual({
+      line1: null,
+      line2: null,
+      city: null,
+      state: "PA",
       postal_code: null,
     });
   });

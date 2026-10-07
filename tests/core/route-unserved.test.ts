@@ -31,7 +31,11 @@ function clientAnswering(body: unknown, status = 503) {
       pivotAllowance: 5,
       filterMinStem: 3,
       scope: {
-        routes: { businesses: [], people: ["businesses"] },
+        routes: {
+          businesses: [],
+          people: ["businesses"],
+          addresses: ["businesses"],
+        },
         maxLimit: 20,
       },
     },
@@ -59,26 +63,28 @@ async function refusal(promise: Promise<unknown>): Promise<AutocompleteError> {
 
 describe("a route the deployment cannot answer yet", () => {
   it.each([
-    ["index_too_old", 3, 4],
-    ["token_version_too_old", 5, 6],
+    ["people", "index_too_old", 3, 4],
+    ["people", "token_version_too_old", 5, 6],
+    ["addresses", "index_too_old", 3, 4],
+    ["addresses", "token_version_too_old", 5, 6],
   ] as const)(
-    "reads a 503 %s as route_unserved, with what it has and needs, and does not retry",
-    async (reason, current, required) => {
+    "reads a 503 on %s, %s, as route_unserved, with what it has and needs, and does not retry",
+    async (route, reason, current, required) => {
       const { client, fetch, mint } = clientAnswering({
         code: 503,
-        message: "This replica cannot answer people search yet.",
+        message: "This replica cannot answer this search yet.",
         uri: null,
         metadata: { reason, current, required },
       });
 
-      const error = await refusal(client.search("people", { q: "dana" }));
+      const error = await refusal(client.search(route, { q: "dana" }));
 
       expect(error).toMatchObject({
         kind: "route_unserved",
         status: 503,
         code: 503,
         reason,
-        route: "people",
+        route,
         unserved: { reason, current, required },
       });
       expect(fetch).toHaveBeenCalledTimes(1);
