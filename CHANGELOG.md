@@ -135,6 +135,12 @@ release.
   go. A wrapper that takes `Omit<BusinessAutocompleteProps, …>` and spreads the
   rest needs an `Omit` that distributes over the union:
   `T extends unknown ? Omit<T, K> : never`.
+- **Breaking:** `layout` on `BusinessAutocomplete` and
+  `BusinessAutocompleteView` is a `BusinessRowLayoutInput`, which also places a
+  listed line's fields, so handing it to `includeForLayout` or
+  `resolveRowLayout` no longer compiles:
+  `requestFor("businesses", resolveLayout(BUSINESS_ROW, layout))` gives what to
+  fetch.
 - **Breaking:** `ROUTES.people` and `ROUTES.addresses` are served, and their
   filters are exactly what each serves: `{ business: { state } }` on people,
   `{ state }` on addresses. `filterParams` and `hasFilters` take the route, and
