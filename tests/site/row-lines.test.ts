@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_STYLE,
+  componentChanges,
+  componentProps,
+  exportCode,
   lineKinds,
   shownEntities,
   withEnabled,
@@ -44,29 +47,33 @@ describe("listing a line kind", () => {
     expect(both.rows.people).toBe(DEFAULT_STYLE.rows.people);
   });
 
-  it("disables it when it leaves the row: a line not drawn cannot be enabled", () => {
+  it("hands the components no hidden line as enabled: a line not drawn cannot be chosen", () => {
     const listed = withEnabled(
       withListed(DEFAULT_STYLE, "people", "addresses", true),
       "people",
       "address",
       true,
     );
-    expect(listed.rows.people.enabled).toEqual(["business", "address"]);
+    expect(componentProps(listed, "people").enabledLines).toEqual([
+      "business",
+      "address",
+    ]);
 
     const hidden = withListed(listed, "people", "addresses", false);
     expect(hidden.rows.people.list).toEqual(["businesses"]);
-    expect(hidden.rows.people.enabled).toEqual(["business"]);
+    expect(componentProps(hidden, "people").enabledLines).toEqual(["business"]);
   });
 
-  it("brings a line back disabled, whatever it was before", () => {
-    const back = withListed(
-      withListed(DEFAULT_STYLE, "addresses", "businesses", false),
-      "addresses",
-      "businesses",
-      true,
-    );
-    expect(back.rows.addresses.list).toEqual(["businesses"]);
-    expect(back.rows.addresses.enabled).toEqual([]);
+  it("brings a hidden line back as it was, enabled or not", () => {
+    const hidden = withListed(DEFAULT_STYLE, "people", "businesses", false);
+    expect(componentProps(hidden, "people").enabledLines).toEqual([]);
+    expect(componentChanges(hidden)).toBe(2);
+
+    const back = withListed(hidden, "people", "businesses", true);
+    expect(back.rows.people.list).toEqual(["businesses"]);
+    expect(componentProps(back, "people").enabledLines).toEqual(["business"]);
+    expect(componentChanges(back)).toBe(0);
+    expect(exportCode(back, "people").tsx).not.toContain("enabledLines");
   });
 
   it("changes nothing when the line is already where it is asked to be", () => {

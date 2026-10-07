@@ -9,6 +9,7 @@ import { BUSINESS_ROW } from "@baselayer-sdk/autocomplete";
 import { RowMap } from "../../site/demo/RowMap";
 import {
   DEFAULT_STYLE,
+  componentProps,
   withListed,
   type StyleState,
 } from "../../site/demo/style-state";
@@ -574,10 +575,12 @@ describe("the row map as the row's configuration", () => {
       "addresses",
     ]);
     drag(grip("businesses")!, drawer("hidden"));
-    const hidden = onChange.mock.calls[2]![0].rows.people;
-    expect(hidden.list).toEqual([]);
-    // A hidden line is not drawn, so not a choice either.
-    expect(hidden.enabled).toEqual([]);
+    const hidden = onChange.mock.calls[2]![0];
+    expect(hidden.rows.people.list).toEqual([]);
+    // A hidden line is not drawn, so not a choice either, though it keeps
+    // being enabled for when it is shown again.
+    expect(componentProps(hidden, "people").enabledLines).toEqual([]);
+    expect(hidden.rows.people.enabled).toEqual(["business"]);
   });
 
   it("takes a line only in the drawer it is not in, over a place there too", () => {

@@ -12,7 +12,6 @@ import {
   DEFAULT_ICON_SEGMENTS,
   DEFAULT_LIST,
   DEFAULT_LOOK,
-  ENTITY_OF,
   PERSON_ROW,
   ROUTES,
   ROW_KINDS,
@@ -800,7 +799,8 @@ function withRow<R extends Route>(
 
 /**
  * The state with a line kind listed under a search's rows, or not, in the
- * row's own order. A line the row stops drawing is disabled too.
+ * row's own order. A line keeps whether it is enabled while it is hidden, so
+ * it comes back as it was; `componentProps` hands over only the shown ones.
  */
 export function withListed<R extends Route>(
   state: StyleState,
@@ -811,13 +811,11 @@ export function withListed<R extends Route>(
   const row: RowStates[R] = state.rows[route];
   const list: readonly Relation[] = row.list;
   if (list.includes(relation) === listed) return state;
-  const entity = ENTITY_OF[relation];
   return withRow(state, route, {
     ...row,
     list: ROUTES[route].includes.filter(each =>
       each === relation ? listed : list.includes(each),
     ) as IncludeOf<R>[],
-    enabled: listed ? row.enabled : row.enabled.filter(type => type !== entity),
   });
 }
 
@@ -960,10 +958,13 @@ export function componentProps<R extends Route>(
   route: R,
 ): ComponentProps[R] {
   const { layout, list, enabled, iconSegments } = state.rows[route];
+  // A hidden line keeps its choice for when it is shown again, but nothing
+  // not drawn can be chosen.
+  const shown = shownEntities(route, state);
   return {
     layout,
     list,
-    enabledLines: enabled,
+    enabledLines: enabled.filter(entity => shown.includes(entity)),
     iconSegments,
   } as ComponentProps[R];
 }
