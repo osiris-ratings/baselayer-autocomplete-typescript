@@ -183,7 +183,8 @@ The same props shape the rows of all three:
 | `enabledLines`  | `["business"]`     | Which lines can be picked, by entity ([What can be picked](#what-can-be-picked))              |
 | `onPickEntity`  | none               | Where a person or an address picked goes; required once `enabledLines` names one              |
 | `showSelection` | `true`             | The line under the field after a pick ([The line under the field](#the-line-under-the-field)) |
-| `icons`         | the SDK's          | The icon before each name, per entity, or `false` for none ([Icons](#icons))                  |
+| `iconSegments`  | the route's own    | The segments that carry an icon: names, addresses, people ([Icons](#icons))                   |
+| `icons`         | the SDK's          | Your own icon per entity or entity and role, or `false` for none ([Icons](#icons))            |
 | `layout`        | the row kind's own | What each line draws where ([Every kind of row](styling.md#every-kind-of-row))                |
 | `include`       | what is drawn      | What the request fetches; name it only to fetch something else                                |
 
@@ -213,7 +214,7 @@ Dana Whitfield  48 Wrenmoor St, Pittsburgh, PA … 2 businesses · 1 address
 
 That is `list={["businesses", "addresses"]}` on a person: each business with
 its address, states and the person's role there, then each address with
-theirs. Every line starts with its entity's icon.
+theirs. Every name starts with its icon.
 
 ### What can be picked
 
@@ -275,24 +276,48 @@ The views (`BusinessAutocompleteView`, `PersonAutocompleteView`,
 
 ### Icons
 
-Every line starts with its entity's icon: an office building for a business,
-a person for a person and a map pin for an address, drawn at the size of the
-text in `subtitleColor` and hidden from screen readers. A business row draws
-none before its own name unless its layout asks (`titleLead: "titleIcon"`),
-so a row that lists nothing draws exactly as before. `icons` replaces any of
-them with a node of your own, or turns them all off:
+An icon rides on a segment: a name, or a field that has a glyph of its own,
+an address or a business's people. It is drawn right before the segment's
+text, wherever the layout places it. `iconSegments` names the segments that
+carry one:
+
+| Search                 | Segments an icon can ride on                                     | By default (`DEFAULT_ICON_SEGMENTS`)  |
+| ---------------------- | ---------------------------------------------------------------- | ------------------------------------- |
+| `BusinessAutocomplete` | `name`, `address`, `people`, `personName`, `addressName`         | none, so a row draws as it always has |
+| `PersonAutocomplete`   | `name`, `firstAddress`, `businessName`, `address`, `addressName` | `name`, `businessName`, `addressName` |
+| `AddressAutocomplete`  | `name`, `businessName`, `address`, `personName`                  | `name`, `businessName`, `personName`  |
+
+`name` is the row's own name, `<line>Name` a listed line's, and the rest are
+the fields of the same names. The glyph follows the data, by its role
+wherever the row knows one, so the same officer or address draws the same
+glyph in any segment:
+
+| Entity     | Glyph                                                                                  |
+| ---------- | -------------------------------------------------------------------------------------- |
+| a business | an office building                                                                     |
+| a person   | a person; an agent, a briefcase                                                        |
+| an address | a map pin; a mailing address an envelope, an agent's a briefcase, an officer's a house |
+
+`icons` replaces any of them with a node of your own, keyed by the entity
+(`address`) or by the entity in a role (`address:mailing`), the role's
+winning. `false` hides that one, and `icons={false}` hides them all:
 
 ```tsx
-<PersonAutocomplete
-  // A storefront for a business; a person and an address keep the SDK's.
-  icons={{ business: <StorefrontIcon aria-hidden /> }}
+<BusinessAutocomplete
+  iconSegments={["name", "address", "people"]}
+  icons={{
+    // A storefront for every business; an envelope of your own for mail.
+    business: <StorefrontIcon aria-hidden />,
+    "address:mailing": <MailIcon aria-hidden />,
+    // No icon for a registered agent.
+    "person:agent": false,
+  }}
   …
 />
-<AddressAutocomplete icons={false} … />
 ```
 
-To drop one line's icon and keep the rest, empty its place in the layout:
-`layout={{ businessLead: null }}`.
+No icon is drawn on an address the business does not have ("No address on
+file"). `IconSet` and `IconKey` are the types.
 
 ### A business row's lines
 
@@ -332,7 +357,8 @@ autocomplete service sealed no token for is drawn and disabled, whatever
 
 `PersonAutocompleteView` and `AddressAutocompleteView` draw the same rows
 from state you supply, and `BusinessAutocompleteView` takes `list`,
-`enabledLines`, `icons`, `selection` and `onSelectEntity` for a business row's
+`enabledLines`, `icons`, `iconSegments`, `selection` and `onSelectEntity`
+for a business row's
 lines. `useEntityAutocomplete({ relation, query, ... })` is the hook for any
 route, and `groupedLines` and `groupedOptions` turn a row into its lines and
 picks (see [Headless use](headless.md)).

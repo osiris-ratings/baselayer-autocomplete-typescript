@@ -30,23 +30,34 @@ release.
   each business under it with the business's address, states and role, an icon
   before every name. `list` lists a person's addresses or an address's people
   too, `enabledLines` enables the row itself or the lines it lists, `layout`
-  places each line's fields, as on a business row, and `icons` sets or turns off
-  the icons. `onPick` hands a `BusinessPick`: `businessToken`, `businessName`,
-  `pickedAt`, `expiresAt`, and `through`, the person or address it was reached
-  by with the business's role there; `onPickEntity` hands an `EntityPick` for a
-  person or an address. A pick puts the row's own name in the field, and a pick
-  from a line under the row draws a line under the field naming it until the
-  next edit (`showSelection`). `PersonAutocompleteView` and
+  places each line's fields, as on a business row, and `iconSegments` and
+  `icons` choose the icons. `onPick` hands a `BusinessPick`: `businessToken`,
+  `businessName`, `pickedAt`, `expiresAt`, and `through`, the person or address
+  it was reached by with the business's role there; `onPickEntity` hands an
+  `EntityPick` for a person or an address. A pick puts the row's own name in the
+  field, and a pick from a line under the row draws a line under the field
+  naming it until the next edit (`showSelection`). `PersonAutocompleteView` and
   `AddressAutocompleteView` draw the same rows from state a host supplies.
-- `list`, `enabledLines`, `onPickEntity`, `icons` and `showSelection` on
-  `BusinessAutocomplete`: a business row can list its officers and agents and
-  its addresses, a line each with an icon and the role. Such a row is a group
-  whose head is the row as it has always been, picked as it always was; an
-  officer or an address picked hands `onPickEntity` an `EntityPick`, puts the
-  business's name in the field, and is named on a line under it. With none of
-  them, a business row draws exactly as before. `titleLead: "titleIcon"` in
-  its layout draws the business's own icon. `BusinessAutocompleteView` takes
-  `list`, `enabledLines`, `icons`, `selection` and `onSelectEntity`.
+- `list`, `enabledLines`, `onPickEntity`, `icons`, `iconSegments` and
+  `showSelection` on `BusinessAutocomplete`: a business row can list its
+  officers and agents and its addresses, a line each with the role. Such a row
+  is a group whose head is the row as it has always been, picked as it always
+  was; an officer or an address picked hands `onPickEntity` an `EntityPick`,
+  puts the business's name in the field, and is named on a line under it. With
+  none of them, a business row draws exactly as before.
+  `BusinessAutocompleteView` takes `list`, `enabledLines`, `icons`,
+  `iconSegments`, `selection` and `onSelectEntity`.
+- Icons on segments: `iconSegments` on all three components names the
+  segments that carry one, a name or a field with a glyph of its own (an
+  address, a business's people), drawn right before its text wherever it is
+  placed; none on a business row by default, every name on a person's and an
+  address's. The glyph follows the entity and, where the row knows it, the
+  role: a building, a person (an agent a briefcase), a map pin (mailing an
+  envelope, an agent's a briefcase, an officer's a house). `icons` takes your
+  own, keyed by entity or `entity:role`, the role's winning, and `false`
+  hides one. Each icon carries `data-entity`, `data-role` and `data-glyph`.
+  `IconSet`, `IconKey`, `DEFAULT_ICON_SEGMENTS`, `IconSegmentByRoute` and each
+  kind's segments (`BUSINESS_ICON_SEGMENTS`, …).
 - The line under the field after a pick from a line under a row
   (`bl-ac-selection`, a `GroupedSelection` on the views), the field described
   by it. It names the picked line while the field holds the name the pick put
@@ -58,13 +69,13 @@ release.
 - One row model for all three searches: `BUSINESS_ROW`, `PERSON_ROW` and
   `ADDRESS_ROW` (`ROW_KINDS`), each a `RowKind`: its places
   (`BUSINESS_ROW_PLACES`, …), its fields by line (`BUSINESS_LINE_FIELDS`, …),
-  its lines, each naming the entity it draws and the relation it lists, with
-  a place before every name for its icon, and its defaults. `resolveLayout`
-  and `drawnLayout` resolve any kind's layout, typed by its own places and
-  fields (`BusinessRowLayoutInput`, `PersonRowLayoutInput`,
+  its lines, each naming the entity it draws and the relation it lists, the
+  segments an icon can ride on (`iconSegments`), and its defaults.
+  `resolveLayout` and `drawnLayout` resolve any kind's layout, typed by its own
+  places and fields (`BusinessRowLayoutInput`, `PersonRowLayoutInput`,
   `AddressRowLayoutInput`; `LayoutOf` and `LayoutInputOf` for any kind).
-  `ROW_PLACES`, `ROW_FIELDS` and `RowLayout` are a business row's head, as
-  they always were.
+  `ROW_PLACES`, `ROW_FIELDS` and `RowLayout` are a business row's head, as they
+  always were.
 - `DEFAULT_LIST` and `requestFor(route, layout, list, scope)`: what any
   search's rows list, and what to ask for them.
 - `groupedLines(row, list, enabledLines)` and `groupedOptions(lines)`: any row's

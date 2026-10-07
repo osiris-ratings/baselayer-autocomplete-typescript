@@ -167,7 +167,9 @@ The first `mint` or `mintUrl` is kept for the component's life; a new
 - `showSelection` (`true`): after an officer or an address is picked, a line
   under the field names it
   ([The line under the field](docs/entities.md#the-line-under-the-field)).
-- `icons`: the icon before each listed name, per entity, or `false` for none
+- `iconSegments` and `icons`: the segments that carry an icon (none by
+  default; `["name", "address"]` draws one before the name and the address)
+  and your own icons, by entity or entity and role, or `false` for none
   ([Icons](docs/entities.md#icons)).
 - `include`: the related entities the autocomplete service expands for each row,
   by default what `layout` places and `list` lists. Rows you draw yourself

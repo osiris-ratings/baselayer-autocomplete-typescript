@@ -218,27 +218,24 @@ addresses (`addresses`) under it, as a person's row draws its businesses:
 the row as it always was is the group's head, and each item a line
 (`bl-ac-group-line`, `data-line` `person` or `address`). A business row that
 lists nothing draws exactly as before. The head keeps `ROW_PLACES` and
-`ROW_FIELDS`, and gains one place, before the name; each line has the four
-places every listed line has (`BUSINESS_ROW`):
+`ROW_FIELDS`; each line has the three places after its name every listed
+line has (`BUSINESS_ROW`):
 
 | Place                                  | Default       | Can show                                                           |
 | -------------------------------------- | ------------- | ------------------------------------------------------------------ |
-| `titleLead`                            | empty         | `titleIcon`, the business's own icon                               |
-| `personLead`                           | `personIcon`  | `personIcon`                                                       |
 | `personBadge`, `personTrailingBadge`   | empty         | `personRole`: officer or agent (`messages.personRoles`)            |
 | `personTrailing`                       | `personRole`  | `personRole`                                                       |
-| `addressLead`                          | `addressIcon` | `addressIcon`                                                      |
 | `addressBadge`, `addressTrailingBadge` | empty         | `addressRole`: how the business holds it (`messages.addressRoles`) |
 | `addressTrailing`                      | `addressRole` | `addressRole`                                                      |
 
 A line's fields go only on that line, and the head's only in the head;
-placed anywhere else, a field counts as left out. To draw the business's
-icon, and each officer's role right after their name:
+placed anywhere else, a field counts as left out. To draw each officer's
+role right after their name:
 
 ```tsx
 <BusinessAutocomplete
   list={["people"]}
-  layout={{ titleLead: "titleIcon", personBadge: "personRole" }}
+  layout={{ personBadge: "personRole" }}
   …
 />
 ```
@@ -254,7 +251,7 @@ its lists leave out). Its head (`bl-ac-group-head`) is the name, marked as a
 business's is (`bl-ac-name`). Below it, indented, is a line
 (`bl-ac-group-line`, `data-line` its type) for each business, address or
 person listed under it (`list`), its name in `bl-ac-line-name`. Every
-line, the head too, is its lead (its icon, the name, then its badge:
+line, the head too, is its lead (the name, after its icon, then its badge:
 `bl-ac-group-lead`) and its trailing corner (`bl-ac-group-trailing`). By
 default:
 
@@ -265,10 +262,8 @@ Jane Q Doe   12 Fernhallow Ln, Dover, DE 19901 +2 ........ 3 businesses · 3 add
 ```
 
 The last line is there when `list` names addresses. Each line's places are
-`<line>Lead`, before the name, which takes only the line's icon
-(`<line>Icon`), then `<line>Badge`, `<line>TrailingBadge` and
-`<line>Trailing` (`headBadge`, `businessTrailing`, …), listed in
-`PERSON_ROW` and `ADDRESS_ROW`, and
+`<line>Badge`, `<line>TrailingBadge` and `<line>Trailing` (`headBadge`,
+`businessTrailing`, …), listed in `PERSON_ROW` and `ADDRESS_ROW`, and
 `layout` fills them as it does a business row's, each place taking only its
 own line's fields:
 
@@ -305,11 +300,24 @@ After a pick from a line under a row, the line under the field
 (`bl-ac-selection`, `data-type` the picked line's type) names what was
 picked, in `subtitleColor`.
 
-Each line's icon (`bl-ac-icon`, `data-entity` its entity, hidden from
-screen readers) is an office building for a business, a person for a
-person and a map pin for an address, drawn in `subtitleColor` at the size
-of its text. `icons` gives an entity an icon of your own, any React node,
-or turns them all off with `false`.
+### Icons
+
+An icon rides on a segment, a name or a field, wherever the layout puts it
+([Icons](entities.md#icons) says which and how to choose them). It is
+`bl-ac-icon`, hidden from screen readers, with `data-entity` its entity,
+`data-role` its role where the row knows one, and `data-glyph` the SDK's
+glyph it draws (`building`, `person`, `pin`, `envelope`, `briefcase`,
+`house`; none for your own). It is drawn in `subtitleColor` at the size of
+its text, centred on its line. On a name it sits just before the name; on a
+field (an address, the people) it is the field's first child, kept
+`0.4em` from the text, which gives way after it.
+
+```css
+/* A mailing address's envelope in the brand colour. */
+.my-form .bl-ac-icon[data-glyph="envelope"] {
+  color: var(--brand-ink);
+}
+```
 
 ## 5. A row's places and fields
 
@@ -421,20 +429,21 @@ A business row's head is one kind of row among three, and they share one
 model. `ROW_KINDS` holds each search's: `BUSINESS_ROW`, `PERSON_ROW` and
 `ADDRESS_ROW`. Each is a `RowKind`:
 
-| Member     | What it is                                                                                 |
-| ---------- | ------------------------------------------------------------------------------------------ |
-| `places`   | Its places in reading order (`BUSINESS_ROW_PLACES`, `PERSON_ROW_PLACES`, …)                |
-| `fields`   | Every field a place can show, by line in `BUSINESS_LINE_FIELDS`, `PERSON_LINE_FIELDS`, …   |
-| `lines`    | Its lines: each line's `leading` place (its icon's), its two corners, `entity`, `relation` |
-| `defaults` | The field each place shows when a layout leaves it out                                     |
-| `accepts`  | Which fields a place may hold: its own line's, and its icon only before the name           |
+| Member         | What it is                                                                               |
+| -------------- | ---------------------------------------------------------------------------------------- |
+| `places`       | Its places in reading order (`BUSINESS_ROW_PLACES`, `PERSON_ROW_PLACES`, …)              |
+| `fields`       | Every field a place can show, by line in `BUSINESS_LINE_FIELDS`, `PERSON_LINE_FIELDS`, … |
+| `lines`        | Its lines: each line's two corners, the `entity` it draws and the `relation` it lists    |
+| `defaults`     | The field each place shows when a layout leaves it out                                   |
+| `accepts`      | Which fields a place may hold: its own line's                                            |
+| `iconSegments` | The segments an icon can ride on (`BUSINESS_ICON_SEGMENTS`, …)                           |
 
 A line's `entity` is what it draws, and so what `enabledLines` names to
-enable it;
-its `relation` is the relation it lists, one line per item, null on the
-row's head. Every listed line has the same four places, named for its line:
-`<line>Lead` before the name, which holds only `<line>Icon`, then
-`<line>Badge`, `<line>TrailingBadge` and `<line>Trailing`.
+enable it; its `relation` is the relation it lists, one line per item, null
+on the row's head. Every listed line has the same three places after its
+name, named for its line: `<line>Badge`, `<line>TrailingBadge` and
+`<line>Trailing`. A row's segments are its fields and its names: `name` for
+the row's own, `<line>Name` for each listed line's.
 
 `resolveLayout(kind, layout)` and `drawnLayout(kind, resolved)` do for any
 kind what `resolveRowLayout` and `drawnRowLayout` do for a business row's
