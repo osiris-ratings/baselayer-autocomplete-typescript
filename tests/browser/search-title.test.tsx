@@ -1,6 +1,7 @@
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
+import { userEvent } from "vitest/browser";
 
 import { ROUTE_NAMES, type Route } from "@baselayer-sdk/autocomplete";
 
@@ -110,4 +111,84 @@ describe("the test form's title", () => {
       });
     }
   }
+});
+
+/** A colour, a token's included, as the browser computes it. */
+function computed(property: "color" | "background-color", value: string) {
+  const probe = document.createElement("span");
+  probe.style.setProperty(property, value);
+  document.body.append(probe);
+  const resolved = getComputedStyle(probe).getPropertyValue(property);
+  probe.remove();
+  return resolved;
+}
+
+const TRANSPARENT = "rgba(0, 0, 0, 0)";
+
+describe("the title's words, drawn", () => {
+  it("draws the selected noun in the accent, underlined in it, and the others muted", () => {
+    const { host, done } = draw(560, "people");
+    try {
+      const blue = computed("color", "var(--blue)");
+      const [business, person] = host.querySelectorAll(".search-by-word");
+      const noun = getComputedStyle(person!.querySelector(".search-by-noun")!);
+
+      expect(noun.color).toBe(blue);
+      expect(noun.textDecorationLine).toBe("underline");
+      expect(noun.textDecorationColor).toBe(blue);
+      expect(getComputedStyle(business!).color).toBe(
+        computed("color", "var(--muted)"),
+      );
+      expect(getComputedStyle(business!).backgroundColor).toBe(TRANSPARENT);
+    } finally {
+      done();
+    }
+  });
+
+  it("tints a word under the pointer and draws it in the accent, moving no word", async () => {
+    const { host, done } = draw(560, "people");
+    try {
+      const words = [...host.querySelectorAll<HTMLElement>(".search-by-word")];
+      const boxes = () =>
+        words.map(word => {
+          const { x, y, width } = word.getBoundingClientRect();
+          return [Math.round(x), Math.round(y), Math.round(width)];
+        });
+      const before = boxes();
+
+      await userEvent.hover(words[0]!);
+
+      const style = getComputedStyle(words[0]!);
+      expect(style.backgroundColor).toBe(
+        computed("background-color", "var(--faded)"),
+      );
+      expect(style.color).toBe(computed("color", "var(--blue)"));
+      expect(boxes()).toEqual(before);
+      await userEvent.unhover(words[0]!);
+    } finally {
+      done();
+    }
+  });
+
+  it("gives a word the keys reach the same tint, and a focus ring", async () => {
+    const { host, done } = draw(560, "people");
+    try {
+      // The selected word is the one in the tab order; the arrow moves the
+      // focus to the next, which this title's host never selects.
+      await userEvent.tab();
+      await userEvent.keyboard("{ArrowRight}");
+      const address = host.querySelectorAll<HTMLElement>(".search-by-word")[2]!;
+      expect(document.activeElement).toBe(address);
+
+      const style = getComputedStyle(address);
+      expect(style.backgroundColor).toBe(
+        computed("background-color", "var(--faded)"),
+      );
+      expect(style.color).toBe(computed("color", "var(--blue)"));
+      expect(style.outlineStyle).toBe("solid");
+      expect(style.outlineColor).toBe(computed("color", "var(--blue)"));
+    } finally {
+      done();
+    }
+  });
 });
