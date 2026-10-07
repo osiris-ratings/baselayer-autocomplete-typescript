@@ -50,8 +50,8 @@ const jane: PersonSuggestion = {
     ),
     addresses: set(
       [
-        item("address", "12 Oak Ln, Dover, DE 19901", "tok-oak"),
-        item("address", "9 Elm Ct, Dover, DE 19904", null),
+        item("address", "12 Fernhallow Ln, Dover, DE 19901", "tok-oak"),
+        item("address", "9 Ashcombe Ct, Dover, DE 19904", null),
       ],
       3,
     ),
@@ -61,12 +61,12 @@ const jane: PersonSuggestion = {
 const pier: AddressSuggestion = {
   type: "address",
   token: "tok-pier",
-  label: "1200 River Rd, Wilmington, DE 19801",
+  label: "1200 Tallowmere Rd, Wilmington, DE 19801",
   matched_name: null,
   match: "strong",
   highlight: [],
   components: {
-    line1: "1200 River Rd",
+    line1: "1200 Tallowmere Rd",
     line2: null,
     city: "Wilmington",
     state: "DE",
@@ -84,8 +84,8 @@ describe("groupedLines", () => {
 
     expect(lines.lists.map(list => list.line)).toEqual(["business", "address"]);
     expect(lines.lists[1]!.lines.map(line => line.item.label)).toEqual([
-      "12 Oak Ln, Dover, DE 19901",
-      "9 Elm Ct, Dover, DE 19904",
+      "12 Fernhallow Ln, Dover, DE 19901",
+      "9 Ashcombe Ct, Dover, DE 19904",
     ]);
     expect(
       groupedLines(jane, ["businesses"]).lists.map(list => list.line),
@@ -140,7 +140,7 @@ describe("groupedLines", () => {
         pick: {
           type: "address",
           token: "tok-oak",
-          label: "12 Oak Ln, Dover, DE 19901",
+          label: "12 Fernhallow Ln, Dover, DE 19901",
         },
       },
       null,
@@ -196,7 +196,7 @@ describe("groupedOptions", () => {
     ).toEqual([
       "person: Jane Q Doe",
       "ACME HOLDINGS LLC",
-      "address: 12 Oak Ln, Dover, DE 19901",
+      "address: 12 Fernhallow Ln, Dover, DE 19901",
     ]);
   });
 });

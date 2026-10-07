@@ -180,8 +180,8 @@ address that address, as the API records them from the token, and a line
 under the table says whose businesses it was picked from. What you typed is
 underlined in green where it matched, as the typeahead's rows underline it, but
 the whole of the name, officer or address it reached rather than the letters
-typed (`baselaye` underlines all of `Baselayer`, and `353 mission street` all of
-`353 Mission St Fl 14, San Francisco, CA 94105`, though `street` is not `St`).
+typed (`baselaye` underlines all of `Baselayer`, and `353 quenby street` all of
+`353 Quenby St Fl 14, San Francisco, CA 94105`, though `street` is not `St`).
 A name the business goes by reads `(DBA …)` in grey, beside its legal name, with
 the underline kept on the name you matched, and the business's **Also known as**
 leads with that name, underlined too. The lists that follow lead with what

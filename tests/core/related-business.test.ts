@@ -18,7 +18,7 @@ const harbor = {
   label: "HARBOR LANE HOLDINGS LLC",
   role: "officer",
   matched: false,
-  address: "1200 River Rd, Wilmington, DE 19801",
+  address: "1200 Tallowmere Rd, Wilmington, DE 19801",
   states: ["DE", "FL", "TX"],
   domicile_state: "TX",
 };
@@ -26,7 +26,7 @@ const harbor = {
 const oakLane = {
   type: "address",
   token: "tok-oak",
-  label: "12 Oak Ln, Dover, DE 19901",
+  label: "12 Fernhallow Ln, Dover, DE 19901",
   role: null,
   matched: false,
   address: null,

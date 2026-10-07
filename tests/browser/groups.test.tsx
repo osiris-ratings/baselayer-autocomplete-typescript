@@ -25,7 +25,7 @@ const business = (label: string, role: RelatedItem["role"]): RelatedItem => ({
   role,
   matched: false,
   address:
-    "4120 Orchard Lane Northwest Building C Suite 1400, Springfield, MO 65806",
+    "4120 Wrenmoor Lane Northwest Building C Suite 1400, Springfield, MO 65806",
   states: ["CA", "DE", "FL", "IL", "MO", "NY", "TX"],
   domicile_state: "MO",
 });
@@ -46,7 +46,7 @@ const entity = (
 });
 
 const LONG_ADDRESS =
-  "4120 Orchard Lane Northwest Building C Suite 1400, Springfield, MO 65806";
+  "4120 Wrenmoor Lane Northwest Building C Suite 1400, Springfield, MO 65806";
 const LONG_NAME = "Margarethe Alexandrina Featherstonehaugh-Whitfield";
 
 const LONG_BUSINESS =
@@ -92,7 +92,7 @@ const ADDRESSES: AddressSuggestion[] = [
     match: "strong",
     highlight: [{ text: "4120 Orchard", matched: true }],
     components: {
-      line1: "4120 Orchard Lane Northwest Building C",
+      line1: "4120 Wrenmoor Lane Northwest Building C",
       line2: "Suite 1400",
       city: "Springfield",
       state: "MO",

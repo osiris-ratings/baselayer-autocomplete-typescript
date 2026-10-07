@@ -128,7 +128,7 @@ describe("the sample rows' fields", () => {
     });
     expect(found).toContainEqual({
       kind: "address",
-      label: "2210 Key Hwy, Baltimore, MD 21230",
+      label: "2210 Pellington Hwy, Baltimore, MD 21230",
       role: "officer",
     });
     // The first the preview opens with is reached by its name alone.

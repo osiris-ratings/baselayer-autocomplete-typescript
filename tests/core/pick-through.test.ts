@@ -53,13 +53,13 @@ const dana: PersonSuggestion = {
 
 const office: AddressSuggestion = {
   type: "address",
-  token: "tok-address-ferry",
-  label: "45 Ferry Landing Ste 200, Erie, PA 16507",
+  token: "tok-address-corvel",
+  label: "45 Corvel Landing Ste 200, Erie, PA 16507",
   matched_name: null,
   match: "strong",
-  highlight: [{ text: "45 Ferry Landing", matched: true }],
+  highlight: [{ text: "45 Corvel Landing", matched: true }],
   components: {
-    line1: "45 Ferry Landing",
+    line1: "45 Corvel Landing",
     line2: "Ste 200",
     city: "Erie",
     state: "PA",

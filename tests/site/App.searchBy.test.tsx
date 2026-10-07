@@ -85,7 +85,7 @@ describe("searching by person or address", () => {
       "7 businesses · 3 addresses",
     );
     expect(within(dana).getByTestId("grouped-firstAddress").textContent).toBe(
-      "1200 River Rd, Pittsburgh, PA 15212 +2",
+      "1200 Tallowmere Rd, Pittsburgh, PA 15212 +2",
     );
     await user.click(
       within(dana).getByRole("option", {
@@ -194,15 +194,17 @@ describe("a person's or an address's row, as Styling sets it", () => {
 
     await user.type(field("demo-person"), "dana");
     const dana = await screen.findByRole("group", { name: "Dana Whitfield" });
-    const [river] = within(dana).getAllByTestId("address-line");
-    expect(river!.textContent).toBe(
-      "1200 River Rd, Pittsburgh, PA 15212officer",
+    const [tallowmere] = within(dana).getAllByTestId("address-line");
+    expect(tallowmere!.textContent).toBe(
+      "1200 Tallowmere Rd, Pittsburgh, PA 15212officer",
     );
-    await user.click(river!);
+    await user.click(tallowmere!);
 
     expect(field("demo-person").value).toBe("Dana Whitfield");
     const selection = screen.getByTestId("grouped-selection");
-    expect(selection.textContent).toBe("1200 River Rd, Pittsburgh, PA 15212");
+    expect(selection.textContent).toBe(
+      "1200 Tallowmere Rd, Pittsburgh, PA 15212",
+    );
     expect(selection.getAttribute("data-type")).toBe("address");
     // Nothing redeems an address's token: there is no business to search.
     expect(step()).toBeNull();

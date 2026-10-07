@@ -124,7 +124,7 @@ const ADDRESS_UPPER = new Set([
 
 /**
  * An address string in the same spirit, with its state still a state:
- * `1200 RIVER RD, PITTSBURGH, PA 15212` reads `1200 River Rd, Pittsburgh,
+ * `1200 TALLOWMERE RD, PITTSBURGH, PA 15212` reads `1200 Tallowmere Rd, Pittsburgh,
  * PA 15212`, and a bare `CA` stays `CA`.
  */
 export function readableAddress(text: string | null | undefined): string {
@@ -492,7 +492,7 @@ const WORD = /^[\p{L}\p{N}']+$/u;
  * own marks are: a word a typed token starts is matched as far as the token
  * reaches (`baselaye` marks `Baselaye` of `Baselayer`, and `street` marks
  * nothing of `St`), and the whitespace between two matched words is matched
- * with them, so `353 Mission` is one underline. Nothing typed, nothing matched.
+ * with them, so `353 Quenby` is one underline. Nothing typed, nothing matched.
  */
 export function markTyped(text: string, typed: string, dba = false): Stretch[] {
   const tokens = queryTokens(typed);

@@ -87,8 +87,8 @@ const harbor: BusinessSuggestion = {
       { count: 7 },
     ),
     addresses: set([
-      address("12 Wharf Rd, Wilmington, DE 19801", "principal"),
-      address("900 Pier Ave, Oakland, CA 94607", "mailing"),
+      address("12 Kestrelwick Rd, Wilmington, DE 19801", "principal"),
+      address("900 Saltmarrow Ave, Oakland, CA 94607", "mailing"),
     ]),
   },
   highlight: [
@@ -187,9 +187,13 @@ describe("matchedOn", () => {
     const row = withRelated({
       addresses: set(
         [
-          address("900 Pier Ave, Oakland, CA 94607", "officer", true),
-          address("900 Pier Ave Ste 4, Oakland, CA 94607", "officer", true),
-          address("12 Wharf Rd, Wilmington, DE 19801", "principal"),
+          address("900 Saltmarrow Ave, Oakland, CA 94607", "officer", true),
+          address(
+            "900 Saltmarrow Ave Ste 4, Oakland, CA 94607",
+            "officer",
+            true,
+          ),
+          address("12 Kestrelwick Rd, Wilmington, DE 19801", "principal"),
         ],
         { count: 5, matched: 2 },
       ),
@@ -202,12 +206,12 @@ describe("matchedOn", () => {
       { kind: "officer", names: ["Ada Brandt"], of: 1 },
       {
         kind: "address",
-        label: "900 Pier Ave, Oakland, CA 94607",
+        label: "900 Saltmarrow Ave, Oakland, CA 94607",
         role: "officer",
       },
       {
         kind: "address",
-        label: "900 Pier Ave Ste 4, Oakland, CA 94607",
+        label: "900 Saltmarrow Ave Ste 4, Oakland, CA 94607",
         role: "officer",
       },
     ]);
@@ -222,10 +226,12 @@ describe("matchedOn", () => {
     [null, null],
   ] as const)("reads an address role of %s as %s", (wire, owner) => {
     const row = withRelated({
-      addresses: set([address("12 Wharf Rd", wire, true)], { matched: 1 }),
+      addresses: set([address("12 Kestrelwick Rd", wire, true)], {
+        matched: 1,
+      }),
     });
     expect(matchedOn(row, {})).toEqual([
-      { kind: "address", label: "12 Wharf Rd", role: owner },
+      { kind: "address", label: "12 Kestrelwick Rd", role: owner },
     ]);
   });
 
@@ -279,7 +285,7 @@ describe("matchedOn", () => {
           matched: 1,
         }),
         addresses: set(
-          [address("900 Pier Ave, Oakland, CA", "officer", true)],
+          [address("900 Saltmarrow Ave, Oakland, CA", "officer", true)],
           { matched: 1 },
         ),
       },
@@ -329,19 +335,19 @@ describe("the readers the matches reorder", () => {
     const row = withRelated({
       addresses: set(
         [
-          address("900 Pier Ave, Oakland, CA", "officer", true),
-          address("12 Wharf Rd, Wilmington, DE", "principal"),
+          address("900 Saltmarrow Ave, Oakland, CA", "officer", true),
+          address("12 Kestrelwick Rd, Wilmington, DE", "principal"),
         ],
         { matched: 1 },
       ),
     });
     expect(addressLineOf(row)).toEqual({
-      label: "900 Pier Ave, Oakland, CA",
+      label: "900 Saltmarrow Ave, Oakland, CA",
       matched: true,
       role: "officer",
     });
     expect(addressLineOf(harbor)).toEqual({
-      label: "12 Wharf Rd, Wilmington, DE 19801",
+      label: "12 Kestrelwick Rd, Wilmington, DE 19801",
       matched: false,
       role: "principal",
     });

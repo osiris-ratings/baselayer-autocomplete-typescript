@@ -124,7 +124,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
         [person("Dana Whitfield", "officer"), person("Luis Ortega", "officer")],
         4,
       ),
-      addresses: set([address("1200 River Rd, Pittsburgh, PA 15212")]),
+      addresses: set([address("1200 Tallowmere Rd, Pittsburgh, PA 15212")]),
     },
   }),
   row("NORTHSHORE PUMPING, LLC", {
@@ -134,7 +134,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     structure: "LLC",
     related: {
       people: set([person("MERIDIAN REGISTERED AGENTS, LLC", "agent")]),
-      addresses: set([address("88 Canal St, Akron, OH 44308")]),
+      addresses: set([address("88 Velloway St, Akron, OH 44308")]),
     },
   }),
   row("HARBOR VIEW CONCRETE, INC.", {
@@ -144,7 +144,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     related: {
       // An officer filter reached this row: the one it matched.
       people: set([person("Priya Raman", "officer", true)], 3, 1),
-      addresses: set([address("400 Bayfront Ave, Tampa, FL 33602")]),
+      addresses: set([address("400 Marrowbay Ave, Tampa, FL 33602")]),
     },
   }),
   row("HARBOR CONCRETE SUPPLY, INC.", {
@@ -153,7 +153,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     structure: null,
     related: {
       people: set([]),
-      addresses: set([address("15 Ferry St, Newark, NJ 07105")]),
+      addresses: set([address("15 Corvel St, Newark, NJ 07105")]),
     },
   }),
   row("HARBOR CONCRETE & MASONRY", {
@@ -164,7 +164,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
       people: set([person("Grace Oduya", "officer")], 2),
       // An address filter reached this row, by an officer's address.
       addresses: set(
-        [address("2210 Key Hwy, Baltimore, MD 21230", "officer", true)],
+        [address("2210 Pellington Hwy, Baltimore, MD 21230", "officer", true)],
         2,
         1,
       ),
@@ -176,7 +176,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     structure: "LP",
     related: {
       people: set([person("Silverline Agent Services, Inc.", "agent")]),
-      addresses: set([address("700 Harborside Dr, Galveston, TX 77550")]),
+      addresses: set([address("700 Gullhaven Dr, Galveston, TX 77550")]),
     },
   }),
   row("HARBOR CONCRETE FORMING, INC.", {
@@ -185,7 +185,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     structure: "B_CORPORATION",
     related: {
       people: set([person("Tomas Lindqvist", "officer")]),
-      addresses: set([address("3100 Marine View Dr, Tacoma, WA 98422")]),
+      addresses: set([address("3100 Seavane Dr, Tacoma, WA 98422")]),
     },
   }),
   row("BAYSIDE HARBOR CONCRETE, INC.", {
@@ -194,7 +194,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     structure: "C_CORPORATION",
     related: {
       people: set([person("Maya Castellanos", "officer")], 3),
-      addresses: set([address("55 Embarcadero W, Oakland, CA 94607")]),
+      addresses: set([address("55 Tidecaster W, Oakland, CA 94607")]),
     },
   }),
 ];
@@ -239,7 +239,7 @@ export const SAMPLE_META = {
 
 /** What the people and address previews pretend was typed. */
 export const SAMPLE_PEOPLE_QUERY = "dana";
-export const SAMPLE_ADDRESSES_QUERY = "1200 river";
+export const SAMPLE_ADDRESSES_QUERY = "1200 tallowmere";
 
 /** A business offered under a person or an address: one of the rows above. */
 function business(
@@ -331,8 +331,8 @@ export const SAMPLE_PEOPLE: PersonSuggestion[] = [
     ),
     set(
       [
-        address("1200 River Rd, Pittsburgh, PA 15212", "officer"),
-        address("48 Linden St, Pittsburgh, PA 15206", "officer"),
+        address("1200 Tallowmere Rd, Pittsburgh, PA 15212", "officer"),
+        address("48 Corriway St, Pittsburgh, PA 15206", "officer"),
       ],
       3,
     ),
@@ -346,27 +346,27 @@ export const SAMPLE_PEOPLE: PersonSuggestion[] = [
       ],
       2,
     ),
-    set([address("2210 Key Hwy, Baltimore, MD 21230", "officer")]),
+    set([address("2210 Pellington Hwy, Baltimore, MD 21230", "officer")]),
   ),
   personRow(
     "Dana Kessler",
     set([business("NORTHSHORE PUMPING, LLC", "officer")]),
-    set([address("915 Shoreline Blvd, Erie, PA 16507", "officer")]),
+    set([address("915 Silverkell Blvd, Erie, PA 16507", "officer")]),
   ),
   personRow(
     "Luis Ortega",
     set([business("HARBOR CONCRETE PUMPING CO., INC.", "officer")]),
-    set([address("1200 River Rd, Pittsburgh, PA 15212", "officer")]),
+    set([address("1200 Tallowmere Rd, Pittsburgh, PA 15212", "officer")]),
   ),
   personRow(
     "Priya Raman",
     set([business("HARBOR VIEW CONCRETE, INC.", "officer")], 3),
-    set([address("400 Bayfront Ave, Tampa, FL 33602", "officer")], 2),
+    set([address("400 Marrowbay Ave, Tampa, FL 33602", "officer")], 2),
   ),
   personRow(
     "Grace Oduya",
     set([business("HARBOR CONCRETE & MASONRY", "officer")]),
-    set([address("2210 Key Hwy, Baltimore, MD 21230", "officer")]),
+    set([address("2210 Pellington Hwy, Baltimore, MD 21230", "officer")]),
   ),
   personRow(
     "Meridian Registered Agents, LLC",
@@ -409,7 +409,7 @@ function addressRow(
 
 export const SAMPLE_ADDRESSES: AddressSuggestion[] = [
   addressRow(
-    "1200 River Rd",
+    "1200 Tallowmere Rd",
     null,
     "Pittsburgh",
     "PA",
@@ -444,7 +444,7 @@ export const SAMPLE_ADDRESSES: AddressSuggestion[] = [
     set([person("Meridian Registered Agents, LLC", "agent")]),
   ),
   addressRow(
-    "700 Harborside Dr",
+    "700 Gullhaven Dr",
     null,
     "Galveston",
     "TX",
@@ -453,7 +453,7 @@ export const SAMPLE_ADDRESSES: AddressSuggestion[] = [
     set([]),
   ),
   addressRow(
-    "2210 Key Hwy",
+    "2210 Pellington Hwy",
     null,
     "Baltimore",
     "MD",
@@ -462,7 +462,7 @@ export const SAMPLE_ADDRESSES: AddressSuggestion[] = [
     set([person("Dana Okafor", "officer"), person("Grace Oduya", "officer")]),
   ),
   addressRow(
-    "400 Bayfront Ave",
+    "400 Marrowbay Ave",
     null,
     "Tampa",
     "FL",

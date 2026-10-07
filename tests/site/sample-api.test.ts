@@ -124,15 +124,17 @@ describe("the made-up API's searches", () => {
   it("finds addresses by their words, and filters them by state", () => {
     const found = parseSuggestResponse(
       "addresses",
-      get("/autocomplete/addresses?q=1200%20river").body,
+      get("/autocomplete/addresses?q=1200%20tallowmere").body,
     );
     expect(found.suggestions.map(row => row.label)).toEqual([
-      "1200 River Rd, Pittsburgh, PA 15212",
+      "1200 Tallowmere Rd, Pittsburgh, PA 15212",
     ]);
 
+    // "77" starts the Dover agent's office and the Galveston address's ZIP:
+    // the state keeps only the second.
     const inTexas = parseSuggestResponse(
       "addresses",
-      get("/autocomplete/addresses?q=harbor&state=TX").body,
+      get("/autocomplete/addresses?q=77&state=TX").body,
     );
     expect(inTexas.suggestions.map(row => row.components.state)).toEqual([
       "TX",

@@ -107,7 +107,7 @@ const PEOPLE = {
               "Harbor Concrete Pumping Co., Inc.",
               "tok-b-harbor",
               "officer",
-              "1200 River Rd, Wilmington, DE 19801",
+              "1200 Tallowmere Rd, Wilmington, DE 19801",
               // Sorted by code, as the wire sends them; the domicile is PA.
               ["DE", "FL", "PA"],
             ),
@@ -122,11 +122,11 @@ const PEOPLE = {
           items: [
             entity(
               "address",
-              "12 Oak Ln, Dover, DE 19901",
+              "12 Fernhallow Ln, Dover, DE 19901",
               "tok-a-oak",
               "officer",
             ),
-            entity("address", "9 Elm Ct, Dover, DE 19904", null, "agent"),
+            entity("address", "9 Ashcombe Ct, Dover, DE 19904", null, "agent"),
           ],
         },
       },
@@ -152,7 +152,7 @@ const PEOPLE = {
 };
 
 const ADDRESSES = {
-  query: "45 ferry",
+  query: "45 corvel",
   found: 1,
   found_capped: false,
   truncated: false,
@@ -163,16 +163,16 @@ const ADDRESSES = {
   suggestions: [
     {
       type: "address",
-      token: "tok-a-ferry",
-      label: "45 Ferry Landing Ste 200, Erie, PA 16507",
+      token: "tok-a-corvel",
+      label: "45 Corvel Landing Ste 200, Erie, PA 16507",
       matched_name: null,
       match: "strong",
       highlight: [
-        { text: "45 Ferry", matched: true },
+        { text: "45 Corvel", matched: true },
         { text: " Landing Ste 200, Erie, PA 16507", matched: false },
       ],
       components: {
-        line1: "45 Ferry Landing",
+        line1: "45 Corvel Landing",
         line2: "Ste 200",
         city: "Erie",
         state: "PA",
@@ -368,7 +368,7 @@ describe("PersonAutocomplete", () => {
 
     const head = within(dana).getByTestId("group-head");
     expect(within(head).getByTestId("grouped-firstAddress")).toHaveTextContent(
-      "12 Oak Ln, Dover, DE 19901 +2",
+      "12 Fernhallow Ln, Dover, DE 19901 +2",
     );
     expect(within(head).getByTestId("grouped-counts")).toHaveTextContent(
       "9 businesses · 3 addresses",
@@ -392,7 +392,7 @@ describe("PersonAutocomplete", () => {
 
     const [harbor] = within(dana).getAllByTestId("business-line");
     expect(within(harbor!).getByTestId("grouped-address")).toHaveTextContent(
-      "1200 River Rd, Wilmington, DE 19801",
+      "1200 Tallowmere Rd, Wilmington, DE 19801",
     );
     expect(
       within(harbor!)
@@ -440,13 +440,13 @@ describe("PersonAutocomplete", () => {
     });
 
     expect(linesOf(dana, "address")).toEqual([
-      "12 Oak Ln, Dover, DE 19901officer",
-      "9 Elm Ct, Dover, DE 19904agent",
+      "12 Fernhallow Ln, Dover, DE 19901officer",
+      "9 Ashcombe Ct, Dover, DE 19904agent",
     ]);
     expect(within(dana).getByText("+1 more not shown")).toBeInTheDocument();
     // Listed, not pickable: no address is an option.
     expect(
-      within(dana).queryByRole("option", { name: /12 Oak Ln/ }),
+      within(dana).queryByRole("option", { name: /12 Fernhallow Ln/ }),
     ).toBeNull();
   });
 
@@ -530,7 +530,7 @@ describe("PersonAutocomplete", () => {
       {
         type: "address",
         token: "tok-a-oak",
-        label: "12 Oak Ln, Dover, DE 19901",
+        label: "12 Fernhallow Ln, Dover, DE 19901",
       },
     ]);
     expect(onPick).not.toHaveBeenCalled();
@@ -620,23 +620,23 @@ describe("AddressAutocomplete", () => {
     const user = userEvent.setup();
     render(<AddressHost client={client} />);
 
-    await user.type(screen.getByRole("combobox"), "45 ferry");
-    const ferry = await screen.findByRole("group", {
-      name: "45 Ferry Landing Ste 200, Erie, PA 16507",
+    await user.type(screen.getByRole("combobox"), "45 corvel");
+    const corvel = await screen.findByRole("group", {
+      name: "45 Corvel Landing Ste 200, Erie, PA 16507",
     });
 
     const url = new URL(fetch.mock.calls.at(-1)![0]);
     expect(url.pathname).toBe("/autocomplete/addresses");
     expect(url.searchParams.get("include")).toBe("businesses,people");
-    expect(within(ferry).getByTestId("grouped-counts")).toHaveTextContent(
+    expect(within(corvel).getByTestId("grouped-counts")).toHaveTextContent(
       "412 businesses · 2 people",
     );
-    const options = within(ferry).getAllByRole("option");
+    const options = within(corvel).getAllByRole("option");
     expect(options[0]).toHaveTextContent("Ridgeline Freight LLC");
     expect(options[0]).toHaveTextContent("principal office");
     expect(options[1]).toHaveTextContent("registered agent");
-    expect(within(ferry).getByText("+410 more not shown")).toBeInTheDocument();
-    expect(linesOf(ferry, "person")).toEqual([]);
+    expect(within(corvel).getByText("+410 more not shown")).toBeInTheDocument();
+    expect(linesOf(corvel, "person")).toEqual([]);
     expect(screen.getByText("1 address")).toBeInTheDocument();
   });
 
@@ -645,10 +645,10 @@ describe("AddressAutocomplete", () => {
     const user = userEvent.setup();
     render(<AddressHost client={client} include={["businesses", "people"]} />);
 
-    await user.type(screen.getByRole("combobox"), "45 ferry");
-    const ferry = await screen.findByRole("group", { name: /45 Ferry/ });
+    await user.type(screen.getByRole("combobox"), "45 corvel");
+    const corvel = await screen.findByRole("group", { name: /45 Corvel/ });
 
-    expect(linesOf(ferry, "person")).toEqual([
+    expect(linesOf(corvel, "person")).toEqual([
       "Wesley Craneofficer",
       "Ada Foxagent",
     ]);
@@ -660,7 +660,7 @@ describe("AddressAutocomplete", () => {
     const user = userEvent.setup();
     render(<AddressHost client={client} onPick={onPick} />);
 
-    await user.type(screen.getByRole("combobox"), "45 ferry");
+    await user.type(screen.getByRole("combobox"), "45 corvel");
     await screen.findAllByRole("option");
     await user.keyboard("{ArrowDown}{Enter}");
 
@@ -672,7 +672,7 @@ describe("AddressAutocomplete", () => {
     });
     expect(
       pick.through.route === "addresses" && pick.through.address.components,
-    ).toMatchObject({ line1: "45 Ferry Landing", postal_code: "16507" });
+    ).toMatchObject({ line1: "45 Corvel Landing", postal_code: "16507" });
   });
 
   it("picks the address itself, or a person at it, when they are pickable", async () => {
@@ -688,7 +688,7 @@ describe("AddressAutocomplete", () => {
       />,
     );
 
-    await user.type(screen.getByRole("combobox"), "45 ferry");
+    await user.type(screen.getByRole("combobox"), "45 corvel");
     await user.click(await screen.findByRole("option", { name: /Ada Fox/ }));
 
     expect(onPickEntity).toHaveBeenCalledWith({
@@ -726,7 +726,7 @@ describe("the selection line", () => {
     const [oak] = screen.getAllByTestId("address-line");
     await user.click(oak!);
     expect(input().value).toBe("Dana Whitfield");
-    expect(selection()).toHaveTextContent("12 Oak Ln, Dover, DE 19901");
+    expect(selection()).toHaveTextContent("12 Fernhallow Ln, Dover, DE 19901");
     expect(selection()).toHaveAttribute("data-type", "address");
 
     await user.clear(input());
@@ -825,15 +825,15 @@ describe("the selection line", () => {
       />,
     );
 
-    await user.type(input(), "45 ferry");
+    await user.type(input(), "45 corvel");
     await user.click(
       await screen.findByRole("option", { name: /Ridgeline Freight LLC/ }),
     );
-    expect(input().value).toBe("45 Ferry Landing Ste 200, Erie, PA 16507");
+    expect(input().value).toBe("45 Corvel Landing Ste 200, Erie, PA 16507");
     expect(selection()).toHaveTextContent("Ridgeline Freight LLC");
 
     await user.clear(input());
-    await user.type(input(), "45 ferry");
+    await user.type(input(), "45 corvel");
     await user.click(await screen.findByRole("option", { name: /Ada Fox/ }));
     expect(selection()).toHaveTextContent("Ada Fox");
     expect(selection()).toHaveAttribute("data-type", "person");

@@ -58,9 +58,9 @@ const GRAPH = {
   addresses: {
     count: 3,
     items: [
-      { label: "1200 River Rd, Pittsburgh, PA 15212", role: "principal" },
-      { label: "45 Ferry Landing, Erie, PA 16507", role: "principal" },
-      { label: "300 Liberty Ave, Pittsburgh, PA 15222", role: "officer" },
+      { label: "1200 Tallowmere Rd, Pittsburgh, PA 15212", role: "principal" },
+      { label: "45 Corvel Landing, Erie, PA 16507", role: "principal" },
+      { label: "300 Penderly Ave, Pittsburgh, PA 15222", role: "officer" },
     ],
   },
 };

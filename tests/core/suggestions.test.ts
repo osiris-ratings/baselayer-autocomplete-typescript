@@ -76,7 +76,7 @@ const cinder: BusinessSuggestion = {
         {
           type: "address",
           token: "tok-7f1a2c3d",
-          label: "412 Orchard Ln, Springfield, MO 65806",
+          label: "412 Wrenmoor Ln, Springfield, MO 65806",
           role: "principal",
           matched: false,
           address: null,
@@ -96,7 +96,7 @@ const cinder: BusinessSuggestion = {
         {
           type: "address",
           token: "tok-8f1a2c3d",
-          label: "88 Cactus Wren Dr, Tempe, AZ 85281",
+          label: "88 Thistlecrest Dr, Tempe, AZ 85281",
           role: "agent",
           matched: false,
           address: null,
@@ -207,7 +207,9 @@ const crowded: BusinessSuggestion = {
 
 describe("leadAddressOf", () => {
   it("takes the autocomplete service's first address whatever its role, and nothing from an empty head", () => {
-    expect(leadAddressOf(cinder)).toBe("412 Orchard Ln, Springfield, MO 65806");
+    expect(leadAddressOf(cinder)).toBe(
+      "412 Wrenmoor Ln, Springfield, MO 65806",
+    );
     // The autocomplete service ranks a registered agent's address last, but
     // when it is all a family has, it is the family's lead address rather than
     // nothing.
@@ -224,7 +226,7 @@ describe("leadAddressOf", () => {
       },
     };
     expect(leadAddressOf(agentAddressOnly)).toBe(
-      "88 Cactus Wren Dr, Tempe, AZ 85281",
+      "88 Thistlecrest Dr, Tempe, AZ 85281",
     );
     expect(leadAddressOf(stable)).toBeNull();
   });

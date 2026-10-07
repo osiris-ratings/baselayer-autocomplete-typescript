@@ -11,9 +11,9 @@ import {
 
 describe("a person's row", () => {
   it("draws, by default, the head, the business lines and the address lines", () => {
-    // Jane Q Doe   12 Oak Ln, Dover, DE  +2 ......... 3 businesses · 3 addresses
-    //   ACME HOLDINGS LLC   1200 River Rd, Wilm… ..... [DE][FL] +1   officer
-    //   12 Oak Ln, Dover, DE 19901 ................................. officer
+    // Jane Q Doe   12 Fernhallow Ln, Dover, DE  +2 ......... 3 businesses · 3 addresses
+    //   ACME HOLDINGS LLC   1200 Tallowmere Rd, Wilm… ..... [DE][FL] +1   officer
+    //   12 Fernhallow Ln, Dover, DE 19901 ................................. officer
     expect(resolveLayout(PERSON_ROW)).toEqual({
       headBadge: "firstAddress",
       headTrailingBadge: null,

@@ -145,14 +145,14 @@ describe("buildSuggestUrl on the people and addresses routes", () => {
   it("asks the addresses route with its state", () => {
     const url = new URL(
       buildSuggestUrl("https://api.test", "addresses", {
-        q: "1200 river rd",
+        q: "1200 tallowmere rd",
         filters: { state: ["PA"] },
       }),
     );
 
     expect(url.pathname).toBe("/autocomplete/addresses");
     expect([...url.searchParams]).toEqual([
-      ["q", "1200 river rd"],
+      ["q", "1200 tallowmere rd"],
       ["state", "PA"],
     ]);
   });
@@ -169,7 +169,7 @@ describe("buildSuggestUrl on the people and addresses routes", () => {
       filters: { business: { name: "harbor" } },
     };
     const addresses: RouteQuery<"addresses"> = {
-      q: "1200 river",
+      q: "1200 tallowmere",
       // @ts-expect-error: the addresses route takes no relation filter.
       filters: { person: { name: "dana" } },
     };

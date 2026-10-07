@@ -163,7 +163,8 @@ describe("a request the session's scope leaves out", () => {
     const { client } = clientWith(undefined, fetch);
 
     expect(
-      (await refusal(client.search("addresses", { q: "1200 river" }))).kind,
+      (await refusal(client.search("addresses", { q: "1200 tallowmere" })))
+        .kind,
     ).toBe("out_of_scope");
   });
 });

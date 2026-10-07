@@ -50,7 +50,7 @@ const suggestion = {
         {
           type: "address",
           token: "tok-7f1a2c3d",
-          label: "1200 EMBARCADERO RD FL 3, OAKLAND, CA 94606",
+          label: "1200 TIDECASTER RD FL 3, OAKLAND, CA 94606",
           role: "principal",
           matched: false,
           address: null,
@@ -182,7 +182,7 @@ describe("a business suggestion", () => {
             {
               type: "address",
               token: handle,
-              label: "412 Orchard Ln, Springfield, MO 65806",
+              label: "412 Wrenmoor Ln, Springfield, MO 65806",
               role: "principal",
               matched: false,
             },
@@ -214,7 +214,7 @@ describe("a business suggestion", () => {
             {
               type: "address",
               id: "7f1a2c3d-4e5f-4a0c-9c0e-0d3b2b6e2b7e",
-              label: "412 Orchard Ln, Springfield, MO 65806",
+              label: "412 Wrenmoor Ln, Springfield, MO 65806",
               role: "principal",
               matched: false,
             },
@@ -228,7 +228,7 @@ describe("a business suggestion", () => {
     const item = parsed.related.addresses.items[0];
     expect(item).not.toHaveProperty("id");
     expect(item?.token).toBeNull();
-    expect(item?.label).toBe("412 Orchard Ln, Springfield, MO 65806");
+    expect(item?.label).toBe("412 Wrenmoor Ln, Springfield, MO 65806");
   });
 
   describe("structure", () => {

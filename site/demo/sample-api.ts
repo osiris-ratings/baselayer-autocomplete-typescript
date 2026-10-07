@@ -309,7 +309,7 @@ function suggest(
   };
 }
 
-/** `"1200 River Rd, Pittsburgh, PA 15212"` as a search's address. */
+/** `"1200 Tallowmere Rd, Pittsburgh, PA 15212"` as a search's address. */
 function addressOf(label: string): Address {
   const [street = "", city = "", stateZip = ""] = label.split(", ");
   const [state = "", zip = ""] = stateZip.split(" ");

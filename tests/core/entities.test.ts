@@ -85,7 +85,7 @@ describe("parseSuggestResponse", () => {
     const row = {
       ...base("address", relations),
       components: {
-        line1: "1200 River Rd",
+        line1: "1200 Tallowmere Rd",
         line2: null,
         city: "Pittsburgh",
         state: "PA",
@@ -143,7 +143,7 @@ describe("buildSuggestUrl", () => {
         domicileState: "PA",
         person: { name: "dana", role: "officer" as const },
         address: {
-          text: "1200 river",
+          text: "1200 tallowmere",
           city: "Pittsburgh",
           postalCode: "15212",
           state: "PA",

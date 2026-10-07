@@ -788,7 +788,7 @@ export function ArchitectureDiagram({ paused = false }: { paused?: boolean }) {
             fontSize={10}
             fill={MUTED}
           >
-            1200 River Rd, Pittsburgh, PA 15212
+            1200 Tallowmere Rd, Pittsburgh, PA 15212
           </text>
           <text
             x={64}
@@ -810,7 +810,7 @@ export function ArchitectureDiagram({ paused = false }: { paused?: boolean }) {
             fontSize={10}
             fill={MUTED}
           >
-            88 Canal St, Akron, OH 44308
+            88 Velloway St, Akron, OH 44308
           </text>
         </>
       )}

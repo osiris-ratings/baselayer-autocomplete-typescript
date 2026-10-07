@@ -223,9 +223,9 @@ line, the head too, is its lead (the name, then its badge:
 default:
 
 ```text
-Jane Q Doe   12 Oak Ln, Dover, DE 19901 +2 ........ 3 businesses · 3 addresses
-  ACME HOLDINGS LLC   1200 River Rd, Wilm… ............ [DE][FL] +1   officer
-  12 Oak Ln, Dover, DE 19901 .................................... officer
+Jane Q Doe   12 Fernhallow Ln, Dover, DE 19901 +2 ........ 3 businesses · 3 addresses
+  ACME HOLDINGS LLC   1200 Tallowmere Rd, Wilm… ............ [DE][FL] +1   officer
+  12 Fernhallow Ln, Dover, DE 19901 .................................... officer
 ```
 
 The last line is there when `include` lists addresses. Each line's places
@@ -266,7 +266,7 @@ to show. `layout` picks the field each place shows:
 │ subtitle · subtitleBadge  subtitleTrailingBadge · subtitleTrailing │
 └────────────────────────────────────────────────────────────────────┘
   HARBOR CONCRETE PUMPING CO., INC. [C-Corp]          PA MD NY +2
-  1200 River Rd, Pittsburgh, PA 15212             Dana Whitfield +3
+  1200 Tallowmere Rd, Pittsburgh, PA 15212             Dana Whitfield +3
 ```
 
 | Place                   | Where                                    | Default                              |
