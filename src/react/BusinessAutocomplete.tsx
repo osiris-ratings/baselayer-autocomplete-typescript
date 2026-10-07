@@ -121,8 +121,8 @@ interface CommonProps {
   list?: Include[];
   /**
    * A host's own icons, by entity (`address`) or by entity and role
-   * (`address:mailing`), the role's winning; `false` hides that one, and
-   * `false` for all draws none.
+   * (`address:mailing`), the role's winning; `false` or `null` hides that
+   * one, and `false` for all draws none. Decorative: nothing focusable.
    */
   icons?: IconSet;
   /**

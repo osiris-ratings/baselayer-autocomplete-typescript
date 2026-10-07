@@ -300,7 +300,9 @@ glyph in any segment:
 
 `icons` replaces any of them with a node of your own, keyed by the entity
 (`address`) or by the entity in a role (`address:mailing`), the role's
-winning. `false` hides that one, and `icons={false}` hides them all:
+winning. `false` or `null` hides that one, and `icons={false}` hides them
+all. An icon is decorative: it is drawn inside an `aria-hidden` wrapper, so
+pass nothing focusable or meant to be read, no link or button:
 
 ```tsx
 <BusinessAutocomplete

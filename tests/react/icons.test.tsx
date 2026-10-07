@@ -66,8 +66,10 @@ describe("a host's icons", () => {
     expect(drawn(icons, "person", "agent")!.dataset.glyph).toBe("briefcase");
   });
 
-  it("hide the one set to false, the entity's or the role's, and every one when off", () => {
+  it("hide the one set to false or null, the entity's or the role's, and every one when off", () => {
     expect(drawn({ "person:agent": false }, "person", "agent")).toBeNull();
+    expect(drawn({ "person:agent": null }, "person", "agent")).toBeNull();
+    expect(drawn({ address: null }, "address", "mailing")).toBeNull();
     expect(
       drawn({ "person:agent": false }, "person", "officer"),
     ).not.toBeNull();

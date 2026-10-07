@@ -11,7 +11,8 @@ export type IconKey = EntityType | `${EntityType}:${RelatedRole}`;
 
 /**
  * A host's own icons, by entity or by entity and role, the role's winning;
- * `false` hides that one. `false` for the whole set draws none at all.
+ * `false` or `null` hides that one. `false` for the whole set draws none at
+ * all. Each is decorative and drawn inside `aria-hidden`: nothing focusable.
  */
 export type IconSet = Partial<Record<IconKey, ReactNode>> | false;
 

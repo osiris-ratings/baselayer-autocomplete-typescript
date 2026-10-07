@@ -47,17 +47,17 @@ release.
   none of them, a business row draws exactly as before.
   `BusinessAutocompleteView` takes `list`, `enabledLines`, `icons`,
   `iconSegments`, `selection` and `onSelectEntity`.
-- Icons on segments: `iconSegments` on all three components names the
-  segments that carry one, a name or a field with a glyph of its own (an
-  address, a business's people), drawn right before its text wherever it is
-  placed; none on a business row by default, every name on a person's and an
-  address's. The glyph follows the entity and, where the row knows it, the
-  role: a building, a person (an agent a briefcase), a map pin (mailing an
-  envelope, an agent's a briefcase, an officer's a house). `icons` takes your
-  own, keyed by entity or `entity:role`, the role's winning, and `false`
-  hides one. Each icon carries `data-entity`, `data-role` and `data-glyph`.
-  `IconSet`, `IconKey`, `DEFAULT_ICON_SEGMENTS`, `IconSegmentByRoute` and each
-  kind's segments (`BUSINESS_ICON_SEGMENTS`, …).
+- Icons on segments: `iconSegments` on all three components names the segments
+  that carry one, a name or a field with a glyph of its own (an address, a
+  business's people), drawn right before its text wherever it is placed; none on
+  a business row by default, every name on a person's and an address's. The
+  glyph follows the entity and, where the row knows it, the role: a building, a
+  person (an agent a briefcase), a map pin (mailing an envelope, an agent's a
+  briefcase, an officer's a house). `icons` takes your own, keyed by entity or
+  `entity:role`, the role's winning, and `false` or `null` hides one. Each icon
+  carries `data-entity`, `data-role` and `data-glyph`. `IconSet`, `IconKey`,
+  `DEFAULT_ICON_SEGMENTS`, `IconSegmentByRoute` and each kind's segments
+  (`BUSINESS_ICON_SEGMENTS`, …).
 - The line under the field after a pick from a line under a row
   (`bl-ac-selection`, a `GroupedSelection` on the views), the field described
   by it. It names the picked line while the field holds the name the pick put

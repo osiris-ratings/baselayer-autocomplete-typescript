@@ -373,6 +373,35 @@ describe("the icons on a business row", () => {
     expect(line).toEqual(subtitle);
   });
 
+  it("draws a mailing address as an envelope, by the role the address is held in", async () => {
+    const [lead] = BODY.suggestions[0]!.related.addresses.items;
+    const mailing = {
+      ...BODY,
+      suggestions: [
+        {
+          ...BODY.suggestions[0]!,
+          related: {
+            ...BODY.suggestions[0]!.related,
+            addresses: {
+              count: 1,
+              matched: null,
+              truncated: false,
+              items: [{ ...lead!, role: "mailing" }],
+            },
+          },
+        },
+      ],
+    };
+    await typeHarbor({ iconSegments: ["address"] }, mailing);
+
+    const address = screen.getByTestId("business-suggestion-address");
+    expect(glyphsOf(address)).toEqual(["envelope"]);
+    expect(address.querySelector(".bl-ac-icon")).toHaveAttribute(
+      "data-role",
+      "mailing",
+    );
+  });
+
   it("draws none on an address it does not have", async () => {
     const noAddress = {
       ...BODY,
