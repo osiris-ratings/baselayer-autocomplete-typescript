@@ -13,8 +13,25 @@
     "/autocomplete/sessions": {
       "post": {
         "summary": "Mint an autocomplete session",
-        "description": "Mints the grant every request to the autocomplete service carries in ``X-Autocomplete-Session``. Minting writes one Order and is rate limited per organization, per ten-minute window and per rolling day, one pool drawn from by every caller in it; the keystrokes it admits write nothing. The grant is bound to the ``Origin`` it was minted with, expires after ``expires_in`` seconds (refresh at about 80% of it; ``expires_at`` is the same instant as a UTC timestamp, for display) and admits ``request_budget`` requests per route. A caller whose ``autocomplete.enabled`` override is off is answered 403; a locked organization is answered 402; a sandbox application is answered 422, since sandbox searches resolve against fixtures.",
+        "description": "Mints the grant every request to the autocomplete service carries in ``X-Autocomplete-Session``. Minting writes one Order; the keystrokes it admits write nothing. An organization mints without limit unless one is set for it, ``sessions_per_window`` per ten minutes and ``sessions_per_day`` per rolling day (each ``null`` when there is none), one pool drawn from by every caller in it; past either the mint answers 429. The grant is bound to the ``Origin`` it was minted with, expires after ``expires_in`` seconds (refresh at about 80% of it; ``expires_at`` is the same instant as a UTC timestamp, for display) and admits ``request_budget`` requests per route. A sandbox application's grant is served the sandbox's own index, and its mint writes no Order and counts against neither limit. A caller whose ``autocomplete.enabled`` override is off is answered 403; a locked organization is answered 402.",
         "operationId": "mint_autocomplete_session_autocomplete_sessions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/v1.AutocompleteSessionRequest"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Request"
+              }
+            }
+          }
+        },
         "responses": {
           "201": {
             "description": "Response",
@@ -52,6 +69,80 @@
   },
   "components": {
     "schemas": {
+      "AutocompleteRelation": {
+        "type": "string",
+        "enum": [
+          "businesses",
+          "people",
+          "addresses"
+        ],
+        "title": "AutocompleteRelation",
+        "description": "A kind of row a suggestion relates to: the key of ``related.<relation>``."
+      },
+      "AutocompleteRoute": {
+        "type": "string",
+        "enum": [
+          "businesses",
+          "people",
+          "addresses"
+        ],
+        "title": "AutocompleteRoute",
+        "description": "A route of the autocomplete service a session may query: the path segment\nafter ``/autocomplete/``. A session's scope names the routes it reaches and,\nper route, the relations a request may include or filter by."
+      },
+      "AutocompleteSessionScopeRequest": {
+        "properties": {
+          "routes": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "$ref": "#/components/schemas/AutocompleteRelation"
+                  },
+                  "type": "array"
+                },
+                "propertyNames": {
+                  "$ref": "#/components/schemas/AutocompleteRoute"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "minLength": 1,
+            "title": "Routes",
+            "description": "The routes the session may query and, per route, the relations a request may include or filter by. Each must be one the caller may reach (else 403) and a relation of its route (else 422); none at all is a 422, since that session could query nothing. Left out, every route the caller may query, with every relation.",
+            "examples": [
+              {
+                "businesses": [
+                  "addresses"
+                ]
+              }
+            ]
+          },
+          "max_limit": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 20,
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Limit",
+            "description": "The most suggestions a request may ask for. Left out, 20.",
+            "examples": [
+              5
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "AutocompleteSessionScopeRequest",
+        "description": "A narrowing of what a session may search; either part left out narrows\nnothing on that side."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -65,8 +156,28 @@
         "type": "object",
         "title": "HTTPValidationError"
       },
+      "v1.AutocompleteRelation": {
+        "description": "A kind of row a suggestion relates to: the key of ``related.<relation>``.",
+        "enum": [
+          "businesses",
+          "people",
+          "addresses"
+        ],
+        "title": "AutocompleteRelation",
+        "type": "string"
+      },
+      "v1.AutocompleteRoute": {
+        "description": "A route of the autocomplete service a session may query: the path segment\nafter ``/autocomplete/``. A session's scope names the routes it reaches and,\nper route, the relations a request may include or filter by.",
+        "enum": [
+          "businesses",
+          "people",
+          "addresses"
+        ],
+        "title": "AutocompleteRoute",
+        "type": "string"
+      },
       "v1.AutocompleteSessionGrantResponse": {
-        "description": "The grant a caller presents to the autocomplete service.",
+        "description": "A grant from ``POST /autocomplete/sessions``, and its organization's limits.",
         "properties": {
           "session_token": {
             "description": "Opaque, signed session grant. Send it verbatim in the ``X-Autocomplete-Session`` header of every autocomplete request; it carries its own expiry and budget.",
@@ -79,7 +190,7 @@
           "expires_in": {
             "description": "Seconds until the grant expires, counted from this response. Time the refresh from this, not from ``expires_at``: it is right however far the caller's clock is off. Mint the next grant at about 80% of it so expiry never lands on the typing path.",
             "examples": [
-              180
+              120
             ],
             "title": "Expires In",
             "type": "integer"
@@ -96,7 +207,7 @@
           "request_budget": {
             "description": "Requests this session may make per autocomplete route. Past it the autocomplete service answers 429 with ``session_budget_spent``; the remedy is a new session, not a retry.",
             "examples": [
-              150
+              10
             ],
             "title": "Request Budget",
             "type": "integer"
@@ -116,6 +227,58 @@
             ],
             "title": "Filter Min Stem",
             "type": "integer"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/v1.AutocompleteSessionScope",
+            "description": "What this session may search: the routes, the relations per route, and the most suggestions a request may ask for. Offer a search only where its route is listed."
+          },
+          "sessions_per_window": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sessions this organization may mint per ten-minute window, one number shared by every user and API key in it; the mint past it is answered 429 with a ``Retry-After``. ``null`` when there is no limit.",
+            "title": "Sessions Per Window"
+          },
+          "sessions_per_day": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sessions this organization may mint in a rolling 24 hours, shared and refused the same way. ``null`` when there is no limit.",
+            "title": "Sessions Per Day"
+          },
+          "user_sessions_per_window": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sessions a user signed in to the console may mint per ten-minute window, their own pool beside the organization's; past it the mint answers 429 with a ``Retry-After``. ``null`` for an API key, whose sessions are billed, or when there is no limit.",
+            "title": "User Sessions Per Window"
+          },
+          "user_sessions_per_day": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Sessions a user signed in to the console may mint in a rolling 24 hours, refused the same way. ``null`` for an API key, or when there is no limit.",
+            "title": "User Sessions Per Day"
           }
         },
         "required": [
@@ -124,9 +287,77 @@
           "expires_at",
           "request_budget",
           "pivot_allowance",
-          "filter_min_stem"
+          "filter_min_stem",
+          "scope",
+          "sessions_per_window",
+          "sessions_per_day",
+          "user_sessions_per_window",
+          "user_sessions_per_day"
         ],
         "title": "AutocompleteSessionGrantResponse (v1)",
+        "type": "object"
+      },
+      "v1.AutocompleteSessionRequest": {
+        "properties": {
+          "scope": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AutocompleteSessionScopeRequest"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Narrows what the session may search, so a leaked session can do no more than this. Left out, everything the caller may search."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "AutocompleteSessionRequest (v1)",
+        "description": "What a caller asks of a new session; the body is optional."
+      },
+      "v1.AutocompleteSessionScope": {
+        "additionalProperties": false,
+        "description": "What a session may search: the routes it may query and, per route, the\nrelations a request may include or filter by, and the most rows a request\nmay ask for.",
+        "properties": {
+          "routes": {
+            "additionalProperties": {
+              "items": {
+                "$ref": "#/components/schemas/v1.AutocompleteRelation"
+              },
+              "type": "array"
+            },
+            "description": "Each route the session may query, and the relations a request on it may include or filter by. Any other route answers 403, and so does a relation outside the list.",
+            "examples": [
+              {
+                "businesses": [
+                  "addresses",
+                  "people"
+                ]
+              }
+            ],
+            "propertyNames": {
+              "$ref": "#/components/schemas/v1.AutocompleteRoute"
+            },
+            "title": "Routes",
+            "type": "object"
+          },
+          "max_limit": {
+            "description": "The most suggestions a request may ask for; a larger ``limit`` answers 422.",
+            "examples": [
+              20
+            ],
+            "maximum": 20,
+            "minimum": 1,
+            "title": "Max Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "routes",
+          "max_limit"
+        ],
+        "title": "AutocompleteSessionScope",
         "type": "object"
       },
       "ValidationError": {

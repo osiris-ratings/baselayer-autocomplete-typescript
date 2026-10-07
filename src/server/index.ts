@@ -22,6 +22,69 @@ export const SESSIONS_PATH = "/autocomplete/sessions";
 /** Response headers passed back to the browser; everything else is dropped. */
 const PASSED_HEADERS = ["retry-after", "x-request-id"] as const;
 
+/**
+ * The relations each route's rows may carry: the session scope contract's
+ * table, kept here so this module needs nothing from the browser core.
+ */
+export const SCOPE_RELATIONS = {
+  businesses: ["people", "addresses"],
+  people: ["businesses", "addresses"],
+  addresses: ["businesses", "people"],
+} as const;
+
+/** The most suggestions a session may ever ask for. */
+export const MAX_SCOPE_LIMIT = 20;
+
+/** Each route a session may query, and the relations a request on it may touch. */
+export type ScopeRoutes = {
+  [
+    R in keyof typeof SCOPE_RELATIONS
+  ]?: readonly (typeof SCOPE_RELATIONS)[R][number][];
+};
+
+/**
+ * What a session may search, narrowed from everything your organization may:
+ * a session leaked from the page can do no more than this. Either half left
+ * out narrows nothing on that side.
+ */
+export interface SessionScopeRequest {
+  /**
+   * Each route the session may query, and the relations a request on it may
+   * include or filter by. The API refuses a route your organization may not
+   * reach (403, code 501) and a relation it may not reach there (403, code
+   * 502).
+   */
+  routes?: ScopeRoutes;
+  /** The most suggestions a request may ask for, 1 to 20. */
+  maxLimit?: number;
+}
+
+/** The body that asks the API for `scope`, or none without one. */
+function scopeBody(scope: SessionScopeRequest | undefined): string | null {
+  if (scope === undefined) {
+    return null;
+  }
+  const { routes, maxLimit } = scope;
+  if (routes !== undefined && Object.keys(routes).length === 0) {
+    // A session that may query nothing; the API refuses it with a 422.
+    throw new Error("mintForOrigin: scope.routes names no route");
+  }
+  if (
+    maxLimit !== undefined &&
+    (!Number.isInteger(maxLimit) || maxLimit < 1 || maxLimit > MAX_SCOPE_LIMIT)
+  ) {
+    throw new Error(
+      `mintForOrigin: scope.maxLimit must be a whole number from 1 to ${MAX_SCOPE_LIMIT}`,
+    );
+  }
+  return JSON.stringify({
+    scope: {
+      ...(routes !== undefined ? { routes } : {}),
+      ...(maxLimit !== undefined ? { max_limit: maxLimit } : {}),
+    },
+  });
+}
+
 export interface MintForOriginOptions {
   /** Your Baselayer API key. Read it from your secret store; never ship it to a browser. */
   apiKey: string;
@@ -30,6 +93,8 @@ export interface MintForOriginOptions {
   apiBaseUrl?: string;
   fetch?: typeof fetch;
   signal?: AbortSignal;
+  /** Narrows what the session may search; left out, everything your organization may. */
+  scope?: SessionScopeRequest;
 }
 
 export interface MintPassThrough {
@@ -45,8 +110,8 @@ export interface MintPassThrough {
  *
  * Every answer comes back as it is, success or refusal: a 201 grant, a 429
  * with its `Retry-After` and pool scope, a 403 when the key or the
- * organization is not enabled for autocomplete, a 503 when the deployment
- * cannot mint.
+ * organization is not enabled for autocomplete, or `scope` asks for more than
+ * it may reach, a 503 when the deployment cannot mint.
  */
 export async function mintForOrigin(
   options: MintForOriginOptions,
@@ -58,6 +123,7 @@ export async function mintForOrigin(
     // An unbound grant works from any page; refuse to make one for a browser.
     throw new Error("mintForOrigin: origin is required");
   }
+  const requestBody = scopeBody(options.scope);
   const base = (options.apiBaseUrl ?? DEFAULT_API_BASE_URL).replace(/\/+$/, "");
   const fetchImpl: typeof fetch =
     options.fetch ?? ((input, init) => globalThis.fetch(input, init));
@@ -67,7 +133,9 @@ export async function mintForOrigin(
       Accept: "application/json",
       "X-API-Key": options.apiKey,
       Origin: options.origin,
+      ...(requestBody !== null ? { "Content-Type": "application/json" } : {}),
     },
+    ...(requestBody !== null ? { body: requestBody } : {}),
     ...(options.signal !== undefined ? { signal: options.signal } : {}),
   });
   const text = await response.text();
@@ -110,6 +178,19 @@ export interface MintHandlerOptions {
    */
   allowedOrigins?: string[] | ((origin: string) => boolean);
   fetch?: typeof fetch;
+  /**
+   * Narrows what each session may search: one scope for every mint, or a
+   * function of the incoming request (the signed-in user's plan, say) that
+   * may answer none.
+   */
+  scope?:
+    | SessionScopeRequest
+    | ((
+        request: Request,
+      ) =>
+        | SessionScopeRequest
+        | undefined
+        | Promise<SessionScopeRequest | undefined>);
 }
 
 function normalizeOrigin(origin: string): string {
@@ -163,9 +244,14 @@ export function createMintHandler(
     if (!allows(origin)) {
       return refusal(403, "This origin may not mint autocomplete sessions");
     }
+    const scope =
+      typeof options.scope === "function"
+        ? await options.scope(request)
+        : options.scope;
     const result = await mintForOrigin({
       apiKey: options.apiKey,
       origin,
+      ...(scope !== undefined ? { scope } : {}),
       ...(options.apiBaseUrl !== undefined
         ? { apiBaseUrl: options.apiBaseUrl }
         : {}),
