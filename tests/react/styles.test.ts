@@ -186,12 +186,14 @@ describe("the type", () => {
 describe("a line that is not a pick", () => {
   it("fades by the look's default when the component sets nothing", () => {
     // The component sets the variables only for another `inertDim`, so the
-    // fallbacks must be the default's: its colour by 1 - d, its ink by 0.15 d.
-    const fade = rule(".bl-ac-group-line:not([data-pickable])");
+    // fallbacks must be the default's: its colour by 1 - d, its name, icon
+    // and squares by 0.15 d.
     const d = DEFAULT_LOOK.inertDim;
-    expect(fade).toContain(`saturate(var(--bl-ac-inert-saturation, ${1 - d}))`);
-    expect(fade).toContain(
-      `opacity(var(--bl-ac-inert-opacity, ${Math.round((1 - d * 0.15) * 1000) / 1000}))`,
+    expect(rule(".bl-ac-group-line:not([data-pickable])")).toContain(
+      `filter: var(--bl-ac-inert-filter, saturate(${1 - d}));`,
+    );
+    expect(css).toContain(
+      `opacity: var(--bl-ac-inert-opacity, ${Math.round((1 - d * 0.15) * 1000) / 1000});`,
     );
   });
 });

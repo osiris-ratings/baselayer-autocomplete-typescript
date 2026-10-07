@@ -272,10 +272,11 @@ states and the role are columns: the states as wide as three squares and a `+N`,
 the role as wide as the menu's longest (`--bl-ac-role-chars`) and a step
 quieter, so the squares start at one edge down the group.
 
-A line under a row that is not a pick fades, its icon, squares and text
-together: mostly its colour, a little its ink, so it stays readable
-(`look.inertDim`, 0 for none; `--bl-ac-inert-saturation` and `--bl-ac-inert-
-opacity` behind it). A pick and the row's head do not fade.
+A line under a row that is not a pick fades: all of it loses colour
+(`--bl-ac-inert-filter`), and only its name, icon and state squares a little
+ink (`--bl-ac-inert-opacity`), so its role and secondary text are no fainter
+than unfaded. `look.inertDim` sets both, 0 for none. A pick and the row's
+head do not fade, and nothing fades under forced colours.
 
 After a pick from a line under a row, the line under the field
 (`bl-ac-selection`, `data-type` the picked line's type) names what was

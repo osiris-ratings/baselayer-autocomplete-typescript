@@ -1,7 +1,18 @@
 import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
+import type { BrowserCommand } from "vitest/node";
 
 import { alias } from "./vitest.config";
+
+/** Emulates a forced-colors display, or lifts it, for the page under test. */
+const forcedColors: BrowserCommand<[active: boolean]> = async (
+  context,
+  active,
+) => {
+  await context.page.emulateMedia({
+    forcedColors: active ? "active" : "none",
+  });
+};
 
 // The tests that need a real layout engine: jsdom lays nothing out, so a row
 // that overflows its menu passes there. Run with `pnpm test:browser`.
@@ -19,6 +30,7 @@ export default defineConfig({
       // allows (`100vw - 2rem`), and the default iframe is a phone's width.
       viewport: { width: 1280, height: 900 },
       instances: [{ browser: "chromium" }],
+      commands: { forcedColors },
     },
   },
 });

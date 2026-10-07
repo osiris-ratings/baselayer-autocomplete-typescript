@@ -46,7 +46,9 @@ release.
   business's name in the field, and is named on a line under it. With none of
   them, a business row draws exactly as before.
 - `inertDim` on `look`: how far a line under a row fades when it is not a pick,
-  0 to 1 and 0.6 by default, mostly by its colour so its text stays readable.
+  0 to 1 and 0.6 by default. It drains the line's colour and lightens only its
+  name, icon and state squares, so its secondary text is no fainter; nothing
+  fades under forced colours.
 - One row model for all three searches: `BUSINESS_ROW`, `PERSON_ROW` and
   `ADDRESS_ROW` (`ROW_KINDS`), each a head and the line kinds it can list, each
   line naming the entity it draws and the relation it lists, with a place before

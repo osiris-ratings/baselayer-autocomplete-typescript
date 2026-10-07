@@ -1,6 +1,7 @@
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
+import { commands } from "vitest/browser";
 
 import type {
   LookInput,
@@ -10,6 +11,13 @@ import type {
 import { PersonAutocompleteView } from "@baselayer-sdk/autocomplete/react";
 
 import "../../src/react/styles.css";
+
+declare module "vitest/browser" {
+  interface BrowserCommands {
+    /** Emulates `forced-colors: active`, or lifts it. */
+    forcedColors: (active: boolean) => Promise<void>;
+  }
+}
 
 // Made-up people, addresses and businesses.
 const related = (
@@ -122,11 +130,24 @@ function contrast(a: Rgb, b: Rgb): number {
   return (light! + 0.05) / (dark! + 0.05);
 }
 
-/** A text's colour as its line's filter leaves it, over the menu. */
-function effective(text: HTMLElement, line: HTMLElement, menu: HTMLElement) {
+/**
+ * A text's colour as its line's filter and its own opacity leave it, over the
+ * menu; `faded: false` reads it as an inert line would draw without fading.
+ */
+function effective(
+  text: HTMLElement,
+  line: HTMLElement,
+  menu: HTMLElement,
+  faded = true,
+) {
   const filter = getComputedStyle(line).filter;
-  const s = Number(/saturate\(([\d.]+)\)/.exec(filter)?.[1] ?? 1);
-  const o = Number(/opacity\(([\d.]+)\)/.exec(filter)?.[1] ?? 1);
+  const amount = (fn: string) =>
+    faded
+      ? Number(new RegExp(`${fn}\\(([\\d.]+)\\)`).exec(filter)?.[1] ?? 1)
+      : 1;
+  const s = amount("saturate");
+  const o =
+    amount("opacity") * (faded ? Number(getComputedStyle(text).opacity) : 1);
   const background = rgb(getComputedStyle(menu).backgroundColor);
   const ink = saturate(rgb(getComputedStyle(text).color), s);
   const shown = ink.map(
@@ -135,41 +156,61 @@ function effective(text: HTMLElement, line: HTMLElement, menu: HTMLElement) {
   return contrast(shown, background);
 }
 
+const opacityOf = (element: Element) => getComputedStyle(element).opacity;
+
 describe("a line that is not a pick", () => {
-  it("is faded, mostly by its colour; a pick and the head are not", () => {
+  it("fades: its colour drained, its name, icon and squares a little lighter; a pick and the head do not", () => {
     const { head, business, address, done } = draw();
     try {
-      expect(getComputedStyle(address).filter).toBe(
-        "saturate(0.4) opacity(0.91)",
+      expect(getComputedStyle(address).filter).toBe("saturate(0.4)");
+      expect(opacityOf(address.querySelector(".bl-ac-line-name")!)).toBe(
+        "0.91",
       );
+      expect(opacityOf(address.querySelector(".bl-ac-icon")!)).toBe("0.91");
+      // The role, like any secondary text, is not made lighter.
+      expect(opacityOf(address.querySelector(".bl-ac-role")!)).toBe("1");
       expect(getComputedStyle(business).filter).toBe("none");
+      expect(opacityOf(business.querySelector(".bl-ac-line-name")!)).toBe("1");
       expect(getComputedStyle(head).filter).toBe("none");
     } finally {
       done();
     }
   });
 
-  it("is not faded at all with the look's inertDim at 0", () => {
+  it("does not fade at all, nor cost a filter, with the look's inertDim at 0", () => {
     const { address, done } = draw({ inertDim: 0 });
     try {
-      expect(getComputedStyle(address).filter).toBe("saturate(1) opacity(1)");
+      expect(getComputedStyle(address).filter).toBe("none");
+      expect(opacityOf(address.querySelector(".bl-ac-line-name")!)).toBe("1");
     } finally {
       done();
     }
   });
 
-  it("keeps its name at AA, and its role readable, on the menu", () => {
+  it("keeps its name at AA, and its secondary text no worse than unfaded", () => {
     const { address, menu, done } = draw();
     try {
       const name = address.querySelector<HTMLElement>(".bl-ac-line-name")!;
       const role = address.querySelector<HTMLElement>(".bl-ac-role")!;
 
       expect(effective(name, address, menu)).toBeGreaterThanOrEqual(4.5);
-      // The subtitle's own grey is about 4:1 before any fading; faded, it
-      // keeps at least the 3:1 large text and controls are held to.
-      expect(effective(role, address, menu)).toBeGreaterThanOrEqual(3);
+      expect(effective(role, address, menu)).toBeGreaterThanOrEqual(
+        effective(role, address, menu, false),
+      );
     } finally {
       done();
+    }
+  });
+
+  it("draws as any other line under forced colours", async () => {
+    await commands.forcedColors(true);
+    const { address, done } = draw();
+    try {
+      expect(getComputedStyle(address).filter).toBe("none");
+      expect(opacityOf(address.querySelector(".bl-ac-line-name")!)).toBe("1");
+    } finally {
+      done();
+      await commands.forcedColors(false);
     }
   });
 });

@@ -382,12 +382,29 @@
   margin-left: auto;
 }
 
-/* A line that is not a pick fades: mostly its colour, a little its ink, so
-   its icon, its squares and its text quieten together and it stays readable.
-   The look's `inertDim` sets both; the fallbacks are its default, 0.6. */
+/* A line that is not a pick fades: all of it loses colour, and only its
+   name, icon and squares, which have the contrast to spare, a little ink, so
+   its secondary text is no fainter than it is unfaded. The look's
+   `inertDim` sets both; the fallbacks are its default, 0.6. */
 .bl-ac-group-line:not([data-pickable]) {
-  filter: saturate(var(--bl-ac-inert-saturation, 0.4))
-    opacity(var(--bl-ac-inert-opacity, 0.91));
+  filter: var(--bl-ac-inert-filter, saturate(0.4));
+}
+
+.bl-ac-group-line:not([data-pickable])
+  :is(.bl-ac-line-name, .bl-ac-icon, .bl-ac-state) {
+  opacity: var(--bl-ac-inert-opacity, 0.91);
+}
+
+/* Forced colours draw the text in the system's own; fading it would not. */
+@media (forced-colors: active) {
+  .bl-ac-group-line:not([data-pickable]) {
+    filter: none;
+  }
+
+  .bl-ac-group-line:not([data-pickable])
+    :is(.bl-ac-line-name, .bl-ac-icon, .bl-ac-state) {
+    opacity: 1;
+  }
 }
 
 /* The icon before a name: the size of its text, in the subtitle's colour,
