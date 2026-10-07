@@ -475,6 +475,7 @@ export function BusinessAutocompleteView({
     },
     hasFooter,
     open,
+    rowCount: suggestions.length,
   });
   const headIcon =
     rowLayout.titleLead === "titleIcon" ? iconFor(icons, "business") : null;

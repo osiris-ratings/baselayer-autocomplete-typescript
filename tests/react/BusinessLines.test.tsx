@@ -272,6 +272,21 @@ describe("a business row that lists its officers and addresses", () => {
     ).toHaveLength(0);
   });
 
+  it("draws a business that is not itself a pick as an inert group, though it lists nothing", async () => {
+    const { client } = setup();
+    const user = userEvent.setup();
+    render(<Host client={client} pickable={["person"]} />);
+
+    await user.type(screen.getByRole("combobox"), "harbor");
+
+    expect(
+      await screen.findByRole("group", {
+        name: "HARBOR CONCRETE PUMPING CO., INC.",
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryAllByRole("option")).toHaveLength(0);
+  });
+
   it("needs somewhere to send an officer or an address picked", () => {
     const client = setup().client;
     const props = {

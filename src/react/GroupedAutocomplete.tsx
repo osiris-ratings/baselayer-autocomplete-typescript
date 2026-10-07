@@ -504,6 +504,7 @@ function GroupedView<R extends GroupedRoute>({
     onPick: item => onSelect(item.option),
     hasFooter,
     open,
+    rowCount: rows.length,
   });
   const tokens = queryTokens(value);
   const region = look.matchEmphasisRegion;

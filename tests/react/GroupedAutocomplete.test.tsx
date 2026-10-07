@@ -21,6 +21,7 @@ import {
   AddressAutocomplete,
   DEFAULT_MESSAGES,
   PersonAutocomplete,
+  PersonAutocompleteView,
 } from "../../src/react";
 
 // Made-up people, addresses and businesses.
@@ -535,6 +536,40 @@ describe("PersonAutocomplete", () => {
       businessToken: "tok-b-cobalt",
       through: { route: "people", role: "agent" },
     });
+  });
+
+  it("shows a view's rows though none of their lines is a pick and no footer has anything to say", () => {
+    render(
+      <PersonAutocompleteView
+        id="person"
+        value="dana"
+        onInputChange={() => {}}
+        onSelect={() => {}}
+        suggestions={PEOPLE.suggestions as never}
+        found={2}
+        foundCapped={false}
+        truncated={false}
+        indexTag={null}
+        roundTripMs={null}
+        isSearching={false}
+        error={null}
+        pickable={[]}
+        open
+      />,
+    );
+
+    expect(screen.getByTestId("autocomplete-menu")).not.toHaveAttribute(
+      "hidden",
+    );
+    expect(screen.getAllByRole("group")).toHaveLength(2);
+  });
+
+  it("draws a person's rows though none of their lines is a pick", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client, { pickable: [] });
+
+    expect(within(dana).getAllByTestId("business-line")).toHaveLength(3);
+    expect(screen.queryAllByRole("option")).toHaveLength(0);
   });
 
   it("highlights a pickable line under the pointer, and leaves an inert one be", async () => {

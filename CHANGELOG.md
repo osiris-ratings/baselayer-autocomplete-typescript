@@ -90,6 +90,9 @@ scope)`, what to ask for any of them. `groupedLines(row, listed, pickable)`
 
 ### Changed
 
+- `RelatedItem` gains `address`, `states` and `domicile_state`, required as the
+  parser always fills them; a fixture that builds a related item by hand must
+  add them, null on a person or an address item.
 - `BusinessAutocompleteProps` is a union over `pickable` and `onPickEntity`, so
   that a person or an address made pickable needs somewhere to go. A wrapper
   that takes `Omit<BusinessAutocompleteProps, …>` and spreads the rest needs an

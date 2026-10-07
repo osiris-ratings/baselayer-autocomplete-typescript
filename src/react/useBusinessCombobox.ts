@@ -19,6 +19,11 @@ export interface UseSuggestionComboboxOptions<T extends ComboboxItem> {
   /** Whether a footer row (count, "searching", an error) has anything to say. */
   hasFooter: boolean;
   /**
+   * How many rows the menu draws, when that is not how many items it offers:
+   * a row whose lines are none of them picks is drawn, and offers nothing.
+   */
+  rowCount?: number | undefined;
+  /**
    * Hold the menu open whatever focus and Escape do, for a preview. Read
    * alongside downshift's own state rather than controlling it, so letting go
    * leaves downshift where it was.
@@ -78,6 +83,7 @@ export function useSuggestionCombobox<T extends ComboboxItem>({
   onPick,
   hasFooter,
   open = false,
+  rowCount,
 }: UseSuggestionComboboxOptions<T>): SuggestionCombobox<T> {
   const combobox = useCombobox<T>({
     id,
@@ -99,7 +105,7 @@ export function useSuggestionCombobox<T extends ComboboxItem>({
         : changes,
   });
   const isOpen = open || combobox.isOpen;
-  const hasRows = isOpen && items.length > 0;
+  const hasRows = isOpen && (rowCount ?? items.length) > 0;
   const menuVisible = hasRows || (isOpen && hasFooter);
   return {
     isOpen,
