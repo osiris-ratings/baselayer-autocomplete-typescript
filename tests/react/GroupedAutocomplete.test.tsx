@@ -472,16 +472,18 @@ describe("PersonAutocomplete", () => {
     ).toHaveAccessibleDescription("1 business · 0 addresses");
   });
 
-  it("makes a line that is not a pick a disabled option, and keeps the head the group's label", async () => {
+  it("makes a line or a head that is not a pick a disabled option, the head still the group's label", async () => {
     const { client } = setup();
     const { dana } = await typeDana(client, {
       list: ["businesses", "addresses"],
     });
 
-    expect(within(dana).getByTestId("group-head")).toHaveAttribute(
-      "role",
-      "presentation",
-    );
+    // Not a pick by default: a person's head is a disabled option, and still
+    // what the group is named by.
+    const head = within(dana).getByTestId("group-head");
+    expect(head).toHaveAttribute("role", "option");
+    expect(head).toHaveAttribute("aria-disabled", "true");
+    expect(dana).toHaveAccessibleName("Dana Whitfield");
     const disabled = [
       within(dana).getAllByTestId("business-line")[1]!,
       ...within(dana).getAllByTestId("address-line"),
@@ -530,9 +532,9 @@ describe("PersonAutocomplete", () => {
     ]);
     expect(within(dana).getByText("+1 more not shown")).toBeInTheDocument();
     // Listed, not enabled: an address is a disabled option.
-    expect(
-      within(dana).getByRole("option", { name: /12 Fernhallow Ln/ }),
-    ).toHaveAttribute("aria-disabled", "true");
+    const [fernhallow] = within(dana).getAllByTestId("address-line");
+    expect(fernhallow).toHaveAttribute("role", "option");
+    expect(fernhallow).toHaveAttribute("aria-disabled", "true");
   });
 
   it("moves through the enabled lines only, and picks a business with the person it came through", async () => {
@@ -749,7 +751,7 @@ describe("AddressAutocomplete", () => {
     expect(within(corvel).getByTestId("grouped-counts")).toHaveTextContent(
       "412 businesses · 2 people",
     );
-    const options = within(corvel).getAllByRole("option");
+    const options = enabledOptions(corvel);
     expect(options[0]).toHaveTextContent("Ridgeline Freight LLC");
     expect(options[0]).toHaveTextContent("principal office");
     expect(options[1]).toHaveTextContent(/agent$/);

@@ -382,15 +382,21 @@
   margin-left: auto;
 }
 
-/* A disabled line reads as inactive: drained of colour, its text faded
-   toward the ground no further than it stays readable, its squares dimmed.
+/* A disabled line, or a head that is not a pick, reads as inactive: drained
+   of colour, its text faded toward the ground no further than it stays
+   readable, its squares dimmed. A business row outside a group is never
+   disabled, so it draws as it always has.
    The component sets the inks from the look (`disabledInks`); the fallbacks
    are the default look's, mixed from whatever colours are set. */
-.bl-ac-group-line:not([data-enabled]) {
+.bl-ac-group-line:not([data-enabled]),
+.bl-ac-group-head:not([data-enabled]),
+.bl-ac-group > .bl-ac-row:not([data-enabled]) {
   filter: var(--bl-ac-disabled-filter, saturate(0));
 }
 
-.bl-ac-group-line:not([data-enabled]) .bl-ac-line-name {
+.bl-ac-group-line:not([data-enabled]) .bl-ac-line-name,
+.bl-ac-group-head:not([data-enabled]) .bl-ac-name,
+.bl-ac-group > .bl-ac-row:not([data-enabled]) .bl-ac-name {
   color: var(
     --bl-ac-disabled-name,
     color-mix(in srgb, var(--bl-ac-title) 61.7%, var(--bl-ac-bg))
@@ -398,24 +404,37 @@
 }
 
 .bl-ac-group-line:not([data-enabled])
-  :is(.bl-ac-address, .bl-ac-role, .bl-ac-icon) {
+  :is(.bl-ac-address, .bl-ac-role, .bl-ac-icon),
+.bl-ac-group-head:not([data-enabled])
+  :is(.bl-ac-address, .bl-ac-group-count, .bl-ac-icon),
+.bl-ac-group
+  > .bl-ac-row:not([data-enabled])
+  :is(.bl-ac-address, .bl-ac-people, .bl-ac-also, .bl-ac-icon) {
   color: var(
     --bl-ac-disabled-text,
     color-mix(in srgb, var(--bl-ac-subtitle) 48.4%, var(--bl-ac-bg))
   );
 }
 
-.bl-ac-group-line:not([data-enabled]) .bl-ac-states {
+.bl-ac-group-line:not([data-enabled]) .bl-ac-states,
+.bl-ac-group
+  > .bl-ac-row:not([data-enabled])
+  :is(.bl-ac-states, .bl-ac-structure) {
   opacity: var(--bl-ac-disabled-opacity, 0.52);
 }
 
 /* Forced colours draw the text in the system's own; fading it would not. */
 @media (forced-colors: active) {
-  .bl-ac-group-line:not([data-enabled]) {
+  .bl-ac-group-line:not([data-enabled]),
+  .bl-ac-group-head:not([data-enabled]),
+  .bl-ac-group > .bl-ac-row:not([data-enabled]) {
     filter: none;
   }
 
-  .bl-ac-group-line:not([data-enabled]) .bl-ac-states {
+  .bl-ac-group-line:not([data-enabled]) .bl-ac-states,
+  .bl-ac-group
+    > .bl-ac-row:not([data-enabled])
+    :is(.bl-ac-states, .bl-ac-structure) {
     opacity: 1;
   }
 }

@@ -4,11 +4,18 @@ import { describe, expect, it } from "vitest";
 import { commands, page } from "vitest/browser";
 
 import type {
+  AddressSuggestion,
+  BusinessSuggestion,
+  EntityType,
   LookInput,
   PersonSuggestion,
   RelatedItem,
 } from "@baselayer-sdk/autocomplete";
-import { PersonAutocompleteView } from "@baselayer-sdk/autocomplete/react";
+import {
+  AddressAutocompleteView,
+  BusinessAutocompleteView,
+  PersonAutocompleteView,
+} from "@baselayer-sdk/autocomplete/react";
 
 import { PRESETS } from "../../site/demo/style-state";
 import "../../src/react/styles.css";
@@ -149,7 +156,7 @@ const part = (line: HTMLElement, selector: string) =>
   line.querySelector<HTMLElement>(selector)!;
 
 describe("a disabled line", () => {
-  it("is drained of colour, its text faded toward the ground and its squares dimmed; an enabled line and the head are not", () => {
+  it("is drained of colour, its text faded toward the ground and its squares dimmed; an enabled line is not", () => {
     const { head, enabled, disabled, done } = draw();
     try {
       expect(getComputedStyle(disabled).filter).toBe("saturate(0)");
@@ -162,9 +169,9 @@ describe("a disabled line", () => {
       expect(getComputedStyle(part(disabled, ".bl-ac-role")).color).not.toBe(
         getComputedStyle(part(enabled, ".bl-ac-role")).color,
       );
-      for (const untouched of [enabled, head]) {
-        expect(getComputedStyle(untouched).filter).toBe("none");
-      }
+      expect(getComputedStyle(enabled).filter).toBe("none");
+      // The head, a person's, is not a pick by default: it fades too.
+      expect(getComputedStyle(head).filter).toBe("saturate(0)");
       expect(getComputedStyle(part(enabled, ".bl-ac-states")).opacity).toBe(
         "1",
       );
@@ -226,4 +233,141 @@ describe("a disabled line", () => {
       await commands.forcedColors(false);
     }
   });
+});
+
+// A row of each search, its head enabled or not.
+const PIER: AddressSuggestion = {
+  type: "address",
+  token: "tok-pier",
+  label: "77 Quillfeather Ln, Dover, DE 19904",
+  matched_name: null,
+  match: "strong",
+  highlight: [],
+  components: {
+    line1: "77 Quillfeather Ln",
+    line2: null,
+    city: "Dover",
+    state: "DE",
+    postal_code: "19904",
+  },
+  related: {
+    businesses: DANA.related.businesses,
+    people: { count: null, matched: null, truncated: false, items: [] },
+  },
+};
+
+const HARBOR: BusinessSuggestion = {
+  type: "business",
+  token: "tok-harbor",
+  label: "HARBOR CONCRETE PUMPING, LLC",
+  matched_name: null,
+  match: "strong",
+  domicile_state: "PA",
+  states: ["OH", "PA"],
+  structure: "LLC",
+  highlight: [],
+  related: {
+    people: {
+      count: 1,
+      matched: null,
+      truncated: false,
+      items: [{ ...business("Dana Whitfield", "tok-dana"), type: "person" }],
+    },
+    addresses: { count: null, matched: null, truncated: false, items: [] },
+  },
+};
+
+const viewProps = {
+  value: "harbor",
+  onInputChange: () => {},
+  onSelect: () => {},
+  found: 1,
+  foundCapped: false,
+  truncated: false,
+  indexTag: null,
+  roundTripMs: null,
+  isSearching: false,
+  error: null,
+  open: true,
+};
+
+/** A search's row with its head enabled or not, and the head's name. */
+function head(
+  search: "person" | "address" | "business",
+  enabled: boolean,
+  look: LookInput,
+) {
+  const host = document.createElement("div");
+  host.style.width = "760px";
+  host.style.fontFamily = "sans-serif";
+  document.body.append(host);
+  const root = createRoot(host);
+  const lines: EntityType[] = enabled
+    ? ["business", "person", "address"]
+    : search === "business"
+      ? ["person"]
+      : ["business"];
+  flushSync(() =>
+    root.render(
+      search === "person" ? (
+        <PersonAutocompleteView
+          {...viewProps}
+          id="person"
+          suggestions={[DANA]}
+          enabledLines={lines}
+          look={look}
+        />
+      ) : search === "address" ? (
+        <AddressAutocompleteView
+          {...viewProps}
+          id="address"
+          suggestions={[PIER]}
+          enabledLines={lines}
+          look={look}
+        />
+      ) : (
+        <BusinessAutocompleteView
+          {...viewProps}
+          id="business"
+          suggestions={[HARBOR]}
+          list={["people"]}
+          enabledLines={lines}
+          look={look}
+        />
+      ),
+    ),
+  );
+  const group = host.querySelector<HTMLElement>('[role="group"]')!;
+  return {
+    head: group.firstElementChild as HTMLElement,
+    name: group.querySelector<HTMLElement>(".bl-ac-name")!,
+    done() {
+      root.unmount();
+      host.remove();
+    },
+  };
+}
+
+describe("a row's head that is not a pick", () => {
+  for (const preset of PRESETS.filter(
+    each => each.name === "Light" || each.name === "Midnight",
+  )) {
+    for (const search of ["person", "address", "business"] as const) {
+      const article = search === "address" ? "an" : "a";
+      it(`fades on ${article} ${search}'s row as a disabled line does, on ${preset.name}, and not when it is a pick`, async () => {
+        const enabled = head(search, true, preset.look);
+        const enabledName = await drawnContrast(enabled.name);
+        enabled.done();
+        const disabled = head(search, false, preset.look);
+        try {
+          expect(disabled.head).toHaveAttribute("aria-disabled", "true");
+          const disabledName = await drawnContrast(disabled.name);
+          expect(disabledName).toBeGreaterThanOrEqual(3);
+          expect(disabledName).toBeLessThanOrEqual(0.6 * enabledName);
+        } finally {
+          disabled.done();
+        }
+      });
+    }
+  }
 });

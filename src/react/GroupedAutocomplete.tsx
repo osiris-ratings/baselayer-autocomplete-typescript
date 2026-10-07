@@ -525,12 +525,14 @@ function GroupedView<R extends GroupedRoute>({
     row,
     lines: groupedLines(row, listed, enabledLines),
   }));
-  // Every line is an option, in the order drawn: the head when it is a pick,
-  // and each listed line, enabled or not.
-  const items: OptionItem[] = drawn.flatMap(({ lines }) => [
-    ...(lines.head.option !== null
-      ? [{ option: lines.head.option, label: optionLabel(lines.head.option) }]
-      : []),
+  // Every line is an option, in the order drawn, the head first: one that is
+  // not a pick is a disabled one.
+  const items: OptionItem[] = drawn.flatMap(({ row, lines }) => [
+    {
+      option: lines.head.option,
+      label:
+        lines.head.option !== null ? optionLabel(lines.head.option) : row.label,
+    },
     ...lines.lists.flatMap(list =>
       list.lines.map(({ item, option }) => ({ option, label: item.label })),
     ),
@@ -718,30 +720,27 @@ function GroupedView<R extends GroupedRoute>({
     name: ReactNode,
     headId: string,
   ) {
-    // The head is the group's label, and an option only when it is a pick;
-    // every listed line is an option, a disabled one passed over by the keys.
-    const index = of.line === "head" && option === null ? null : optionIndex++;
-    const highlighted = index !== null && combobox.highlightedIndex === index;
+    // Every line is an option, the head too, which also names the group; one
+    // that is not a pick is a disabled option, passed over by the keys.
+    const index = optionIndex++;
+    const highlighted = combobox.highlightedIndex === index;
     const at = (place: string) =>
       field(layout[place] ?? null, place, of, headId);
     const badge = at(`${of.line}Badge`);
     const trailingBadge = at(`${of.line}TrailingBadge`);
     const trailing = at(`${of.line}Trailing`);
-    const props =
-      index === null
-        ? { role: "presentation", id: `${headId}-${key}` }
-        : combobox.getItemProps({
-            item: {
-              option,
-              label:
-                option !== null
-                  ? optionLabel(option)
-                  : of.line === "head"
-                    ? of.row.label
-                    : of.item.label,
-            },
-            index,
-          });
+    const props = combobox.getItemProps({
+      item: {
+        option,
+        label:
+          option !== null
+            ? optionLabel(option)
+            : of.line === "head"
+              ? of.row.label
+              : of.item.label,
+      },
+      index,
+    });
     return (
       <div
         {...props}

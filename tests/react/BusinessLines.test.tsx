@@ -404,7 +404,11 @@ describe("a business row that lists its officers and addresses", () => {
         name: "HARBOR CONCRETE PUMPING CO., INC.",
       }),
     ).toBeInTheDocument();
-    expect(screen.queryAllByRole("option")).toHaveLength(0);
+    // Its head is an option a screen reader calls unavailable, and the only one.
+    const [head, ...rest] = screen.getAllByRole("option");
+    expect(rest).toHaveLength(0);
+    expect(head).toHaveAttribute("data-testid", "business-suggestion");
+    expect(head).toHaveAttribute("aria-disabled", "true");
   });
 
   it("needs somewhere to send an officer or an address picked", () => {

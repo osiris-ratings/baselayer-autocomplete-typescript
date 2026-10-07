@@ -65,20 +65,20 @@ release.
   carries `data-entity`, `data-role` and `data-glyph`. `IconSet`, `IconKey`,
   `DEFAULT_ICON_SEGMENTS`, `IconSegmentByRoute` and each kind's segments
   (`BUSINESS_ICON_SEGMENTS`, …).
-- A disabled line is an option marked `aria-disabled`, which a screen reader
-  calls unavailable, the keys pass over and a click does not pick.
-  `isItemDisabled` on `useSuggestionCombobox` does the same for a host's own
-  rows.
+- A disabled line, or a row's head that is not a pick, is an option marked
+  `aria-disabled`, which a screen reader calls unavailable, the keys pass over
+  and a click does not pick; a head still names its group. `isItemDisabled` on
+  `useSuggestionCombobox` does the same for a host's own rows.
 - The line under the field after a pick from a line under a row
   (`bl-ac-selection`, a `GroupedSelection` on the views), the field described
   by it. It names the picked line while the field holds the name the pick put
   there, and any other edit lets it go.
-- `disabledDim` on `look`: how far a disabled line under a row fades, 0 to 1 and
-  0.6 by default, so it reads as inactive. It drains the line's colour, fades
-  its text toward the menu's ground and dims its state squares, with floors
-  worked out from the look's colours: a name keeps 4.6:1 (3:1 or more as
-  drawn) and the rest 40% of its contrast, at least 1.8:1. Nothing fades under
-  forced colours.
+- `disabledDim` on `look`: how far a disabled line, or a head that is not a
+  pick, fades, 0 to 1 and 0.6 by default, so it reads as inactive: a person's
+  and an address's heads by default. It drains the line's colour, fades its text
+  toward the menu's ground and dims its state squares, with floors worked out
+  from the look's colours: a name keeps 4.6:1 (3:1 or more as drawn) and the
+  rest 40% of its contrast, at least 1.8:1. Nothing fades under forced colours.
 - One row model for all three searches: `BUSINESS_ROW`, `PERSON_ROW` and
   `ADDRESS_ROW` (`ROW_KINDS`), each a `RowKind`: its places
   (`BUSINESS_ROW_PLACES`, …), its fields by line (`BUSINESS_LINE_FIELDS`, …),

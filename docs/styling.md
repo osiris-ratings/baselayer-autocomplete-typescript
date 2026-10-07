@@ -305,7 +305,9 @@ set only in CSS, not through `look`, fades by the default look's shares
 (`color-mix`), without the floors. A translucent title or subtitle is faded as
 it is drawn on the ground; a translucent background shows whatever is under the
 menu, which the component cannot know, so the floors then hold only on the
-background's own colour. A pick and the row's head do not fade, and nothing
+background's own colour. A row's head that is not a pick fades as a disabled
+line does: a person's and an address's by default, since a business is the
+pick, their businesses at full strength. A pick does not fade, and nothing
 fades under forced colours.
 
 After a pick from a line under a row, the line under the field

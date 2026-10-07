@@ -474,13 +474,11 @@ export function BusinessAutocompleteView({
   const rowLines = grouped
     ? suggestions.map(row => groupedLines(row, listed, enabledLines))
     : [];
-  // Every line of a group is an option, in the order drawn: the business when
-  // it is a pick, and each listed line, enabled or not.
+  // Every line of a group is an option, in the order drawn, the business
+  // first: one that is not a pick is a disabled one.
   const items: (BusinessSuggestion | OptionItem)[] = grouped
-    ? rowLines.flatMap(lines => [
-        ...(lines.head.option !== null
-          ? [{ option: lines.head.option, label: lines.head.option.row.label }]
-          : []),
+    ? rowLines.flatMap((lines, rowIndex) => [
+        { option: lines.head.option, label: suggestions[rowIndex]!.label },
         ...lines.lists.flatMap(list =>
           list.lines.map(({ item, option }) => ({ option, label: item.label })),
         ),
@@ -684,9 +682,8 @@ export function BusinessAutocompleteView({
               const lines = rowLines[rowIndex]!;
               const headId = `${id}-group-${rowIndex}`;
               const head = lines.head.option;
-              const headIndex = head === null ? null : optionIndex++;
-              const highlighted =
-                headIndex !== null && highlightedIndex === headIndex;
+              const headIndex = optionIndex++;
+              const highlighted = highlightedIndex === headIndex;
               const defaultRow = (
                 <DefaultRow
                   item={item}
@@ -715,12 +712,10 @@ export function BusinessAutocompleteView({
                   data-testid="business-group"
                 >
                   <div
-                    {...(head === null || headIndex === null
-                      ? { role: "presentation" }
-                      : combobox.getItemProps({
-                          item: { option: head, label: item.label },
-                          index: headIndex,
-                        }))}
+                    {...combobox.getItemProps({
+                      item: { option: head, label: item.label },
+                      index: headIndex,
+                    })}
                     className={cx("row", "bl-ac-row")}
                     data-highlighted={highlighted ? "true" : undefined}
                     data-enabled={head !== null ? "true" : undefined}
