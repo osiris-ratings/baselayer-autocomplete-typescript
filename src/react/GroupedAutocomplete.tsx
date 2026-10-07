@@ -398,6 +398,8 @@ function GroupedView<R extends GroupedRoute>({
           {hasRows &&
             rows.map((row, rowIndex) => {
               const headId = `${id}-group-${rowIndex}`;
+              const countId = `${headId}-count`;
+              const moreId = `${headId}-more`;
               const pickable = pickableBusinesses(row);
               const { count } = row.related.businesses;
               const notShown = (count ?? pickable.length) - pickable.length;
@@ -407,6 +409,16 @@ function GroupedView<R extends GroupedRoute>({
                   key={row.token}
                   role="group"
                   aria-labelledby={headId}
+                  // How many it leads to, and how many the row leaves out:
+                  // what the options alone do not say.
+                  aria-describedby={
+                    [
+                      count !== null ? countId : null,
+                      notShown > 0 ? moreId : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" ") || undefined
+                  }
                   className={cx("group", "bl-ac-group")}
                   data-testid={`${entity}-suggestion`}
                 >
@@ -425,7 +437,10 @@ function GroupedView<R extends GroupedRoute>({
                       )}
                     </span>
                     {count !== null && (
-                      <span className={cx("groupCount", "bl-ac-group-count")}>
+                      <span
+                        id={countId}
+                        className={cx("groupCount", "bl-ac-group-count")}
+                      >
                         {route === "people"
                           ? text.businessesOfPerson(count)
                           : text.businessesAtAddress(count)}
@@ -456,7 +471,7 @@ function GroupedView<R extends GroupedRoute>({
                     );
                   })}
                   {notShown > 0 && (
-                    <div className={cx("more", "bl-ac-more")}>
+                    <div id={moreId} className={cx("more", "bl-ac-more")}>
                       {text.moreBusinesses(notShown)}
                     </div>
                   )}

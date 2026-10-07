@@ -212,7 +212,8 @@ Past that, drop the component and build on the hooks: see
 ### Person and address rows
 
 A person or an address is a group in the menu (`bl-ac-group`,
-`role="group"`, labelled by its name). Its head (`bl-ac-group-head`) is the
+`role="group"`, labelled by its name and described by its count and what it
+leaves out). Its head (`bl-ac-group-head`) is the
 name, drawn as a business's is, with the same marks under the same
 emphasis (`bl-ac-name`), and at the right how many businesses it leads to
 (`bl-ac-group-count`: `messages.businessesOfPerson`,

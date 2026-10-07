@@ -263,6 +263,21 @@ describe("PersonAutocomplete", () => {
     expect(screen.getByText("2 people")).toBeInTheDocument();
   });
 
+  it("describes each group by its count and what it leaves out, for a screen reader", async () => {
+    const { client } = setup();
+    const user = userEvent.setup();
+    render(<PersonHost client={client} onPick={() => {}} />);
+
+    await user.type(screen.getByRole("combobox"), "dana");
+
+    expect(
+      await screen.findByRole("group", { name: "Dana Whitfield" }),
+    ).toHaveAccessibleDescription("9 businesses +7 more not shown");
+    expect(
+      screen.getByRole("group", { name: "Danae Ortega" }),
+    ).toHaveAccessibleDescription("1 business");
+  });
+
   it("moves through the businesses only, and picks one with the person it came through", async () => {
     const { client } = setup();
     const onPick = vi.fn<(pick: BusinessPick) => void>();
