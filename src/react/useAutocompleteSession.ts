@@ -1,9 +1,8 @@
-import { useCallback, useState, useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 import type {
   AutocompleteClient,
   ClientSnapshot,
-  SessionScope,
 } from "@baselayer-sdk/autocomplete";
 
 import { useResolvedClient } from "./context";
@@ -40,22 +39,4 @@ export function useAutocompleteSession(
     prewarm: resolved.prewarm,
     reset: resolved.reset,
   };
-}
-
-/**
- * The scope of the session's latest grant, kept while the next one is
- * minted, since the rows on screen were asked for under it; undefined before
- * the first grant. What a row lists is drawn only where it grants it.
- */
-export function useSessionScope(
-  client: AutocompleteClient,
-): SessionScope | undefined {
-  const { snapshot } = useAutocompleteSession(client);
-  const [scope, setScope] = useState<SessionScope | undefined>(undefined);
-  const current =
-    snapshot.session.phase === "ready" ? snapshot.session.grant.scope : scope;
-  if (current !== scope) {
-    setScope(current);
-  }
-  return current;
 }

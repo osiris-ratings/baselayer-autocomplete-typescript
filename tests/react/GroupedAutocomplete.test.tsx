@@ -12,6 +12,7 @@ import {
   type EntityType,
   type FetchLike,
   type MintFunction,
+  type MintOutcome,
   type PersonIconSegment,
   type PersonRowLayoutInput,
   type ResponseLike,
@@ -228,7 +229,23 @@ function answer(body: typeof PEOPLE | typeof ADDRESSES, include: string[]) {
   };
 }
 
-function setup(scope: SessionScope = SCOPE) {
+/** A mint that grants `scope`. */
+const grant = (scope: SessionScope): MintOutcome => ({
+  kind: "granted",
+  grant: {
+    sessionToken: "sess-1",
+    expiresIn: 300,
+    requestBudget: 50,
+    pivotAllowance: 5,
+    filterMinStem: 3,
+    scope,
+  },
+});
+
+function setup(
+  scope: SessionScope = SCOPE,
+  mint: MintFunction = async () => grant(scope),
+) {
   const fetch = vi.fn<FetchLike>(async url => {
     const include = (
       new URL(url).searchParams.get("include") ?? "businesses"
@@ -240,17 +257,6 @@ function setup(scope: SessionScope = SCOPE) {
         include,
       ),
     );
-  });
-  const mint: MintFunction = async () => ({
-    kind: "granted",
-    grant: {
-      sessionToken: "sess-1",
-      expiresIn: 300,
-      requestBudget: 50,
-      pivotAllowance: 5,
-      filterMinStem: 3,
-      scope,
-    },
   });
   return {
     fetch,
@@ -1116,6 +1122,86 @@ describe("a listed relation the session's scope leaves out", () => {
     });
 
     expect(listsOf(dana)).toEqual(["businesses"]);
+  });
+
+  const NARROW: SessionScope = {
+    routes: { people: ["businesses"] },
+    maxLimit: 20,
+  };
+  /** Dana, who has businesses and addresses, has no list drawn empty. */
+  const noEmptyList = () => {
+    const dana = screen.getByRole("group", { name: "Dana Whitfield" });
+    for (const list of dana.querySelectorAll("[data-list]")) {
+      expect(list.querySelector("[data-line]"), list.outerHTML).not.toBeNull();
+    }
+  };
+
+  it("draws rows by what they were asked for, though a wider grant has come since", async () => {
+    let outcome = grant(NARROW);
+    const { client } = setup(SCOPE, async () => outcome);
+    const { dana } = await typeDana(client, {
+      list: ["addresses", "businesses"],
+    });
+    expect(listsOf(dana)).toEqual(["businesses"]);
+
+    outcome = grant(SCOPE);
+    await act(async () => {
+      await client.getSession({ force: true });
+    });
+
+    expect(
+      listsOf(screen.getByRole("group", { name: "Dana Whitfield" })),
+    ).toEqual(["businesses"]);
+    noEmptyList();
+  });
+
+  it("draws rows by what they were asked for while a new grant is refused", async () => {
+    let outcome: MintOutcome = grant(NARROW);
+    const { client } = setup(SCOPE, async () => outcome);
+    await typeDana(client, { list: ["addresses", "businesses"] });
+
+    outcome = {
+      kind: "refused",
+      status: 503,
+      code: null,
+      retryAfterSeconds: 60,
+      scope: null,
+      message: null,
+    };
+    await act(async () => {
+      await client.getSession({ force: true }).catch(() => undefined);
+    });
+
+    expect(client.getSnapshot().session.phase).not.toBe("ready");
+    expect(
+      listsOf(screen.getByRole("group", { name: "Dana Whitfield" })),
+    ).toEqual(["businesses"]);
+    noEmptyList();
+  });
+
+  it("keeps a row's lists whole when a narrower grant comes, until the next answer", async () => {
+    let outcome = grant(SCOPE);
+    const { client } = setup(SCOPE, async () => outcome);
+    const { user, dana } = await typeDana(client, {
+      list: ["addresses", "businesses"],
+    });
+    expect(listsOf(dana)).toEqual(["addresses", "businesses"]);
+
+    outcome = grant(NARROW);
+    await act(async () => {
+      await client.getSession({ force: true });
+    });
+    expect(
+      listsOf(screen.getByRole("group", { name: "Dana Whitfield" })),
+    ).toEqual(["addresses", "businesses"]);
+    noEmptyList();
+
+    await user.type(screen.getByRole("combobox"), " w");
+    await aMoment();
+    expect(
+      listsOf(await screen.findByRole("group", { name: "Dana Whitfield" })),
+    ).toEqual(["businesses"]);
+    noEmptyList();
   });
 
   it("is not drawn under an address, though the host lists it", async () => {

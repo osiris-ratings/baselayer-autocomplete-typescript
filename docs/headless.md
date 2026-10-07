@@ -231,6 +231,9 @@ Its state, besides `suggestions`, `isSearching` and `unavailable`:
   is null (a window backoff, an invalid query)
 - `indexTag`, `roundTripMs` and `requestId`: the shown answer's, or null
 - `filtersWithheld`: the filters were held back for a short stem
+- `expanded`: the relations the shown rows were asked to expand, as the
+  session's scope allowed then; list only these under a row, since one
+  outside it comes back empty
 
 `EMPTY_AUTOCOMPLETE_STATE` is the state before anything is asked.
 
@@ -259,8 +262,12 @@ const state = useEntityAutocomplete({
   enabled: true,
   include: request.include,
 });
+// List only what the rows were asked to expand, under the scope of the time.
+const listed = request.list.filter(relation =>
+  state.expanded.includes(relation),
+);
 const rows = state.suggestions.map(row =>
-  groupedLines(row, request.list, ["business", "person"]),
+  groupedLines(row, listed, ["business", "person"]),
 );
 const options = rows.flatMap(groupedOptions).map(option => ({
   option,
@@ -296,8 +303,9 @@ const combobox = useSuggestionCombobox({
 Draw each row as a `role="group"` labelled by its name, its lines inside, so
 the arrow keys move from pick to pick and a screen reader hears whose they
 are. A line that is not enabled is plain text, not an option. The hook
-leaves out any relation the session's scope does not grant; pass the scope
-to `requestFor` too, and it leaves it out of `list`.
+leaves out any relation the session's scope does not grant, and its
+`expanded` says what the shown rows were asked to expand: list only those, as
+above, and a grant that changes while they are on screen draws no empty list.
 
 `useBusinessCombobox` is downshift's combobox with three decisions made: the
 caret never jumps on a mid-word insert, a blur never commits the highlighted

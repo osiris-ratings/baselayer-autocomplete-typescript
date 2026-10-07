@@ -77,6 +77,12 @@ export interface EntityAutocompleteState<R extends Relation> {
    * holds now, says what the rows matched on.
    */
   appliedFilters: FiltersByRelation[R] | undefined;
+  /**
+   * The relations `suggestions` were asked to expand, as the session's scope
+   * allowed then. A relation outside it comes back empty, so a row lists only
+   * these, whatever a grant since allows.
+   */
+  expanded: IncludeOf<R>[];
   requestId: string | null;
 }
 
@@ -96,6 +102,7 @@ export const EMPTY_AUTOCOMPLETE_STATE: BusinessAutocompleteState =
     errorKind: null,
     filtersWithheld: false,
     appliedFilters: undefined,
+    expanded: [],
     requestId: null,
   }) as BusinessAutocompleteState;
 
@@ -245,6 +252,7 @@ export function useEntityAutocomplete<R extends Relation>({
           errorKind: null,
           filtersWithheld: result.filtersWithheld,
           appliedFilters: result.filtersWithheld ? undefined : stableFilters,
+          expanded: included ?? [],
           requestId: result.requestId,
         });
       } catch (error) {

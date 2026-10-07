@@ -43,7 +43,6 @@ import {
   filtersKeyOf,
   useBusinessAutocomplete,
 } from "./useBusinessAutocomplete";
-import { useSessionScope } from "./useAutocompleteSession";
 
 /**
  * When the component mints its session. `focus` (the default) mints as the
@@ -261,14 +260,13 @@ function Connected({
   // The fields drawn decide what is fetched unless the host says: a field
   // placed nowhere is not asked for. With none needing a related entity the
   // autocomplete service's default stands, since it refuses an empty include.
-  // What is fetched does not wait on the session: the hook drops what its
-  // scope does not grant as it asks. What is drawn lists only what the scope
-  // grants, since an ungranted relation comes back empty, and a row left
-  // nothing to list is the one option it always was.
-  const drawn = drawnLayout(BUSINESS_ROW, resolveLayout(BUSINESS_ROW, layout));
-  const include = includeGiven ?? requestFor("businesses", drawn, list).include;
-  const scope = useSessionScope(client);
-  const listed = requestFor("businesses", drawn, list, scope).list;
+  // The hook drops what the session's scope does not grant as it asks.
+  const request = requestFor(
+    "businesses",
+    drawnLayout(BUSINESS_ROW, resolveLayout(BUSINESS_ROW, layout)),
+    list,
+  );
+  const include = includeGiven ?? request.include;
   const { selection, pick } = usePickedSelection(value, showSelection);
   const {
     unavailable,
@@ -276,6 +274,7 @@ function Connected({
     filtersWithheld,
     appliedFilters,
     requestId,
+    expanded,
     ...state
   } = useBusinessAutocomplete({
     client,
@@ -288,6 +287,10 @@ function Connected({
     ...(debounceMs !== undefined ? { debounceMs } : {}),
     ...(messages !== undefined ? { messages } : {}),
   });
+  // A row lists only what its answer was asked to expand: a relation outside
+  // the scope it was asked under comes back empty, and a row left nothing to
+  // list is the one option it always was.
+  const listed = request.list.filter(relation => expanded.includes(relation));
   void errorKind;
   void filtersWithheld;
   void requestId;
