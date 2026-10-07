@@ -556,7 +556,7 @@ function GroupedView<R extends GroupedRoute>({
     name: string | null,
     place: string,
     of: LineOf,
-    countId: string,
+    headId: string,
   ): ReactNode {
     switch (name) {
       case "firstAddress": {
@@ -571,6 +571,7 @@ function GroupedView<R extends GroupedRoute>({
         const more = (count ?? items.length) - 1;
         return (
           <span
+            id={`${headId}-first-address`}
             className={cx("address", "bl-ac-address")}
             data-place={place}
             data-testid="grouped-firstAddress"
@@ -585,7 +586,7 @@ function GroupedView<R extends GroupedRoute>({
         return (
           counts !== null && (
             <span
-              id={countId}
+              id={`${headId}-count`}
               className={cx("counts", "bl-ac-group-count")}
               data-place={place}
               data-testid="grouped-counts"
@@ -667,15 +668,16 @@ function GroupedView<R extends GroupedRoute>({
   ) {
     const index = option === null ? null : optionIndex++;
     const highlighted = index !== null && combobox.highlightedIndex === index;
-    const countId = `${headId}-count`;
     const at = (place: string) =>
-      field(layout[place] ?? null, place, of, countId);
+      field(layout[place] ?? null, place, of, headId);
     const badge = at(`${of.line}Badge`);
     const trailingBadge = at(`${of.line}TrailingBadge`);
     const trailing = at(`${of.line}Trailing`);
+    // Not a pick: no role in the listbox, which allows only options, and an
+    // id the group's description reads it by.
     const props =
       option === null || index === null
-        ? {}
+        ? { role: "presentation", id: `${headId}-${key}` }
         : combobox.getItemProps({
             item: { option, label: optionLabel(option) },
             index,
@@ -746,24 +748,37 @@ function GroupedView<R extends GroupedRoute>({
             drawn.map(({ row, lines }, rowIndex) => {
               const headId = `${id}-group-${rowIndex}`;
               const parts = look.matchEmphasis !== "plain" ? row.highlight : [];
-              const counted =
-                Object.values(layout).includes("counts") &&
-                countsText(row) !== null;
-              const moreIds = lines.lists
-                .filter(list => list.notShown > 0)
-                .map(list => `${headId}-more-${list.relation}`);
+              const drawsField = (name: string) =>
+                Object.values(layout).includes(name);
+              const firstAddressShown =
+                lines.head.option === null &&
+                row.type === "person" &&
+                drawsField("firstAddress") &&
+                row.related.addresses.items.length > 0;
+              const counted = drawsField("counts") && countsText(row) !== null;
+              // What the options do not say, as the lines are drawn: the
+              // head's first address and counts, each line that is not a
+              // pick, and what each list leaves out.
+              const describedBy = [
+                ...(firstAddressShown ? [`${headId}-first-address`] : []),
+                ...(counted ? [`${headId}-count`] : []),
+                ...lines.lists.flatMap(list => [
+                  ...list.lines.flatMap(({ option }, itemIndex) =>
+                    option === null
+                      ? [`${headId}-${list.line}-${itemIndex}`]
+                      : [],
+                  ),
+                  ...(list.notShown > 0
+                    ? [`${headId}-more-${list.relation}`]
+                    : []),
+                ]),
+              ];
               return (
                 <div
                   key={row.token}
                   role="group"
                   aria-labelledby={headId}
-                  // The counts, and how many each list leaves out: what the
-                  // lines alone do not say.
-                  aria-describedby={
-                    [...(counted ? [`${headId}-count`] : []), ...moreIds].join(
-                      " ",
-                    ) || undefined
-                  }
+                  aria-describedby={describedBy.join(" ") || undefined}
                   className={cx("group", "bl-ac-group")}
                   data-testid={`${entity}-suggestion`}
                 >
@@ -790,7 +805,7 @@ function GroupedView<R extends GroupedRoute>({
                     <div key={list.relation} data-list={list.relation}>
                       {list.lines.map(({ item, option }, itemIndex) =>
                         line(
-                          String(itemIndex),
+                          `${list.line}-${itemIndex}`,
                           { line: list.line, item },
                           option,
                           <span className={cx("lineName", "bl-ac-line-name")}>

@@ -421,16 +421,60 @@ describe("PersonAutocomplete", () => {
     expect(linesOf(dana, "address")).toEqual([]);
   });
 
-  it("describes each group by its counts and what it leaves out, for a screen reader", async () => {
+  it("describes each group by what only its inert lines say, for a screen reader", async () => {
     const { client } = setup();
-    const { dana } = await typeDana(client);
+    const { dana } = await typeDana(client, {
+      include: ["businesses", "addresses"],
+    });
 
-    expect(dana).toHaveAccessibleDescription(
-      "9 businesses · 3 addresses +6 more not shown",
-    );
+    // The options speak for themselves; a screen reader in a listbox moves
+    // from option to option, so the rest is the group's description: the
+    // head's first address and counts, each line that is not a pick, and
+    // what each list leaves out.
+    const description = [
+      "12 Fernhallow Ln, Dover, DE 19901 +2",
+      "9 businesses · 3 addresses",
+      "Unsealed Holdings LLC",
+      "+6 more not shown",
+      "12 Fernhallow Ln, Dover, DE 19901",
+      "9 Ashcombe Ct, Dover, DE 19904",
+      "+1 more not shown",
+    ];
+    const described = (dana.getAttribute("aria-describedby") ?? "")
+      .split(" ")
+      .map(id => document.getElementById(id)?.textContent ?? "");
+    expect(described).toEqual([
+      description[0],
+      description[1],
+      expect.stringMatching(/^Unsealed Holdings LLC.*officer$/),
+      description[3],
+      expect.stringMatching(/^12 Fernhallow Ln, Dover, DE 19901.*officer$/),
+      expect.stringMatching(/^9 Ashcombe Ct, Dover, DE 19904.*agent$/),
+      description[6],
+    ]);
     expect(
       screen.getByRole("group", { name: "Danae Ortega" }),
     ).toHaveAccessibleDescription("1 business · 0 addresses");
+  });
+
+  it("gives a line that is not a pick no role in the listbox", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client, {
+      include: ["businesses", "addresses"],
+    });
+
+    const inert = [
+      within(dana).getByTestId("group-head"),
+      within(dana).getAllByTestId("business-line")[1]!,
+      ...within(dana).getAllByTestId("address-line"),
+    ];
+    for (const line of inert) {
+      expect(line).toHaveAttribute("role", "presentation");
+    }
+    expect(within(dana).getAllByTestId("business-line")[0]).toHaveAttribute(
+      "role",
+      "option",
+    );
   });
 
   it("lists a person's addresses when the host includes them, each with the person's role there", async () => {

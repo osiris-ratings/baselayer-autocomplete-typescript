@@ -1,3 +1,4 @@
+import axe from "axe-core";
 import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
@@ -152,6 +153,7 @@ function draw(route: "people" | "addresses", width: number) {
       route === "people" ? (
         <PersonAutocompleteView
           id="people"
+          label="Person's name"
           value="margarethe"
           onInputChange={() => {}}
           onSelect={() => {}}
@@ -162,6 +164,7 @@ function draw(route: "people" | "addresses", width: number) {
       ) : (
         <AddressAutocompleteView
           id="addresses"
+          label="Address"
           value="4120 orchard"
           onInputChange={() => {}}
           onSelect={() => {}}
@@ -237,5 +240,30 @@ describe("person and address groups", () => {
         expect(faults()).toEqual([]);
       });
     }
+  }
+});
+
+describe("person and address groups, to assistive technology", () => {
+  for (const route of ["people", "addresses"] as const) {
+    it(`break no ARIA rule on ${route}, with inert lines among the options`, async () => {
+      draw(route, 560);
+      // Each group lists an inert line: the businesses are the picks, the
+      // addresses or people listed beside them are not.
+      expect(host.querySelectorAll('[role="option"]').length).toBeGreaterThan(
+        0,
+      );
+
+      const { violations } = await axe.run(host, {
+        // The look's colours are the host's; the structure is the SDK's.
+        rules: { "color-contrast": { enabled: false } },
+      });
+
+      expect(
+        violations.map(
+          ({ id, nodes }) =>
+            `${id}: ${nodes.map(node => node.target.join(" ")).join(", ")}`,
+        ),
+      ).toEqual([]);
+    });
   }
 });
