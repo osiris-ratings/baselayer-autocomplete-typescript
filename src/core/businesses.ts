@@ -1,9 +1,8 @@
-import { ROUTES, type IncludeOf, type Relation } from "./entities";
+import { ROUTES, type IncludeOf, type Relation, type Route } from "./entities";
+import type { RelatedRole } from "./wire";
 
-/** A person's role on a business: what `sos_officers` records. */
-export type PersonRole = "officer" | "agent";
-/** What an address is to the entity that holds it. */
-export type AddressRole = "principal" | "mailing" | "agent" | "officer";
+/** A person's role on a business. */
+export type PersonRole = Extract<RelatedRole, "officer" | "agent">;
 
 /**
  * Narrowing filters on `GET /autocomplete/businesses`: exactly the set the
@@ -23,31 +22,16 @@ export interface Filters {
   };
 }
 
-interface BusinessRelationFilter {
-  name?: string;
-  state?: string[];
-}
-
-interface AddressRelationFilter {
-  text?: string;
-  city?: string;
-  postalCode?: string[];
-  state?: string[];
-  role?: AddressRole[];
-}
-
-/** Not served yet: the working specification's filters on `/autocomplete/people`. */
+/** Narrowing filters on `GET /autocomplete/people`: the one it serves. */
 export interface PeopleFilters {
-  state?: string[];
-  business?: BusinessRelationFilter;
-  address?: AddressRelationFilter;
+  /** Keeps the people who hold a role on a business in any of these states. */
+  business?: { state?: string[] };
 }
 
-/** Not served yet: the working specification's filters on `/autocomplete/addresses`. */
+/** Narrowing filters on `GET /autocomplete/addresses`: the one it serves. */
 export interface AddressesFilters {
+  /** The address's own state, any of these. */
   state?: string[];
-  business?: BusinessRelationFilter;
-  person?: { name?: string; role?: PersonRole[] };
 }
 
 export interface FiltersByRelation {
@@ -57,7 +41,7 @@ export interface FiltersByRelation {
 }
 
 /** One keystroke's query on a route. */
-export interface RouteQuery<R extends Relation> {
+export interface RouteQuery<R extends Route> {
   /** The text as typed. */
   q: string;
   /** 1 to 20; omitted, the autocomplete service answers 10. */
@@ -141,27 +125,48 @@ export function stemLength(q: string): number {
   return Array.from(depunct(strippedQuery(q))).length;
 }
 
+export interface FilterParam {
+  /** The query parameter. */
+  param: string;
+  /** Where its value sits in the route's filters. */
+  path: readonly [string] | readonly [string, string];
+  /** The relation it narrows by, which the session's scope must grant; null for a direct one. */
+  relation: Relation | null;
+}
+
 /**
- * Every filter parameter a route can take, in the one order they are sent.
+ * The filter parameters each route takes, in the one order they are sent.
  * The autocomplete service parses strictly (an unknown or repeated parameter is
  * a 422), and a fixed order keeps one query one URL.
  */
-const FILTER_PARAMS: {
-  param: string;
-  path: readonly [string] | readonly [string, string];
-}[] = [
-  { param: "state", path: ["state"] },
-  { param: "domicile_state", path: ["domicileState"] },
-  { param: "person.name", path: ["person", "name"] },
-  { param: "person.role", path: ["person", "role"] },
-  { param: "business.name", path: ["business", "name"] },
-  { param: "business.state", path: ["business", "state"] },
-  { param: "address.text", path: ["address", "text"] },
-  { param: "address.city", path: ["address", "city"] },
-  { param: "address.postal_code", path: ["address", "postalCode"] },
-  { param: "address.state", path: ["address", "state"] },
-  { param: "address.role", path: ["address", "role"] },
-];
+export const FILTER_PARAMS = {
+  businesses: [
+    { param: "state", path: ["state"], relation: null },
+    { param: "domicile_state", path: ["domicileState"], relation: null },
+    { param: "person.name", path: ["person", "name"], relation: "people" },
+    { param: "person.role", path: ["person", "role"], relation: "people" },
+    { param: "address.text", path: ["address", "text"], relation: "addresses" },
+    { param: "address.city", path: ["address", "city"], relation: "addresses" },
+    {
+      param: "address.postal_code",
+      path: ["address", "postalCode"],
+      relation: "addresses",
+    },
+    {
+      param: "address.state",
+      path: ["address", "state"],
+      relation: "addresses",
+    },
+  ],
+  people: [
+    {
+      param: "business.state",
+      path: ["business", "state"],
+      relation: "businesses",
+    },
+  ],
+  addresses: [{ param: "state", path: ["state"], relation: null }],
+} as const satisfies Record<Route, readonly FilterParam[]>;
 
 /** The value a parameter carries: trimmed text, or a non-empty comma list. */
 function paramValue(value: unknown): string | null {
@@ -177,14 +182,24 @@ function paramValue(value: unknown): string | null {
   return null;
 }
 
-/** The filter parameters a query sends, in order. */
-export function filterParams(filters: object | undefined): [string, string][] {
+/** A filter a query sets: its parameter, the value it sends, and its relation. */
+export interface SetFilter {
+  param: string;
+  value: string;
+  relation: Relation | null;
+}
+
+/** The filters a query on `route` sets, in order; any the route does not take are ignored. */
+export function setFilters(
+  route: Route,
+  filters: object | undefined,
+): SetFilter[] {
   if (filters === undefined) {
     return [];
   }
   const record = filters as Record<string, unknown>;
-  const out: [string, string][] = [];
-  for (const { param, path } of FILTER_PARAMS) {
+  const out: SetFilter[] = [];
+  for (const { param, path, relation } of FILTER_PARAMS[route]) {
     const [head, field] = path;
     const holder = record[head];
     const value =
@@ -195,15 +210,23 @@ export function filterParams(filters: object | undefined): [string, string][] {
           : undefined;
     const text = paramValue(value);
     if (text !== null) {
-      out.push([param, text]);
+      out.push({ param, value: text, relation });
     }
   }
   return out;
 }
 
-/** Whether a query carries any filter, on any route. */
-export function hasFilters(filters: object | undefined): boolean {
-  return filterParams(filters).length > 0;
+/** The filter parameters a query on `route` sends, in order. */
+export function filterParams(
+  route: Route,
+  filters: object | undefined,
+): [string, string][] {
+  return setFilters(route, filters).map(({ param, value }) => [param, value]);
+}
+
+/** Whether a query on `route` carries any filter that route takes. */
+export function hasFilters(route: Route, filters: object | undefined): boolean {
+  return setFilters(route, filters).length > 0;
 }
 
 /**
@@ -211,9 +234,9 @@ export function hasFilters(filters: object | undefined): boolean {
  * order, and only when set: the autocomplete service parses strictly and
  * answers 422 to an unknown or repeated one.
  */
-export function buildSuggestUrl<R extends Relation>(
+export function buildSuggestUrl<R extends Route>(
   baseUrl: string,
-  relation: R,
+  route: R,
   query: RouteQuery<R>,
   { withFilters = true }: { withFilters?: boolean } = {},
 ): string {
@@ -226,11 +249,11 @@ export function buildSuggestUrl<R extends Relation>(
     params.set("include", query.include.join(","));
   }
   if (withFilters) {
-    for (const [param, value] of filterParams(query.filters)) {
+    for (const [param, value] of filterParams(route, query.filters)) {
       params.set(param, value);
     }
   }
-  return `${baseUrl.replace(/\/+$/, "")}${ROUTES[relation].path}?${params.toString()}`;
+  return `${baseUrl.replace(/\/+$/, "")}${ROUTES[route].path}?${params.toString()}`;
 }
 
 /** The request URL for `GET /autocomplete/businesses`. */

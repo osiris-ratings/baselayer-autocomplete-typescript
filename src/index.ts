@@ -12,6 +12,7 @@ export {
   type SuggestResult,
 } from "./core/client";
 export {
+  FILTER_PARAMS,
   MAX_LIMIT,
   MAX_Q_CHARS,
   MIN_Q_CHARS,
@@ -21,10 +22,11 @@ export {
   filterParams,
   hasFilters,
   recoveryFor,
+  setFilters,
   stemLength,
   strippedQuery,
-  type AddressRole,
   type AddressesFilters,
+  type FilterParam,
   type Filters,
   type FiltersByRelation,
   type PeopleFilters,
@@ -32,6 +34,7 @@ export {
   type Query,
   type Recovery,
   type RouteQuery,
+  type SetFilter,
   type ShortStemPolicy,
 } from "./core/businesses";
 export {

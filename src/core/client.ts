@@ -464,7 +464,7 @@ export function createAutocompleteClient(
         until: authBrakeUntil,
       });
     }
-    const filtered = hasFilters(query.filters);
+    const filtered = hasFilters(relation, query.filters);
     let grant = await session.getSession();
     // What this call already tried, not merely that it tried something. The
     // brake counts one thing, a grant just re-minted and refused again, and a

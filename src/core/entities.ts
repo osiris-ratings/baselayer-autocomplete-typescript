@@ -73,14 +73,14 @@ export const ROUTES = {
     entity: "person",
     includes: LEGAL_RELATIONS.people,
     defaultInclude: ["businesses"],
-    served: false,
+    served: true,
   },
   addresses: {
     path: "/autocomplete/addresses",
     entity: "address",
     includes: LEGAL_RELATIONS.addresses,
     defaultInclude: ["businesses"],
-    served: false,
+    served: true,
   },
 } as const satisfies Record<Route, RouteSpec>;
 
