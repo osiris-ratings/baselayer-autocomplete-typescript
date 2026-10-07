@@ -340,7 +340,7 @@
             ]
           },
           "token": {
-            "description": "Opaque handle for this person or address, sealed the same way the\nsuggestion's own `token` is and bound to the same organization and\ndeadline. Nothing redeems one yet \u2014 the route that resolves a person or an\naddress is still to come. The subject sealed inside names the corpus it\nwill be resolved from, so that route can be written against the handles\nthis build already mints \u2014 what survives is the FORMAT, not any handle:\nevery one of these expires a quarter of an hour after it is sealed.\nNull when the autocomplete service cannot name the row: its id was unreadable, or it\nbelongs to a corpus this build has no `Subject` for \u2014 a `people.anchor_kind`\na newer builder writes reaches an older autocomplete service as an unsealed item rather\nthan as a person resolved in the wrong table.",
+            "description": "Opaque handle for this business, person or address, sealed the same way the suggestion's own `token` is and bound to the same organization: it expires a quarter of an hour after it is sealed. A business's is a `business_token` that `POST /searches` redeems; a person's or an address's is redeemed nowhere yet. Null when the autocomplete service cannot name the row: its id was unreadable, or it is a kind of row this service version cannot seal yet.",
             "type": [
               "string",
               "null"

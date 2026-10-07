@@ -13,10 +13,46 @@ function rewrite(text: string): string {
 }
 
 /**
+ * Descriptions upstream words for the index's own readers, written for this
+ * repository's. Each goes once upstream's own text is public.
+ */
+export const PUBLIC_DESCRIPTIONS: {
+  path: readonly string[];
+  text: string;
+}[] = [
+  {
+    path: ["components", "schemas", "RelatedItem", "properties", "token"],
+    text: [
+      "Opaque handle for this business, person or address, sealed the same way",
+      "the suggestion's own `token` is and bound to the same organization: it",
+      "expires a quarter of an hour after it is sealed. A business's is a",
+      "`business_token` that `POST /searches` redeems; a person's or an",
+      "address's is redeemed nowhere yet. Null when the autocomplete service",
+      "cannot name the row: its id was unreadable, or it is a kind of row this",
+      "service version cannot seal yet.",
+    ].join(" "),
+  },
+];
+
+function describe(spec: Json, path: readonly string[], text: string): void {
+  let node: Json = spec;
+  for (const key of path) {
+    if (node === null || typeof node !== "object" || Array.isArray(node)) {
+      return;
+    }
+    node = node[key] ?? null;
+  }
+  if (node !== null && typeof node === "object" && !Array.isArray(node)) {
+    node.description = text;
+  }
+}
+
+/**
  * The autocomplete service's OpenAPI document as this repository vendors it:
  * every string names the autocomplete service where the upstream text says
- * only "the service", and no description names the server-side class behind
- * the error envelope. Everything else is kept as it is.
+ * only "the service", no description names the server-side class behind the
+ * error envelope, and the descriptions written for the index's own readers
+ * are replaced (`PUBLIC_DESCRIPTIONS`). Everything else is kept as it is.
  */
 export function publicAutocompleteSpec<T>(spec: T): T {
   const walk = (value: Json): Json => {
@@ -33,7 +69,11 @@ export function publicAutocompleteSpec<T>(spec: T): T {
     }
     return value;
   };
-  return walk(spec as Json) as T;
+  const out = walk(spec as Json);
+  for (const { path, text } of PUBLIC_DESCRIPTIONS) {
+    describe(out, path, text);
+  }
+  return out as T;
 }
 
 /**

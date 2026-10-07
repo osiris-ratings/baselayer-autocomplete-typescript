@@ -1,6 +1,10 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
+  PUBLIC_DESCRIPTIONS,
   publicAutocompleteSpec,
   publicScope,
   vendoredJson,
@@ -110,5 +114,55 @@ describe("vendoredJson", () => {
     const value = { text: "café — naïve", list: [1, null, true] };
 
     expect(JSON.parse(vendoredJson(value))).toEqual(value);
+  });
+});
+
+describe("the vendored autocomplete spec", () => {
+  const vendored = JSON.parse(
+    readFileSync(
+      join(__dirname, "../../contracts/autocomplete-openapi.json"),
+      "utf8",
+    ),
+  ) as {
+    components: {
+      schemas: Record<
+        string,
+        { properties?: Record<string, { description?: string }> }
+      >;
+    };
+  };
+
+  it("describes every field the public way where upstream does not yet", () => {
+    for (const { path, text } of PUBLIC_DESCRIPTIONS) {
+      const [, , schema, , field] = path;
+      expect(
+        vendored.components.schemas[schema!]?.properties?.[field!]?.description,
+        path.join("."),
+      ).toBe(text);
+    }
+  });
+
+  it("replaces a related item's token description, whatever upstream says", () => {
+    const spec = publicAutocompleteSpec({
+      components: {
+        schemas: {
+          RelatedItem: {
+            properties: {
+              token: {
+                description: "Upstream's own wording.",
+                type: ["string", "null"],
+              },
+            },
+          },
+        },
+      },
+    });
+    const token = spec.components.schemas.RelatedItem.properties.token;
+
+    expect(token.type).toEqual(["string", "null"]);
+    expect(token.description).toContain("`POST /searches` redeems");
+    expect(token.description).toContain(
+      "a kind of row this service version cannot seal yet",
+    );
   });
 });
