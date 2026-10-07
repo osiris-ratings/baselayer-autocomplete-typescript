@@ -276,16 +276,17 @@ function Connected<R extends GroupedRoute>({
   ...view
 }: ConnectedProps<R> & { client: AutocompleteClient }) {
   const client = useResolvedClient(given);
-  // The pick, and the name it put in the field. Any typing drops it; so does
-  // a host that puts anything else there.
+  // The pick, and the name it put in the field.
   const [picked, setPicked] = useState<{
     field: string;
     selection: GroupedSelection;
   } | null>(null);
-  const selection =
-    showSelection && picked !== null && picked.field === value
-      ? picked.selection
-      : null;
+  // A field that holds anything else lets the pick go for good, so the name
+  // put back later is not the pick again.
+  if (picked !== null && picked.field !== value) {
+    setPicked(null);
+  }
+  const selection = showSelection && picked !== null ? picked.selection : null;
   // What the rows draw decides what is asked for; the hook drops whatever the
   // session's scope does not grant.
   const request = requestOf(route, drawnFor(route, layout), include);
@@ -328,7 +329,6 @@ function Connected<R extends GroupedRoute>({
       error={state.error}
       selection={selection}
       onInputChange={next => {
-        setPicked(null);
         if (mintOn === "keystroke" && enabled && next !== "") {
           client.prewarm();
         }

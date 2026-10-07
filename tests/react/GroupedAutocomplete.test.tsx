@@ -284,6 +284,9 @@ function PersonHost({
       <button type="button" onClick={() => setValue("")}>
         Start over
       </button>
+      <button type="button" onClick={() => setValue("Dana Whitfield")}>
+        Put back
+      </button>
       <PersonAutocomplete
         client={client}
         id="person"
@@ -764,6 +767,20 @@ describe("the selection line", () => {
     await user.click(screen.getByRole("button", { name: "Start over" }));
 
     expect(input().value).toBe("");
+    expect(selection()).toBeNull();
+  });
+
+  it("stays gone when the host puts the picked name back", async () => {
+    const { client } = setup();
+    const { user } = await typeDana(client);
+    await user.click(
+      screen.getByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Start over" }));
+    await user.click(screen.getByRole("button", { name: "Put back" }));
+
+    expect(input().value).toBe("Dana Whitfield");
     expect(selection()).toBeNull();
   });
 
