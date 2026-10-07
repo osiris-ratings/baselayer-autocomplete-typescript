@@ -109,6 +109,8 @@ export {
 export {
   DEFAULT_SESSION_SCOPE,
   MAX_LIMIT,
+  allowedFilters,
+  offeredRoutes,
   parseSessionScope,
   scopeViolation,
   type RelationsOf,

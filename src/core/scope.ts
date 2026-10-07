@@ -5,7 +5,7 @@
  * outside it, so the SDK never sends a request the scope leaves out.
  */
 
-import { setFilters } from "./businesses";
+import { FILTER_PARAMS, setFilters, type FilterParam } from "./businesses";
 import {
   LEGAL_RELATIONS,
   RELATIONS,
@@ -125,4 +125,37 @@ export function routeNamed(value: unknown): Route | null {
 /** `value` when it names a relation, else null. */
 export function relationNamed(value: unknown): Relation | null {
   return RELATIONS.find(relation => relation === value) ?? null;
+}
+
+/**
+ * The searches a page may offer under `scope`, in the SDK's order: businesses,
+ * and people or addresses where the scope grants their businesses, since a
+ * pick from either is one of those businesses.
+ */
+export function offeredRoutes(scope: SessionScope): Route[] {
+  return ROUTE_NAMES.filter(route => {
+    const granted: readonly Relation[] | undefined = scope.routes[route];
+    return (
+      granted !== undefined &&
+      (route === "businesses" || granted.includes("businesses"))
+    );
+  });
+}
+
+/**
+ * The filters a request on `route` may send under `scope`: its direct ones,
+ * and the relation ones whose relation the scope grants there.
+ */
+export function allowedFilters(
+  scope: SessionScope,
+  route: Route,
+): FilterParam[] {
+  const granted: readonly Relation[] | undefined = scope.routes[route];
+  if (granted === undefined) {
+    return [];
+  }
+  const params: readonly FilterParam[] = FILTER_PARAMS[route];
+  return params.filter(
+    ({ relation }) => relation === null || granted.includes(relation),
+  );
 }
