@@ -40,7 +40,8 @@ export function address(
 ): RelatedItem {
   return {
     type: "address",
-    token: null,
+    // The token the address's own row has, to pick it from under a business.
+    token: `sample-address-${slug(label)}`,
     label,
     role,
     matched,
@@ -57,7 +58,8 @@ export function person(
 ): RelatedItem {
   return {
     type: "person",
-    token: null,
+    // The token the person's own row has, to pick them from under a business.
+    token: `sample-person-${slug(label)}`,
     label,
     role,
     matched,

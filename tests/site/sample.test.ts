@@ -205,3 +205,26 @@ describe("the sample people and addresses", () => {
     }
   });
 });
+
+describe("the sample businesses' officers and addresses", () => {
+  it("each carry a token to pick, the one its own row has where it is a row too", () => {
+    const tokenOf = new Map(
+      [...SAMPLE_PEOPLE, ...SAMPLE_ADDRESSES].map(row => [
+        `${row.type}:${row.label}`,
+        row.token,
+      ]),
+    );
+    for (const business of SAMPLE_SUGGESTIONS) {
+      for (const item of [
+        ...business.related.people.items,
+        ...business.related.addresses.items,
+      ]) {
+        expect(item.token, item.label).not.toBeNull();
+        const own = tokenOf.get(`${item.type}:${item.label}`);
+        if (own !== undefined) {
+          expect(item.token, item.label).toBe(own);
+        }
+      }
+    }
+  });
+});
