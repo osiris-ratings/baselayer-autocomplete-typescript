@@ -609,6 +609,7 @@
 
 .row-map-line {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
   min-width: 0;
@@ -710,11 +711,11 @@
   -webkit-user-select: none;
 }
 
-/* Every place is as wide as what it holds usually is: a name and an address
-   long, the people middling, a flag short. The name is fixed, so it is drawn
-   as a place that cannot be picked. */
+/* A place draws its field's name whole, in a face as wide as the name, or as
+   its column (below) when that is wider. The name is fixed, so it is drawn as
+   a place that cannot be chosen. */
 .row-map-name,
-.row-map-place :is(select, .row-map-face) {
+.row-map-place .row-map-face {
   box-sizing: border-box;
   width: 100%;
   height: 28px;
@@ -733,11 +734,10 @@
   white-space: nowrap;
 }
 
-/* The name's slot shrinks as a place does: no padding of its own. */
+/* The name's slot is as wide as the name: no padding of its own. */
 .row-map-slot {
   display: inline-flex;
-  flex: 0 1 var(--map-lead);
-  min-width: 0;
+  flex: none;
 }
 
 .row-map-name {
@@ -750,38 +750,42 @@
 .row-map-place {
   position: relative;
   display: inline-flex;
-  flex: 0 1 var(--map-trailing);
-  min-width: 0;
+  flex: none;
+  min-width: var(--map-place);
 }
 
-/* A place is as wide as where it sits, whatever it holds, so its chevron
-   stays put as its field changes; the two lines' columns line up. */
+/* A place is as wide as the field it holds, so every field's name shows
+   whole; an empty badge or icon place is a square to fill. A line out of room
+   goes on below. */
 .row-map-wrap {
-  --map-icon: 4.5rem;
-  --map-lead: 11rem;
-  --map-badge: 6rem;
-  --map-trailing: 7rem;
+  --map-place: 4rem;
+  --map-empty: 2.5rem;
 }
 
-/* The place before a name holds an icon, nothing longer. */
-.row-map-place[data-drop$="Lead"] {
-  flex-basis: var(--map-icon);
-}
-
-.row-map-place[data-drop="subtitle"] {
-  flex-basis: var(--map-lead);
-}
-
-.row-map-place[data-badge] {
-  flex-basis: var(--map-badge);
+.row-map-place:is([data-badge], [data-drop$="Lead"])[data-field="empty"] {
+  min-width: var(--map-empty);
 }
 
 .row-map-place[data-trailing] {
   margin-left: auto;
 }
 
-.row-map-place :is(select, .row-map-face) {
+/* The dropdown lies over the face, unseen: a press or a key opens its menu,
+   and the face shows what it holds. */
+.row-map-place select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
   appearance: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.row-map-place .row-map-face {
   cursor: pointer;
 }
 
@@ -803,7 +807,7 @@
   color: var(--map-pill-fg, #22543d);
 }
 
-.row-map-place[data-field="states"] :is(select, .row-map-face) {
+.row-map-place[data-field="states"] .row-map-face {
   background: var(--map-pill-bg, #c6f6d5);
   border-color: var(--map-pill-border, #48bb78);
   font-size: 12px;
@@ -814,7 +818,7 @@
   color: var(--map-structure-fg, #4a5568);
 }
 
-.row-map-place[data-field="structure"] :is(select, .row-map-face) {
+.row-map-place[data-field="structure"] .row-map-face {
   background: var(--map-structure-bg, #edf2f7);
   font-size: 12px;
   font-weight: 600;
@@ -829,8 +833,7 @@
   color: color-mix(in srgb, var(--map-subtitle, #718096) 60%, transparent);
 }
 
-/* The dropdown's own list stays legible whatever the look, and whatever
-   size its select draws its own text at (none, in an empty badge). */
+/* The dropdown's own list stays legible whatever the look. */
 .row-map-place option {
   font-size: 13px;
   color: #1c1b1c;
@@ -840,21 +843,21 @@
 /* Over the chevron, or on a place that is all dropdown, the cell's border
    goes: the dash says a field can be dragged, and a press here opens the
    menu instead. */
-.row-map:not([data-dragging]) .row-map-place:not([data-closed]) select:hover {
+.row-map:not([data-dragging])
+  .row-map-place:not([data-closed]):has(select:hover)
+  .row-map-face {
   border-color: transparent;
 }
 
 /* One ring, over the cell's own border rather than around it. */
-.row-map-place select:focus-visible {
+.row-map-place:has(select:focus-visible) .row-map-face {
   outline: 2px solid var(--blue);
   outline-offset: -1px;
 }
 
 /* An empty badge slot shows only a `+`. */
-/* Its menu's text is hidden, not its ink: the dashed border is drawn in it. */
-.row-map-place[data-badge][data-field="empty"] :is(select, .row-map-face),
-.row-map-place[data-drop$="Lead"][data-field="empty"]
-  :is(select, .row-map-face) {
+.row-map-place[data-badge][data-field="empty"] .row-map-face,
+.row-map-place[data-drop$="Lead"][data-field="empty"] .row-map-face {
   padding: 0;
   font-size: 0;
 }
@@ -922,7 +925,7 @@
 
 /* While a field is dragged, every spot that takes it says so, the one under
    the pointer most; a spot that does not is faded, and so is the field's own. */
-.row-map-place[data-accepts][data-field] select,
+.row-map-place[data-accepts][data-field] .row-map-face,
 .row-map-tray[data-accepts] {
   border-color: var(--blue);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 14%, transparent);
@@ -932,7 +935,7 @@
   background: color-mix(in srgb, var(--blue) 5%, transparent);
 }
 
-.row-map-place[data-over][data-field] select,
+.row-map-place[data-over][data-field] .row-map-face,
 .row-map-tray[data-over] {
   border-style: solid;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 32%, transparent);
@@ -1097,13 +1100,9 @@
 }
 
 @container (max-width: 420px) {
-  /* Four places to a line: the name is short here, so the lead gives the
-     others its room. */
   .row-map {
-    --map-icon: 3.75rem;
-    --map-lead: 5.5rem;
-    --map-badge: 5rem;
-    --map-trailing: 5.5rem;
+    --map-place: 3.25rem;
+    --map-empty: 2.25rem;
   }
 
   .row-map {
@@ -1124,7 +1123,7 @@
   }
 
   .row-map-name,
-  .row-map-place :is(select, .row-map-face) {
+  .row-map-place .row-map-face {
     padding-right: 18px;
     padding-left: 6px;
     font-size: 11.5px;

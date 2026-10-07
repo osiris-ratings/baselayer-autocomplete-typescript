@@ -128,7 +128,7 @@ function measure(handle: HTMLElement, x: number, y: number): Lifted {
   );
   const box = (cell ?? handle).getBoundingClientRect();
   const face = getComputedStyle(
-    cell?.querySelector("select") ?? cell ?? handle,
+    cell?.querySelector(".row-map-face") ?? cell ?? handle,
   );
   return {
     chip: cell?.classList.contains("row-map-chip") ?? false,
@@ -564,6 +564,9 @@ function KindRowMap<P extends string, F extends string>({
             aria-hidden="true"
           />
         )}
+        <span className="row-map-face" aria-hidden="true">
+          {field === null ? "" : editor.fieldLabels[field]}
+        </span>
         <select
           aria-label={editor.placeLabels[spot]}
           value={choice}

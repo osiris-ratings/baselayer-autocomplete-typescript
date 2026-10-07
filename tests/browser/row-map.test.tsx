@@ -10,7 +10,7 @@ import { DEFAULT_STYLE } from "../../site/demo/style-state";
 import "../../site/demo/demo.css";
 
 describe("the Components fold's row, laid out", () => {
-  it("lists an empty badge's options at a readable size, though its own text is hidden", () => {
+  it("lists an empty badge's options at a readable size, though it shows only a +", () => {
     const host = document.createElement("div");
     host.style.width = "520px";
     document.body.append(host);
@@ -27,8 +27,9 @@ describe("the Components fold's row, laid out", () => {
     expect(empty.length).toBeGreaterThan(0);
     for (const place of empty) {
       const select = place.querySelector("select")!;
-      // The `+` stands in for the select's text, which is drawn at 0.
-      expect(getComputedStyle(select).fontSize).toBe("0px");
+      // The `+` is all it shows: no name, and the dropdown over it unseen.
+      expect(place.querySelector(".row-map-face")!.textContent).toBe("");
+      expect(getComputedStyle(select).opacity).toBe("0");
       // A platform that draws the list in its options' size must still
       // draw them legibly.
       for (const option of select.options) {
