@@ -115,9 +115,9 @@ release.
   request event: the requests on the current session, per route, as the
   autocomplete service budgets them.
 - Messages for the new rows: `person`, `people`, `address`, `addresses`,
-  `relationCounts`, `moreNotShown`, `personRoles`, `addressRoles`, and
-  `outOfScope`. Slots: `group`, `groupHead`, `groupLine`, `lineName`,
-  `counts`, `role`, `more`.
+  `relationCounts`, `moreNotShown`, `personRoles`, `addressRoles`,
+  `outOfScope` and `routeUnserved`. Slots: `group`, `groupHead`, `groupLine`,
+  `lineName`, `counts`, `role`, `more`, `icon` and `selection`.
 - The demo searches by business, person or address, offering what the
   session's scope allows, and `DEMO_API=sample pnpm demo` runs it on made-up
   data with no network. In Styling, the row map builds each search's row: a
@@ -137,16 +137,21 @@ release.
   `T extends unknown ? Omit<T, K> : never`.
 - **Breaking:** `ROUTES.people` and `ROUTES.addresses` are served, and their
   filters are exactly what each serves: `{ business: { state } }` on people,
-  `{ state }` on addresses. `filterParams`, `hasFilters` and `buildSuggestUrl`
-  take the route and send only its own parameters.
+  `{ state }` on addresses. `filterParams` and `hasFilters` take the route, and
+  they and `buildSuggestUrl` send only its own parameters.
 - **Breaking:** `match`, `type`, `role`, `structure` and a source's `status` are
   typed unions pinned to the API's contract, and an unknown value is a
   `contract` error. A related item must be the entity its relation holds.
 - **Breaking:** `Look` gains `disabledDim`, `AutocompleteMessages` the messages
   for the new rows, and `SlotName` the new slots, so a complete literal of any
   of them needs them too.
-- **Breaking:** `PersonRole` is `RelatedRole`'s `officer` and `agent`;
-  `AddressRole` is gone (use `RelatedRole`).
+- **Breaking:** `AutocompleteErrorKind` gains `out_of_scope` and
+  `route_unserved`, so a switch over it that ends in `never`, or a record keyed
+  by it, needs them.
+- **Breaking:** `Grant` requires `scope`, the snapshot's `usage`
+  `requestsByRoute` and a `RequestEvent` `requestsOnRoute`, so a fixture or a
+  fake client that builds one needs them; a `mint` is unchanged.
+- **Breaking:** `AddressRole` is gone (use `RelatedRole`).
 - **Breaking:** every field of an address's `components` (`line1`, `line2`,
   `city`, `state`, `postal_code`) is `string | null`: null, or absent, where the
   filing did not carry it.
