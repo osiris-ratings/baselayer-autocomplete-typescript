@@ -539,7 +539,7 @@ export function App() {
             </div>
             <div className="demo-intro-body" data-vt="intro-body">
               <h1 className="display-sm" id="demo-title">
-                The typeahead, against your own organization
+                The typeahead, against your own Baselayer account
               </h1>
               <p className="lede">
                 Configure the component and watch every request it makes, as it
@@ -551,7 +551,7 @@ export function App() {
         ) : (
           <div className="pane-rail">
             <h1 className="visually-hidden">
-              The typeahead, against your own organization
+              The typeahead, against your own Baselayer account
             </h1>
             <button
               type="button"

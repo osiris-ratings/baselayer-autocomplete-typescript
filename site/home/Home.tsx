@@ -749,7 +749,7 @@ export function Home() {
         <section className="cta" aria-labelledby="cta-title">
           <div className="wrap cta-inner">
             <h2 className="display" id="cta-title">
-              Try it against your own organization
+              Try it against your own Baselayer account
             </h2>
             <div>
               <p>

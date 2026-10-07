@@ -1,6 +1,6 @@
 # Live demo
 
-The demo is the styled component against your own organization. You
+The demo is the styled component against your own Baselayer account. You
 connect, type a business name with any filters, run the search a pick leads
 to, and restyle the component. Beside it, folded away until you want it, is
 what the SDK did about it: the session, every request on a network timeline

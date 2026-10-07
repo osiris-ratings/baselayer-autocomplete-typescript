@@ -6,7 +6,7 @@
 | ------------- | -------- | -------------------------------------------------- |
 | Overview      | `/`      | the entities it searches, how it fits your backend |
 | API reference | `/api/`  | the two routes, generated from their specs         |
-| Demo          | `/demo/` | the component against your own organization        |
+| Demo          | `/demo/` | the component against your own Baselayer account   |
 
 ![The overview](images/site-overview.png)
 
