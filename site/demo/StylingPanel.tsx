@@ -192,8 +192,8 @@ export function StylingPanel({
 
       <Fold title="Components" summary={count(componentChanges(state))}>
         <p className="hint fold-note">
-          Drag lines and fields into place or onto Not shown, and enable or
-          disable each line.
+          Switch each line off, visible or enabled, and drag its fields into
+          place or onto Not shown.
         </p>
         {routes.length > 1 && (
           <div

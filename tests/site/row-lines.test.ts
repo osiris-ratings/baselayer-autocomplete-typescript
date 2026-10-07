@@ -3,9 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_STYLE,
   lineKinds,
+  lineState,
   shownEntities,
-  withListed,
   withEnabled,
+  withLineState,
+  withListed,
+  type LineKind,
 } from "../../site/demo/style-state";
 
 describe("a row's line kinds", () => {
@@ -135,5 +138,66 @@ describe("the entities a row shows", () => {
       "business",
       "person",
     ]);
+  });
+});
+
+describe("a line's switch: off, visible or enabled", () => {
+  const kind = (
+    route: Parameters<typeof lineKinds>[0],
+    relation: string | null,
+  ): LineKind => lineKinds(route).find(each => each.relation === relation)!;
+
+  it("reads off a line the row does not list, visible one it lists and does not enable, and enabled one it does", () => {
+    const people = (relation: string | null) =>
+      lineState(DEFAULT_STYLE, "people", kind("people", relation));
+    expect([people(null), people("businesses"), people("addresses")]).toEqual([
+      "visible",
+      "enabled",
+      "off",
+    ]);
+    expect(
+      lineState(DEFAULT_STYLE, "businesses", kind("businesses", null)),
+    ).toBe("enabled");
+  });
+
+  it("lists and enables a line through the row's own writers, in one step", () => {
+    const addresses = kind("people", "addresses");
+    const enabled = withLineState(
+      DEFAULT_STYLE,
+      "people",
+      addresses,
+      "enabled",
+    );
+    expect(enabled).toEqual(
+      withEnabled(
+        withListed(DEFAULT_STYLE, "people", "addresses", true),
+        "people",
+        "address",
+        true,
+      ),
+    );
+    expect(lineState(enabled, "people", addresses)).toBe("enabled");
+
+    const visible = withLineState(enabled, "people", addresses, "visible");
+    expect(visible.rows.people.list).toEqual(["businesses", "addresses"]);
+    expect(visible.rows.people.enabled).toEqual(["business"]);
+
+    const off = withLineState(enabled, "people", addresses, "off");
+    expect(off.rows.people.list).toEqual(["businesses"]);
+    expect(off.rows.people.enabled).toEqual(["business"]);
+    expect(withLineState(off, "people", addresses, "off")).toBe(off);
+  });
+
+  it("never takes a row's head off, only from visible to enabled and back", () => {
+    const head = kind("people", null);
+    expect(withLineState(DEFAULT_STYLE, "people", head, "off")).toBe(
+      DEFAULT_STYLE,
+    );
+    const enabled = withLineState(DEFAULT_STYLE, "people", head, "enabled");
+    expect(enabled.rows.people.enabled).toEqual(["person", "business"]);
+    expect(lineState(enabled, "people", head)).toBe("enabled");
+    expect(
+      withLineState(enabled, "people", head, "visible").rows.people.enabled,
+    ).toEqual(["business"]);
   });
 });

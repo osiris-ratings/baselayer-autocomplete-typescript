@@ -1,6 +1,13 @@
 // @vitest-environment jsdom
 
-import { cleanup, fireEvent, render } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { BUSINESS_ROW } from "@baselayer-sdk/autocomplete";
@@ -8,8 +15,9 @@ import { BUSINESS_ROW } from "@baselayer-sdk/autocomplete";
 import { RowMap } from "../../site/demo/RowMap";
 import {
   DEFAULT_STYLE,
+  lineKinds,
+  withLineState,
   withListed,
-  withEnabled,
   type StyleState,
 } from "../../site/demo/style-state";
 
@@ -58,28 +66,17 @@ describe("the Components fold's row", () => {
       ),
     );
 
-  it("draws the head's every place, in its lines, and lists nothing under it", () => {
+  it("draws every line's places, the head's first, whether the row lists the line or not", () => {
     const { view } = mount();
-    // The row's head, as the core describes it: a place the core adds is
-    // drawn here too.
-    const head = BUSINESS_ROW.lines.filter(line => line.relation === null);
+    // The row, as the core describes it: a place the core adds is drawn here
+    // too.
     expect(drawnLines(view.container)).toEqual(
-      head.map(({ lead, trailing }) =>
+      BUSINESS_ROW.lines.map(({ lead, trailing }) =>
         [lead.field, lead.badge, trailing.badge, trailing.field].filter(
           place => place !== null && place !== undefined,
         ),
       ),
     );
-  });
-
-  it("draws a line kind's places once the row lists it", () => {
-    const listed = withListed(DEFAULT_STYLE, "businesses", "addresses", true);
-    const { view } = mount(listed);
-    expect(drawnLines(view.container).at(-1)).toEqual([
-      "addressBadge",
-      "addressTrailingBadge",
-      "addressTrailing",
-    ]);
   });
 
   it("puts only a drawn line's fields on the tray", () => {
@@ -90,8 +87,7 @@ describe("the Components fold's row", () => {
           ".row-map-tray .row-map-chip",
         ),
       ].map(chip => chip.dataset.field);
-    // The officers' and the addresses' fields are on lines the row does not
-    // draw.
+    // The officers' and the addresses' lines are switched off.
     expect(tray()).toEqual([]);
 
     // The officers' line listed, their role taken off it: on the tray.
@@ -109,7 +105,7 @@ describe("the Components fold's row", () => {
     view.rerender(<RowMap state={roleOut} onChange={() => {}} />);
     expect(tray()).toEqual(["personRole"]);
 
-    // The line taken off the row again: its fields go with it.
+    // The line switched off again: its fields go with it.
     view.rerender(
       <RowMap
         state={withListed(roleOut, "businesses", "people", false)}
@@ -477,19 +473,11 @@ describe("the Components fold's row on People and Addresses", () => {
         name: "Business name",
         places: ["businessBadge", "businessTrailingBadge", "businessTrailing"],
       },
+      {
+        name: "Their address",
+        places: ["addressBadge", "addressTrailingBadge", "addressTrailing"],
+      },
     ]);
-  });
-
-  it("draws a person's addresses only once the row lists them", () => {
-    const listed = withListed(DEFAULT_STYLE, "people", "addresses", true);
-    const view = render(
-      <RowMap state={listed} onChange={() => {}} route="people" />,
-    );
-    expect(
-      [...view.container.querySelectorAll(".row-map-name-long")].map(
-        name => name.textContent,
-      ),
-    ).toEqual(["Person's name", "Business name", "Their address"]);
   });
 
   it("moves a person's field within its line, into the person's layout only", () => {
@@ -537,156 +525,147 @@ describe("the row map as the row's configuration", () => {
     const view = render(
       <RowMap state={state} onChange={onChange} route={route} />,
     );
-    const spot = (name: string) =>
-      view.container.querySelector<HTMLElement>(`[data-drop="${name}"]`)!;
-    const card = (relation: string) =>
+    const kind = (relation: string) =>
       view.container.querySelector<HTMLElement>(
-        `.row-map-tray [data-relation="${relation}"]`,
-      );
-    const shown = (relation: string) =>
-      view.container.querySelector<HTMLElement>(
-        `.row-map [data-relation="${relation}"]`,
-      );
-    const toggles = () =>
+        `.row-map-kind[data-relation="${relation}"]`,
+      )!;
+    const stop = (relation: string, label: string) =>
+      within(kind(relation)).getByRole<HTMLButtonElement>("radio", {
+        name: label,
+      });
+    const switches = () =>
       [
-        ...view.container.querySelectorAll<HTMLButtonElement>(
-          ".row-map-toggle",
-        ),
-      ].map(button => [
-        button.getAttribute("aria-label"),
-        button.getAttribute("aria-pressed"),
-        button.textContent,
+        ...view.container.querySelectorAll<HTMLElement>('[role="radiogroup"]'),
+      ].map(group => [
+        group.getAttribute("aria-label"),
+        group
+          .querySelector('[aria-checked="true"]')
+          ?.getAttribute("aria-label"),
       ]);
-    return { view, onChange, spot, card, shown, toggles };
+    return { view, onChange, kind, stop, switches };
   }
 
-  it("keeps each line kind the row does not list in Not shown, and a toggle on each one it draws", () => {
-    const { card, shown, toggles } = mountOn("businesses");
-    expect(card("people")?.textContent).toContain("Officers and agents");
-    expect(card("addresses")?.textContent).toContain("Addresses");
-    expect(shown("people")).toBeNull();
-    expect(toggles()).toEqual([["Enable the business", "true", "Enabled"]]);
-
-    const person = mountOn("people").toggles();
-    expect(person.slice(-2)).toEqual([
-      ["Enable the person", "false", "Disabled"],
-      ["Enable businesses", "true", "Enabled"],
+  it("draws every line kind with a switch saying off, visible or enabled", () => {
+    expect(mountOn("businesses").switches()).toEqual([
+      ["The business", "Enabled"],
+      ["Officers and agents", "Off"],
+      ["Addresses", "Off"],
+    ]);
+    cleanup();
+    expect(mountOn("people").switches()).toEqual([
+      ["The person", "Visible"],
+      ["Businesses", "Enabled"],
+      ["Their addresses", "Off"],
     ]);
   });
 
-  it("marks each drawn line enabled or disabled, as its toggle says", () => {
-    const listed = withListed(DEFAULT_STYLE, "people", "addresses", true);
-    const { view } = mountOn("people", listed);
-    const marks = [
-      ...view.container.querySelectorAll<HTMLElement>(".row-map-kind"),
-    ].map(kind => [
-      kind.dataset.relation,
-      kind.dataset.enabled,
-      kind.querySelector(".row-map-toggle")!.getAttribute("aria-pressed"),
-    ]);
-    expect(marks).toEqual([
-      ["head", "false", "false"],
-      ["businesses", "true", "true"],
-      ["addresses", "false", "false"],
-    ]);
+  it("offers a row's head no Off: a row always shows its head", () => {
+    const { stop } = mountOn("people");
+    expect(stop("head", "Off").disabled).toBe(true);
+    expect(stop("businesses", "Off").disabled).toBe(false);
   });
 
-  it("lists a line kind dropped on the row, and takes one off that is dropped on Not shown", () => {
-    const { onChange, spot, card, view } = mountOn("businesses");
-    drag(card("addresses")!, spot("row"));
-    const listed = onChange.mock.calls[0]![0];
-    expect(listed.rows.businesses.list).toEqual(["addresses"]);
+  it("switches a line off, visible or enabled, through the row's writers", () => {
+    const { onChange, stop } = mountOn("people");
+    const row = (call: number) => onChange.mock.calls[call]![0].rows.people;
 
-    view.unmount();
-    const again = mountOn("businesses", listed);
-    drag(
-      again.shown("addresses")!.querySelector(".row-map-line-handle")!,
-      again.spot("tray"),
+    fireEvent.click(stop("addresses", "Enabled"));
+    expect(row(0).list).toEqual(["businesses", "addresses"]);
+    expect(row(0).enabled).toEqual(["business", "address"]);
+    fireEvent.click(stop("businesses", "Visible"));
+    expect(row(1).list).toEqual(["businesses"]);
+    expect(row(1).enabled).toEqual([]);
+    fireEvent.click(stop("businesses", "Off"));
+    expect(row(2).list).toEqual([]);
+    expect(row(2).enabled).toEqual([]);
+    fireEvent.click(stop("head", "Enabled"));
+    expect(row(3).enabled).toEqual(["person", "business"]);
+  });
+
+  it("moves a switch with the arrow keys, one tab stop each, past the head's Off", () => {
+    function Kept() {
+      const [state, setState] = useState(DEFAULT_STYLE);
+      return <RowMap state={state} onChange={setState} route="people" />;
+    }
+    render(<Kept />);
+    const checked = (name: string) =>
+      within(screen.getByRole("radiogroup", { name })).getByRole("radio", {
+        checked: true,
+      });
+    const stops = (name: string) =>
+      within(screen.getByRole("radiogroup", { name }))
+        .getAllByRole("radio")
+        .map(stop => stop.tabIndex);
+
+    expect(checked("The person").getAttribute("aria-label")).toBe("Visible");
+    expect(stops("The person")).toEqual([-1, 0, -1]);
+    fireEvent.keyDown(checked("The person"), { key: "ArrowRight" });
+    expect(checked("The person").getAttribute("aria-label")).toBe("Enabled");
+    expect(document.activeElement).toBe(checked("The person"));
+    // On round, past the Off a head cannot take.
+    fireEvent.keyDown(checked("The person"), { key: "ArrowDown" });
+    expect(checked("The person").getAttribute("aria-label")).toBe("Visible");
+
+    fireEvent.keyDown(checked("Their addresses"), { key: "ArrowLeft" });
+    expect(checked("Their addresses").getAttribute("aria-label")).toBe(
+      "Enabled",
     );
-    expect(again.onChange.mock.calls[0]![0].rows.businesses.list).toEqual([]);
-  });
-
-  it("disables a line that leaves the row", () => {
-    const picked = withEnabled(
-      withListed(DEFAULT_STYLE, "people", "addresses", true),
-      "people",
-      "address",
-      true,
+    fireEvent.keyDown(checked("Their addresses"), { key: "ArrowUp" });
+    expect(checked("Their addresses").getAttribute("aria-label")).toBe(
+      "Visible",
     );
-    const { onChange, shown, spot } = mountOn("people", picked);
-    drag(
-      shown("addresses")!.querySelector(".row-map-line-handle")!,
-      spot("tray"),
+    expect(stops("Their addresses")).toEqual([-1, 0, -1]);
+  });
+
+  it("keeps a line switched off in the map, frozen, and frees it switched back on", () => {
+    const { view, kind } = mountOn("people");
+    const addresses = () => kind("addresses");
+    const selects = () => [...addresses().querySelectorAll("select")];
+
+    expect(selects().length).toBe(3);
+    expect(selects().every(select => select.disabled)).toBe(true);
+    expect(addresses().querySelector(".row-map-handle")).toBeNull();
+
+    const [, , kindOf] = lineKinds("people");
+    view.rerender(
+      <RowMap
+        state={withLineState(DEFAULT_STYLE, "people", kindOf!, "visible")}
+        onChange={() => {}}
+        route="people"
+      />,
     );
-
-    const next = onChange.mock.calls[0]![0];
-    expect(next.rows.people.list).toEqual(["businesses"]);
-    expect(next.rows.people.enabled).toEqual(["business"]);
+    // Its filled places take a field and give it up again; a place nothing
+    // can go in yet stays shut, as on any line.
+    expect(selects().filter(select => !select.disabled).length).toBe(
+      selects().filter(select => !select.closest("[data-closed]")).length,
+    );
+    expect(addresses().querySelector(".row-map-handle")).not.toBeNull();
   });
 
-  it("moves a line kind from the keyboard, or with a click, through its handle", () => {
-    const { onChange, card } = mountOn("addresses");
-    const show = card("people")!.querySelector<HTMLButtonElement>(
-      ".row-map-line-handle",
-    )!;
-    expect(show.getAttribute("aria-label")).toBe("Show people there");
-    fireEvent.click(show);
-    expect(onChange.mock.calls[0]![0].rows.addresses.list).toEqual([
-      "businesses",
-      "people",
-    ]);
-  });
-
-  it("enables or disables a drawn line, the head included", () => {
-    const { onChange, view } = mountOn("people");
-    const toggle = (label: string) =>
-      view.container.querySelector<HTMLButtonElement>(
-        `.row-map-toggle[aria-label="${label}"]`,
-      )!;
-    fireEvent.click(toggle("Enable the person"));
-    expect(onChange.mock.calls[0]![0].rows.people.enabled).toEqual([
-      "person",
-      "business",
-    ]);
-    fireEvent.click(toggle("Enable businesses"));
-    expect(onChange.mock.calls[1]![0].rows.people.enabled).toEqual([]);
-  });
-
-  it("does not move a line kind a drag only nudged, nor once a drag has dropped it", () => {
-    const { onChange, card, spot } = mountOn("businesses");
-    // A drag that dropped it is not a click as well: the browser's click after
-    // the pointer's release does not take it back off.
-    const handle = card("people")!.querySelector(".row-map-line-handle")!;
-    drag(handle, spot("row"));
-    fireEvent.click(handle);
-    expect(onChange).toHaveBeenCalledTimes(1);
-    expect(onChange.mock.calls[0]![0].rows.businesses.list).toEqual(["people"]);
-  });
-
-  it("lights the row as a whole while a line kind is carried onto it, and Not shown while one leaves", () => {
-    const { view, card, spot } = mountOn("businesses");
-    const lit = () =>
-      [...view.container.querySelectorAll<HTMLElement>("[data-accepts]")].map(
-        each => each.dataset.drop,
+  it("draws as many lines whatever each is switched to", () => {
+    const counts = (["off", "visible", "enabled"] as const).map(to => {
+      const [, , addresses] = lineKinds("people");
+      const view = render(
+        <RowMap
+          state={withLineState(DEFAULT_STYLE, "people", addresses!, to)}
+          onChange={() => {}}
+          route="people"
+        />,
       );
-    vi.spyOn(document, "elementFromPoint").mockReturnValue(spot("row"));
-    const addresses = card("addresses")!;
-    fireEvent.pointerDown(addresses, { button: 0, clientX: 0, clientY: 0 });
-    fireEvent.pointerMove(addresses, { buttons: 1, clientX: 40, clientY: 30 });
-
-    expect(lit()).toEqual(["row"]);
-    expect(document.querySelector(".row-map-ghost")?.textContent).toBe(
-      "Addresses",
-    );
-    fireEvent.pointerUp(addresses, { clientX: 40, clientY: 30 });
-    expect(lit()).toEqual([]);
+      const count = view.container.querySelectorAll(".row-map-line").length;
+      view.unmount();
+      return count;
+    });
+    expect(counts).toEqual([3, 3, 3]);
   });
 
   it("takes a field on no gap of the row, only on a place", () => {
-    const { onChange, spot } = mountOn("businesses");
+    const { onChange, view } = mountOn("businesses");
     drag(
-      spot("subtitleTrailing").querySelector(".row-map-handle")!,
-      spot("row"),
+      view.container.querySelector(
+        '[data-drop="subtitleTrailing"] .row-map-handle',
+      )!,
+      view.container.querySelector(".row-map")!,
     );
     expect(onChange).not.toHaveBeenCalled();
   });

@@ -841,6 +841,43 @@ export function withEnabled<R extends Route>(
 }
 
 /**
+ * How a line kind is drawn: left out of the row (`off`), drawn and not a
+ * choice in the menu (`visible`), or drawn and a choice (`enabled`).
+ */
+export type LineState = "off" | "visible" | "enabled";
+
+/** How a search's row draws one of its line kinds. */
+export function lineState(
+  state: StyleState,
+  route: Route,
+  kind: LineKind,
+): LineState {
+  const row = state.rows[route];
+  const list: readonly Relation[] = row.list;
+  if (kind.relation !== null && !list.includes(kind.relation)) return "off";
+  return row.enabled.includes(kind.entity) ? "enabled" : "visible";
+}
+
+/**
+ * The state with a line kind drawn as `to`, through `withListed` and then
+ * `withEnabled`. A row's head is always drawn: it is never off.
+ */
+export function withLineState<R extends Route>(
+  state: StyleState,
+  route: R,
+  kind: LineKind,
+  to: LineState,
+): StyleState {
+  const listed =
+    kind.relation === null
+      ? state
+      : withListed(state, route, kind.relation as IncludeOf<R>, to !== "off");
+  return to === "off"
+    ? listed
+    : withEnabled(listed, route, kind.entity, to === "enabled");
+}
+
+/**
  * What each search's component is handed for its row, as a host writes it:
  * the layout, the relations listed under each row, and the lines enabled.
  */

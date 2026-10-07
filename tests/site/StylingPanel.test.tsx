@@ -120,19 +120,21 @@ describe("the Components fold's searches", () => {
     expect(screen.getByTestId("route").textContent).toBe("addresses");
   });
 
-  /** A line kind's handle, in the map or on Not shown, by its name. */
-  const handle = (name: string) =>
-    screen.getByRole("button", { name: new RegExp(`^(Show|Hide) ${name}$`) });
-  const enable = (name: string) =>
-    screen.getByRole("button", { name: `Enable ${name}` });
+  /** Switch a line kind in the map, by its name, to one of its stops. */
+  const setLine = (name: string, to: "Off" | "Visible" | "Enabled") =>
+    fireEvent.click(
+      within(screen.getByRole("radiogroup", { name })).getByRole("radio", {
+        name: to,
+      }),
+    );
   const exported = () =>
     document.querySelector(".styling-export")!.textContent ?? "";
 
   it("lists a person's addresses, and enables the person, from the row map", () => {
     render(<RoutedPanel start="people" />);
 
-    fireEvent.click(handle("their addresses"));
-    fireEvent.click(enable("the person"));
+    setLine("Their addresses", "Visible");
+    setLine("The person", "Enabled");
 
     expect(lists()).toEqual([
       ["businesses", "addresses"],
@@ -145,9 +147,8 @@ describe("the Components fold's searches", () => {
   it("lists the people at an address, and enables them instead of its businesses", () => {
     render(<RoutedPanel start="addresses" />);
 
-    fireEvent.click(handle("people there"));
-    fireEvent.click(enable("people there"));
-    fireEvent.click(enable("businesses"));
+    setLine("People there", "Enabled");
+    setLine("Businesses", "Visible");
 
     expect(lists().slice(2)).toEqual([["businesses", "people"], ["person"]]);
   });
@@ -161,27 +162,32 @@ describe("the Components fold's searches", () => {
     }
   });
 
-  it("disables a line, in the export too, when it leaves the row", () => {
+  it("exports each line as its switch says: enabled, visible, then off", () => {
     render(<RoutedPanel start="people" />);
-    fireEvent.click(handle("their addresses"));
-    fireEvent.click(enable("their addresses"));
+    setLine("Their addresses", "Enabled");
+    expect(exported()).toContain('list={["businesses", "addresses"]}');
     expect(exported()).toContain('enabledLines={["business", "address"]}');
     expect(exported()).toContain("onPickEntity");
 
-    fireEvent.click(handle("their addresses"));
-
-    expect(lists()[1]).toEqual(["business"]);
-    expect(exported()).not.toContain('"address"');
+    setLine("Their addresses", "Visible");
+    expect(exported()).toContain('list={["businesses", "addresses"]}');
+    expect(exported()).not.toContain("enabledLines");
     expect(exported()).not.toContain("onPickEntity");
-    // A line the row does not draw has no toggle.
+
+    setLine("Their addresses", "Off");
+    expect(lists()[0]).toEqual(["businesses"]);
+    expect(lists()[1]).toEqual(["business"]);
+    expect(exported()).not.toContain("addresses");
+    expect(exported()).not.toContain('"address"');
+    // A line switched off keeps its switch, to switch it back on.
     expect(
-      screen.queryByRole("button", { name: "Enable their addresses" }),
-    ).toBeNull();
+      screen.getByRole("radiogroup", { name: "Their addresses" }),
+    ).toBeTruthy();
   });
 
   it("explains the row map in one sentence, and calls its lines enabled or disabled, never picks", () => {
     render(<RoutedPanel start="people" />);
-    fireEvent.click(handle("their addresses"));
+    setLine("Their addresses", "Visible");
 
     const note = screen.getByText(/Not shown/, { selector: "p.fold-note" });
     expect(note.textContent!.trim().split(/(?<=\.)\s+/)).toHaveLength(1);
@@ -206,8 +212,7 @@ describe("the Components fold's searches", () => {
     render(<RoutedPanel start="businesses" />);
 
     expect(document.querySelector('[data-drop="titleBadge"]')).not.toBeNull();
-    fireEvent.click(handle("officers and agents"));
-    fireEvent.click(enable("officers and agents"));
+    setLine("Officers and agents", "Enabled");
 
     expect(exported()).toContain('list={["people"]}');
     expect(exported()).toContain('enabledLines={["business", "person"]}');

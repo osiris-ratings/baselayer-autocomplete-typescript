@@ -1,26 +1,21 @@
 // The Components fold's row: a menu row drawn as its lines and their places,
-// in the look being styled, and the row's whole configuration. A line kind is
-// dragged by its handle onto the row to list it, or onto Not shown to leave
-// it out, and its toggle enables or disables it. A field is
+// in the look being styled, and the row's whole configuration. Each kind of
+// line has a switch: off, visible or enabled. A field is
 // dragged by its place onto another place of its line, or onto the tray of
 // fields the row leaves out; each place's chevron is a dropdown of what it can
 // show. Pointer events, so a mouse and a finger drag the same way.
 
-import type {
-  EntityType,
-  IncludeOf,
-  LayoutOf,
-  Relation,
-  Route,
-} from "@baselayer-sdk/autocomplete";
+import type { LayoutOf, Relation, Route } from "@baselayer-sdk/autocomplete";
 import {
   useEffect,
   useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
+  type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 
@@ -33,8 +28,10 @@ import {
   editorOps,
   lineFields,
   lineKinds,
-  withListed,
-  withEnabled,
+  lineState,
+  withLineState,
+  type LineKind,
+  type LineState,
   type RowEditor,
   type StyleState,
 } from "./style-state";
@@ -45,42 +42,19 @@ type DropSpot = string;
 /** How far a pointer travels before a press on a place is a drag. */
 const DRAG_SLOP = 4;
 
-/**
- * How long after a drop a click on what was dragged is the browser's own,
- * from the pointer's release, and not a press of its own.
- */
-const CLICK_AFTER_DROP_MS = 400;
-
-/** What a dragged line kind is called while it is carried: its relation. */
-const LINE = "line:";
-
-const lineItem = (relation: Relation) => `${LINE}${relation}`;
-
-/** The relation a dragged item lists, when it is a line kind and not a field. */
-function relationOf(item: string): Relation | null {
-  return item.startsWith(LINE) ? (item.slice(LINE.length) as Relation) : null;
-}
-
-/** "their addresses" as a card or a tooltip starts it. */
+/** "their addresses" as a hidden line's name starts it. */
 function capitalized(name: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
-/** How much of a disabled line's fading is its ink: the components' own share. */
-const DISABLED_INK = 0.15;
-
 /**
- * The look's colors and corners, as the drawn row paints its places, and how
- * it tints an enabled line and fades a disabled one, as the menu does.
+ * The look's colors and corners, as the drawn row paints its places, and the
+ * tint the menu gives the line under the pointer, which an enabled line takes.
  */
 function rowMapColors(state: StyleState): CSSProperties {
   const { look, vars } = state;
-  const dim = look.disabledDim;
-  const round = (value: number) => Math.round(value * 1000) / 1000;
   return {
     "--map-enabled-bg": vars["--bl-ac-highlight-bg"],
-    "--map-disabled-filter": dim === 0 ? "none" : `saturate(${round(1 - dim)})`,
-    "--map-disabled-opacity": String(round(1 - dim * DISABLED_INK)),
     "--map-bg": look.backgroundColor,
     "--map-border": vars["--bl-ac-border"],
     "--map-radius": vars["--bl-ac-radius"],
@@ -99,8 +73,6 @@ function rowMapColors(state: StyleState): CSSProperties {
 interface Lifted {
   /** A place in the row, or a chip on the tray. */
   chip: boolean;
-  /** A whole line kind, from the row or from Not shown. */
-  line: boolean;
   badge: boolean;
   width: number;
   height: number;
@@ -134,16 +106,13 @@ function spotAt(x: number, y: number): DropSpot | null {
 }
 
 function measure(handle: HTMLElement, x: number, y: number): Lifted {
-  const cell = handle.closest<HTMLElement>(
-    ".row-map-place, .row-map-chip, .row-map-line-card, .row-map-kind",
-  );
+  const cell = handle.closest<HTMLElement>(".row-map-place, .row-map-chip");
   const box = (cell ?? handle).getBoundingClientRect();
   const face = getComputedStyle(
     cell?.querySelector(".row-map-face") ?? cell ?? handle,
   );
   return {
     chip: cell?.classList.contains("row-map-chip") ?? false,
-    line: cell?.matches(".row-map-line-card, .row-map-kind") ?? false,
     badge: cell?.dataset.badge !== undefined,
     width: box.width,
     height: box.height,
@@ -165,7 +134,6 @@ function useFieldDrag(
   // Read in the listeners, which a render may not have caught up with.
   const current = useRef<Drag | null>(null);
   const menu = useRef<HTMLSelectElement | null>(null);
-  const droppedAt = useRef(Number.NEGATIVE_INFINITY);
   const latest = useRef({ accepts, onDrop });
   useLayoutEffect(() => {
     latest.current = { accepts, onDrop };
@@ -215,7 +183,6 @@ function useFieldDrag(
       if (now === null || !carries(event)) return;
       update(null);
       if (now.moving) {
-        droppedAt.current = Date.now();
         // Where it is let go, which a scroll since the last move can change.
         const spot = spotAt(event.clientX, event.clientY);
         if (spot !== null && latest.current.accepts(now.field, spot)) {
@@ -311,13 +278,7 @@ function useFieldDrag(
     },
   });
 
-  /**
-   * Whether a click on something that can be dragged is a press of its own,
-   * and not the one the browser sends as a drag of it is let go.
-   */
-  const clicked = () => Date.now() - droppedAt.current > CLICK_AFTER_DROP_MS;
-
-  return { drag, handle, clicked };
+  return { drag, handle };
 }
 
 /**
@@ -342,13 +303,6 @@ function Ghost({
     height: lifted.height,
     transformOrigin: `${lifted.grabX}px ${lifted.grabY}px`,
   };
-  if (lifted.line) {
-    return (
-      <span className="row-map-line-card row-map-ghost" style={style}>
-        {label}
-      </span>
-    );
-  }
   return lifted.chip ? (
     <span
       className="row-map-chip row-map-ghost"
@@ -373,8 +327,8 @@ function Ghost({
 
 /**
  * The Components fold's row for one search: a business's, a person's or an
- * address's, each editing its own row in the style state. What the row lists
- * and which lines are enabled change only through `withListed` and
+ * address's, each editing its own row in the style state. Its lines are
+ * switched only through `withLineState`, so through `withListed` and
  * `withEnabled`, which keep a line the row does not draw from being enabled.
  */
 export function RowMap({
@@ -386,15 +340,11 @@ export function RowMap({
   onChange(state: StyleState): void;
   route?: Route;
 }) {
-  const row = state.rows[route];
   const lines = {
     route,
-    list: row.list,
-    enabled: row.enabled,
-    onList: (relation: Relation, listed: boolean) =>
-      onChange(withListed(state, route, relation as IncludeOf<Route>, listed)),
-    onEnable: (entity: EntityType, on: boolean) =>
-      onChange(withEnabled(state, route, entity, on)),
+    stateOf: (kind: LineKind) => lineState(state, route, kind),
+    onLine: (kind: LineKind, to: LineState) =>
+      onChange(withLineState(state, route, kind, to)),
     colors: rowMapColors(state),
   };
   switch (route) {
@@ -449,99 +399,167 @@ export function RowMap({
   }
 }
 
+/** A switch's stops, in order, each with its glyph and what it says. */
+const STOPS: readonly { value: LineState; label: string; title: string }[] = [
+  { value: "off", label: "Off", title: "Off: not listed under each row" },
+  {
+    value: "visible",
+    label: "Visible",
+    title: "Visible: listed, and not a choice in the menu",
+  },
+  {
+    value: "enabled",
+    label: "Enabled",
+    title: "Enabled: listed, and a choice in the menu",
+  },
+];
+
+const GLYPHS: Record<LineState, ReactNode> = {
+  off: (
+    <>
+      <path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8Z" />
+      <path d="M2.5 13.5 13.5 2.5" />
+    </>
+  ),
+  visible: (
+    <>
+      <path d="M1.5 8S4 3.5 8 3.5 14.5 8 14.5 8 12 12.5 8 12.5 1.5 8 1.5 8Z" />
+      <circle cx="8" cy="8" r="2" />
+    </>
+  ),
+  enabled: <path d="M4 2.5v10.25l2.6-2.4 1.7 3.9 1.8-.8-1.7-3.85H12L4 2.5Z" />,
+};
+
 /**
- * Whether a line kind is enabled, as a pill that says which. Its name stays
- * the same either way: a screen reader says whether it is pressed.
+ * A line's switch: off, visible or enabled, as a group of radios the arrow
+ * keys move through. A row always shows its head, so the head's Off is
+ * disabled, and the keys pass it by.
  */
-function EnabledToggle({
+function LineSwitch({
   name,
-  on,
-  onToggle,
+  head,
+  value,
+  onSet,
 }: {
   name: string;
-  on: boolean;
-  onToggle(on: boolean): void;
+  head: boolean;
+  value: LineState;
+  onSet(to: LineState): void;
 }) {
+  const stops = STOPS.map(stop => ({
+    ...stop,
+    disabled: head && stop.value === "off",
+  }));
+  const open = stops.filter(stop => !stop.disabled);
+  const move = (event: ReactKeyboardEvent<HTMLButtonElement>) => {
+    const step =
+      event.key === "ArrowRight" || event.key === "ArrowDown"
+        ? 1
+        : event.key === "ArrowLeft" || event.key === "ArrowUp"
+          ? -1
+          : 0;
+    if (step === 0) return;
+    event.preventDefault();
+    const at = open.findIndex(stop => stop.value === value);
+    const next = open[(at + step + open.length) % open.length]!.value;
+    onSet(next);
+    event.currentTarget.parentElement
+      ?.querySelector<HTMLButtonElement>(`[data-stop="${next}"]`)
+      ?.focus();
+  };
   return (
-    <button
-      type="button"
-      className="row-map-toggle"
-      aria-pressed={on}
-      aria-label={`Enable ${name}`}
-      title={`${capitalized(name)}: ${on ? "enabled, a choice in the menu. Press to disable." : "disabled, drawn dimmed in the menu. Press to enable."} (enabledLines)`}
-      onClick={() => onToggle(!on)}
+    <span
+      className="row-map-switch"
+      role="radiogroup"
+      aria-label={capitalized(name)}
     >
-      {on ? "Enabled" : "Disabled"}
-    </button>
+      {stops.map(stop => (
+        <button
+          key={stop.value}
+          type="button"
+          role="radio"
+          className="row-map-stop"
+          data-stop={stop.value}
+          aria-label={stop.label}
+          aria-checked={stop.value === value}
+          disabled={stop.disabled}
+          tabIndex={stop.value === value ? 0 : -1}
+          title={stop.disabled ? "A row always shows its head" : stop.title}
+          onClick={() => onSet(stop.value)}
+          onKeyDown={move}
+        >
+          <svg
+            viewBox="0 0 16 16"
+            width="10"
+            height="10"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.6"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            focusable="false"
+            aria-hidden="true"
+          >
+            {GLYPHS[stop.value]}
+          </svg>
+        </button>
+      ))}
+    </span>
   );
 }
 
 function KindRowMap<P extends string, F extends string>({
   editor,
   route,
-  list,
-  enabled,
-  onList,
-  onEnable,
+  stateOf,
+  onLine,
   layout,
   onLayout,
   colors,
 }: {
   editor: RowEditor<P, F>;
   route: Route;
-  /** The relations the row lists: their lines are drawn, the others are not. */
-  list: readonly Relation[];
-  /** The entities whose lines are enabled. */
-  enabled: readonly EntityType[];
-  onList(relation: Relation, listed: boolean): void;
-  onEnable(entity: EntityType, on: boolean): void;
+  /** How the row draws each of its line kinds. */
+  stateOf(kind: LineKind): LineState;
+  onLine(kind: LineKind, to: LineState): void;
   layout: LayoutOf<P, F>;
   onLayout(layout: LayoutOf<P, F>): void;
   colors: CSSProperties;
 }) {
   const { canDrop, moveField, placeOptions, unplacedFields, withPlaced } =
     editorOps(editor);
-  const places = new Set<string>(editor.kind.places);
+  const kinds = lineKinds(route);
+  /** The places of a line switched off: nothing moves into or out of them. */
+  const frozen = new Set<string>(
+    kinds
+      .filter(kind => stateOf(kind) === "off")
+      .flatMap(kind =>
+        kind.lines.flatMap(({ lead, trailing }) => [
+          lead.field,
+          lead.badge,
+          trailing.badge,
+          trailing.field,
+        ]),
+      )
+      .filter(spot => spot !== null && spot !== undefined),
+  );
   /**
-   * A line kind the row lists goes to Not shown, and one it does not, onto the
-   * row, anywhere on it. A field goes on a place that would draw it, or on the
-   * tray: a gap of the row is no place, so it takes none.
+   * A field goes on a place of its own line that would draw it, or on the
+   * tray: a gap of the row is no place, so it takes none. A line switched off
+   * gives up no field to carry, and the tray holds none of its own.
    */
-  const takes = (item: string, to: DropSpot) => {
-    const relation = relationOf(item);
-    if (relation !== null) {
-      return list.includes(relation) ? to === TRAY : to !== TRAY;
-    }
-    return canDrop(layout, item as F, to as P);
-  };
-  const { drag, handle, clicked } = useFieldDrag(takes, (item, to) => {
-    const relation = relationOf(item);
-    if (relation === null) {
-      onLayout(moveField(layout, item as F, to as P));
-    } else {
-      onList(relation, to !== TRAY);
-    }
-  });
+  const takes = (field: string, to: DropSpot) =>
+    canDrop(layout, field as F, to as P);
+  const { drag, handle } = useFieldDrag(takes, (field, to) =>
+    onLayout(moveField(layout, field as F, to as P)),
+  );
   const moving = drag?.moving === true ? drag : null;
   const over = moving?.over ?? null;
-  /**
-   * While something is dragged, every spot that takes it says so: a line kind
-   * lights the row as a whole, not each place on it.
-   */
+  /** While a field is dragged, every spot that takes it says so. */
   const accepts = (spot: DropSpot) =>
-    moving !== null &&
-    takes(moving.field, spot) &&
-    !(relationOf(moving.field) !== null && places.has(spot))
-      ? true
-      : undefined;
+    moving !== null && takes(moving.field, spot) ? true : undefined;
   const kindName = (relation: Relation | null) =>
     editor.kindNames[relation ?? "head"] ?? "";
-  const itemLabel = (item: string) => {
-    const relation = relationOf(item);
-    return relation === null
-      ? editor.fieldLabels[item as F]
-      : capitalized(kindName(relation));
-  };
 
   /**
    * One place: its dropdown, and over all of it but the chevron, when it
@@ -554,6 +572,7 @@ function KindRowMap<P extends string, F extends string>({
     // Nothing the row would draw here: a badge beside an empty field, or the
     // second line's right with no lead.
     const closed = options.length === 1;
+    const held = field !== null && !frozen.has(spot);
     return (
       <span
         className="row-map-place"
@@ -567,10 +586,10 @@ function KindRowMap<P extends string, F extends string>({
         data-dragged={
           moving !== null && moving.field === field ? true : undefined
         }
-        {...(field === null ? {} : handle(field))}
+        {...(held ? handle(field) : {})}
         title={`${editor.placeLabels[spot]} · layout.${spot}${field === null ? "" : ` · reads ${editor.fieldWire[field].join(", ")}`}`}
       >
-        {field !== null && (
+        {held && (
           <span
             className="row-map-handle"
             // The grab cursor and the finger's hold; the place takes the press.
@@ -584,7 +603,7 @@ function KindRowMap<P extends string, F extends string>({
         <select
           aria-label={editor.placeLabels[spot]}
           value={choice}
-          disabled={closed}
+          disabled={closed || frozen.has(spot)}
           onChange={event =>
             onLayout(
               withPlaced(
@@ -605,13 +624,7 @@ function KindRowMap<P extends string, F extends string>({
     );
   };
 
-  const kinds = lineKinds(route);
-  const shown = kinds.filter(
-    kind => kind.relation === null || list.includes(kind.relation),
-  );
-  const hidden = kinds.filter(
-    kind => kind.relation !== null && !list.includes(kind.relation),
-  );
+  const shown = kinds.filter(kind => stateOf(kind) !== "off");
   /** The fields a drawn line can show: only those go on the tray and in the table. */
   const shownFields = new Set(
     shown.flatMap(kind => lineFields(route, kind.relation)),
@@ -625,51 +638,25 @@ function KindRowMap<P extends string, F extends string>({
         className="row-map"
         role="group"
         aria-label="A row's places"
-        data-drop="row"
-        data-accepts={accepts("row")}
-        data-over={over === "row" || undefined}
         data-dragging={moving !== null || undefined}
       >
-        {shown.map(kind => {
+        {kinds.map(kind => {
           const name = kindName(kind.relation);
           const relation = kind.relation;
-          const on = enabled.includes(kind.entity);
+          const value = stateOf(kind);
           return (
             <div
               key={relation ?? "head"}
               className="row-map-kind"
               data-relation={relation ?? "head"}
-              data-enabled={on}
-              data-dragged={
-                relation !== null && moving?.field === lineItem(relation)
-                  ? true
-                  : undefined
-              }
+              data-state={value}
             >
               <span className="row-map-kind-controls">
-                {relation === null && (
-                  <span
-                    className="row-map-line-handle"
-                    data-spacer
-                    aria-hidden="true"
-                  />
-                )}
-                {relation !== null && (
-                  <button
-                    type="button"
-                    className="row-map-line-handle"
-                    aria-label={`Hide ${name}`}
-                    title={`${capitalized(name)}: drag to Not shown, or press, to stop listing them`}
-                    {...handle(lineItem(relation))}
-                    onClick={() => {
-                      if (clicked()) onList(relation, false);
-                    }}
-                  />
-                )}
-                <EnabledToggle
+                <LineSwitch
                   name={name}
-                  on={on}
-                  onToggle={next => onEnable(kind.entity, next)}
+                  head={relation === null}
+                  value={value}
+                  onSet={to => onLine(kind, to)}
                 />
               </span>
               <div className="row-map-kind-lines">
@@ -715,33 +702,9 @@ function KindRowMap<P extends string, F extends string>({
         data-over={over === TRAY || undefined}
       >
         <span className="row-map-tray-label">Not shown</span>
-        {hidden.map(kind => {
-          const relation = kind.relation!;
-          const name = kindName(relation);
-          return (
-            <span
-              key={relation}
-              className="row-map-line-card"
-              data-relation={relation}
-              title={`${capitalized(name)}: drag onto the row, or press, to list them`}
-              {...handle(lineItem(relation))}
-              data-dragged={moving?.field === lineItem(relation) || undefined}
-            >
-              <button
-                type="button"
-                className="row-map-line-handle"
-                aria-label={`Show ${name}`}
-                onClick={() => {
-                  if (clicked()) onList(relation, true);
-                }}
-              />
-              {capitalized(name)}
-            </span>
-          );
-        })}
-        {unplaced.length === 0 && hidden.length === 0 ? (
+        {unplaced.length === 0 ? (
           <span className="row-map-tray-hint">
-            Drag a field or a line here to leave it out
+            Drag a field here to leave it out
           </span>
         ) : (
           unplaced.map(field => (
@@ -788,7 +751,7 @@ function KindRowMap<P extends string, F extends string>({
           <Ghost
             drag={moving}
             colors={colors}
-            label={itemLabel(moving.field)}
+            label={editor.fieldLabels[moving.field as F]}
           />,
           document.body,
         )}
