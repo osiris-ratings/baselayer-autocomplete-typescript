@@ -43,25 +43,25 @@ curl -s -X POST https://api.baselayer.com/autocomplete/sessions \
 }
 ```
 
-| Answer              | Meaning                                                                |
-| ------------------- | ---------------------------------------------------------------------- |
-| 201                 | a session                                                              |
-| 401, codes 20 to 24 | the key is not recognized                                              |
-| 402, code 3004      | the organization is locked                                             |
-| 403, code 30        | the key lacks the `autocomplete.read` permission                       |
-| 403, code 37        | autocomplete is not enabled for the organization                       |
-| 403, code 501       | `scope` names a route the organization may not search                  |
-| 403, code 502       | `scope` names a relation it may not reach on a route                   |
-| 422                 | the body is malformed, `scope` included                                |
-| 422, code 483       | a sandbox application's key, where sandbox sessions are not served yet |
-| 429, code 429       | a session pool is spent; `Retry-After` says for how long               |
-| 503, code 481       | the deployment cannot mint sessions right now                          |
+| Answer              | Meaning                                                  |
+| ------------------- | -------------------------------------------------------- |
+| 201                 | a session                                                |
+| 401, codes 20 to 24 | the key is not recognized                                |
+| 402, code 3004      | the organization is locked                               |
+| 403, code 30        | the key lacks the `autocomplete.read` permission         |
+| 403, code 37        | autocomplete is not enabled for the organization         |
+| 403, code 501       | `scope` names a route the organization may not search    |
+| 403, code 502       | `scope` names a relation it may not reach on a route     |
+| 422                 | the body is malformed, `scope` included                  |
+| 429, code 429       | a session pool is spent; `Retry-After` says for how long |
+| 503, code 481       | the deployment cannot mint sessions right now            |
 
 A 429's `metadata.scope` names the pool:
 `autocomplete_session_mint:organization` is the ten-minute window,
 `autocomplete_session_mint_day:organization` the rolling day. A sandbox
-application's key mints sessions served from the sandbox index once that is
-available on your deployment; until then its mint is refused with a 422, code 483.
+application's key mints a session served from the sandbox index; until a
+deployment has that index available, the session's searches are answered
+503, not ready, as when no index is served.
 
 ## Narrowing a session
 
