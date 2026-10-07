@@ -2160,17 +2160,14 @@
   margin: 0;
 }
 
+/* As many to a row as the panel has room for, each at least as wide as the
+   longest name, so the names never run into each other: a narrow panel
+   takes two rows, or three. */
 .presets {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(5.75rem, 1fr));
   gap: 12px;
   margin-bottom: 18px;
-}
-
-@media (max-width: 560px) {
-  .presets {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 
 .preset {
@@ -2243,11 +2240,14 @@
 }
 
 .preset-name {
+  overflow: hidden;
   font-family: var(--mono);
   font-size: 11.5px;
   letter-spacing: 0.06em;
   text-align: center;
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .preset[aria-checked="true"] .preset-name {
