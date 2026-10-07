@@ -64,6 +64,7 @@ import {
   sampleRows,
 } from "./sample";
 import { SearchStep } from "./SearchStep";
+import { SearchTitle } from "./SearchTitle";
 import { StylingPanel } from "./StylingPanel";
 
 const PRODUCTION = "https://api.baselayer.com";
@@ -169,12 +170,6 @@ function useSessionScope(
 }
 
 /** What the switch above the field calls each search. */
-const SEARCH_BY_LABELS: Record<Route, string> = {
-  businesses: "Business",
-  people: "Person",
-  addresses: "Address",
-};
-
 /** The field's label in each search but the business one, which Styling sets. */
 const FIELD_LABELS: Record<Exclude<Route, "businesses">, string> = {
   people: "Person's name",
@@ -780,9 +775,13 @@ export function App() {
 
           <section className="demo-card" aria-labelledby="demo-business-title">
             <div className="demo-card-head">
-              <h2 className="demo-card-title" id="demo-business-title">
-                <span className="demo-num">02</span> Try autocomplete here
-              </h2>
+              <SearchTitle
+                id="demo-business-title"
+                panelId="demo-search-panel"
+                routes={offered}
+                route={mode}
+                onRoute={setSearchBy}
+              />
               <button
                 type="button"
                 className="link-toggle"
@@ -798,27 +797,6 @@ export function App() {
                 />
               </button>
             </div>
-            {offered.length > 1 && (
-              <div
-                className="search-by"
-                role="radiogroup"
-                aria-label="Search by"
-                data-testid="demo-search-by"
-              >
-                {offered.map(route => (
-                  <button
-                    key={route}
-                    type="button"
-                    role="radio"
-                    aria-checked={mode === route}
-                    className="search-by-option"
-                    onClick={() => setSearchBy(route)}
-                  >
-                    {SEARCH_BY_LABELS[route]}
-                  </button>
-                ))}
-              </div>
-            )}
             <div
               id="demo-filters"
               className="filters-panel"
@@ -891,6 +869,14 @@ export function App() {
             <div
               className="demo-preview"
               data-held={styling ? "true" : "false"}
+              // The title's words switch what the field searches for.
+              {...(offered.length > 1
+                ? {
+                    id: "demo-search-panel",
+                    role: "tabpanel",
+                    "aria-labelledby": `demo-business-title-tab-${mode}`,
+                  }
+                : {})}
             >
               {previewCss(style) !== "" && <style>{previewCss(style)}</style>}
               {client === null ? (

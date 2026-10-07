@@ -24,7 +24,7 @@ appears in them.
 
 The page is the window's height and never scrolls itself. It has three panes,
 side by side, each scrolling on its own: the introduction, the controls (**01
-Connect** and **02 Try autocomplete here**, and **03 Run a business search**
+Connect** and **02 Autocomplete a business**, and **03 Run a business search**
 once a business is picked), and Debug or Styling. The introduction folds to a
 **Live demo** tab with its **Hide**; opening Debug or Styling folds it too, to
 give that pane room, and the tab brings it back. On a narrow screen the panes
@@ -104,10 +104,12 @@ origin. For another environment, pick **Custom URL** and give its API host.
 
 ## The test form
 
-**02 Try autocomplete here** is the component on a form of its own. Above
-the field, **Business · Person · Address** says what it searches for,
-offering only the searches the session's scope allows; before you connect it
-offers all three, so Styling can show each. Business is the business name and
+**02 Autocomplete a business · person · address** is the component on a form of
+its own. Its title says what the field searches for, each search a word: the
+selected one underlined, the others muted and a click or an arrow key away. It
+offers only the searches the session's scope allows, and with businesses alone
+it reads **Autocomplete a business**; before you connect it offers all three, so
+Styling can show each. Business is the business name and
 its suggestions. Person and Address find the business another way: each
 person or address that fits comes with its counts (`7 businesses · 3
 addresses`), a person's first address, and a line for each of its first

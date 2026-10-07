@@ -1789,39 +1789,42 @@
   border-color: var(--blue);
 }
 
-/* What the field searches for, above it: the side panes' switch, as a radio
-   group, offering only the searches the session's scope allows. */
-.search-by {
-  display: inline-flex;
-  gap: 2px;
-  margin-bottom: 16px;
-  padding: 3px;
-  background: var(--faded);
-  border: 1px solid var(--line-soft);
-  border-radius: 2px;
+/* What the field searches for, in the title's own sentence: each search a
+   word, the selected one underlined and the others muted, still a tab each.
+   A word never breaks; the sentence wraps between words. */
+.search-title {
+  min-width: 0;
 }
 
-.search-by-option {
-  padding: 7px 14px;
+.search-by-word {
+  padding: 0;
   background: none;
   border: 0;
-  border-radius: 2px;
   color: var(--muted);
-  font-family: var(--mono);
-  font-size: 12.5px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font: inherit;
+  white-space: nowrap;
   cursor: pointer;
 }
 
-.search-by-option:hover {
+.search-by-word:hover {
   color: var(--ink);
 }
 
-.search-by-option[aria-checked="true"] {
-  background: var(--paper);
-  box-shadow: 0 1px 2px rgba(9, 35, 79, 0.14);
+.search-by-word[aria-selected="true"] {
   color: var(--ink);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 5px;
+}
+
+.search-by-word:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+.search-by-sep {
+  margin: 0 0.3em;
+  color: var(--muted);
 }
 
 .fold-chevron[data-open="true"] {

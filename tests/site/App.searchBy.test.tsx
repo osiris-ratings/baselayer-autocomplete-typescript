@@ -53,32 +53,42 @@ async function connect(routes: readonly string[]) {
 const field = (id: string): HTMLInputElement =>
   document.getElementById(`${id}-input`) as HTMLInputElement;
 
-const checked = (name: string) =>
-  screen.getByRole("radio", { name }).getAttribute("aria-checked");
+/** Whether the title's word for a search is the one selected. */
+const checked = (word: string) =>
+  screen.getByRole("tab", { name: word }).getAttribute("aria-selected");
 
 describe("searching by person or address", () => {
   it("offers only the searches the session's scope allows", async () => {
     await connect(["businesses"]);
 
-    expect(screen.queryByRole("radiogroup", { name: "Search by" })).toBeNull();
+    expect(screen.queryByRole("tablist", { name: "Search by" })).toBeNull();
+    expect(
+      screen.getByRole("heading", { name: "Autocomplete a business" }),
+    ).toBeTruthy();
   });
 
-  it("offers Business, Person and Address when the session may search all three", async () => {
+  it("offers a business, a person and an address in its title when the session may search all three", async () => {
     await connect(["businesses", "people", "addresses"]);
 
-    const searchBy = screen.getByRole("radiogroup", { name: "Search by" });
+    const searchBy = screen.getByRole("tablist", { name: "Search by" });
     expect(
       within(searchBy)
-        .getAllByRole("radio")
-        .map(radio => radio.textContent),
-    ).toEqual(["Business", "Person", "Address"]);
-    expect(checked("Business")).toBe("true");
+        .getAllByRole("tab")
+        .map(tab => tab.textContent),
+    ).toEqual(["business", "person", "address"]);
+    expect(checked("business")).toBe("true");
+    // The words switch the field's panel, named by the one selected.
+    const panel = screen.getByRole("tabpanel");
+    expect(panel.getAttribute("aria-labelledby")).toBe(
+      screen.getByRole("tab", { name: "business" }).id,
+    );
+    expect(within(panel).getByRole("combobox")).toBeTruthy();
   });
 
   it("finds a business through a person, stays on Person with their name and the business under it, and names the officer in How it matched", async () => {
     const user = await connect(["businesses", "people", "addresses"]);
 
-    await user.click(screen.getByRole("radio", { name: "Person" }));
+    await user.click(screen.getByRole("tab", { name: "person" }));
     await user.type(field("demo-person"), "dana");
     const dana = await screen.findByRole("group", { name: "Dana Whitfield" });
     expect(within(dana).getByTestId("grouped-counts").textContent).toBe(
@@ -95,7 +105,7 @@ describe("searching by person or address", () => {
 
     // The pick stays where it was made: the person's name in the field, and
     // the business under it.
-    expect(checked("Person")).toBe("true");
+    expect(checked("person")).toBe("true");
     expect(field("demo-person").value).toBe("Dana Whitfield");
     expect(screen.getByTestId("grouped-selection").textContent).toBe(
       "HARBOR CONCRETE SUPPLY, INC.",
@@ -121,7 +131,7 @@ describe("searching by person or address", () => {
   it("finds a business through an address, stays on Address with the address, and names it in How it matched", async () => {
     const user = await connect(["businesses", "people", "addresses"]);
 
-    await user.click(screen.getByRole("radio", { name: "Address" }));
+    await user.click(screen.getByRole("tab", { name: "address" }));
     await user.type(field("demo-address"), "77 quill");
     // Matched by the part typing leaves whole: the typed prefix of a word is
     // a mark of its own, which jsdom names apart from the rest of the word.
@@ -135,7 +145,7 @@ describe("searching by person or address", () => {
       within(office).getByRole("option", { name: /NORTHSHORE PUMPING, LLC/ }),
     );
 
-    expect(checked("Address")).toBe("true");
+    expect(checked("address")).toBe("true");
     expect(field("demo-address").value).toBe(
       "77 Quillfeather Ln Ste 300, Dover, DE 19904",
     );
@@ -161,7 +171,7 @@ describe("searching by person or address", () => {
 
   it("lets the pick go once the field is edited", async () => {
     const user = await connect(["businesses", "people", "addresses"]);
-    await user.click(screen.getByRole("radio", { name: "Person" }));
+    await user.click(screen.getByRole("tab", { name: "person" }));
     await user.type(field("demo-person"), "dana");
     await user.click(
       await screen.findByRole("option", { name: /BAYSIDE HARBOR CONCRETE/ }),
@@ -178,7 +188,7 @@ describe("searching by person or address", () => {
 describe("a person's or an address's row, as Styling sets it", () => {
   it("lists a person's addresses, and picks one as the person's, with no search to run", async () => {
     const user = await connect(["businesses", "people", "addresses"]);
-    await user.click(screen.getByRole("radio", { name: "Person" }));
+    await user.click(screen.getByRole("tab", { name: "person" }));
     await user.click(screen.getByTestId("demo-styling-open"));
     await user.click(
       within(
@@ -216,7 +226,7 @@ describe("a person's or an address's row, as Styling sets it", () => {
 
     await user.click(screen.getByRole("tab", { name: "Address" }));
 
-    expect(checked("Address")).toBe("true");
+    expect(checked("address")).toBe("true");
     expect(
       document.querySelector('[data-drop="personTrailing"]'),
     ).not.toBeNull();
@@ -233,7 +243,7 @@ describe("Styling's sample rows", () => {
       0,
     );
 
-    await user.click(screen.getByRole("radio", { name: "Person" }));
+    await user.click(screen.getByRole("tab", { name: "person" }));
     const sample = screen.getAllByTestId("person-suggestion");
     expect(sample.length).toBeGreaterThan(1);
     expect(
@@ -241,7 +251,7 @@ describe("Styling's sample rows", () => {
     ).toBeGreaterThan(0);
     expect(screen.getByText(/Sample rows for/).textContent).toContain("dana");
 
-    await user.click(screen.getByRole("radio", { name: "Address" }));
+    await user.click(screen.getByRole("tab", { name: "address" }));
     expect(screen.getAllByTestId("address-suggestion").length).toBeGreaterThan(
       1,
     );
