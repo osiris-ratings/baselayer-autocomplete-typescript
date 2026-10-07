@@ -295,3 +295,35 @@ describe("requests per route", () => {
     expect(events.map(event => event.requestsOnRoute)).toEqual([1, 1, 2]);
   });
 });
+
+describe("a re-mint that narrows the scope", () => {
+  it("checks the retry against the new grant's scope, and sends nothing more", async () => {
+    const scopes: SessionScope[] = [
+      { routes: { businesses: [], people: ["businesses"] }, maxLimit: 20 },
+      { routes: { businesses: [] }, maxLimit: 20 },
+    ];
+    let minted = 0;
+    const mint = vi.fn<MintFunction>(async () => ({
+      kind: "granted",
+      grant: { ...grant(scopes[minted]), sessionToken: `grant-${++minted}` },
+    }));
+    const fetch = vi.fn<FetchLike>(async () =>
+      reply(401, {
+        code: 28,
+        message: "Autocomplete session invalid. Mint a new one.",
+        metadata: { reason: "session_invalid", action: "mint" },
+      }),
+    );
+    const client = createAutocompleteClient({
+      baseUrl: "https://api.test",
+      mint,
+      fetch,
+    });
+
+    const error = await refusal(client.search("people", { q: "dana" }));
+
+    expect(mint).toHaveBeenCalledTimes(2);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(error).toMatchObject({ kind: "out_of_scope", route: "people" });
+  });
+});
