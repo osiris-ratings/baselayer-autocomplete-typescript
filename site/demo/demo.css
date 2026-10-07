@@ -632,11 +632,12 @@
 }
 
 .row-map-head,
+.row-map-hint-row,
 .row-map-kind {
   display: grid;
   box-sizing: border-box;
   grid-template-columns: var(--map-grip) minmax(0, 1fr) var(--map-check);
-  gap: 6px;
+  gap: var(--map-col-gap);
   align-items: start;
   width: max-content;
   min-width: 100%;
@@ -645,6 +646,10 @@
 .row-map-wrap {
   --map-grip: 12px;
   --map-check: 3.5rem;
+  --map-col-gap: 6px;
+  /* A line's box's padding: a drawer's title and note start where its
+     chips do. */
+  --map-box-pad: 6px;
 }
 
 .row-map-head {
@@ -659,9 +664,10 @@
 
 .row-map-drawer-label {
   position: sticky;
-  left: calc(var(--map-grip) + 6px);
+  left: calc(var(--map-grip) + var(--map-col-gap));
   grid-column: 2;
   justify-self: start;
+  padding-left: var(--map-box-pad);
 }
 
 .row-map-check-head {
@@ -674,8 +680,9 @@
 }
 
 .row-map-drawer-hint {
+  grid-column: 2;
   margin: 0;
-  padding: 6px 0;
+  padding: 6px 0 6px var(--map-box-pad);
   color: var(--muted);
   font-size: 12px;
 }
@@ -687,7 +694,7 @@
   display: grid;
   gap: 8px;
   min-width: 0;
-  padding: 4px 6px;
+  padding: 4px var(--map-box-pad);
   border-radius: 6px;
 }
 
@@ -728,7 +735,7 @@
   background:
     radial-gradient(currentColor 1px, transparent 1.5px) 1px 1px / 5px 5px,
     var(--map-bg, var(--paper));
-  box-shadow: 6px 0 0 var(--map-bg, var(--paper));
+  box-shadow: var(--map-col-gap) 0 0 var(--map-bg, var(--paper));
   border: 0;
   border-radius: 3px;
   color: var(--faded);
@@ -763,7 +770,7 @@
   justify-content: center;
   background: var(--map-bg, var(--paper));
   box-shadow:
-    -6px 0 0 var(--map-bg, var(--paper)),
+    calc(-1 * var(--map-col-gap)) 0 0 var(--map-bg, var(--paper)),
     -12px 0 8px -8px rgba(9, 35, 79, 0.18);
 }
 
@@ -1260,13 +1267,9 @@
     gap: 5px;
   }
 
-  .row-map-head,
-  .row-map-kind {
-    gap: 4px;
-  }
-
-  .row-map-kind-lines {
-    padding: 4px;
+  .row-map {
+    --map-box-pad: 4px;
+    --map-col-gap: 4px;
   }
 
   .row-map-name-long {

@@ -832,9 +832,11 @@ function KindRowMap<P extends string, F extends string>({
               <span className="row-map-drawer-label">Hidden</span>
             </div>
             {hidden.length === 0 ? (
-              <p className="row-map-drawer-hint">
-                Drag a line here by its grip to hide it
-              </p>
+              <div className="row-map-hint-row">
+                <p className="row-map-drawer-hint">
+                  Drag a line here by its grip to hide it
+                </p>
+              </div>
             ) : (
               hidden.map(kindRow)
             )}
