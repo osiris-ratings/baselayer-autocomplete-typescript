@@ -29,7 +29,7 @@ release.
   the menu: its name with its counts, a person's first address, and a line for
   each business under it with the business's address, states and role, an icon
   before every name. `list` lists a person's addresses or an address's people
-  too, `pickable` makes the row itself or what it lists pickable, `layout`
+  too, `enabledLines` enables the row itself or the lines it lists, `layout`
   places each line's fields, as on a business row, and `icons` sets or turns off
   the icons. `onPick` hands a `BusinessPick`: `businessToken`, `businessName`,
   `pickedAt`, `expiresAt`, and `through`, the person or address it was reached
@@ -38,7 +38,7 @@ release.
   from a line under the row draws a line under the field naming it until the
   next edit (`showSelection`). `PersonAutocompleteView` and
   `AddressAutocompleteView` draw the same rows from state a host supplies.
-- `list`, `pickable`, `onPickEntity`, `icons` and `showSelection` on
+- `list`, `enabledLines`, `onPickEntity`, `icons` and `showSelection` on
   `BusinessAutocomplete`: a business row can list its officers and agents and
   its addresses, a line each with an icon and the role. Such a row is a group
   whose head is the row as it has always been, picked as it always was; an
@@ -46,15 +46,15 @@ release.
   business's name in the field, and is named on a line under it. With none of
   them, a business row draws exactly as before. `titleLead: "titleIcon"` in
   its layout draws the business's own icon. `BusinessAutocompleteView` takes
-  `list`, `pickable`, `icons`, `selection` and `onSelectEntity`.
+  `list`, `enabledLines`, `icons`, `selection` and `onSelectEntity`.
 - The line under the field after a pick from a line under a row
   (`bl-ac-selection`, a `GroupedSelection` on the views), the field described
   by it. It names the picked line while the field holds the name the pick put
   there, and any other edit lets it go.
-- `inertDim` on `look`: how far a line under a row fades when it is not a pick,
-  0 to 1 and 0.6 by default. It drains the line's colour and lightens only its
-  name, icon and state squares, so its secondary text is no fainter; nothing
-  fades under forced colours.
+- `disabledDim` on `look`: how far a disabled line under a row fades, 0 to 1 and
+  0.6 by default. It drains the line's colour and lightens only its name, icon
+  and state squares, so its secondary text is no fainter; nothing fades under
+  forced colours.
 - One row model for all three searches: `BUSINESS_ROW`, `PERSON_ROW` and
   `ADDRESS_ROW` (`ROW_KINDS`), each a `RowKind`: its places
   (`BUSINESS_ROW_PLACES`, …), its fields by line (`BUSINESS_LINE_FIELDS`, …),
@@ -67,10 +67,10 @@ release.
   they always were.
 - `DEFAULT_LIST` and `requestFor(route, layout, list, scope)`: what any
   search's rows list, and what to ask for them.
-- `groupedLines(row, list, pickable)` and `groupedOptions(lines)`: any row's
-  lines, and what each pickable one hands, a `GroupedOption` of kind `row` (a
-  business row's own head), `business` (a business under a person or an
-  address) or `entity` (an `EntityPick`). `DEFAULT_PICKABLE` is businesses.
+- `groupedLines(row, list, enabledLines)` and `groupedOptions(lines)`: any row's
+  lines, and what each enabled one hands, a `GroupedOption` of kind `row` (a
+  business row's own head), `business` (a business under a person or an address)
+  or `entity` (an `EntityPick`). `DEFAULT_ENABLED_LINES` is businesses.
 - `pickableBusinesses(row)` and `businessPickFrom(row, business, at)`: the
   businesses a person's or an address's row offers, and the pick of one.
 - `address`, `states` and `domicile_state` on a related item: a business
@@ -110,8 +110,8 @@ release.
 - `RelatedItem` gains `address`, `states` and `domicile_state`, required as the
   parser always fills them; a fixture that builds a related item by hand must
   add them, null on a person or an address item.
-- `BusinessAutocompleteProps` is a union over `pickable` and `onPickEntity`, so
-  that a person or an address made pickable needs somewhere to go. A wrapper
+- `BusinessAutocompleteProps` is a union over `enabledLines` and `onPickEntity`,
+  so that a person or an address, once enabled, has somewhere to go. A wrapper
   that takes `Omit<BusinessAutocompleteProps, …>` and spreads the rest needs an
   `Omit` that distributes over the union (`T extends unknown ? Omit<T, K> :
 never`).

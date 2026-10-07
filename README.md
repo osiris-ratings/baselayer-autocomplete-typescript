@@ -160,7 +160,7 @@ The first `mint` or `mintUrl` is kept for the component's life; a new
   officers and agents (`people`) and its `addresses`. None by default, and
   each row is the one option it has always been
   ([A business row's lines](docs/entities.md#a-business-rows-lines)).
-- `pickable` (`["business"]`) and `onPickEntity`: which lines can be picked.
+- `enabledLines` (`["business"]`) and `onPickEntity`: which lines can be picked.
   Name `person` or `address` too, and an officer or an address picked goes to
   `onPickEntity` as an `EntityPick`, which is then required
   ([What can be picked](docs/entities.md#what-can-be-picked)).
@@ -235,7 +235,7 @@ officer, agent and address under it, and let an officer be picked too:
 <BusinessAutocomplete
   …
   list={["people", "addresses"]}
-  pickable={["business", "person"]}
+  enabledLines={["business", "person"]}
   onPick={(_, pick) => setBusinessToken(pick.businessToken)}
   onPickEntity={officer => setOfficer(officer)}
 />

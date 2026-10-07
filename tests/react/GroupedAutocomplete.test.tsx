@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   BUSINESS_TOKEN_TTL_SECONDS,
-  DEFAULT_PICKABLE,
+  DEFAULT_ENABLED_LINES,
   createAutocompleteClient,
   type BusinessPick,
   type EntityPick,
@@ -267,7 +267,7 @@ function PersonHost({
   onPick = () => {},
   onPickEntity = () => {},
   list,
-  pickable,
+  enabledLines,
   layout,
   showSelection,
   icons,
@@ -276,7 +276,7 @@ function PersonHost({
   onPick?: (pick: BusinessPick) => void;
   onPickEntity?: (pick: EntityPick) => void;
   list?: ("businesses" | "addresses")[];
-  pickable?: EntityType[];
+  enabledLines?: EntityType[];
   layout?: PersonRowLayoutInput;
   showSelection?: boolean;
   icons?: Partial<Record<EntityType, ReactNode>> | false;
@@ -303,7 +303,7 @@ function PersonHost({
         onPick={onPick}
         onPickEntity={onPickEntity}
         {...(list !== undefined ? { list } : {})}
-        pickable={pickable ?? DEFAULT_PICKABLE}
+        enabledLines={enabledLines ?? DEFAULT_ENABLED_LINES}
         {...(layout !== undefined ? { layout } : {})}
         {...(showSelection !== undefined ? { showSelection } : {})}
         {...(icons !== undefined ? { icons } : {})}
@@ -317,13 +317,13 @@ function AddressHost({
   onPick = () => {},
   onPickEntity = () => {},
   list,
-  pickable,
+  enabledLines,
 }: {
   client: Client;
   onPick?: (pick: BusinessPick) => void;
   onPickEntity?: (pick: EntityPick) => void;
   list?: ("businesses" | "people")[];
-  pickable?: EntityType[];
+  enabledLines?: EntityType[];
 }) {
   const [value, setValue] = useState("");
   return (
@@ -337,7 +337,7 @@ function AddressHost({
       onPick={onPick}
       onPickEntity={onPickEntity}
       {...(list !== undefined ? { list } : {})}
-      pickable={pickable ?? DEFAULT_PICKABLE}
+      enabledLines={enabledLines ?? DEFAULT_ENABLED_LINES}
     />
   );
 }
@@ -409,7 +409,7 @@ describe("PersonAutocomplete", () => {
     expect(within(harbor!).getByTestId("grouped-role")).toHaveTextContent(
       "officer",
     );
-    // Every business is drawn; the one the service could not seal is inert.
+    // Every business is drawn; the one the service could not seal is disabled.
     expect(linesOf(dana, "business")).toEqual([
       expect.stringContaining("Harbor Concrete Pumping Co., Inc."),
       expect.stringContaining("Unsealed Holdings LLC"),
@@ -428,7 +428,7 @@ describe("PersonAutocomplete", () => {
     expect(linesOf(dana, "address")).toEqual([]);
   });
 
-  it("describes each group by what only its inert lines say, for a screen reader", async () => {
+  it("describes each group by what only its disabled lines say, for a screen reader", async () => {
     const { client } = setup();
     const { dana } = await typeDana(client, {
       list: ["businesses", "addresses"],
@@ -470,12 +470,12 @@ describe("PersonAutocomplete", () => {
       list: ["businesses", "addresses"],
     });
 
-    const inert = [
+    const disabled = [
       within(dana).getByTestId("group-head"),
       within(dana).getAllByTestId("business-line")[1]!,
       ...within(dana).getAllByTestId("address-line"),
     ];
-    for (const line of inert) {
+    for (const line of disabled) {
       expect(line).toHaveAttribute("role", "presentation");
     }
     expect(within(dana).getAllByTestId("business-line")[0]).toHaveAttribute(
@@ -495,13 +495,13 @@ describe("PersonAutocomplete", () => {
       "9 Ashcombe Ct, Dover, DE 19904agent",
     ]);
     expect(within(dana).getByText("+1 more not shown")).toBeInTheDocument();
-    // Listed, not pickable: no address is an option.
+    // Listed, not enabled: no address is an option.
     expect(
       within(dana).queryByRole("option", { name: /12 Fernhallow Ln/ }),
     ).toBeNull();
   });
 
-  it("moves through the pickable lines only, and picks a business with the person it came through", async () => {
+  it("moves through the enabled lines only, and picks a business with the person it came through", async () => {
     const { client } = setup();
     const onPick = vi.fn<(pick: BusinessPick) => void>();
     const { user } = await typeDana(client, { onPick });
@@ -553,7 +553,7 @@ describe("PersonAutocomplete", () => {
         roundTripMs={null}
         isSearching={false}
         error={null}
-        pickable={[]}
+        enabledLines={[]}
         open
       />,
     );
@@ -566,27 +566,27 @@ describe("PersonAutocomplete", () => {
 
   it("draws a person's rows though none of their lines is a pick", async () => {
     const { client } = setup();
-    const { dana } = await typeDana(client, { pickable: [] });
+    const { dana } = await typeDana(client, { enabledLines: [] });
 
     expect(within(dana).getAllByTestId("business-line")).toHaveLength(3);
     expect(screen.queryAllByRole("option")).toHaveLength(0);
   });
 
-  it("highlights a pickable line under the pointer, and leaves an inert one be", async () => {
+  it("highlights an enabled line under the pointer, and leaves a disabled one be", async () => {
     const { client } = setup();
     const { user, dana } = await typeDana(client);
     const [, unsealed, cobalt] = within(dana).getAllByTestId("business-line");
 
     await user.hover(unsealed!);
     expect(unsealed).not.toHaveAttribute("data-highlighted");
-    expect(unsealed).not.toHaveAttribute("data-pickable");
+    expect(unsealed).not.toHaveAttribute("data-enabled");
 
     await user.hover(cobalt!);
     expect(cobalt).toHaveAttribute("data-highlighted", "true");
-    expect(cobalt).toHaveAttribute("data-pickable", "true");
+    expect(cobalt).toHaveAttribute("data-enabled", "true");
   });
 
-  it("picks the person, or an address listed under them, as a typed pick when they are pickable", async () => {
+  it("picks the person, or an address listed under them, as a typed pick when they are enabled", async () => {
     const { client } = setup();
     const onPick = vi.fn<(pick: BusinessPick) => void>();
     const onPickEntity = vi.fn<(pick: EntityPick) => void>();
@@ -594,10 +594,10 @@ describe("PersonAutocomplete", () => {
       onPick,
       onPickEntity,
       list: ["businesses", "addresses"],
-      pickable: ["person", "address"],
+      enabledLines: ["person", "address"],
     });
 
-    // The head, then the one address with a token; businesses are inert.
+    // The head, then the one address with a token; businesses are disabled.
     expect(
       within(dana)
         .getAllByRole("option")
@@ -690,9 +690,9 @@ describe("PersonAutocomplete", () => {
     };
 
     // @ts-expect-error: a person to pick needs onPickEntity.
-    const bare = <PersonAutocomplete {...props} pickable={["person"]} />;
+    const bare = <PersonAutocomplete {...props} enabledLines={["person"]} />;
     const businessesOnly = (
-      <PersonAutocomplete {...props} pickable={["business"]} />
+      <PersonAutocomplete {...props} enabledLines={["business"]} />
     );
 
     expect([bare, businessesOnly]).toHaveLength(2);
@@ -760,7 +760,7 @@ describe("AddressAutocomplete", () => {
     ).toMatchObject({ line1: "45 Corvel Landing", postal_code: "16507" });
   });
 
-  it("picks the address itself, or a person at it, when they are pickable", async () => {
+  it("picks the address itself, or a person at it, when they are enabled", async () => {
     const { client } = setup();
     const onPickEntity = vi.fn<(pick: EntityPick) => void>();
     const user = userEvent.setup();
@@ -769,7 +769,7 @@ describe("AddressAutocomplete", () => {
         client={client}
         onPickEntity={onPickEntity}
         list={["businesses", "people"]}
-        pickable={["address", "person", "business"]}
+        enabledLines={["address", "person", "business"]}
       />,
     );
 
@@ -805,7 +805,7 @@ describe("the selection line", () => {
     const { client } = setup();
     const { user } = await typeDana(client, {
       list: ["businesses", "addresses"],
-      pickable: ["person", "address"],
+      enabledLines: ["person", "address"],
     });
 
     const [oak] = screen.getAllByTestId("address-line");
@@ -989,7 +989,7 @@ describe("the selection line", () => {
       <AddressHost
         client={client}
         list={["businesses", "people"]}
-        pickable={["business", "person"]}
+        enabledLines={["business", "person"]}
       />,
     );
 

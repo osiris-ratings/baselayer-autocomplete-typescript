@@ -183,17 +183,17 @@ describe("the type", () => {
   });
 });
 
-describe("a line that is not a pick", () => {
+describe("a disabled line", () => {
   it("fades by the look's default when the component sets nothing", () => {
-    // The component sets the variables only for another `inertDim`, so the
+    // The component sets the variables only for another `disabledDim`, so the
     // fallbacks must be the default's: its colour by 1 - d, its name, icon
     // and squares by 0.15 d.
-    const d = DEFAULT_LOOK.inertDim;
-    expect(rule(".bl-ac-group-line:not([data-pickable])")).toContain(
-      `filter: var(--bl-ac-inert-filter, saturate(${1 - d}));`,
+    const d = DEFAULT_LOOK.disabledDim;
+    expect(rule(".bl-ac-group-line:not([data-enabled])")).toContain(
+      `filter: var(--bl-ac-disabled-filter, saturate(${1 - d}));`,
     );
     expect(css).toContain(
-      `opacity: var(--bl-ac-inert-opacity, ${Math.round((1 - d * 0.15) * 1000) / 1000});`,
+      `opacity: var(--bl-ac-disabled-opacity, ${Math.round((1 - d * 0.15) * 1000) / 1000});`,
     );
   });
 });
@@ -201,7 +201,7 @@ describe("a line that is not a pick", () => {
 describe("the stylesheet's colors", () => {
   // Each color knob of `look`, and the variable it sets.
   const VARIABLES: Record<
-    Exclude<keyof Look, `match${string}` | "showDebugInfo" | "inertDim">,
+    Exclude<keyof Look, `match${string}` | "showDebugInfo" | "disabledDim">,
     string
   > = {
     backgroundColor: "--bl-ac-bg",

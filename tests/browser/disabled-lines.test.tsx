@@ -132,7 +132,7 @@ function contrast(a: Rgb, b: Rgb): number {
 
 /**
  * A text's colour as its line's filter and its own opacity leave it, over the
- * menu; `faded: false` reads it as an inert line would draw without fading.
+ * menu; `faded: false` reads it as a disabled line would draw without fading.
  */
 function effective(
   text: HTMLElement,
@@ -158,7 +158,7 @@ function effective(
 
 const opacityOf = (element: Element) => getComputedStyle(element).opacity;
 
-describe("a line that is not a pick", () => {
+describe("a disabled line", () => {
   it("fades: its colour drained, its name, icon and squares a little lighter; a pick and the head do not", () => {
     const { head, business, address, done } = draw();
     try {
@@ -177,8 +177,8 @@ describe("a line that is not a pick", () => {
     }
   });
 
-  it("does not fade at all, nor cost a filter, with the look's inertDim at 0", () => {
-    const { address, done } = draw({ inertDim: 0 });
+  it("does not fade at all, nor cost a filter, with the look's disabledDim at 0", () => {
+    const { address, done } = draw({ disabledDim: 0 });
     try {
       expect(getComputedStyle(address).filter).toBe("none");
       expect(opacityOf(address.querySelector(".bl-ac-line-name")!)).toBe("1");

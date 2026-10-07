@@ -111,7 +111,7 @@ function setup() {
 type HostProps = Partial<
   Pick<BusinessAutocompleteProps, "list" | "layout" | "icons">
 > & {
-  pickable?: EntityType[];
+  enabledLines?: EntityType[];
   onPick?: () => void;
   onPickEntity?: (pick: EntityPick) => void;
 };
@@ -120,7 +120,7 @@ function Host({
   client,
   onPick = () => {},
   onPickEntity = () => {},
-  pickable = ["business"],
+  enabledLines = ["business"],
   ...rest
 }: HostProps & { client: ReturnType<typeof setup>["client"] }) {
   const [value, setValue] = useState("");
@@ -134,7 +134,7 @@ function Host({
       onChange={setValue}
       onPick={onPick}
       onPickEntity={onPickEntity}
-      pickable={pickable}
+      enabledLines={enabledLines}
       {...rest}
     />
   );
@@ -232,7 +232,7 @@ describe("a business row that lists its officers and addresses", () => {
     const onPickEntity = vi.fn<(pick: EntityPick) => void>();
     const { user } = await typeHarbor({
       list: ["people"],
-      pickable: ["business", "person"],
+      enabledLines: ["business", "person"],
       onPick,
       onPickEntity,
     });
@@ -272,10 +272,10 @@ describe("a business row that lists its officers and addresses", () => {
     ).toHaveLength(0);
   });
 
-  it("draws a business that is not itself a pick as an inert group, though it lists nothing", async () => {
+  it("draws a business that is not itself a pick as a disabled group, though it lists nothing", async () => {
     const { client } = setup();
     const user = userEvent.setup();
-    render(<Host client={client} pickable={["person"]} />);
+    render(<Host client={client} enabledLines={["person"]} />);
 
     await user.type(screen.getByRole("combobox"), "harbor");
 
@@ -298,9 +298,9 @@ describe("a business row that lists its officers and addresses", () => {
     };
 
     // @ts-expect-error: an officer to pick needs onPickEntity.
-    const bare = <BusinessAutocomplete {...props} pickable={["person"]} />;
+    const bare = <BusinessAutocomplete {...props} enabledLines={["person"]} />;
     const businessesOnly = (
-      <BusinessAutocomplete {...props} pickable={["business"]} />
+      <BusinessAutocomplete {...props} enabledLines={["business"]} />
     );
 
     expect([bare, businessesOnly]).toHaveLength(2);

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  DEFAULT_PICKABLE,
+  DEFAULT_ENABLED_LINES,
   type BusinessSuggestion,
   groupedLines,
   groupedOptions,
@@ -106,7 +106,7 @@ describe("groupedLines", () => {
   it("offers only businesses by default, and only those with a token", () => {
     const lines = groupedLines(jane, ["businesses", "addresses"]);
 
-    expect(DEFAULT_PICKABLE).toEqual(["business"]);
+    expect(DEFAULT_ENABLED_LINES).toEqual(["business"]);
     expect(lines.head.option).toBeNull();
     expect(lines.lists[0]!.lines.map(line => line.option?.kind)).toEqual([
       "business",
@@ -117,7 +117,7 @@ describe("groupedLines", () => {
     );
   });
 
-  it("offers the row itself and its listed addresses when they are pickable, as typed picks", () => {
+  it("offers the row itself and its listed addresses when they are enabled, as typed picks", () => {
     const lines = groupedLines(
       jane,
       ["businesses", "addresses"],
@@ -129,7 +129,7 @@ describe("groupedLines", () => {
       row: jane,
       pick: { type: "person", token: "tok-jane", label: "Jane Q Doe" },
     });
-    // Businesses are not pickable here: their lines are inert.
+    // Businesses are not enabled here: their lines are disabled.
     expect(lines.lists[0]!.lines.every(line => line.option === null)).toBe(
       true,
     );
@@ -198,7 +198,7 @@ describe("groupedLines on a business row", () => {
     },
   };
 
-  it("offers the business itself as a business row's pick, and its officers when they are pickable", () => {
+  it("offers the business itself as a business row's pick, and its officers when they are enabled", () => {
     const lines = groupedLines(
       harbor,
       ["people", "addresses"],
@@ -213,17 +213,17 @@ describe("groupedLines on a business row", () => {
       pick: { type: "person", token: "tok-jane", label: "Jane Q Doe" },
     });
     expect(lines.lists[0]!.notShown).toBe(1);
-    // No token, no pick: the address stays inert.
+    // No token, no pick: the address stays disabled.
     expect(lines.lists[1]!.lines[0]!.option).toBeNull();
   });
 
-  it("offers no head where businesses are not pickable", () => {
+  it("offers no head where businesses are not enabled", () => {
     expect(groupedLines(harbor, ["people"], ["person"]).head.option).toBeNull();
   });
 });
 
 describe("groupedOptions", () => {
-  it("lists every pickable line in the order drawn: the head, then each list", () => {
+  it("lists every enabled line in the order drawn: the head, then each list", () => {
     const options = groupedOptions(
       groupedLines(
         jane,

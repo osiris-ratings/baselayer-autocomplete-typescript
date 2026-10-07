@@ -2,7 +2,7 @@ import { type ReactElement, type ReactNode, type Ref } from "react";
 
 import {
   BUSINESS_ROW,
-  DEFAULT_PICKABLE,
+  DEFAULT_ENABLED_LINES,
   ROUTES,
   ROW_LINES,
   drawnLayout,
@@ -106,7 +106,7 @@ export interface BusinessAutocompleteViewProps {
    */
   list?: readonly Include[] | undefined;
   /** Which lines can be picked, by type: the business itself by default. */
-  pickable?: readonly EntityType[] | undefined;
+  enabledLines?: readonly EntityType[] | undefined;
   /** The icon before each name, per entity; `false` draws none. */
   icons?: IconSet | undefined;
   /** What the line under the field names; none drawn when null. */
@@ -421,7 +421,7 @@ export function BusinessAutocompleteView({
   classNames,
   unstyled = false,
   list,
-  pickable = DEFAULT_PICKABLE,
+  enabledLines = DEFAULT_ENABLED_LINES,
   icons,
   selection = null,
   onSelectEntity,
@@ -444,9 +444,9 @@ export function BusinessAutocompleteView({
   const listed = ROUTES.businesses.includes.filter(relation =>
     (list ?? []).includes(relation),
   );
-  const grouped = listed.length > 0 || !pickable.includes("business");
+  const grouped = listed.length > 0 || !enabledLines.includes("business");
   const rowLines = grouped
-    ? suggestions.map(row => groupedLines(row, listed, pickable))
+    ? suggestions.map(row => groupedLines(row, listed, enabledLines))
     : [];
   const items: (BusinessSuggestion | OptionItem)[] = grouped
     ? rowLines.flatMap(lines =>
@@ -550,8 +550,8 @@ export function BusinessAutocompleteView({
   };
   /**
    * An officer's or an address's line under a business: its icon, its name,
-   * and the role at the right. A pickable one is an option; any other is
-   * inert, read through the group's description.
+   * and the role at the right. An enabled one is an option; any other is
+   * disabled, read through the group's description.
    */
   const listedLine = (
     line: EntityType,
@@ -581,7 +581,7 @@ export function BusinessAutocompleteView({
         className={cx("groupLine", "bl-ac-group-line")}
         data-line={line}
         data-testid={`${line}-line`}
-        data-pickable={option !== null ? "true" : undefined}
+        data-enabled={option !== null ? "true" : undefined}
         data-highlighted={
           index !== null && highlightedIndex === index ? "true" : undefined
         }
@@ -711,7 +711,7 @@ export function BusinessAutocompleteView({
                         }))}
                     className={cx("row", "bl-ac-row")}
                     data-highlighted={highlighted ? "true" : undefined}
-                    data-pickable={head !== null ? "true" : undefined}
+                    data-enabled={head !== null ? "true" : undefined}
                     data-testid="business-suggestion"
                   >
                     {renderRow

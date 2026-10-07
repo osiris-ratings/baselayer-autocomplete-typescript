@@ -59,18 +59,22 @@ export function classes(
   };
 }
 
-/** How much of a line's fading, when it is not a pick, is its ink rather than its colour. */
-const INERT_INK = 0.15;
+/** How much of a disabled line's fading is its ink rather than its colour. */
+const DISABLED_INK = 0.15;
 
 /** The look's colors as CSS variables, only where they differ from the stylesheet's. */
 export function lookVariables(look: Look): CSSProperties {
   const vars: Record<string, string> = {};
   // One knob, two variables: the stylesheet's fallbacks are the default's.
-  if (look.inertDim !== DEFAULT_LOOK.inertDim) {
+  if (look.disabledDim !== DEFAULT_LOOK.disabledDim) {
     const round = (value: number) => String(Math.round(value * 1000) / 1000);
-    vars["--bl-ac-inert-filter"] =
-      look.inertDim === 0 ? "none" : `saturate(${round(1 - look.inertDim)})`;
-    vars["--bl-ac-inert-opacity"] = round(1 - look.inertDim * INERT_INK);
+    vars["--bl-ac-disabled-filter"] =
+      look.disabledDim === 0
+        ? "none"
+        : `saturate(${round(1 - look.disabledDim)})`;
+    vars["--bl-ac-disabled-opacity"] = round(
+      1 - look.disabledDim * DISABLED_INK,
+    );
   }
   const set = (name: string, value: string, fallback: string) => {
     if (value !== fallback) {

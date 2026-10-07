@@ -10,7 +10,7 @@ import {
   BUSINESS_STRUCTURES,
   DEFAULT_LIST,
   DEFAULT_LOOK,
-  DEFAULT_PICKABLE,
+  DEFAULT_ENABLED_LINES,
   ENTITY_OF,
   PERSON_ROW,
   ROUTES,
@@ -319,17 +319,17 @@ export const DEFAULT_STYLE: StyleState = {
     businesses: {
       layout: resolveLayout(BUSINESS_ROW),
       list: [...DEFAULT_LIST.businesses] as IncludeOf<"businesses">[],
-      pickable: [...DEFAULT_PICKABLE],
+      pickable: [...DEFAULT_ENABLED_LINES],
     },
     people: {
       layout: resolveLayout(PERSON_ROW),
       list: [...DEFAULT_LIST.people] as IncludeOf<"people">[],
-      pickable: [...DEFAULT_PICKABLE],
+      pickable: [...DEFAULT_ENABLED_LINES],
     },
     addresses: {
       layout: resolveLayout(ADDRESS_ROW),
       list: [...DEFAULT_LIST.addresses] as IncludeOf<"addresses">[],
-      pickable: [...DEFAULT_PICKABLE],
+      pickable: [...DEFAULT_ENABLED_LINES],
     },
   },
   vars: Object.fromEntries(
@@ -878,17 +878,17 @@ export interface ComponentProps {
   businesses: {
     layout: BusinessRowLayout;
     list: IncludeOf<"businesses">[];
-    pickable: EntityType[];
+    enabledLines: EntityType[];
   };
   people: {
     layout: PersonRowLayout;
     list: IncludeOf<"people">[];
-    pickable: EntityType[];
+    enabledLines: EntityType[];
   };
   addresses: {
     layout: AddressRowLayout;
     list: IncludeOf<"addresses">[];
-    pickable: EntityType[];
+    enabledLines: EntityType[];
   };
 }
 
@@ -902,7 +902,7 @@ export function componentProps<R extends Route>(
   route: R,
 ): ComponentProps[R] {
   const { layout, list, pickable } = state.rows[route];
-  return { layout, list, pickable } as ComponentProps[R];
+  return { layout, list, enabledLines: pickable } as ComponentProps[R];
 }
 
 /** The preview's stylesheet: the changed variables, on the demo's component only. */
@@ -958,10 +958,10 @@ export function changedRowLayout(
 export function componentChanges(state: StyleState): number {
   const routes: Route[] = ["businesses", "people", "addresses"];
   return routes.reduce((count, route) => {
-    const { list, pickable } = componentProps(state, route);
+    const { list, enabledLines: pickable } = componentProps(state, route);
     const lists: [readonly string[], readonly string[]][] = [
       [list, DEFAULT_LIST[route]],
-      [pickable, DEFAULT_PICKABLE],
+      [pickable, DEFAULT_ENABLED_LINES],
     ];
     return (
       count +
@@ -1040,10 +1040,10 @@ export function exportCode(
   }
   // What the row lists and what can be picked, as the component is handed them;
   // a pick that is not a business needs somewhere to go.
-  const { list, pickable } = componentProps(state, route);
+  const { list, enabledLines: pickable } = componentProps(state, route);
   props.push(
     ...listProp("list", list, DEFAULT_LIST[route]),
-    ...listProp("pickable", pickable, DEFAULT_PICKABLE),
+    ...listProp("enabledLines", pickable, DEFAULT_ENABLED_LINES),
   );
   if (pickable.some(type => type !== "business")) {
     props.push("onPickEntity={pick => …}");

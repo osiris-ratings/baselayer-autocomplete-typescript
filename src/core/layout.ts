@@ -69,7 +69,7 @@ export interface RowLine<
   /** When the lead's field is the row's name, which no place holds: null. */
   lead: RowCorner<P | null, P>;
   trailing: RowCorner<P, P>;
-  /** The entity the line draws, and so what `pickable` names to pick it. */
+  /** The entity the line draws, and so what `enabledLines` names to enable it. */
   entity?: EntityType;
   /** The relation a line lists, one line per item; null on the row's head. */
   relation?: Relation | null;

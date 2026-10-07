@@ -75,7 +75,7 @@ interface LayoutInputByRoute {
 
 export type { GroupedSelection } from "./selection";
 
-/** A pickable line as the combobox holds it: what it hands, and its name. */
+/** An enabled line as the combobox holds it: what it hands, and its name. */
 interface OptionItem {
   option: GroupedOption;
   label: string;
@@ -365,7 +365,7 @@ interface GroupedViewCommonProps<R extends GroupedRoute> {
   /** Typing only; a pick reports through `onSelect`. */
   onInputChange(value: string): void;
   /**
-   * A pickable line picked: a business, with the row it was reached through
+   * An enabled line picked: a business, with the row it was reached through
    * (`businessPickFrom` makes the `BusinessPick`), or a person or an address.
    */
   onSelect(option: GroupedOption): void;
@@ -387,7 +387,7 @@ interface GroupedViewCommonProps<R extends GroupedRoute> {
   /** The icon before each name, per entity; `false` draws none. */
   icons?: IconSet | undefined;
   /** Which lines can be picked, by type. Default: businesses. */
-  pickable?: readonly EntityType[] | undefined;
+  enabledLines?: readonly EntityType[] | undefined;
   /** The field each place of a row's lines shows. */
   layout?: LayoutInputByRoute[R] | undefined;
   /** What the line under the field names; none drawn when null. */
@@ -466,7 +466,7 @@ function GroupedView<R extends GroupedRoute>({
   error,
   list,
   icons,
-  pickable,
+  enabledLines,
   layout: layoutInput,
   selection = null,
   open = false,
@@ -488,7 +488,7 @@ function GroupedView<R extends GroupedRoute>({
   const rows: GroupedRow[] = suggestions;
   const drawn = rows.map(row => ({
     row,
-    lines: groupedLines(row, listed, pickable),
+    lines: groupedLines(row, listed, enabledLines),
   }));
   const items: OptionItem[] = drawn.flatMap(({ lines }) =>
     groupedOptions(lines).map(option => ({
@@ -680,8 +680,8 @@ function GroupedView<R extends GroupedRoute>({
 
   let optionIndex = 0;
   /**
-   * One line: its name and badge, then its trailing corner. A pickable line
-   * is an option the keys and the pointer move to; any other line is inert.
+   * One line: its name and badge, then its trailing corner. An enabled line
+   * is an option the keys and the pointer move to; any other line is disabled.
    */
   function line(
     key: string,
@@ -717,7 +717,7 @@ function GroupedView<R extends GroupedRoute>({
         }
         data-line={of.line}
         data-testid={of.line === "head" ? "group-head" : `${of.line}-line`}
-        data-pickable={option !== null ? "true" : undefined}
+        data-enabled={option !== null ? "true" : undefined}
         data-highlighted={highlighted ? "true" : undefined}
         data-matched={
           of.line !== "head" && of.item.matched ? "true" : undefined

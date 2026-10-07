@@ -13,17 +13,17 @@ export interface GroupedSelection {
 
 /**
  * Where a pick goes. A business goes to `onPick`; a person or an address can
- * be picked only where `pickable` names it, and goes to `onPickEntity`, which
+ * be picked only where `enabledLines` names it, and goes to `onPickEntity`, which
  * is then required.
  */
 export type PickTargets =
   | {
       /** Which lines can be picked, by type. Default: businesses. */
-      pickable?: readonly "business"[] | undefined;
+      enabledLines?: readonly "business"[] | undefined;
       onPickEntity?: ((pick: EntityPick) => void) | undefined;
     }
   | {
-      pickable: readonly EntityType[];
+      enabledLines: readonly EntityType[];
       /** A person or an address picked: the row itself, or one it lists. */
       onPickEntity(pick: EntityPick): void;
     };

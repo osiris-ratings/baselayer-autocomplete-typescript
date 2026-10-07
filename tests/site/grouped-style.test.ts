@@ -54,17 +54,17 @@ describe("the People and Addresses tabs' rows", () => {
     expect(componentProps(state, "people")).toEqual({
       layout: { ...personDefault, headBadge: null },
       list: ["businesses", "addresses"],
-      pickable: ["business", "address"],
+      enabledLines: ["business", "address"],
     });
     expect(componentProps(state, "addresses")).toEqual({
       layout: addressDefault,
       list: ["businesses"],
-      pickable: ["business"],
+      enabledLines: ["business"],
     });
     expect(componentProps(state, "businesses")).toEqual({
       layout: DEFAULT_STYLE.rows.businesses.layout,
       list: [],
-      pickable: ["business"],
+      enabledLines: ["business"],
     });
   });
 
@@ -156,7 +156,7 @@ describe("the exported configuration of a person or an address field", () => {
     expect(tsx).toContain("layout={{\n    headBadge: null,\n  }}");
     expect(tsx).toContain('list={["businesses", "addresses"]}');
     expect(tsx).not.toContain("include=");
-    expect(tsx).toContain('pickable={["business", "address"]}');
+    expect(tsx).toContain('enabledLines={["business", "address"]}');
     expect(tsx).toContain("onPickEntity={pick => …}");
   });
 
@@ -225,7 +225,7 @@ describe("the exported configuration follows the row map", () => {
     const { tsx } = exportCode(state, "businesses");
     expect(tsx).toContain('layout={{\n    titleLead: "titleIcon",\n  }}');
     expect(tsx).toContain('list={["people"]}');
-    expect(tsx).toContain('pickable={["business", "person"]}');
+    expect(tsx).toContain('enabledLines={["business", "person"]}');
     expect(tsx).toContain("onPickEntity={pick => …}");
     expect(componentChanges(state)).toBe(3);
   });
@@ -237,13 +237,13 @@ describe("the exported configuration follows the row map", () => {
       "person",
       true,
     );
-    const { list, pickable } = componentProps(state, "addresses");
+    const { list, enabledLines: pickable } = componentProps(state, "addresses");
     const { tsx } = exportCode(state, "addresses");
     expect(tsx).toContain(
       `list={${JSON.stringify(list).replaceAll(",", ", ")}}`,
     );
     expect(tsx).toContain(
-      `pickable={${JSON.stringify(pickable).replaceAll(",", ", ")}}`,
+      `enabledLines={${JSON.stringify(pickable).replaceAll(",", ", ")}}`,
     );
   });
 });

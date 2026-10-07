@@ -194,7 +194,7 @@ function draw(route: Route, width: number) {
           onInputChange={() => {}}
           onSelect={() => {}}
           list={["people", "addresses"]}
-          pickable={["business", "person"]}
+          enabledLines={["business", "person"]}
           suggestions={BUSINESSES}
           {...state}
         />
@@ -298,9 +298,9 @@ describe("person, address and business groups", () => {
 
 describe("person, address and business groups, to assistive technology", () => {
   for (const route of ROUTES) {
-    it(`break no ARIA rule on ${route}, with inert lines among the options`, async () => {
+    it(`break no ARIA rule on ${route}, with disabled lines among the options`, async () => {
       draw(route, 560);
-      // Each group lists an inert line: the businesses are the picks, the
+      // Each group lists a disabled line: the businesses are the picks, the
       // addresses or people listed beside them are not.
       expect(host.querySelectorAll('[role="option"]').length).toBeGreaterThan(
         0,

@@ -379,12 +379,12 @@ export function requestFor(
  * What a row offers to pick when the host names nothing: businesses, which
  * are a business row's head and the lines under a person or an address.
  */
-export const DEFAULT_PICKABLE = ["business"] as const;
+export const DEFAULT_ENABLED_LINES = ["business"] as const;
 
 /** A line under the head: one item of a listed relation. */
 export interface GroupedItemLine {
   item: RelatedItem;
-  /** What picking it hands; null when the line is inert. */
+  /** What picking it hands; null when the line is disabled. */
   option: GroupedOption | null;
 }
 
@@ -398,25 +398,25 @@ export interface GroupedList {
 }
 
 export interface GroupedLines {
-  /** What picking the head hands; null when the row's own type is not pickable. */
+  /** What picking the head hands; null when the row's own type is not enabled. */
   head: { option: GroupedOption | null };
   lists: GroupedList[];
 }
 
 /**
  * A person's or an address's row as lines: the head, then a list per relation
- * in `listed`, each item a line. A line is pickable when its type is in
- * `pickable` and the autocomplete service gave it a token; a business hands a
+ * in `listed`, each item a line. A line is enabled when its type is in
+ * `enabledLines` and the autocomplete service gave it a token; a business hands a
  * business option, a person or an address a typed pick.
  */
 export function groupedLines(
   row: PersonSuggestion | AddressSuggestion | BusinessSuggestion,
   listed: readonly Relation[],
-  pickable: readonly EntityType[] = DEFAULT_PICKABLE,
+  enabledLines: readonly EntityType[] = DEFAULT_ENABLED_LINES,
 ): GroupedLines {
   const related: Partial<Record<Relation, RelatedSet>> = row.related;
   const optionOf = (item: RelatedItem): GroupedOption | null => {
-    if (item.token === null || !pickable.includes(item.type)) {
+    if (item.token === null || !enabledLines.includes(item.type)) {
       return null;
     }
     if (item.type === "business") {
@@ -433,7 +433,7 @@ export function groupedLines(
   };
   return {
     head: {
-      option: !pickable.includes(row.type)
+      option: !enabledLines.includes(row.type)
         ? null
         : row.type === "business"
           ? { kind: "row", row }
@@ -460,7 +460,7 @@ export function groupedLines(
   };
 }
 
-/** Every pickable line of `lines`, in the order they are drawn. */
+/** Every enabled line of `lines`, in the order they are drawn. */
 export function groupedOptions(lines: GroupedLines): GroupedOption[] {
   return [
     lines.head.option,

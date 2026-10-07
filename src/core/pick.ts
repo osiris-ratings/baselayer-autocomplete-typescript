@@ -93,7 +93,7 @@ export interface EntityPick {
   label: string;
 }
 
-/** What a pickable line of a person's or an address's row hands when picked. */
+/** What an enabled line of a person's or an address's row hands when picked. */
 export type GroupedOption =
   | {
       /** A business row's own head, picked as a business row always is. */

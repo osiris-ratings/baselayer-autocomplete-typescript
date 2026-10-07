@@ -45,11 +45,11 @@ export interface Look {
   structurePillBackgroundColor: string;
   structurePillForegroundColor: string;
   /**
-   * How far a line under a person, an address or a business fades when it is
-   * not a pick, from 0 (not at all) to 1: mostly its colour, a little its
-   * ink, so it stays readable.
+   * How far a disabled line under a person, an address or a business fades,
+   * from 0 (not at all) to 1: mostly its colour, a little its ink, so it
+   * stays readable.
    */
-  inertDim: number;
+  disabledDim: number;
 }
 
 export const DEFAULT_LOOK: Readonly<Look> = Object.freeze({
@@ -67,7 +67,7 @@ export const DEFAULT_LOOK: Readonly<Look> = Object.freeze({
   // Neutral, so the flag does not read as a state square.
   structurePillBackgroundColor: "#EDF2F7", // gray.100
   structurePillForegroundColor: "#4A5568", // gray.600
-  inertDim: 0.6,
+  disabledDim: 0.6,
 });
 
 const HEX_COLOR = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
@@ -140,12 +140,12 @@ export function resolveLook(staged: LookInput = {}): Look {
       staged.structurePillBackgroundColor,
       base.structurePillBackgroundColor,
     ),
-    inertDim:
-      typeof staged.inertDim === "number" &&
-      staged.inertDim >= 0 &&
-      staged.inertDim <= 1
-        ? staged.inertDim
-        : base.inertDim,
+    disabledDim:
+      typeof staged.disabledDim === "number" &&
+      staged.disabledDim >= 0 &&
+      staged.disabledDim <= 1
+        ? staged.disabledDim
+        : base.disabledDim,
     structurePillForegroundColor: color(
       staged.structurePillForegroundColor,
       base.structurePillForegroundColor,

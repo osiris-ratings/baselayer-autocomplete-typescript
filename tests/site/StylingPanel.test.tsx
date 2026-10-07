@@ -165,7 +165,7 @@ describe("the Components fold's searches", () => {
     render(<RoutedPanel start="people" />);
     fireEvent.click(handle("their addresses"));
     fireEvent.click(pick("their addresses"));
-    expect(exported()).toContain('pickable={["business", "address"]}');
+    expect(exported()).toContain('enabledLines={["business", "address"]}');
     expect(exported()).toContain("onPickEntity");
 
     fireEvent.click(handle("their addresses"));
@@ -187,7 +187,7 @@ describe("the Components fold's searches", () => {
     fireEvent.click(pick("officers and agents"));
 
     expect(exported()).toContain('list={["people"]}');
-    expect(exported()).toContain('pickable={["business", "person"]}');
+    expect(exported()).toContain('enabledLines={["business", "person"]}');
     expect(exported()).toContain("onPickEntity={pick => …}");
   });
 });

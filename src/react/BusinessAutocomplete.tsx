@@ -217,7 +217,7 @@ function Connected({
   layout,
   include: includeGiven,
   list,
-  pickable,
+  enabledLines,
   onPickEntity,
   icons,
   showSelection = true,
@@ -323,7 +323,7 @@ function Connected({
       }}
       selection={selection}
       list={list}
-      pickable={pickable}
+      enabledLines={enabledLines}
       icons={icons}
       onInputFocus={() => {
         if (mintOn === "focus" && enabled) {

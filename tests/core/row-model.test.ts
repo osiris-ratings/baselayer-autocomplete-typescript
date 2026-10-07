@@ -4,7 +4,7 @@ import {
   ADDRESS_ROW,
   BUSINESS_ROW,
   DEFAULT_LIST,
-  DEFAULT_PICKABLE,
+  DEFAULT_ENABLED_LINES,
   DEFAULT_ROW_LAYOUT,
   PERSON_ROW,
   ROW_KINDS,
@@ -91,7 +91,7 @@ describe("the row a search draws", () => {
       people: ["businesses"],
       addresses: ["businesses"],
     });
-    expect(DEFAULT_PICKABLE).toEqual(["business"]);
+    expect(DEFAULT_ENABLED_LINES).toEqual(["business"]);
   });
 });
 

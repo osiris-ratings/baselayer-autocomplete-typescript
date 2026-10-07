@@ -180,8 +180,8 @@ The same props shape the rows of all three:
 | Prop            | Default            | What it does                                                                                  |
 | --------------- | ------------------ | --------------------------------------------------------------------------------------------- |
 | `list`          | the route's own    | The relations listed under each row, a line per item ([What a row lists](#what-a-row-lists))  |
-| `pickable`      | `["business"]`     | Which lines can be picked, by entity ([What can be picked](#what-can-be-picked))              |
-| `onPickEntity`  | none               | Where a person or an address picked goes; required once `pickable` names one                  |
+| `enabledLines`  | `["business"]`     | Which lines can be picked, by entity ([What can be picked](#what-can-be-picked))              |
+| `onPickEntity`  | none               | Where a person or an address picked goes; required once `enabledLines` names one              |
 | `showSelection` | `true`             | The line under the field after a pick ([The line under the field](#the-line-under-the-field)) |
 | `icons`         | the SDK's          | The icon before each name, per entity, or `false` for none ([Icons](#icons))                  |
 | `layout`        | the row kind's own | What each line draws where ([Every kind of row](styling.md#every-kind-of-row))                |
@@ -217,11 +217,11 @@ theirs. Every line starts with its entity's icon.
 
 ### What can be picked
 
-`pickable` names the entities a line can be picked as: `business`, and
-`person` or `address`, whether the line is the row itself or one it lists. A
-line is a pick only when its entity is named and the autocomplete service
-sealed it a token; any other line is drawn, faded and inert, and the keys
-pass over it. What a pick hands depends on what it is:
+`enabledLines` names the entities whose lines are enabled, the lines a visitor
+can pick: `business`, and `person` or `address`, whether the line is the row
+itself or one it lists. A line is enabled only when its entity is named and the
+autocomplete service sealed it a token; any other line is disabled: drawn,
+faded, and passed over by the keys. What a pick hands depends on what it is:
 
 | Picked                                  | Hands                                 |
 | --------------------------------------- | ------------------------------------- |
@@ -239,10 +239,10 @@ interface EntityPick {
 }
 ```
 
-The props are typed so that a person or an address made pickable has
-somewhere to go: with `pickable={["business", "person"]}`, leaving out
+The props are typed so that a person or an address, once enabled, has
+somewhere to go: with `enabledLines={["business", "person"]}`, leaving out
 `onPickEntity` is a type error. On a business search, a row whose business is
-not named in `pickable` is a group whose head is inert, though it lists
+not named in `enabledLines` is a group whose head is disabled, though it lists
 nothing.
 
 ### The line under the field
@@ -304,7 +304,7 @@ group whose head is that same row, picked as it always was:
 ```tsx
 <BusinessAutocomplete
   list={["people", "addresses"]}
-  pickable={["business", "person"]}
+  enabledLines={["business", "person"]}
   onPick={(_, pick) => setBusinessToken(pick.businessToken)}
   // An officer picked: { type: "person", token, label }.
   onPickEntity={officer => setOfficer(officer)}
@@ -324,15 +324,15 @@ HARBOR CONCRETE PUMPING CO., INC. [C-Corp] ..................... [PA][OH]
 An officer picked here hands `onPickEntity` its `EntityPick`, puts the
 business's name in the field and names the officer under it; the business
 itself picked hands `onPick` its pick, as it always has. A line the
-autocomplete service sealed no token for is drawn and inert, whatever
-`pickable` names. Each line's places and fields are under
+autocomplete service sealed no token for is drawn and disabled, whatever
+`enabledLines` names. Each line's places and fields are under
 [A business row's lines](styling.md#a-business-rows-lines).
 
 ### Without the styled components
 
 `PersonAutocompleteView` and `AddressAutocompleteView` draw the same rows
 from state you supply, and `BusinessAutocompleteView` takes `list`,
-`pickable`, `icons`, `selection` and `onSelectEntity` for a business row's
+`enabledLines`, `icons`, `selection` and `onSelectEntity` for a business row's
 lines. `useEntityAutocomplete({ relation, query, ... })` is the hook for any
 route, and `groupedLines` and `groupedOptions` turn a row into its lines and
 picks (see [Headless use](headless.md)).

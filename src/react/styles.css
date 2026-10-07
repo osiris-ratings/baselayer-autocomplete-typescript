@@ -305,8 +305,8 @@
  * A person or an address, as a group of lines: its head, the row's name
  * marked as a business's is, then a line for each business, address or
  * person listed under it, indented. Each line is its lead (the name, then its
- * badge) and its trailing corner. A line the host made pickable is an option
- * the keys and the pointer move to; any other line is inert.
+ * badge) and its trailing corner. A line the host enabled is an option
+ * the keys and the pointer move to; any other line is disabled.
  */
 .bl-ac-group {
   margin: 0;
@@ -337,8 +337,8 @@
   padding: 0.375rem 0.875rem 0.375rem 1.75rem;
 }
 
-.bl-ac-group-head[data-pickable],
-.bl-ac-group-line[data-pickable] {
+.bl-ac-group-head[data-enabled],
+.bl-ac-group-line[data-enabled] {
   cursor: pointer;
 }
 
@@ -382,26 +382,26 @@
   margin-left: auto;
 }
 
-/* A line that is not a pick fades: all of it loses colour, and only its
+/* A disabled line fades: all of it loses colour, and only its
    name, icon and squares, which have the contrast to spare, a little ink, so
    its secondary text is no fainter than it is unfaded. The look's
-   `inertDim` sets both; the fallbacks are its default, 0.6. */
-.bl-ac-group-line:not([data-pickable]) {
-  filter: var(--bl-ac-inert-filter, saturate(0.4));
+   `disabledDim` sets both; the fallbacks are its default, 0.6. */
+.bl-ac-group-line:not([data-enabled]) {
+  filter: var(--bl-ac-disabled-filter, saturate(0.4));
 }
 
-.bl-ac-group-line:not([data-pickable])
+.bl-ac-group-line:not([data-enabled])
   :is(.bl-ac-line-name, .bl-ac-icon, .bl-ac-state) {
-  opacity: var(--bl-ac-inert-opacity, 0.91);
+  opacity: var(--bl-ac-disabled-opacity, 0.91);
 }
 
 /* Forced colours draw the text in the system's own; fading it would not. */
 @media (forced-colors: active) {
-  .bl-ac-group-line:not([data-pickable]) {
+  .bl-ac-group-line:not([data-enabled]) {
     filter: none;
   }
 
-  .bl-ac-group-line:not([data-pickable])
+  .bl-ac-group-line:not([data-enabled])
     :is(.bl-ac-line-name, .bl-ac-icon, .bl-ac-state) {
     opacity: 1;
   }

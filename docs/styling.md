@@ -34,22 +34,22 @@ emphasis) keeps its default too.
 />
 ```
 
-| Knob                           | Default       | Sets                                                           |
-| ------------------------------ | ------------- | -------------------------------------------------------------- |
-| `matchEmphasis`                | `"underline"` | how the marks are drawn                                        |
-| `matchEmphasisRegion`          | `"substring"` | the typed characters, or whole words                           |
-| `matchEmphasisColor`           | `null`        | `--bl-ac-mark`                                                 |
-| `backgroundColor`              | `#FFFFFF`     | `--bl-ac-bg`                                                   |
-| `titleColor`                   | `#1A202C`     | `--bl-ac-title`                                                |
-| `subtitleColor`                | `#718096`     | `--bl-ac-subtitle`                                             |
-| `pillBackgroundColor`          | `#C6F6D5`     | `--bl-ac-pill-bg`                                              |
-| `pillForegroundColor`          | `#22543D`     | `--bl-ac-pill-fg`                                              |
-| `primaryPillBorderColor`       | `#48BB78`     | `--bl-ac-pill-primary-border`                                  |
-| `secondaryPillBackgroundColor` | `#EDF2F7`     | `--bl-ac-pill-secondary-bg`                                    |
-| `structurePillBackgroundColor` | `#EDF2F7`     | `--bl-ac-structure-bg`                                         |
-| `structurePillForegroundColor` | `#4A5568`     | `--bl-ac-structure-fg`                                         |
-| `showDebugInfo`                | `false`       | the round trip and index in the footer                         |
-| `inertDim`                     | `0.6`         | how far a line under a row fades when it is not a pick, 0 to 1 |
+| Knob                           | Default       | Sets                                              |
+| ------------------------------ | ------------- | ------------------------------------------------- |
+| `matchEmphasis`                | `"underline"` | how the marks are drawn                           |
+| `matchEmphasisRegion`          | `"substring"` | the typed characters, or whole words              |
+| `matchEmphasisColor`           | `null`        | `--bl-ac-mark`                                    |
+| `backgroundColor`              | `#FFFFFF`     | `--bl-ac-bg`                                      |
+| `titleColor`                   | `#1A202C`     | `--bl-ac-title`                                   |
+| `subtitleColor`                | `#718096`     | `--bl-ac-subtitle`                                |
+| `pillBackgroundColor`          | `#C6F6D5`     | `--bl-ac-pill-bg`                                 |
+| `pillForegroundColor`          | `#22543D`     | `--bl-ac-pill-fg`                                 |
+| `primaryPillBorderColor`       | `#48BB78`     | `--bl-ac-pill-primary-border`                     |
+| `secondaryPillBackgroundColor` | `#EDF2F7`     | `--bl-ac-pill-secondary-bg`                       |
+| `structurePillBackgroundColor` | `#EDF2F7`     | `--bl-ac-structure-bg`                            |
+| `structurePillForegroundColor` | `#4A5568`     | `--bl-ac-structure-fg`                            |
+| `showDebugInfo`                | `false`       | the round trip and index in the footer            |
+| `disabledDim`                  | `0.6`         | how far a disabled line under a row fades, 0 to 1 |
 
 Colors are hex: `#rgb`, `#rrggbb` or `#rrggbbaa`. `plain` draws no marks,
 `weight` sets the matched words bolder than the rest of the name, `ink`
@@ -282,9 +282,9 @@ own line's fields:
 | `addressRole`  | an address, a person | the person's role at it (`bl-ac-role`)                                                   |
 | `personRole`   | a person, an address | the person's role at the address (`bl-ac-role`)                                          |
 
-A line the host made pickable (`pickable`) is an option: `data-pickable`, and
+A line the host enabled (`enabledLines`) is an option: `data-enabled`, and
 `data-highlighted` on the one the keys or the pointer are on. Any other line
-is inert. A list ends, fainter, in how many it leaves out (`bl-ac-more`:
+is disabled. A list ends, fainter, in how many it leaves out (`bl-ac-more`:
 `messages.moreNotShown`). Groups after the first have a rule above them in
 `--bl-ac-border`. `look` colours them as it does a business's row: the names
 in `titleColor`, addresses, counts and roles in `subtitleColor`, the
@@ -295,10 +295,10 @@ states and the role are columns: the states as wide as three squares and a `+N`,
 the role as wide as the menu's longest (`--bl-ac-role-chars`) and a step
 quieter, so the squares start at one edge down the group.
 
-A line under a row that is not a pick fades: all of it loses colour
-(`--bl-ac-inert-filter`), and only its name, icon and state squares a little
-ink (`--bl-ac-inert-opacity`), so its role and secondary text are no fainter
-than unfaded. `look.inertDim` sets both, 0 for none. A pick and the row's
+A disabled line under a row fades: all of it loses colour
+(`--bl-ac-disabled-filter`), and only its name, icon and state squares a little
+ink (`--bl-ac-disabled-opacity`), so its role and secondary text are no fainter
+than unfaded. `look.disabledDim` sets both, 0 for none. A pick and the row's
 head do not fade, and nothing fades under forced colours.
 
 After a pick from a line under a row, the line under the field
@@ -429,7 +429,8 @@ model. `ROW_KINDS` holds each search's: `BUSINESS_ROW`, `PERSON_ROW` and
 | `defaults` | The field each place shows when a layout leaves it out                                     |
 | `accepts`  | Which fields a place may hold: its own line's, and its icon only before the name           |
 
-A line's `entity` is what it draws, and so what `pickable` names to pick it;
+A line's `entity` is what it draws, and so what `enabledLines` names to
+enable it;
 its `relation` is the relation it lists, one line per item, null on the
 row's head. Every listed line has the same four places, named for its line:
 `<line>Lead` before the name, which holds only `<line>Icon`, then
