@@ -24,6 +24,9 @@ const business = (label: string, role: RelatedItem["role"]): RelatedItem => ({
   label,
   role,
   matched: false,
+  address: null,
+  states: null,
+  domicile_state: null,
 });
 
 const LONG_BUSINESS =

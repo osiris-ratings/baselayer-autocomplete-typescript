@@ -56,15 +56,22 @@ function changes(layout: RowLayout): Partial<RowLayout> {
   );
 }
 
+/** A business row's people or addresses, which carry no business fields. */
 function related(
   type: RelatedItem["type"],
-  items: Omit<RelatedItem, "type">[],
+  items: Pick<RelatedItem, "token" | "label" | "role" | "matched">[],
 ) {
   return {
     count: items.length,
     matched: null,
     truncated: false,
-    items: items.map(item => ({ type, ...item })),
+    items: items.map(item => ({
+      type,
+      ...item,
+      address: null,
+      states: null,
+      domicile_state: null,
+    })),
   };
 }
 

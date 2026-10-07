@@ -165,6 +165,7 @@ export {
   typedPrefixLength,
   type AddressLine,
   type AddressOwner,
+  type BusinessStates,
   type MatchedOn,
   type PeopleLine,
 } from "./core/suggestions";

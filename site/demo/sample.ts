@@ -6,7 +6,7 @@
 // an officer's address. Then people and addresses, each leading to some of
 // these businesses. None of these businesses, people or addresses is real.
 
-import { queryTokens } from "@baselayer-sdk/autocomplete";
+import { leadAddressOf, queryTokens } from "@baselayer-sdk/autocomplete";
 import type {
   AddressSuggestion,
   BusinessSuggestion,
@@ -38,7 +38,16 @@ export function address(
   role: "principal" | "officer" | "agent" = "principal",
   matched = false,
 ): RelatedItem {
-  return { type: "address", token: null, label, role, matched };
+  return {
+    type: "address",
+    token: null,
+    label,
+    role,
+    matched,
+    address: null,
+    states: null,
+    domicile_state: null,
+  };
 }
 
 export function person(
@@ -46,7 +55,16 @@ export function person(
   role: "officer" | "agent",
   matched = false,
 ): RelatedItem {
-  return { type: "person", token: null, label, role, matched };
+  return {
+    type: "person",
+    token: null,
+    label,
+    role,
+    matched,
+    address: null,
+    states: null,
+    domicile_state: null,
+  };
 }
 
 /**
@@ -229,10 +247,21 @@ function business(
   role: RelatedItem["role"],
   matched = false,
 ): RelatedItem {
-  if (!SAMPLE_SUGGESTIONS.some(row => row.label === label)) {
+  const row = SAMPLE_SUGGESTIONS.find(row => row.label === label);
+  if (row === undefined) {
     throw new Error(`no sample business is called ${label}`);
   }
-  return { type: "business", token: sampleToken(label), label, role, matched };
+  // What the business's own row leads with, as the autocomplete service sends it.
+  return {
+    type: "business",
+    token: sampleToken(label),
+    label,
+    role,
+    matched,
+    address: leadAddressOf(row),
+    states: row.states,
+    domicile_state: row.domicile_state,
+  };
 }
 
 /** A slug for a sample person or address, as a token spells it. */

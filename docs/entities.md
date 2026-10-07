@@ -116,6 +116,12 @@ role the business filed it under (`principal`, `mailing`, `agent`,
 `BUSINESS_STRUCTURES` (`LLC`, `C_CORPORATION`, …), or null when it is not
 known.
 
+A business under a person or an address carries what its own row leads
+with: `address`, its lead address (on an address row, still the business's
+own, which need not be the row's), `states`, sorted by code, and
+`domicile_state`. `orderedStates(item)` puts the domicile first, as a
+business row draws them. On a person or an address item all three are null.
+
 The person's and the address's own `token` is redeemed nowhere: pick one of
 their businesses instead. Each of those carries a business token, sealed with
 the person or address it was reached through, which `POST /searches` redeems

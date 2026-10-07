@@ -16,7 +16,9 @@
  * keys the contract leaves out of `required` (`matched_name`,
  * `RelatedItem.token`, `role`, `RelatedSet.count`, `RelatedSet.matched`,
  * `structure`, an address's components) may be absent as well as null;
- * either reads as null.
+ * either reads as null. So may a related item's `address`, `states` and
+ * `domicile_state`, which an autocomplete service that predates them leaves
+ * out.
  */
 
 import {
@@ -88,6 +90,16 @@ export interface RelatedItem {
   role: RelatedRole | null;
   /** This item is why the row is here. */
   matched: boolean;
+  /**
+   * A business's lead address, the one its own row leads with: on an address
+   * row too, where it need not be the row's. Null when it has none, and on a
+   * person or an address.
+   */
+  address: string | null;
+  /** A business's states, sorted by code; null on a person or an address. */
+  states: string[] | null;
+  /** A business's domicile state; null on a person or an address. */
+  domicile_state: string | null;
 }
 
 export interface RelatedSet {
@@ -341,6 +353,13 @@ function relatedItem(
     label: string(o.label, `${path}.label`),
     role: nullable(o.role, `${path}.role`, relatedRole),
     matched: boolean(o.matched, `${path}.matched`),
+    address: nullable(o.address, `${path}.address`, string),
+    states: nullable(o.states, `${path}.states`, (v, p) => array(v, p, string)),
+    domicile_state: nullable(
+      o.domicile_state,
+      `${path}.domicile_state`,
+      string,
+    ),
   };
 }
 

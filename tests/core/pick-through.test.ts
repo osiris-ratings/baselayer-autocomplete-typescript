@@ -14,7 +14,16 @@ const business = (
   label: string,
   token: string | null,
   role: RelatedItem["role"],
-): RelatedItem => ({ type: "business", token, label, role, matched: false });
+): RelatedItem => ({
+  type: "business",
+  token,
+  label,
+  role,
+  matched: false,
+  address: null,
+  states: null,
+  domicile_state: null,
+});
 
 const dana: PersonSuggestion = {
   type: "person",

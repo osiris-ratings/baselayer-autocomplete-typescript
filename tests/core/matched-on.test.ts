@@ -16,7 +16,16 @@ function person(
   role: "officer" | "agent",
   matched = false,
 ): RelatedItem {
-  return { type: "person", token: null, label, role, matched };
+  return {
+    type: "person",
+    token: null,
+    label,
+    role,
+    matched,
+    address: null,
+    states: null,
+    domicile_state: null,
+  };
 }
 
 function address(
@@ -24,7 +33,16 @@ function address(
   role: RelatedRole | null,
   matched = false,
 ): RelatedItem {
-  return { type: "address", token: null, label, role, matched };
+  return {
+    type: "address",
+    token: null,
+    label,
+    role,
+    matched,
+    address: null,
+    states: null,
+    domicile_state: null,
+  };
 }
 
 function set(

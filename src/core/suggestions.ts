@@ -154,21 +154,27 @@ export function peopleLineOf(
   return null;
 }
 
+/** A business's states and its domicile: a business row, or a related business. */
+export interface BusinessStates {
+  domicile_state: string | null;
+  states: readonly string[] | null;
+}
+
 /**
  * The domicile first, then the states a state filter matched, then the other
  * states in the autocomplete service's (sorted) order. A matched state is
  * never left behind a `+N` while any other state is shown. `matched` is the
- * `states` of `matchedOn`'s state entry.
+ * `states` of `matchedOn`'s state entry. Empty for a related item that
+ * carries no states.
  */
 export function orderedStates(
-  suggestion: BusinessSuggestion,
+  business: BusinessStates,
   matched: readonly string[] = [],
 ): string[] {
-  const rest = suggestion.states.filter(
-    state => state !== suggestion.domicile_state,
-  );
+  const domicile = business.domicile_state;
+  const rest = (business.states ?? []).filter(state => state !== domicile);
   return [
-    suggestion.domicile_state,
+    ...(domicile === null ? [] : [domicile]),
     ...rest.filter(state => matched.includes(state)),
     ...rest.filter(state => !matched.includes(state)),
   ];

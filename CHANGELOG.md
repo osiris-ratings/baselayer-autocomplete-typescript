@@ -58,6 +58,10 @@ this ships as a minor release.
 - The demo searches by business, person or address, offering what the
   session's scope allows, and `DEMO_API=sample pnpm demo` runs it on made-up
   data with no network.
+- `address`, `states` and `domicile_state` on a related item: a business
+  under a person or an address carries the lead address, states and domicile
+  its own row has. All three are null on a person or an address.
+  `orderedStates` takes either and puts the domicile first.
 
 ### Changed
 
