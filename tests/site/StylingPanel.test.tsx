@@ -120,21 +120,20 @@ describe("the Components fold's searches", () => {
     expect(screen.getByTestId("route").textContent).toBe("addresses");
   });
 
-  /** Switch a line kind in the map, by its name, to one of its stops. */
-  const setLine = (name: string, to: "Off" | "Visible" | "Enabled") =>
-    fireEvent.click(
-      within(screen.getByRole("radiogroup", { name })).getByRole("radio", {
-        name: to,
-      }),
-    );
+  /** Move a line to the other drawer by its grip. */
+  const grip = (label: string) =>
+    fireEvent.click(screen.getByRole("button", { name: label }));
+  /** Tick or untick a line's Disabled checkbox. */
+  const disable = (name: string) =>
+    fireEvent.click(screen.getByRole("checkbox", { name: `Disable ${name}` }));
   const exported = () =>
     document.querySelector(".styling-export")!.textContent ?? "";
 
   it("lists a person's addresses, and enables the person, from the row map", () => {
     render(<RoutedPanel start="people" />);
 
-    setLine("Their addresses", "Visible");
-    setLine("The person", "Enabled");
+    grip("Show their addresses");
+    disable("the person");
 
     expect(lists()).toEqual([
       ["businesses", "addresses"],
@@ -147,8 +146,9 @@ describe("the Components fold's searches", () => {
   it("lists the people at an address, and enables them instead of its businesses", () => {
     render(<RoutedPanel start="addresses" />);
 
-    setLine("People there", "Enabled");
-    setLine("Businesses", "Visible");
+    grip("Show people there");
+    disable("people there");
+    disable("businesses");
 
     expect(lists().slice(2)).toEqual([["businesses", "people"], ["person"]]);
   });
@@ -162,36 +162,37 @@ describe("the Components fold's searches", () => {
     }
   });
 
-  it("exports each line as its switch says: enabled, visible, then off", () => {
+  it("exports each line as the map has it: shown and enabled, disabled, then hidden", () => {
     render(<RoutedPanel start="people" />);
-    setLine("Their addresses", "Enabled");
+    grip("Show their addresses");
+    disable("their addresses");
     expect(exported()).toContain('list={["businesses", "addresses"]}');
     expect(exported()).toContain('enabledLines={["business", "address"]}');
     expect(exported()).toContain("onPickEntity");
 
-    setLine("Their addresses", "Visible");
+    disable("their addresses");
     expect(exported()).toContain('list={["businesses", "addresses"]}');
     expect(exported()).not.toContain("enabledLines");
     expect(exported()).not.toContain("onPickEntity");
 
-    setLine("Their addresses", "Off");
+    grip("Hide their addresses");
     expect(lists()[0]).toEqual(["businesses"]);
     expect(lists()[1]).toEqual(["business"]);
     expect(exported()).not.toContain("addresses");
     expect(exported()).not.toContain('"address"');
-    // A line switched off keeps its switch, to switch it back on.
+    // A hidden line keeps its grip, to show it again.
     expect(
-      screen.getByRole("radiogroup", { name: "Their addresses" }),
+      screen.getByRole("button", { name: "Show their addresses" }),
     ).toBeTruthy();
   });
 
-  it("explains the row map in one sentence, and calls its lines enabled or disabled, never picks", () => {
+  it("explains the row map in one sentence, and calls its lines disabled, never unpickable", () => {
     render(<RoutedPanel start="people" />);
-    setLine("Their addresses", "Visible");
+    grip("Show their addresses");
 
     const note = screen.getByText(/Not shown/, { selector: "p.fold-note" });
     expect(note.textContent!.trim().split(/(?<=\.)\s+/)).toHaveLength(1);
-    expect(note.textContent).toMatch(/enable/i);
+    expect(note.textContent).toMatch(/disabled/i);
     const said = [note, document.querySelector(".row-map-wrap")!].flatMap(
       element => [
         element.textContent,
@@ -212,7 +213,8 @@ describe("the Components fold's searches", () => {
     render(<RoutedPanel start="businesses" />);
 
     expect(document.querySelector('[data-drop="titleBadge"]')).not.toBeNull();
-    setLine("Officers and agents", "Enabled");
+    grip("Show officers and agents");
+    disable("officers and agents");
 
     expect(exported()).toContain('list={["people"]}');
     expect(exported()).toContain('enabledLines={["business", "person"]}');

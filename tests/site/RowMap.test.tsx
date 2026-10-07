@@ -1,12 +1,6 @@
 // @vitest-environment jsdom
 
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  within,
-} from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -15,8 +9,6 @@ import { BUSINESS_ROW } from "@baselayer-sdk/autocomplete";
 import { RowMap } from "../../site/demo/RowMap";
 import {
   DEFAULT_STYLE,
-  lineKinds,
-  withLineState,
   withListed,
   type StyleState,
 } from "../../site/demo/style-state";
@@ -525,138 +517,174 @@ describe("the row map as the row's configuration", () => {
     const view = render(
       <RowMap state={state} onChange={onChange} route={route} />,
     );
+    const drawer = (name: "shown" | "hidden") =>
+      view.container.querySelector<HTMLElement>(`[data-drawer="${name}"]`)!;
+    const kinds = (name: "shown" | "hidden") =>
+      [...drawer(name).querySelectorAll<HTMLElement>(".row-map-kind")].map(
+        kind => kind.dataset.relation,
+      );
     const kind = (relation: string) =>
       view.container.querySelector<HTMLElement>(
         `.row-map-kind[data-relation="${relation}"]`,
       )!;
-    const stop = (relation: string, label: string) =>
-      within(kind(relation)).getByRole<HTMLButtonElement>("radio", {
-        name: label,
-      });
-    const switches = () =>
-      [
-        ...view.container.querySelectorAll<HTMLElement>('[role="radiogroup"]'),
-      ].map(group => [
-        group.getAttribute("aria-label"),
-        group
-          .querySelector('[aria-checked="true"]')
-          ?.getAttribute("aria-label"),
-      ]);
-    return { view, onChange, kind, stop, switches };
+    const grip = (relation: string) =>
+      kind(relation).querySelector<HTMLButtonElement>("button.row-map-grip");
+    const check = (relation: string) =>
+      kind(relation).querySelector<HTMLInputElement>(".row-map-check")!;
+    return { view, onChange, drawer, kinds, kind, grip, check };
   }
 
-  it("draws every line kind with a switch saying off, visible or enabled", () => {
-    expect(mountOn("businesses").switches()).toEqual([
-      ["The business", "Enabled"],
-      ["Officers and agents", "Off"],
-      ["Addresses", "Off"],
-    ]);
+  it("shows the head and each line the row lists, and hides the rest, drawn in full", () => {
+    const business = mountOn("businesses");
+    expect(business.kinds("shown")).toEqual(["head"]);
+    expect(business.kinds("hidden")).toEqual(["people", "addresses"]);
     cleanup();
-    expect(mountOn("people").switches()).toEqual([
-      ["The person", "Visible"],
-      ["Businesses", "Enabled"],
-      ["Their addresses", "Off"],
+    const person = mountOn("people");
+    expect(person.kinds("shown")).toEqual(["head", "businesses"]);
+    expect(person.kinds("hidden")).toEqual(["addresses"]);
+    // A hidden line is drawn whole: its name and every place.
+    expect(
+      person.kind("addresses").querySelectorAll(".row-map-place, .row-map-name")
+        .length,
+    ).toBe(4);
+  });
+
+  it("gives every line a grip but the head, named for where it goes", () => {
+    const { grip } = mountOn("people");
+    expect(grip("head")).toBeNull();
+    expect(grip("businesses")!.getAttribute("aria-label")).toBe(
+      "Hide businesses",
+    );
+    expect(grip("addresses")!.getAttribute("aria-label")).toBe(
+      "Show their addresses",
+    );
+  });
+
+  it("moves a line to the other drawer by its grip, pressed or dragged", () => {
+    const { onChange, grip, drawer } = mountOn("people");
+    fireEvent.click(grip("addresses")!);
+    expect(onChange.mock.calls[0]![0].rows.people.list).toEqual([
+      "businesses",
+      "addresses",
+    ]);
+
+    drag(grip("addresses")!, drawer("shown"));
+    expect(onChange.mock.calls[1]![0].rows.people.list).toEqual([
+      "businesses",
+      "addresses",
+    ]);
+    drag(grip("businesses")!, drawer("hidden"));
+    const hidden = onChange.mock.calls[2]![0].rows.people;
+    expect(hidden.list).toEqual([]);
+    // A hidden line is not drawn, so not a choice either.
+    expect(hidden.enabled).toEqual([]);
+  });
+
+  it("takes a line only in the drawer it is not in, over a place there too", () => {
+    const { onChange, grip, drawer, view } = mountOn("people");
+    drag(grip("businesses")!, drawer("shown"));
+    expect(onChange).not.toHaveBeenCalled();
+    // Let go over a place of the other drawer: the drawer takes it.
+    drag(
+      grip("addresses")!,
+      view.container.querySelector('[data-drop="businessTrailing"]')!,
+    );
+    expect(onChange.mock.calls[0]![0].rows.people.list).toEqual([
+      "businesses",
+      "addresses",
     ]);
   });
 
-  it("offers a row's head no Off: a row always shows its head", () => {
-    const { stop } = mountOn("people");
-    expect(stop("head", "Off").disabled).toBe(true);
-    expect(stop("businesses", "Off").disabled).toBe(false);
+  it("does not move a line a drag only nudged, nor once a drag has dropped it", () => {
+    const { onChange, grip, drawer } = mountOn("people");
+    // A drag that dropped it is not a click as well: the browser's click
+    // after the pointer's release does not move it back.
+    const addresses = grip("addresses")!;
+    drag(addresses, drawer("shown"));
+    fireEvent.click(addresses);
+    expect(onChange).toHaveBeenCalledTimes(1);
   });
 
-  it("switches a line off, visible or enabled, through the row's writers", () => {
-    const { onChange, stop } = mountOn("people");
-    const row = (call: number) => onChange.mock.calls[call]![0].rows.people;
+  it("lights the drawer a carried line can go to", () => {
+    const { grip, drawer, view } = mountOn("people");
+    vi.spyOn(document, "elementFromPoint").mockReturnValue(drawer("shown"));
+    const addresses = grip("addresses")!;
+    fireEvent.pointerDown(addresses, { button: 0, clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(addresses, { buttons: 1, clientX: 40, clientY: 30 });
 
-    fireEvent.click(stop("addresses", "Enabled"));
-    expect(row(0).list).toEqual(["businesses", "addresses"]);
-    expect(row(0).enabled).toEqual(["business", "address"]);
-    fireEvent.click(stop("businesses", "Visible"));
-    expect(row(1).list).toEqual(["businesses"]);
-    expect(row(1).enabled).toEqual([]);
-    fireEvent.click(stop("businesses", "Off"));
-    expect(row(2).list).toEqual([]);
-    expect(row(2).enabled).toEqual([]);
-    fireEvent.click(stop("head", "Enabled"));
-    expect(row(3).enabled).toEqual(["person", "business"]);
+    expect(
+      [...view.container.querySelectorAll<HTMLElement>("[data-accepts]")].map(
+        each => each.dataset.drop,
+      ),
+    ).toEqual(["shown"]);
+    expect(document.querySelector(".row-map-ghost")?.textContent).toBe(
+      "Their addresses",
+    );
+    fireEvent.pointerUp(addresses, { clientX: 40, clientY: 30 });
   });
 
-  it("moves a switch with the arrow keys, one tab stop each, past the head's Off", () => {
+  it("keeps a hidden line frozen: nothing moves into or out of it", () => {
+    const { kind } = mountOn("people");
+    const addresses = kind("addresses");
+    const selects = [...addresses.querySelectorAll("select")];
+    expect(selects.length).toBe(3);
+    expect(selects.every(select => select.disabled)).toBe(true);
+    expect(addresses.querySelector(".row-map-handle")).toBeNull();
+  });
+
+  it("disables a line by its checkbox, the head's too", () => {
+    const { onChange, check } = mountOn("people");
+    expect(check("head").checked).toBe(true);
+    expect(check("head").getAttribute("aria-label")).toBe("Disable the person");
+    expect(check("businesses").checked).toBe(false);
+
+    fireEvent.click(check("head"));
+    expect(onChange.mock.calls[0]![0].rows.people.enabled).toEqual([
+      "person",
+      "business",
+    ]);
+    fireEvent.click(check("businesses"));
+    expect(onChange.mock.calls[1]![0].rows.people.enabled).toEqual([]);
+  });
+
+  it("leaves a hidden line's checkbox disabled", () => {
+    const { check } = mountOn("people");
+    expect(check("addresses").disabled).toBe(true);
+    expect(check("addresses").checked).toBe(false);
+    expect(check("businesses").disabled).toBe(false);
+  });
+
+  it("keeps the grip's focus as its line moves to the other drawer", () => {
     function Kept() {
       const [state, setState] = useState(DEFAULT_STYLE);
       return <RowMap state={state} onChange={setState} route="people" />;
     }
     render(<Kept />);
-    const checked = (name: string) =>
-      within(screen.getByRole("radiogroup", { name })).getByRole("radio", {
-        checked: true,
-      });
-    const stops = (name: string) =>
-      within(screen.getByRole("radiogroup", { name }))
-        .getAllByRole("radio")
-        .map(stop => stop.tabIndex);
-
-    expect(checked("The person").getAttribute("aria-label")).toBe("Visible");
-    expect(stops("The person")).toEqual([-1, 0, -1]);
-    fireEvent.keyDown(checked("The person"), { key: "ArrowRight" });
-    expect(checked("The person").getAttribute("aria-label")).toBe("Enabled");
-    expect(document.activeElement).toBe(checked("The person"));
-    // On round, past the Off a head cannot take.
-    fireEvent.keyDown(checked("The person"), { key: "ArrowDown" });
-    expect(checked("The person").getAttribute("aria-label")).toBe("Visible");
-
-    fireEvent.keyDown(checked("Their addresses"), { key: "ArrowLeft" });
-    expect(checked("Their addresses").getAttribute("aria-label")).toBe(
-      "Enabled",
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show their addresses" }),
     );
-    fireEvent.keyDown(checked("Their addresses"), { key: "ArrowUp" });
-    expect(checked("Their addresses").getAttribute("aria-label")).toBe(
-      "Visible",
+
+    const moved = screen.getByRole("button", { name: "Hide their addresses" });
+    expect(document.activeElement).toBe(moved);
+    expect(moved.closest("[data-drawer]")!.getAttribute("data-drawer")).toBe(
+      "shown",
     );
-    expect(stops("Their addresses")).toEqual([-1, 0, -1]);
   });
 
-  it("keeps a line switched off in the map, frozen, and frees it switched back on", () => {
-    const { view, kind } = mountOn("people");
-    const addresses = () => kind("addresses");
-    const selects = () => [...addresses().querySelectorAll("select")];
-
-    expect(selects().length).toBe(3);
-    expect(selects().every(select => select.disabled)).toBe(true);
-    expect(addresses().querySelector(".row-map-handle")).toBeNull();
-
-    const [, , kindOf] = lineKinds("people");
-    view.rerender(
-      <RowMap
-        state={withLineState(DEFAULT_STYLE, "people", kindOf!, "visible")}
-        onChange={() => {}}
-        route="people"
-      />,
-    );
-    // Its filled places take a field and give it up again; a place nothing
-    // can go in yet stays shut, as on any line.
-    expect(selects().filter(select => !select.disabled).length).toBe(
-      selects().filter(select => !select.closest("[data-closed]")).length,
-    );
-    expect(addresses().querySelector(".row-map-handle")).not.toBeNull();
-  });
-
-  it("draws as many lines whatever each is switched to", () => {
-    const counts = (["off", "visible", "enabled"] as const).map(to => {
-      const [, , addresses] = lineKinds("people");
+  it("draws as many lines wherever each one is", () => {
+    const count = (state: StyleState) => {
       const view = render(
-        <RowMap
-          state={withLineState(DEFAULT_STYLE, "people", addresses!, to)}
-          onChange={() => {}}
-          route="people"
-        />,
+        <RowMap state={state} onChange={() => {}} route="people" />,
       );
-      const count = view.container.querySelectorAll(".row-map-line").length;
+      const lines = view.container.querySelectorAll(".row-map-line").length;
       view.unmount();
-      return count;
-    });
-    expect(counts).toEqual([3, 3, 3]);
+      return lines;
+    };
+    expect([
+      count(DEFAULT_STYLE),
+      count(withListed(DEFAULT_STYLE, "people", "addresses", true)),
+      count(withListed(DEFAULT_STYLE, "people", "businesses", false)),
+    ]).toEqual([3, 3, 3]);
   });
 
   it("takes a field on no gap of the row, only on a place", () => {
@@ -709,7 +737,7 @@ describe("a segment's icon in the row map", () => {
       firstAddress: { on: "false", frozen: false, glyph: "pin" },
       businessName: { on: "true", frozen: false, glyph: "building" },
       address: { on: "false", frozen: false, glyph: "pin" },
-      // On a line switched off: frozen, as its places are.
+      // On a hidden line: frozen, as its places are.
       addressName: { on: "true", frozen: true, glyph: "pin" },
     });
     cleanup();
@@ -762,22 +790,20 @@ describe("a segment's icon in the row map", () => {
     expect(document.querySelector(".row-map-ghost")).toBeNull();
   });
 
-  it("freezes a field's toggle on a line switched off, as its name's", () => {
-    const [, businesses] = lineKinds("people");
+  it("freezes a field's toggle on a hidden line, as its name's", () => {
     const { toggle } = mountOn(
       "people",
-      withLineState(DEFAULT_STYLE, "people", businesses!, "off"),
+      withListed(DEFAULT_STYLE, "people", "businesses", false),
     );
     expect(toggle("businessName")!.disabled).toBe(true);
     expect(toggle("address")!.disabled).toBe(true);
     expect(toggle("firstAddress")!.disabled).toBe(false);
   });
 
-  it("frees a line's toggles when the line is switched back on", () => {
-    const [, , addresses] = lineKinds("people");
+  it("frees a line's toggles when the line is shown again", () => {
     const { toggle } = mountOn(
       "people",
-      withLineState(DEFAULT_STYLE, "people", addresses!, "visible"),
+      withListed(DEFAULT_STYLE, "people", "addresses", true),
     );
     expect(toggle("addressName")!.disabled).toBe(false);
   });

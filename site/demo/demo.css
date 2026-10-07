@@ -615,21 +615,65 @@
   min-width: 0;
 }
 
-/* A kind of line: its switch at the left, its lines (a business's head is
-   two) beside them. An enabled one is tinted as the menu tints the line under
-   the pointer. Any other is greyed, all its colour gone and dimmed, its switch
-   excepted; one switched off more so, as nothing of it moves. */
+/* A drawer of lines: Shown, the row as the menu draws it, and Hidden below
+   it, a line in each that the row leaves out. Each line kind is its grip at
+   the left, its lines in their box, and its Disabled checkbox at the right,
+   the grip and the checkbox outside the box. */
+.row-map-drawer + .row-map-drawer {
+  margin-top: 8px;
+}
+
+.row-map-head,
 .row-map-kind {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: 8px;
+  grid-template-columns: var(--map-grip) minmax(0, 1fr) var(--map-check);
+  gap: 6px;
   align-items: start;
-  margin: 0 -6px;
+}
+
+.row-map-wrap {
+  --map-grip: 12px;
+  --map-check: 3.5rem;
+}
+
+.row-map-head {
+  align-items: end;
+  margin-bottom: -2px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.row-map-drawer-label {
+  grid-column: 2;
+}
+
+.row-map-check-head {
+  grid-column: 3;
+  text-align: center;
+}
+
+.row-map-drawer-hint {
+  margin: 0;
+  padding: 6px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* The box of a line kind's lines. An enabled one is tinted as the menu tints
+   the line under the pointer; a disabled one is greyed, all its colour gone
+   and dimmed; a hidden one greyer still, and nothing of it moves. */
+.row-map-kind-lines {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
   padding: 4px 6px;
   border-radius: 6px;
 }
 
-.row-map-kind[data-state="enabled"] {
+.row-map-kind[data-state="enabled"] .row-map-kind-lines {
   background: var(--map-enabled-bg, #f1f6fd);
 }
 
@@ -638,11 +682,11 @@
   opacity: 0.6;
 }
 
-.row-map-kind[data-state="off"] .row-map-kind-lines {
+.row-map-kind[data-state="hidden"] .row-map-kind-lines {
   opacity: 0.45;
 }
 
-.row-map-kind[data-state="off"] .row-map-place :is(select, .row-map-face) {
+.row-map-kind[data-state="hidden"] .row-map-place :is(select, .row-map-face) {
   cursor: not-allowed;
 }
 
@@ -653,66 +697,80 @@
   }
 }
 
-.row-map-kind-controls {
-  display: inline-flex;
-  align-items: center;
-  height: 28px;
-}
-
-.row-map-kind-lines {
-  display: grid;
-  gap: 8px;
-  min-width: 0;
-}
-
-/* A line's switch: off, visible, enabled, as three glyphs in a narrow strip,
-   the chosen one filled in the accent. */
-.row-map-switch {
-  display: inline-flex;
-  box-sizing: border-box;
-  gap: 1px;
-  padding: 1px;
-  background: var(--paper, #ffffff);
-  border: 1px solid var(--line);
-  border-radius: 4px;
-}
-
-.row-map-stop {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 13px;
-  height: 16px;
+/* A line's grip: dragged between the drawers by a pointer, pressed from the
+   keyboard. */
+.row-map-grip {
+  align-self: center;
+  width: var(--map-grip);
+  height: 20px;
   padding: 0;
-  background: transparent;
+  background: radial-gradient(currentColor 1px, transparent 1.5px) 1px 1px / 5px
+    5px;
   border: 0;
   border-radius: 3px;
-  color: var(--muted);
-  cursor: pointer;
+  color: var(--faded);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
-.row-map-stop:hover:not(:disabled) {
+.row-map-grip:hover {
   color: var(--blue);
 }
 
-.row-map-stop[aria-checked="true"],
-.row-map-stop[aria-checked="true"]:hover {
-  background: var(--blue);
-  color: #ffffff;
+/* The head is always shown: no grip, but its room. */
+.row-map-grip[data-spacer] {
+  visibility: hidden;
 }
 
-/* A row always shows its head: its Off is there, so the stops line up, but
-   cannot be chosen. */
-.row-map-stop:disabled {
-  opacity: 0.3;
-  cursor: default;
-}
-
-.row-map-stop:focus-visible {
-  position: relative;
-  z-index: 1;
+.row-map-grip:focus-visible {
   outline: 2px solid var(--blue);
   outline-offset: 1px;
+}
+
+/* Whether the line is disabled, a plain checkbox in its own column. */
+.row-map-check-cell {
+  display: flex;
+  align-self: center;
+  justify-content: center;
+}
+
+.row-map-check {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  accent-color: var(--blue);
+  cursor: pointer;
+}
+
+.row-map-check:disabled {
+  cursor: not-allowed;
+}
+
+/* A line in flight is its name, on a card. */
+.row-map-line-ghost {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  background: var(--map-bg, var(--paper));
+  border: 1px solid var(--blue);
+  border-radius: var(--map-pill-radius, 3px);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* While a line is carried, the drawer it would go to says so. */
+.row-map-drawer[data-accepts] > .row-map {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 14%, transparent);
+}
+
+.row-map-drawer[data-over] > .row-map {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 32%, transparent);
 }
 
 /* A place draws its field's name whole, in a face as wide as the name, or as
@@ -996,7 +1054,8 @@
 }
 
 .row-map[data-dragging] .row-map-place:not([data-accepts]),
-.row-map-chip[data-dragged] {
+.row-map-chip[data-dragged],
+.row-map-kind[data-dragged] {
   opacity: 0.4;
 }
 
@@ -1170,14 +1229,13 @@
     gap: 5px;
   }
 
+  .row-map-head,
   .row-map-kind {
-    gap: 5px;
-    margin: 0 -4px;
-    padding: 4px;
+    gap: 4px;
   }
 
-  .row-map-stop {
-    width: 12px;
+  .row-map-kind-lines {
+    padding: 4px;
   }
 
   .row-map-name-long {

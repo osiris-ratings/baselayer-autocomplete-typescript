@@ -219,9 +219,10 @@ describe("a business's row, as Styling sets it", () => {
     const user = await connect(["businesses", "people", "addresses"]);
     await user.click(screen.getByTestId("demo-styling-open"));
     await user.click(
-      within(
-        screen.getByRole("radiogroup", { name: "Officers and agents" }),
-      ).getByRole("radio", { name: "Enabled" }),
+      screen.getByRole("button", { name: "Show officers and agents" }),
+    );
+    await user.click(
+      screen.getByRole("checkbox", { name: "Disable officers and agents" }),
     );
 
     await user.type(field("demo-business"), "harbor concrete pumping");
@@ -248,9 +249,10 @@ describe("a person's or an address's row, as Styling sets it", () => {
     await user.click(screen.getByTestId("demo-styling-open"));
     // The row map lists the person's addresses, and lets one be picked.
     await user.click(
-      within(
-        screen.getByRole("radiogroup", { name: "Their addresses" }),
-      ).getByRole("radio", { name: "Enabled" }),
+      screen.getByRole("button", { name: "Show their addresses" }),
+    );
+    await user.click(
+      screen.getByRole("checkbox", { name: "Disable their addresses" }),
     );
 
     await user.type(field("demo-person"), "dana");
@@ -330,12 +332,7 @@ describe("Styling's sample rows", () => {
     await user.click(screen.getByTestId("demo-styling-open"));
     expect(screen.queryAllByTestId("address-line")).toEqual([]);
 
-    await user.click(
-      within(screen.getByRole("radiogroup", { name: "Addresses" })).getByRole(
-        "radio",
-        { name: "Visible" },
-      ),
-    );
+    await user.click(screen.getByRole("button", { name: "Show addresses" }));
 
     const [harbor] = screen.getAllByTestId("business-group");
     expect(
