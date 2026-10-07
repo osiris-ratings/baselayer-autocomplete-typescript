@@ -11,8 +11,11 @@ import {
   DEFAULT_LOOK,
   DEFAULT_PICKABLE,
   DEFAULT_ROW_LAYOUT,
+  ENTITY_OF,
   PERSON_ROW,
+  ROUTES,
   ROW_FIELDS,
+  ROW_KINDS,
   ROW_LINES,
   ROW_PLACES,
   drawnLayout,
@@ -30,10 +33,12 @@ import {
   type PersonRowField,
   type PersonRowLayout,
   type PersonRowPlace,
+  type Relation,
   type Route,
   type RowField,
   type RowKind,
   type RowLayout,
+  type RowLine,
   type RowPlace,
 } from "@baselayer-sdk/autocomplete";
 import {
@@ -697,6 +702,112 @@ export function changedLayout(state: StyleState): Partial<RowLayout> {
       place => [place, layout[place]],
     ),
   );
+}
+
+/**
+ * A kind of line a row draws: its head, which is always drawn, or a relation
+ * it can list, a line per item.
+ */
+export interface LineKind {
+  /** The relation it lists; null on the head. */
+  relation: Relation | null;
+  /** The entity it draws, which its pick toggle names in `pickable`. */
+  entity: EntityType;
+  /** The model's lines that draw it: a business's head is its title and subtitle. */
+  lines: readonly RowLine<string, string>[];
+}
+
+/** A search's row's line kinds, the head first, in the order the row draws them. */
+export function lineKinds(route: Route): LineKind[] {
+  const kinds: {
+    relation: Relation | null;
+    entity: EntityType;
+    lines: RowLine<string, string>[];
+  }[] = [];
+  const lines: readonly RowLine<string, string>[] = ROW_KINDS[route].lines;
+  for (const line of lines) {
+    const relation = line.relation ?? null;
+    const same = kinds.find(kind => kind.relation === relation);
+    if (same === undefined) {
+      kinds.push({
+        relation,
+        entity: line.entity ?? ROUTES[route].entity,
+        lines: [line],
+      });
+    } else {
+      same.lines.push(line);
+    }
+  }
+  return kinds;
+}
+
+/** The entities a search's row draws: its head's, and each listed line's. */
+export function shownEntities(route: Route, state: StyleState): EntityType[] {
+  const list: readonly Relation[] = state.rows[route].list;
+  return lineKinds(route)
+    .filter(kind => kind.relation === null || list.includes(kind.relation))
+    .map(kind => kind.entity);
+}
+
+/** The state with one search's row changed. */
+function withRow<R extends Route>(
+  state: StyleState,
+  route: R,
+  row: RowStates[R],
+): StyleState {
+  return { ...state, rows: { ...state.rows, [route]: row } };
+}
+
+/**
+ * The state with a line kind listed under a search's rows, or not, in the
+ * row's own order. A line the row stops drawing cannot be picked either.
+ */
+export function withListed<R extends Route>(
+  state: StyleState,
+  route: R,
+  relation: IncludeOf<R>,
+  listed: boolean,
+): StyleState {
+  const row: RowStates[R] = state.rows[route];
+  const list: readonly Relation[] = row.list;
+  if (list.includes(relation) === listed) return state;
+  const entity = ENTITY_OF[relation];
+  return withRow(state, route, {
+    ...row,
+    list: ROUTES[route].includes.filter(each =>
+      each === relation ? listed : list.includes(each),
+    ) as IncludeOf<R>[],
+    pickable: listed
+      ? row.pickable
+      : row.pickable.filter(type => type !== entity),
+  });
+}
+
+/**
+ * The state with a line's entity pickable on a search's rows, or not, in the
+ * order the row draws its lines. A line the row does not draw keeps the state.
+ */
+export function withPickable<R extends Route>(
+  state: StyleState,
+  route: R,
+  entity: EntityType,
+  pickable: boolean,
+): StyleState {
+  const row: RowStates[R] = state.rows[route];
+  if (
+    !shownEntities(route, state).includes(entity) ||
+    row.pickable.includes(entity) === pickable
+  ) {
+    return state;
+  }
+  return withRow(state, route, {
+    ...row,
+    pickable: lineKinds(route)
+      .map(kind => kind.entity)
+      .filter(type =>
+        type === entity ? pickable : row.pickable.includes(type),
+      ),
+  });
 }
 
 /** What the preview's component for each search takes from the Components fold. */
