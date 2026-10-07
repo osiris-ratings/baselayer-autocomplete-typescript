@@ -276,17 +276,29 @@ function Connected<R extends GroupedRoute>({
   ...view
 }: ConnectedProps<R> & { client: AutocompleteClient }) {
   const client = useResolvedClient(given);
-  // The pick, and the name it put in the field.
+  // The pick: the name it puts in the field, what the field held when it was
+  // made, and whether the field has taken the name yet.
   const [picked, setPicked] = useState<{
     field: string;
+    before: string;
+    held: boolean;
     selection: GroupedSelection;
   } | null>(null);
-  // A field that holds anything else lets the pick go for good, so the name
-  // put back later is not the pick again.
-  if (picked !== null && picked.field !== value) {
-    setPicked(null);
+  // A host may take the name a render or more later: until then the field
+  // still holds what was typed, and the pick waits. Anything else, before the
+  // name or after it, lets the pick go for good, so a name typed or put back
+  // later is not the pick again.
+  if (picked !== null) {
+    if (value === picked.field) {
+      if (!picked.held) setPicked({ ...picked, held: true });
+    } else if (picked.held || value !== picked.before) {
+      setPicked(null);
+    }
   }
-  const selection = showSelection && picked !== null ? picked.selection : null;
+  const selection =
+    showSelection && picked !== null && value === picked.field
+      ? picked.selection
+      : null;
   // What the rows draw decides what is asked for; the hook drops whatever the
   // session's scope does not grant.
   const request = requestOf(route, drawnFor(route, layout), include);
@@ -340,6 +352,8 @@ function Connected<R extends GroupedRoute>({
         const field = option.row.label;
         setPicked({
           field,
+          before: value,
+          held: field === value,
           selection:
             option.kind === "business"
               ? { type: "business", label: option.business.label }

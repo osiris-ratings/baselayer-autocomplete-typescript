@@ -287,6 +287,9 @@ function PersonHost({
       <button type="button" onClick={() => setValue("Dana Whitfield")}>
         Put back
       </button>
+      <button type="button" onClick={() => setValue("dana")}>
+        Back to what was typed
+      </button>
       <PersonAutocomplete
         client={client}
         id="person"
@@ -814,6 +817,71 @@ describe("the selection line", () => {
     expect(selection()).toBeNull();
   });
 
+  /** A host that takes the picked name late, or never, and typing at once. */
+  function LateHost({
+    client,
+    takesPick,
+  }: {
+    client: Client;
+    takesPick: "later" | "never";
+  }) {
+    const [value, setValue] = useState("");
+    // Only the pick's name is the host's to take late, or to drop; a name
+    // typed later is typing.
+    const [picks, setPicks] = useState(0);
+    return (
+      <PersonAutocomplete
+        client={client}
+        id="person"
+        label="Person"
+        value={value}
+        debounceMs={0}
+        onChange={next => {
+          if (next !== "Dana Whitfield" || picks > 0) {
+            setValue(next);
+          } else if (takesPick === "later") {
+            setTimeout(() => setValue(next), 20);
+          }
+        }}
+        onPick={() => setPicks(count => count + 1)}
+      />
+    );
+  }
+
+  it("waits for a host that puts the picked name in the field a render later", async () => {
+    const { client } = setup();
+    const user = userEvent.setup();
+    render(<LateHost client={client} takesPick="later" />);
+    await user.type(input(), "dana");
+
+    await user.click(
+      await screen.findByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+    // Still what was typed: the pick is kept for the name to come.
+    expect(input().value).toBe("dana");
+    await aMoment();
+
+    expect(input().value).toBe("Dana Whitfield");
+    expect(selection()).toHaveTextContent("Cobalt Tile Supply LLC");
+  });
+
+  it("lets a pick go that the field never took, once the field is edited", async () => {
+    const { client } = setup();
+    const user = userEvent.setup();
+    render(<LateHost client={client} takesPick="never" />);
+    await user.type(input(), "dana");
+    await user.click(
+      await screen.findByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    await user.type(input(), " ");
+    await user.clear(input());
+    // Typed by hand, the name is not the pick.
+    await user.type(input(), "Dana Whitfield");
+
+    expect(selection()).toBeNull();
+  });
+
   it("stays gone when the host puts the picked name back", async () => {
     const { client } = setup();
     const { user } = await typeDana(client);
@@ -822,6 +890,22 @@ describe("the selection line", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Start over" }));
+    await user.click(screen.getByRole("button", { name: "Put back" }));
+
+    expect(input().value).toBe("Dana Whitfield");
+    expect(selection()).toBeNull();
+  });
+
+  it("stays gone when the host puts back what was typed, and then the name", async () => {
+    const { client } = setup();
+    const { user } = await typeDana(client);
+    await user.click(
+      screen.getByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Back to what was typed" }),
+    );
     await user.click(screen.getByRole("button", { name: "Put back" }));
 
     expect(input().value).toBe("Dana Whitfield");
