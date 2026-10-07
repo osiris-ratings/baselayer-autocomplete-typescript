@@ -1,5 +1,4 @@
 import {
-  MAX_LIMIT,
   MAX_Q_CHARS,
   MIN_Q_CHARS,
   buildSuggestUrl,
@@ -15,6 +14,7 @@ import {
 import type { Relation } from "./entities";
 import { AutocompleteError, abortError, isAbortError } from "./errors";
 import type { MintFunction } from "./mint";
+import { DEFAULT_SESSION_SCOPE, MAX_LIMIT, parseSessionScope } from "./scope";
 import {
   DEFAULT_REQUEST_POLICY,
   DEFAULT_SESSION_POLICY,
@@ -200,16 +200,22 @@ function readStoredGrant(key: string, now: number): Grant | null {
       return null;
     }
     const stored = JSON.parse(raw) as StoredGrant;
+    // A release before scopes stored none: that grant reads as the default.
+    const scope =
+      stored.grant?.scope === undefined
+        ? DEFAULT_SESSION_SCOPE
+        : parseSessionScope(stored.grant.scope);
     if (
       stored.origin !== pageOrigin() ||
       typeof stored.grant?.sessionToken !== "string" ||
       typeof stored.grant.expiresAt !== "number" ||
-      now >= stored.grant.expiresAt
+      now >= stored.grant.expiresAt ||
+      scope === null
     ) {
       store.removeItem(key);
       return null;
     }
-    return stored.grant;
+    return { ...stored.grant, scope };
   } catch {
     return null;
   }

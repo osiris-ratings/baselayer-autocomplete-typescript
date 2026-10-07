@@ -13,7 +13,6 @@ export {
 } from "./core/client";
 export {
   FILTER_PARAMS,
-  MAX_LIMIT,
   MAX_Q_CHARS,
   MIN_Q_CHARS,
   buildBusinessesUrl,
@@ -107,6 +106,14 @@ export {
   type RequestPolicy,
   type SessionPolicy,
 } from "./core/policy";
+export {
+  DEFAULT_SESSION_SCOPE,
+  MAX_LIMIT,
+  parseSessionScope,
+  type RelationsOf,
+  type ScopeRoutes,
+  type SessionScope,
+} from "./core/scope";
 export type { Grant, MintEvent, SessionPhase } from "./core/session";
 export {
   addressLineOf,

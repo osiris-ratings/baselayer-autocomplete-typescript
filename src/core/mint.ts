@@ -1,4 +1,5 @@
 import type { MintScope } from "./errors";
+import { parseSessionScope, type SessionScope } from "./scope";
 import { parseErrorEnvelope } from "./wire";
 
 /**
@@ -45,6 +46,11 @@ export interface MintedGrant {
   pivotAllowance: number;
   /** Characters of `q` the narrowing filters wait for. */
   filterMinStem: number;
+  /**
+   * What the session may search, as the mint answered it. Absent when the API
+   * answers none; the session then reads `DEFAULT_SESSION_SCOPE`.
+   */
+  scope?: SessionScope;
 }
 
 export type MintOutcome =
@@ -110,7 +116,13 @@ function grantFrom(body: unknown): MintedGrant | null {
   const requestBudget = b.request_budget ?? b.requestBudget;
   const pivotAllowance = b.pivot_allowance ?? b.pivotAllowance;
   const filterMinStem = b.filter_min_stem ?? b.filterMinStem;
+  const answeredScope = b.scope;
+  const scope =
+    answeredScope === undefined || answeredScope === null
+      ? undefined
+      : parseSessionScope(answeredScope);
   if (
+    scope === null ||
     typeof token !== "string" ||
     token.length === 0 ||
     !positiveInteger(expiresIn) ||
@@ -129,6 +141,7 @@ function grantFrom(body: unknown): MintedGrant | null {
     requestBudget,
     pivotAllowance,
     filterMinStem,
+    ...(scope !== undefined ? { scope } : {}),
   };
 }
 

@@ -63,7 +63,6 @@ export type ShortStemPolicy = "withhold" | "send" | "throw";
 /** The autocomplete service's own floor and ceiling on `q`. */
 export const MIN_Q_CHARS = 2;
 export const MAX_Q_CHARS = 256;
-export const MAX_LIMIT = 20;
 
 const METACHARACTERS = new Set(["%", "_", "*", "?"]);
 
