@@ -143,8 +143,9 @@ The first `mint` or `mintUrl` is kept for the component's life; a new
   request, and that answer waits.
 - `enabled` (`true`): off, the field is a plain input; nothing is minted
   and nothing is asked.
-- `limit` (`5`): rows per keystroke, an integer from 1 to 20; anything else
-  is refused before it is sent, and no menu opens.
+- `limit` (`5`, or the session's most when that is fewer): rows per
+  keystroke, an integer from 1 to 20 and no more than the session's most;
+  anything else is refused before it is sent, and no menu opens.
 - `minChars` (`3`): trimmed characters before a keystroke is sent.
 - `debounceMs` (`250`): the pause after a keystroke before it is sent; a
   newer keystroke cancels it.
