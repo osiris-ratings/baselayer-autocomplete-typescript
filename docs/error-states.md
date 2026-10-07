@@ -57,8 +57,10 @@ on one, your organization may not reach, and a 422 that it is malformed (see
 | a 2xx whose body is not the contract            | none                                     | "Autocomplete unavailable"          |
 
 Every answer with no recovery rejects with `kind: "request_failed"`, except
-a 403 with code 501 or 502, which rejects with `kind: "out_of_scope"`, and a
-2xx whose body is not the contract, which rejects with `kind: "contract"`.
+three: a 403 with code 501 or 502, which rejects with `kind: "out_of_scope"`;
+a 503 for a route the deployment cannot answer yet, which rejects with
+`kind: "route_unserved"` (below); and a 2xx whose body is not the contract,
+which rejects with `kind: "contract"`.
 `out_of_scope` is never retried and never re-minted: a new session has the
 same scope. The client refuses what it can tell is out of scope before it
 sends anything (below), so the 403 means the session and the request
@@ -73,6 +75,7 @@ has (`current`: the index's schema, or its token version) and what the route
 needs (`required`). The footer shows `routeUnserved`. Searching businesses
 still works. Any other 503 (no index served yet, every worker busy) is a
 `request_failed` as above.
+
 A `request_failed` carries the answer's `status` (0 for the network),
 `code`, `reason`, `userMessage` and `retryAfterMs`. The footer shows
 `userMessage` when the answer had one, else `httpFallback(status)`, and
@@ -136,7 +139,7 @@ second bundled copy of the core. Beside `kind` and `message` it carries:
 | `scope`        | on a mint's 429, the pool that refused: `"window"` or `"day"` (`MintScope`)                                            |
 | `retryAfterMs` | ms until the next mint may be tried (`mint_backoff`, `mint_refused`), or the answer's `Retry-After` (`request_failed`) |
 | `userMessage`  | the answer's own message, or its validation message                                                                    |
-| `route`        | on `out_of_scope`, the route asked                                                                                     |
+| `route`        | on `out_of_scope` and `route_unserved`, the route asked                                                                |
 | `relation`     | on `out_of_scope`, the relation the scope leaves out; null when it leaves out the route                                |
 | `param`        | on `out_of_scope`, the parameter that touched it: `include` or a filter's name                                         |
 | `unserved`     | on `route_unserved`, `{ reason, current, required }`: why, what the deployment has, what the route needs               |

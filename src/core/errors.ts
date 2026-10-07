@@ -64,7 +64,7 @@ export interface AutocompleteErrorFields {
   retryAfterMs?: number | null;
   /** The envelope's own message, or a validation message, when there was one. */
   userMessage?: string | null;
-  /** On `out_of_scope`: the route asked. */
+  /** On `out_of_scope` and `route_unserved`: the route asked. */
   route?: Route | null;
   /** On `out_of_scope`: the relation the scope leaves out, if not the route. */
   relation?: Relation | null;
