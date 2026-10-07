@@ -20,17 +20,19 @@ actions:
     update:
       info:
         description: |
-          Your backend mints a session with your API key. The browser uses the session to ask for businesses. The [SDK](../) does all of this for you; this is the contract underneath, for building your own client or checking what crosses the wire.
+          Your backend mints a session with your API key. The browser uses the session to ask for businesses, or for the people and addresses that lead to them. The [SDK](../) does all of this for you; this is the contract underneath, for building your own client or checking what crosses the wire.
 
           | Route | Called from | Credential |
           | --- | --- | --- |
           | [`POST /autocomplete/sessions`](#create-a-session) | Your backend | `X-API-Key` |
           | [`GET /autocomplete/businesses`](#search-businesses) | The browser | `X-Autocomplete-Session` |
+          | [`GET /autocomplete/people`](#search-people) | The browser | `X-Autocomplete-Session` |
 
-          Both routes answer JSON. The mint takes an optional body, a `scope` that narrows what the session may search; the search takes none. Your API key is an application's key from Baselayer, with the `autocomplete.read` permission.
+          Every route answers JSON. The mint takes an optional body, a `scope` that narrows what the session may search; the search takes none. Your API key is an application's key from Baselayer, with the `autocomplete.read` permission.
       tags:
         - name: Sessions
         - name: Businesses
+        - name: People
         - name: Errors
           x-traitTag: true
           description: |
@@ -41,6 +43,8 @@ actions:
             | 401 | 27 | `session_missing` | Mint, then replay. |
             | 401 | 28 | `session_invalid` | Mint, then replay. `metadata.detail` says why: `malformed`, `wrong_type`, `unknown_key`, `bad_signature`, `not_yet_valid` or `origin_mismatch`, which means your backend did not forward the page's `Origin`. |
             | 401 | 29 | `session_expired` | Mint, then replay. |
+            | 403 | 501 | `route_not_in_scope` | The session's scope leaves the route out: offer the search only where `scope` lists it. |
+            | 403 | 502 | `relation_not_in_scope` | A parameter (`metadata.param`) touches a relation the scope leaves out on the route. |
             | 429 | 480 | `session_budget_spent` | Mint, then replay. |
             | 429 | 482 | `session_pivots_exceeded` | Mint, then replay. |
             | 429 | 429 | `rate_limited` | Wait `Retry-After` seconds, then replay. |
@@ -367,5 +371,82 @@ actions:
           source: |-
             const { response, indexTag, roundTripMs } = await client.suggest(
               { q: "harbor concrete", limit: 5 },
+              { signal },
+            );
+
+  - target: $.paths['/autocomplete/people'].get
+    description: >-
+      Belongs upstream, in the autocomplete service's OpenAPI annotations: the
+      public description, the Origin header and examples.
+    update:
+      tags: [People]
+      summary: Search people
+      description: |
+        The people a typed name fits, best first, each with the businesses they hold a role on. A business under a person is what a pick spends: its `token` is a `business_token` that `POST /searches` redeems, sealed with the person it was reached through. The person's own `token` is redeemed nowhere.
+
+        `related.businesses.count` is every business the person holds a role on; `items` is the first five, and an item's `role` is `officer` or `agent`. `business.state` keeps the people with a business in any of those states, and marks those businesses `matched`. Each parameter may appear once, and the session's scope must list the route, and the `businesses` or `addresses` relation for whatever touches it.
+
+        The route answers CORS as the businesses route does, and counts against the session's `request_budget` on its own.
+      parameters:
+        - name: Origin
+          in: header
+          description: >-
+            Set by the browser. It must equal the origin the session was
+            minted for, or the session is refused with 401 code 28.
+          schema: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                dana:
+                  summary: "`dana whit`, one person kept"
+                  value:
+                    query: dana whit
+                    found: 1
+                    found_capped: false
+                    truncated: false
+                    sources:
+                      businesses: { status: ok }
+                      addresses: { status: not_requested }
+                    suggestions:
+                      - type: person
+                        token: AwGCjUrMDqXaypeR5o…
+                        label: Dana Whitfield
+                        matched_name: null
+                        match: strong
+                        related:
+                          businesses:
+                            count: 7
+                            matched: null
+                            truncated: true
+                            items:
+                              - type: business
+                                token: A4uYMdTtN1PuVsmNF8…
+                                label: HARBOR CONCRETE PUMPING CO., INC.
+                                role: officer
+                                matched: false
+                          addresses:
+                            count: null
+                            matched: null
+                            truncated: false
+                            items: []
+                        highlight:
+                          - { text: Dana, matched: true }
+                          - { text: " ", matched: false }
+                          - { text: Whitfield, matched: true }
+      x-codeSamples:
+        - lang: shell
+          label: curl
+          source: |-
+            curl -s "https://api.baselayer.com/autocomplete/people?q=dana%20whit&limit=5" \
+              -H "X-Autocomplete-Session: $SESSION" \
+              -H "Origin: https://app.example.com"
+        - lang: typescript
+          label: SDK
+          source: |-
+            const { response } = await client.search(
+              "people",
+              { q: "dana whit", filters: { business: { state: ["PA"] } } },
               { signal },
             );
