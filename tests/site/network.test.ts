@@ -6,6 +6,7 @@ import {
   indentJson,
   kindOf,
   maxBody,
+  routeOf,
   redactBody,
   redactTokens,
 } from "../../site/demo/network";
@@ -22,11 +23,23 @@ describe("kindOf", () => {
   it.each([
     ["/autocomplete/sessions", "mint"],
     ["/autocomplete/businesses", "autocomplete"],
+    ["/autocomplete/people?q=dana", "autocomplete"],
+    ["/autocomplete/addresses?q=1200", "autocomplete"],
     ["/searches", "search"],
     ["/searches/5f0c2d3e/status", "search"],
     ["/autocomplete/version", "other"],
   ])("sorts %s as %s", (path, kind) => {
     expect(kindOf(path)).toBe(kind);
+  });
+
+  it.each([
+    ["/autocomplete/businesses?q=harbor", "businesses"],
+    ["/autocomplete/people?q=dana", "people"],
+    ["/autocomplete/addresses?q=1200", "addresses"],
+    ["/autocomplete/sessions", null],
+    ["/searches", null],
+  ])("names the route %s asks: %s", (path, route) => {
+    expect(routeOf(path)).toBe(route);
   });
 
   it("keeps a whole search report, which is bigger than 16 kB", () => {

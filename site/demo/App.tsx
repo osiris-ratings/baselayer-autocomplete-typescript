@@ -1,5 +1,6 @@
 import {
   DEFAULT_SESSION_SCOPE,
+  ROUTE_NAMES,
   allowedFilters,
   createAutocompleteClient,
   includeForLayout,
@@ -16,9 +17,11 @@ import {
 } from "@baselayer-sdk/autocomplete";
 import {
   AddressAutocomplete,
+  AddressAutocompleteView,
   BusinessAutocomplete,
   BusinessAutocompleteView,
   PersonAutocomplete,
+  PersonAutocompleteView,
   useAutocompleteSession,
 } from "@baselayer-sdk/autocomplete/react";
 import {
@@ -51,7 +54,15 @@ import {
   type StyleState,
 } from "./style-state";
 import { morph } from "./morph";
-import { SAMPLE_META, SAMPLE_QUERY, sampleRows } from "./sample";
+import {
+  SAMPLE_ADDRESSES,
+  SAMPLE_ADDRESSES_QUERY,
+  SAMPLE_META,
+  SAMPLE_PEOPLE,
+  SAMPLE_PEOPLE_QUERY,
+  SAMPLE_QUERY,
+  sampleRows,
+} from "./sample";
 import { SearchStep } from "./SearchStep";
 import { StylingPanel } from "./StylingPanel";
 
@@ -214,8 +225,8 @@ function useLog(client: AutocompleteClient | null): [LogLine[], () => void] {
         ok: event.error === null,
         text:
           event.error === null
-            ? `"${event.q}" → ${event.status} in ${event.roundTripMs} ms${event.recovery !== "none" ? ` after ${event.recovery}` : ""}${event.filtersWithheld ? ", filters held back" : ""}`
-            : `"${event.q}" → ${event.error.kind}: ${event.error.message}`,
+            ? `${event.relation} "${event.q}" → ${event.status} in ${event.roundTripMs} ms${event.recovery !== "none" ? ` after ${event.recovery}` : ""}${event.filtersWithheld ? ", filters held back" : ""}`
+            : `${event.relation} "${event.q}" → ${event.error.kind}: ${event.error.message}`,
       });
     });
     return () => {
@@ -467,7 +478,10 @@ export function App() {
   // The searches the session may offer, and the filters each may send: the
   // switch and the filter fields show nothing the session would refuse.
   const scope = useSessionScope(client, applied);
-  const offered = offeredRoutes(scope);
+  // Before a key is applied there is no session to hold the switch to: it
+  // offers every search, so Styling can preview each one's rows.
+  const offered: Route[] =
+    client === null ? [...ROUTE_NAMES] : offeredRoutes(scope);
   const mode: Route = offered.includes(searchBy) ? searchBy : "businesses";
   const allowed = new Set(
     allowedFilters(scope, mode).map(({ param }) => param),
@@ -904,7 +918,13 @@ export function App() {
                       style.pageInput ? "bl-ac-input demo-input" : "bl-ac-input"
                     }
                     disabled
-                    placeholder="Connect first, then type a business name"
+                    placeholder={`Connect first, then type ${
+                      mode === "businesses"
+                        ? "a business name"
+                        : mode === "people"
+                          ? "a person's name"
+                          : "an address"
+                    }`}
                   />
                 </div>
               ) : (
@@ -1011,44 +1031,97 @@ export function App() {
                   {/* Sample rows under the empty field, drawn by the same view
                       the live component uses, so every knob shows on them. */}
                   <div className="demo-sample" aria-hidden="true">
-                    <BusinessAutocompleteView
-                      id="demo-sample"
-                      value={SAMPLE_QUERY}
-                      onInputChange={() => {}}
-                      onSelect={() => {}}
-                      renderInput={inputProps => (
-                        <input {...inputProps} hidden tabIndex={-1} />
-                      )}
-                      suggestions={sampleRows({
-                        limit: style.limit,
-                        include: includeForLayout(style.layout),
-                      })}
-                      found={SAMPLE_META.found}
-                      foundCapped={false}
-                      truncated={false}
-                      indexTag={SAMPLE_META.indexTag}
-                      roundTripMs={SAMPLE_META.roundTripMs}
-                      isSearching={false}
-                      error={null}
-                      open
-                      look={{ ...changedLook(style) }}
-                      messages={messages}
-                      unstyled={style.unstyled}
-                      layout={style.layout}
-                      // The sample rows answer to the filters above, so a state
-                      // typed there marks its flag on them.
-                      {...(filters !== undefined
-                        ? { appliedFilters: filters }
-                        : {})}
-                      menuFollowsInputWidth={style.menuFollowsInputWidth}
-                    />
+                    {mode === "businesses" ? (
+                      <BusinessAutocompleteView
+                        id="demo-sample"
+                        value={SAMPLE_QUERY}
+                        onInputChange={() => {}}
+                        onSelect={() => {}}
+                        renderInput={inputProps => (
+                          <input {...inputProps} hidden tabIndex={-1} />
+                        )}
+                        suggestions={sampleRows({
+                          limit: style.limit,
+                          include: includeForLayout(style.layout),
+                        })}
+                        found={SAMPLE_META.found}
+                        foundCapped={false}
+                        truncated={false}
+                        indexTag={SAMPLE_META.indexTag}
+                        roundTripMs={SAMPLE_META.roundTripMs}
+                        isSearching={false}
+                        error={null}
+                        open
+                        look={{ ...changedLook(style) }}
+                        messages={messages}
+                        unstyled={style.unstyled}
+                        layout={style.layout}
+                        // The sample rows answer to the filters above, so a state
+                        // typed there marks its flag on them.
+                        {...(filters !== undefined
+                          ? { appliedFilters: filters }
+                          : {})}
+                        menuFollowsInputWidth={style.menuFollowsInputWidth}
+                      />
+                    ) : mode === "people" ? (
+                      <PersonAutocompleteView
+                        id="demo-sample"
+                        value={SAMPLE_PEOPLE_QUERY}
+                        onInputChange={() => {}}
+                        onSelect={() => {}}
+                        renderInput={inputProps => (
+                          <input {...inputProps} hidden tabIndex={-1} />
+                        )}
+                        suggestions={SAMPLE_PEOPLE.slice(0, style.limit)}
+                        found={SAMPLE_PEOPLE.length}
+                        foundCapped={false}
+                        truncated={false}
+                        indexTag={SAMPLE_META.indexTag}
+                        roundTripMs={SAMPLE_META.roundTripMs}
+                        isSearching={false}
+                        error={null}
+                        open
+                        look={{ ...changedLook(style) }}
+                        messages={messages}
+                        unstyled={style.unstyled}
+                        menuFollowsInputWidth={style.menuFollowsInputWidth}
+                      />
+                    ) : (
+                      <AddressAutocompleteView
+                        id="demo-sample"
+                        value={SAMPLE_ADDRESSES_QUERY}
+                        onInputChange={() => {}}
+                        onSelect={() => {}}
+                        renderInput={inputProps => (
+                          <input {...inputProps} hidden tabIndex={-1} />
+                        )}
+                        suggestions={SAMPLE_ADDRESSES.slice(0, style.limit)}
+                        found={SAMPLE_ADDRESSES.length}
+                        foundCapped={false}
+                        truncated={false}
+                        indexTag={SAMPLE_META.indexTag}
+                        roundTripMs={SAMPLE_META.roundTripMs}
+                        isSearching={false}
+                        error={null}
+                        open
+                        look={{ ...changedLook(style) }}
+                        messages={messages}
+                        unstyled={style.unstyled}
+                        menuFollowsInputWidth={style.menuFollowsInputWidth}
+                      />
+                    )}
                   </div>
                   <p className="hint demo-sample-note">
-                    Sample rows for &ldquo;{SAMPLE_QUERY}&rdquo; while Styling
-                    is open.{" "}
+                    Sample rows for &ldquo;
+                    {mode === "businesses"
+                      ? SAMPLE_QUERY
+                      : mode === "people"
+                        ? SAMPLE_PEOPLE_QUERY
+                        : SAMPLE_ADDRESSES_QUERY}
+                    &rdquo; while Styling is open.{" "}
                     {client === null
-                      ? "Connect and type a name to see real ones."
-                      : "Type a name to see real ones."}
+                      ? "Connect and type to see real ones."
+                      : "Type to see real ones."}
                   </p>
                 </>
               )}

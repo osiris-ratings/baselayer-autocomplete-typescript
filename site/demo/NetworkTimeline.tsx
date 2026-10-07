@@ -139,7 +139,8 @@ export function NetworkTimeline({ log }: { log: NetworkLog }) {
                   </span>
                   <span role="cell" className="net-name">
                     <span className="net-kind" data-kind={entry.kind}>
-                      {entry.kind === "other" ? "http" : entry.kind}
+                      {entry.route ??
+                        (entry.kind === "other" ? "http" : entry.kind)}
                     </span>
                     <span className="net-path">
                       {entry.kind === "autocomplete" && entry.q !== null ? (

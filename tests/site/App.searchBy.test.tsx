@@ -158,3 +158,29 @@ describe("searching by person or address", () => {
     await waitFor(() => expect(step()).toBeNull(), { timeout: 1500 });
   });
 });
+
+describe("Styling's sample rows", () => {
+  it("show made-up people and addresses as well, before anything is connected", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(screen.getByTestId("demo-styling-open"));
+    expect(screen.getAllByTestId("business-suggestion").length).toBeGreaterThan(
+      0,
+    );
+
+    await user.click(screen.getByRole("radio", { name: "Person" }));
+    const sample = screen.getAllByTestId("person-suggestion");
+    expect(sample.length).toBeGreaterThan(1);
+    expect(
+      within(sample[0]!).getAllByTestId("business-option").length,
+    ).toBeGreaterThan(0);
+    expect(screen.getByText(/Sample rows for/).textContent).toContain("dana");
+
+    await user.click(screen.getByRole("radio", { name: "Address" }));
+    expect(screen.getAllByTestId("address-suggestion").length).toBeGreaterThan(
+      1,
+    );
+    expect(screen.getByText(/412 businesses here/)).toBeTruthy();
+  });
+});
