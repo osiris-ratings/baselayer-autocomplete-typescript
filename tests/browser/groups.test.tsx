@@ -5,11 +5,13 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import type {
   AddressSuggestion,
+  BusinessSuggestion,
   PersonSuggestion,
   RelatedItem,
 } from "@baselayer-sdk/autocomplete";
 import {
   AddressAutocompleteView,
+  BusinessAutocompleteView,
   PersonAutocompleteView,
 } from "@baselayer-sdk/autocomplete/react";
 
@@ -119,6 +121,40 @@ const ADDRESSES: AddressSuggestion[] = [
   },
 ];
 
+const BUSINESSES: BusinessSuggestion[] = [
+  {
+    type: "business",
+    token: "tok-b-1",
+    label: LONG_BUSINESS,
+    matched_name: null,
+    match: "strong",
+    domicile_state: "MO",
+    states: ["CA", "DE", "FL", "IL", "MO", "NY", "TX"],
+    structure: "C_CORPORATION",
+    related: {
+      people: {
+        count: 12,
+        matched: null,
+        truncated: true,
+        items: [
+          entity("person", LONG_NAME, "officer"),
+          { ...entity("person", "Ada Fox", "agent"), token: null },
+        ],
+      },
+      addresses: {
+        count: 3,
+        matched: null,
+        truncated: true,
+        items: [entity("address", LONG_ADDRESS, "principal")],
+      },
+    },
+    highlight: [{ text: "CINDER", matched: true }],
+  },
+];
+
+type Route = "people" | "addresses" | "businesses";
+const ROUTES = ["people", "addresses", "businesses"] as const;
+
 let host: HTMLDivElement;
 let root: Root;
 
@@ -145,12 +181,24 @@ const state = {
   open: true,
 };
 
-function draw(route: "people" | "addresses", width: number) {
+function draw(route: Route, width: number) {
   host.style.width = `${width}px`;
   expect(window.innerWidth).toBeGreaterThan(width + 32);
   flushSync(() =>
     root.render(
-      route === "people" ? (
+      route === "businesses" ? (
+        <BusinessAutocompleteView
+          id="businesses"
+          label="Business name"
+          value="cinder"
+          onInputChange={() => {}}
+          onSelect={() => {}}
+          list={["people", "addresses"]}
+          pickable={["business", "person"]}
+          suggestions={BUSINESSES}
+          {...state}
+        />
+      ) : route === "people" ? (
         <PersonAutocompleteView
           id="people"
           label="Person's name"
@@ -194,7 +242,9 @@ function faults(): string[] {
     );
   }
   host
-    .querySelectorAll<HTMLElement>(".bl-ac-group-head, .bl-ac-group-line")
+    .querySelectorAll<HTMLElement>(
+      ".bl-ac-group-head, .bl-ac-group-line, .bl-ac-group > .bl-ac-row",
+    )
     .forEach((line, index) => {
       if (line.scrollWidth > line.clientWidth) {
         found.push(
@@ -217,8 +267,11 @@ function faults(): string[] {
         found.push(`line ${index}: the name is squeezed to nothing`);
       }
       // The badge after a name gives way first: a name is cut only once its
-      // badge has given all its room.
-      const badge = name?.nextElementSibling;
+      // badge has given all its room. A business row's head keeps its flag
+      // pinned beside the name instead, as a business row always has.
+      const badge = line.classList.contains("bl-ac-row")
+        ? null
+        : name?.nextElementSibling;
       if (
         name != null &&
         badge != null &&
@@ -231,8 +284,8 @@ function faults(): string[] {
   return found;
 }
 
-describe("person and address groups", () => {
-  for (const route of ["people", "addresses"] as const) {
+describe("person, address and business groups", () => {
+  for (const route of ROUTES) {
     for (const width of WIDTHS) {
       it(`keep every count and role whole, and the names in their line, on ${route} at ${width}px`, () => {
         draw(route, width);
@@ -243,8 +296,8 @@ describe("person and address groups", () => {
   }
 });
 
-describe("person and address groups, to assistive technology", () => {
-  for (const route of ["people", "addresses"] as const) {
+describe("person, address and business groups, to assistive technology", () => {
+  for (const route of ROUTES) {
     it(`break no ARIA rule on ${route}, with inert lines among the options`, async () => {
       draw(route, 560);
       // Each group lists an inert line: the businesses are the picks, the
