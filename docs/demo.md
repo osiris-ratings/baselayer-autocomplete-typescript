@@ -116,9 +116,9 @@ business is a pick. A pick stays where it was made: the field takes the
 person's name or the address, and a line under it names the business picked,
 until you edit the field.
 
-![Searching by person: each person with their businesses](images/demo-person.png)
+![Searching by person: each person with their first address, their counts and their businesses](images/demo-person.png)
 
-![Searching by address: how many businesses are filed there](images/demo-address.png)
+![Searching by address: how many businesses and people are there, and each business](images/demo-address.png)
 
 The filters each search can carry, where the session's scope allows them (on
 Business an officer or agent's name, the states the business is registered
@@ -224,7 +224,13 @@ overflow, a spread of structures, one on a name with no suffix and one not
 known, an address, officers with a +N, a registered agent, the count), so
 every knob can be judged before a keystroke; type a name and the real rows
 take their place. On Person and Address the made-up rows are people and
-addresses, each with its businesses, as many as Rows asks for. The rows pretend "harbor concr" was typed, one word in full
+addresses, each with its businesses, as many as Rows asks for. The
+Components fold edits the row of the search the form is on, with a tab for
+each (Business, Person, Address) that moves the form with it. On Person and
+Address it says first what each row lists under it (a person's addresses,
+the people at an address) and what can be picked (the businesses, the row
+itself, what it lists), then draws that row's places, a field moving only
+within its own line. The rows pretend "harbor concr" was typed, one word in full
 and the next only begun, so the region shows its difference: whole word
 highlights CONCRETE, typed characters only its CONCR.
 
@@ -273,7 +279,8 @@ as you make them. A color changed from its preset's carries a reset inside its
 field, which puts back the value the last preset chosen gave it. **Your
 configuration** at the bottom is the code that reproduces the result, in a React
 tab and a CSS tab with a **Copy**: the props that differ from the defaults (the
-`layout` names only the places that differ from the SDK's), and the CSS
+`layout` names only the places that differ from the SDK's), for the search
+the form is on, and the CSS
 variables to set. Its **Reset** puts the whole panel back as it opened: the
 Light preset and every default.
 
