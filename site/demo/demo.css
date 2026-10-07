@@ -535,6 +535,30 @@
   accent-color: var(--blue);
 }
 
+/* A person's or an address's row: what it lists under it, and what can be
+   picked, each a column of toggles under its legend. */
+.grouped-lists {
+  margin-bottom: 12px;
+}
+
+.grouped-lists fieldset {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.grouped-lists legend {
+  padding: 0;
+}
+
+.demo .components-tabs {
+  margin-top: 0;
+}
+
 /* Fixed on: shown, but not a choice. */
 .toggle[data-disabled] {
   cursor: default;

@@ -963,6 +963,12 @@ export function App() {
                       value={name}
                       onChange={editName}
                       onPick={pickedThrough}
+                      // A person or an address picked: nothing redeems its
+                      // token, so there is no business for step 03 to search.
+                      onPickEntity={() => setPicked(null)}
+                      layout={style.personLayout}
+                      include={style.personInclude}
+                      pickable={style.personPickable}
                       look={{ ...changedLook(style) }}
                       limit={style.limit}
                       minChars={style.minChars}
@@ -988,6 +994,10 @@ export function App() {
                       value={name}
                       onChange={editName}
                       onPick={pickedThrough}
+                      onPickEntity={() => setPicked(null)}
+                      layout={style.addressLayout}
+                      include={style.addressInclude}
+                      pickable={style.addressPickable}
                       look={{ ...changedLook(style) }}
                       limit={style.limit}
                       minChars={style.minChars}
@@ -1054,6 +1064,9 @@ export function App() {
                           <input {...inputProps} hidden tabIndex={-1} />
                         )}
                         suggestions={SAMPLE_PEOPLE.slice(0, style.limit)}
+                        layout={style.personLayout}
+                        include={style.personInclude}
+                        pickable={style.personPickable}
                         found={SAMPLE_PEOPLE.length}
                         foundCapped={false}
                         truncated={false}
@@ -1077,6 +1090,9 @@ export function App() {
                           <input {...inputProps} hidden tabIndex={-1} />
                         )}
                         suggestions={SAMPLE_ADDRESSES.slice(0, style.limit)}
+                        layout={style.addressLayout}
+                        include={style.addressInclude}
+                        pickable={style.addressPickable}
                         found={SAMPLE_ADDRESSES.length}
                         foundCapped={false}
                         truncated={false}
@@ -1334,7 +1350,13 @@ export function App() {
                   aria-label="Styling"
                   data-testid="demo-styling"
                 >
-                  <StylingPanel state={style} onChange={setStyle} />
+                  <StylingPanel
+                    state={style}
+                    onChange={setStyle}
+                    route={mode}
+                    routes={offered}
+                    onRoute={setSearchBy}
+                  />
                 </section>
               )}
             </div>

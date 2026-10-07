@@ -3,7 +3,13 @@
 
 import { useState } from "react";
 
-import { BUSINESS_STRUCTURES } from "@baselayer-sdk/autocomplete";
+import {
+  BUSINESS_STRUCTURES,
+  ROUTE_NAMES,
+  type EntityType,
+  type Relation,
+  type Route,
+} from "@baselayer-sdk/autocomplete";
 import {
   MINT_TIMINGS,
   type MintTiming,
@@ -35,10 +41,10 @@ import {
   LOOK_COLORS,
   REGIONS,
   TEXT_MESSAGES,
-  changedLayout,
   changedLook,
   changedMessages,
   changedStructures,
+  componentChanges,
   exportCode,
   type CssVariable,
   type StyleState,
@@ -73,12 +79,130 @@ const MINT_TIMING_LABELS: Record<MintTiming, string> = {
   request: "On first request (lazy)",
 };
 
-export function StylingPanel({
+const ROW_TAB_LABELS: Record<Route, string> = {
+  businesses: "Business",
+  people: "Person",
+  addresses: "Address",
+};
+
+/** What a person's or an address's row can list and pick, in its own words. */
+const GROUPED_LISTS = {
+  people: {
+    listedLegend: "Listed under each person",
+    listed: [
+      ["businesses", "Businesses"],
+      ["addresses", "Their addresses"],
+    ],
+    pickable: [
+      ["business", "Businesses"],
+      ["person", "The person"],
+      ["address", "Their addresses"],
+    ],
+  },
+  addresses: {
+    listedLegend: "Listed under each address",
+    listed: [
+      ["businesses", "Businesses"],
+      ["people", "People there"],
+    ],
+    pickable: [
+      ["business", "Businesses"],
+      ["address", "The address"],
+      ["person", "People there"],
+    ],
+  },
+} as const satisfies Record<
+  "people" | "addresses",
+  {
+    listedLegend: string;
+    listed: readonly (readonly [Relation, string])[];
+    pickable: readonly (readonly [EntityType, string])[];
+  }
+>;
+
+/** `values` with `value` in or out, in the order `order` lists them. */
+function toggled<T extends string>(
+  values: readonly T[],
+  value: T,
+  on: boolean,
+  order: readonly T[],
+): T[] {
+  return order.filter(item => (item === value ? on : values.includes(item)));
+}
+
+/** What a person's or an address's row lists under it, and what can be picked. */
+function GroupedLists({
   state,
   onChange,
+  route,
 }: {
   state: StyleState;
   onChange(state: StyleState): void;
+  route: "people" | "addresses";
+}) {
+  const { listedLegend, listed, pickable } = GROUPED_LISTS[route];
+  const include: readonly Relation[] =
+    route === "people" ? state.personInclude : state.addressInclude;
+  const picks: readonly EntityType[] =
+    route === "people" ? state.personPickable : state.addressPickable;
+  const listOrder = listed.map(([value]) => value);
+  const pickOrder = pickable.map(([value]) => value);
+  const setInclude = (next: Relation[]) =>
+    onChange(
+      route === "people"
+        ? { ...state, personInclude: next as StyleState["personInclude"] }
+        : { ...state, addressInclude: next as StyleState["addressInclude"] },
+    );
+  const setPickable = (next: EntityType[]) =>
+    onChange(
+      route === "people"
+        ? { ...state, personPickable: next }
+        : { ...state, addressPickable: next },
+    );
+  return (
+    <div className="field-grid grouped-lists">
+      <fieldset className="field-row">
+        <legend className="field-label">{listedLegend}</legend>
+        {listed.map(([value, label]) => (
+          <Toggle
+            key={value}
+            checked={include.includes(value)}
+            onChange={on => setInclude(toggled(include, value, on, listOrder))}
+          >
+            {label}
+          </Toggle>
+        ))}
+      </fieldset>
+      <fieldset className="field-row">
+        <legend className="field-label">Can be picked</legend>
+        {pickable.map(([value, label]) => (
+          <Toggle
+            key={value}
+            checked={picks.includes(value)}
+            onChange={on => setPickable(toggled(picks, value, on, pickOrder))}
+          >
+            {label}
+          </Toggle>
+        ))}
+      </fieldset>
+    </div>
+  );
+}
+
+export function StylingPanel({
+  state,
+  onChange,
+  route = "businesses",
+  routes = ROUTE_NAMES,
+  onRoute = () => {},
+}: {
+  state: StyleState;
+  onChange(state: StyleState): void;
+  /** The search the form is on, whose row the Components fold edits. */
+  route?: Route;
+  /** The searches the form offers. */
+  routes?: readonly Route[];
+  onRoute?(route: Route): void;
 }) {
   const set = <K extends keyof StyleState>(key: K, value: StyleState[K]) =>
     onChange({ ...state, [key]: value });
@@ -91,7 +215,7 @@ export function StylingPanel({
   const look = changedLook(state);
   // Counted against the preset, as the resets inside the fields put back.
   const changes = presetChanges(state);
-  const code = exportCode(state);
+  const code = exportCode(state, route);
   const colorVars = (Object.keys(CSS_VARIABLES) as CssVariable[]).filter(
     name => CSS_VARIABLES[name].kind === "color",
   );
@@ -172,16 +296,36 @@ export function StylingPanel({
         })}
       </div>
 
-      <Fold
-        title="Components"
-        summary={count(Object.keys(changedLayout(state)).length)}
-      >
+      <Fold title="Components" summary={count(componentChanges(state))}>
         <p className="hint fold-note">
           A row, drawn as its places (<code>layout</code>). Drag a field onto
           another place, or pick one from a place&rsquo;s chevron; a field that
           lands on a taken place swaps with it.
         </p>
-        <RowMap state={state} onChange={onChange} />
+        {routes.length > 1 && (
+          <div
+            className="tabs components-tabs"
+            role="tablist"
+            aria-label="Row of"
+          >
+            {routes.map(tab => (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={route === tab}
+                onClick={() => onRoute(tab)}
+              >
+                {ROW_TAB_LABELS[tab]}
+              </button>
+            ))}
+          </div>
+        )}
+        {/* What the row lists comes first: it decides which lines there are. */}
+        {route !== "businesses" && (
+          <GroupedLists state={state} onChange={onChange} route={route} />
+        )}
+        <RowMap state={state} onChange={onChange} route={route} />
       </Fold>
 
       <Fold

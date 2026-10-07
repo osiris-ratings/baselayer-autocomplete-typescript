@@ -674,7 +674,7 @@ function literal(value: unknown): string {
 }
 
 /** The places of a person's or an address's row that differ from the SDK's default. */
-function changedGroupedLayout(
+export function changedGroupedLayout(
   state: StyleState,
   route: "people" | "addresses",
 ): [string, string | null][] {
@@ -685,6 +685,25 @@ function changedGroupedLayout(
   return Object.keys(defaults)
     .filter(place => layout[place] !== defaults[place])
     .map(place => [place, layout[place] ?? null]);
+}
+
+/**
+ * How many things the Components fold changed, on every search's row: the
+ * places, and what a person's and an address's rows list and can pick.
+ */
+export function componentChanges(state: StyleState): number {
+  const lists: [readonly string[], readonly string[]][] = [
+    [state.personInclude, DEFAULT_LISTED],
+    [state.personPickable, DEFAULT_PICKABLE],
+    [state.addressInclude, DEFAULT_LISTED],
+    [state.addressPickable, DEFAULT_PICKABLE],
+  ];
+  return (
+    Object.keys(changedLayout(state)).length +
+    changedGroupedLayout(state, "people").length +
+    changedGroupedLayout(state, "addresses").length +
+    lists.filter(([value, defaults]) => value.join() !== defaults.join()).length
+  );
 }
 
 /** A list prop, unless it is the default. */

@@ -175,6 +175,52 @@ describe("searching by person or address", () => {
   });
 });
 
+describe("a person's or an address's row, as Styling sets it", () => {
+  it("lists a person's addresses, and picks one as the person's, with no search to run", async () => {
+    const user = await connect(["businesses", "people", "addresses"]);
+    await user.click(screen.getByRole("radio", { name: "Person" }));
+    await user.click(screen.getByTestId("demo-styling-open"));
+    await user.click(
+      within(
+        screen.getByRole("group", { name: "Listed under each person" }),
+      ).getByRole("checkbox", { name: "Their addresses" }),
+    );
+    await user.click(
+      within(screen.getByRole("group", { name: "Can be picked" })).getByRole(
+        "checkbox",
+        { name: "Their addresses" },
+      ),
+    );
+
+    await user.type(field("demo-person"), "dana");
+    const dana = await screen.findByRole("group", { name: "Dana Whitfield" });
+    const [river] = within(dana).getAllByTestId("address-line");
+    expect(river!.textContent).toBe(
+      "1200 River Rd, Pittsburgh, PA 15212officer",
+    );
+    await user.click(river!);
+
+    expect(field("demo-person").value).toBe("Dana Whitfield");
+    const selection = screen.getByTestId("grouped-selection");
+    expect(selection.textContent).toBe("1200 River Rd, Pittsburgh, PA 15212");
+    expect(selection.getAttribute("data-type")).toBe("address");
+    // Nothing redeems an address's token: there is no business to search.
+    expect(step()).toBeNull();
+  });
+
+  it("follows the form's search from the Components fold's tabs", async () => {
+    const user = await connect(["businesses", "people", "addresses"]);
+    await user.click(screen.getByTestId("demo-styling-open"));
+
+    await user.click(screen.getByRole("tab", { name: "Address" }));
+
+    expect(checked("Address")).toBe("true");
+    expect(
+      document.querySelector('[data-drop="personTrailing"]'),
+    ).not.toBeNull();
+  });
+});
+
 describe("Styling's sample rows", () => {
   it("show made-up people and addresses as well, before anything is connected", async () => {
     const user = userEvent.setup();
