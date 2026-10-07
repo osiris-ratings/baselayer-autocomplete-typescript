@@ -192,12 +192,8 @@ export function StylingPanel({
 
       <Fold title="Components" summary={count(componentChanges(state))}>
         <p className="hint fold-note">
-          A row, drawn as its lines and their places, and all of its
-          configuration. Drag a kind of line onto the row to list it (
-          <code>list</code>), or onto Not shown to leave it out; ◉ lets a pick
-          be made on it (<code>pickable</code>). Drag a field onto another place
-          of its line (<code>layout</code>), or pick one from a place&rsquo;s
-          chevron; a field that lands on a taken place swaps with it.
+          Drag lines and fields into place or onto Not shown, and enable or
+          disable each line.
         </p>
         {routes.length > 1 && (
           <div

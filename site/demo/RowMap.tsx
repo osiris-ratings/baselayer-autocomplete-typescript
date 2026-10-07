@@ -66,10 +66,21 @@ function capitalized(name: string): string {
   return name.charAt(0).toUpperCase() + name.slice(1);
 }
 
-/** The look's colors and corners, as the drawn row paints its places. */
+/** How much of a disabled line's fading is its ink: the components' own share. */
+const DISABLED_INK = 0.15;
+
+/**
+ * The look's colors and corners, as the drawn row paints its places, and how
+ * it tints an enabled line and fades a disabled one, as the menu does.
+ */
 function rowMapColors(state: StyleState): CSSProperties {
   const { look, vars } = state;
+  const dim = look.disabledDim;
+  const round = (value: number) => Math.round(value * 1000) / 1000;
   return {
+    "--map-enabled-bg": vars["--bl-ac-highlight-bg"],
+    "--map-disabled-filter": dim === 0 ? "none" : `saturate(${round(1 - dim)})`,
+    "--map-disabled-opacity": String(round(1 - dim * DISABLED_INK)),
     "--map-bg": look.backgroundColor,
     "--map-border": vars["--bl-ac-border"],
     "--map-radius": vars["--bl-ac-radius"],
@@ -438,8 +449,11 @@ export function RowMap({
   }
 }
 
-/** Whether a pick can be made on a line kind, as a button that says so. */
-function PickToggle({
+/**
+ * Whether a line kind is enabled, as a pill that says which. Its name stays
+ * the same either way: a screen reader says whether it is pressed.
+ */
+function EnabledToggle({
   name,
   on,
   onToggle,
@@ -451,13 +465,13 @@ function PickToggle({
   return (
     <button
       type="button"
-      className="row-map-pick"
+      className="row-map-toggle"
       aria-pressed={on}
-      aria-label={`Pick ${name}`}
-      title={`${capitalized(name)}: ${on ? "can be picked" : "cannot be picked"} (pickable)`}
+      aria-label={`Enable ${name}`}
+      title={`${capitalized(name)}: ${on ? "enabled, a choice in the menu. Press to disable." : "disabled, drawn dimmed in the menu. Press to enable."} (enabledLines)`}
       onClick={() => onToggle(!on)}
     >
-      {on ? "◉" : "○"}
+      {on ? "Enabled" : "Disabled"}
     </button>
   );
 }
@@ -619,11 +633,13 @@ function KindRowMap<P extends string, F extends string>({
         {shown.map(kind => {
           const name = kindName(kind.relation);
           const relation = kind.relation;
+          const on = enabled.includes(kind.entity);
           return (
             <div
               key={relation ?? "head"}
               className="row-map-kind"
               data-relation={relation ?? "head"}
+              data-enabled={on}
               data-dragged={
                 relation !== null && moving?.field === lineItem(relation)
                   ? true
@@ -650,10 +666,10 @@ function KindRowMap<P extends string, F extends string>({
                     }}
                   />
                 )}
-                <PickToggle
+                <EnabledToggle
                   name={name}
-                  on={enabled.includes(kind.entity)}
-                  onToggle={on => onEnable(kind.entity, on)}
+                  on={on}
+                  onToggle={next => onEnable(kind.entity, next)}
                 />
               </span>
               <div className="row-map-kind-lines">

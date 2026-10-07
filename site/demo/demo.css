@@ -615,13 +615,45 @@
   min-width: 0;
 }
 
-/* A kind of line: its handle and its pick toggle at the left, its lines (a
-   business's head is two) beside them. */
+/* A kind of line: its handle and its toggle at the left, its lines (a
+   business's head is two) beside them. An enabled one is tinted as the menu
+   tints the line under the pointer, and a disabled one fades as the menu
+   fades it; a disabled head does not, as the menu never fades a head. */
 .row-map-kind {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 8px;
   align-items: start;
+  margin: 0 -6px;
+  padding: 4px 6px;
+  border-radius: 6px;
+}
+
+.row-map-kind[data-enabled="true"] {
+  background: var(--map-enabled-bg, #f1f6fd);
+}
+
+.row-map-kind[data-enabled="false"]:not([data-relation="head"])
+  .row-map-kind-lines {
+  filter: var(--map-disabled-filter, saturate(0.4));
+}
+
+.row-map-kind[data-enabled="false"]:not([data-relation="head"])
+  :is(.row-map-face, .row-map-name) {
+  opacity: var(--map-disabled-opacity, 0.91);
+}
+
+/* Forced colours draw the text in the system's own; fading it would not. */
+@media (forced-colors: active) {
+  .row-map-kind[data-enabled="false"]:not([data-relation="head"])
+    .row-map-kind-lines {
+    filter: none;
+  }
+
+  .row-map-kind[data-enabled="false"]:not([data-relation="head"])
+    :is(.row-map-face, .row-map-name) {
+    opacity: 1;
+  }
 }
 
 .row-map-kind-controls {
@@ -665,27 +697,42 @@
   visibility: hidden;
 }
 
-/* Whether a pick can be made on the line: filled when it can. */
-.row-map-pick {
+/* Whether the line is enabled, in a word: filled in the accent when it is,
+   an outline when not, and as wide either way, so the lines start in one
+   column. */
+.row-map-toggle {
   flex: none;
-  width: 22px;
-  height: 22px;
-  padding: 0;
+  box-sizing: border-box;
+  min-width: 4.5rem;
+  height: 20px;
+  margin-left: 2px;
+  padding: 0 8px;
   background: transparent;
-  border: 0;
-  border-radius: 50%;
+  border: 1px solid var(--line);
+  border-radius: 999px;
   color: var(--muted);
-  font-size: 15px;
-  line-height: 1;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 18px;
+  text-align: center;
   cursor: pointer;
 }
 
-.row-map-pick[aria-pressed="true"] {
+.row-map-toggle:hover {
+  border-color: var(--blue);
   color: var(--blue);
 }
 
+.row-map-toggle[aria-pressed="true"] {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #ffffff;
+}
+
 .row-map-line-handle:focus-visible,
-.row-map-pick:focus-visible {
+.row-map-toggle:focus-visible {
   outline: 2px solid var(--blue);
   outline-offset: 1px;
 }

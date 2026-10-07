@@ -193,7 +193,7 @@ describe("a business's row, as Styling sets it", () => {
       screen.getByRole("button", { name: "Show officers and agents" }),
     );
     await user.click(
-      screen.getByRole("button", { name: "Pick officers and agents" }),
+      screen.getByRole("button", { name: "Enable officers and agents" }),
     );
 
     await user.type(field("demo-business"), "harbor concrete pumping");
@@ -223,7 +223,7 @@ describe("a person's or an address's row, as Styling sets it", () => {
       screen.getByRole("button", { name: "Show their addresses" }),
     );
     await user.click(
-      screen.getByRole("button", { name: "Pick their addresses" }),
+      screen.getByRole("button", { name: "Enable their addresses" }),
     );
 
     await user.type(field("demo-person"), "dana");

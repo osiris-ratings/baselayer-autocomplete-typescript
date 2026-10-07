@@ -123,8 +123,8 @@ describe("the Components fold's searches", () => {
   /** A line kind's handle, in the map or on Not shown, by its name. */
   const handle = (name: string) =>
     screen.getByRole("button", { name: new RegExp(`^(Show|Hide) ${name}$`) });
-  const pick = (name: string) =>
-    screen.getByRole("button", { name: `Pick ${name}` });
+  const enable = (name: string) =>
+    screen.getByRole("button", { name: `Enable ${name}` });
   const exported = () =>
     document.querySelector(".styling-export")!.textContent ?? "";
 
@@ -132,7 +132,7 @@ describe("the Components fold's searches", () => {
     render(<RoutedPanel start="people" />);
 
     fireEvent.click(handle("their addresses"));
-    fireEvent.click(pick("the person"));
+    fireEvent.click(enable("the person"));
 
     expect(lists()).toEqual([
       ["businesses", "addresses"],
@@ -146,8 +146,8 @@ describe("the Components fold's searches", () => {
     render(<RoutedPanel start="addresses" />);
 
     fireEvent.click(handle("people there"));
-    fireEvent.click(pick("people there"));
-    fireEvent.click(pick("businesses"));
+    fireEvent.click(enable("people there"));
+    fireEvent.click(enable("businesses"));
 
     expect(lists().slice(2)).toEqual([["businesses", "people"], ["person"]]);
   });
@@ -161,10 +161,10 @@ describe("the Components fold's searches", () => {
     }
   });
 
-  it("takes a line's pick, and its export, with the line when it leaves the row", () => {
+  it("disables a line, in the export too, when it leaves the row", () => {
     render(<RoutedPanel start="people" />);
     fireEvent.click(handle("their addresses"));
-    fireEvent.click(pick("their addresses"));
+    fireEvent.click(enable("their addresses"));
     expect(exported()).toContain('enabledLines={["business", "address"]}');
     expect(exported()).toContain("onPickEntity");
 
@@ -173,10 +173,33 @@ describe("the Components fold's searches", () => {
     expect(lists()[1]).toEqual(["business"]);
     expect(exported()).not.toContain('"address"');
     expect(exported()).not.toContain("onPickEntity");
-    // A line the row does not draw has no pick to toggle.
+    // A line the row does not draw has no toggle.
     expect(
-      screen.queryByRole("button", { name: "Pick their addresses" }),
+      screen.queryByRole("button", { name: "Enable their addresses" }),
     ).toBeNull();
+  });
+
+  it("explains the row map in one sentence, and calls its lines enabled or disabled, never picks", () => {
+    render(<RoutedPanel start="people" />);
+    fireEvent.click(handle("their addresses"));
+
+    const note = screen.getByText(/Not shown/, { selector: "p.fold-note" });
+    expect(note.textContent!.trim().split(/(?<=\.)\s+/)).toHaveLength(1);
+    expect(note.textContent).toMatch(/enable/i);
+    const said = [note, document.querySelector(".row-map-wrap")!].flatMap(
+      element => [
+        element.textContent,
+        ...[...element.querySelectorAll("[aria-label], [title]")].flatMap(
+          labelled => [
+            labelled.getAttribute("aria-label"),
+            labelled.getAttribute("title"),
+          ],
+        ),
+      ],
+    );
+    expect(said.filter(text => text !== null && /pick/i.test(text))).toEqual(
+      [],
+    );
   });
 
   it("lists a business's officers and enables them, as the other rows do", () => {
@@ -184,7 +207,7 @@ describe("the Components fold's searches", () => {
 
     expect(document.querySelector('[data-drop="titleBadge"]')).not.toBeNull();
     fireEvent.click(handle("officers and agents"));
-    fireEvent.click(pick("officers and agents"));
+    fireEvent.click(enable("officers and agents"));
 
     expect(exported()).toContain('list={["people"]}');
     expect(exported()).toContain('enabledLines={["business", "person"]}');

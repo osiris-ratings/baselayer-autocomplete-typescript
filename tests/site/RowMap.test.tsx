@@ -549,25 +549,45 @@ describe("the row map as the row's configuration", () => {
       );
     const toggles = () =>
       [
-        ...view.container.querySelectorAll<HTMLButtonElement>(".row-map-pick"),
+        ...view.container.querySelectorAll<HTMLButtonElement>(
+          ".row-map-toggle",
+        ),
       ].map(button => [
         button.getAttribute("aria-label"),
         button.getAttribute("aria-pressed"),
+        button.textContent,
       ]);
     return { view, onChange, spot, card, shown, toggles };
   }
 
-  it("keeps each line kind the row does not list in Not shown, and a pick toggle on each one it draws", () => {
+  it("keeps each line kind the row does not list in Not shown, and a toggle on each one it draws", () => {
     const { card, shown, toggles } = mountOn("businesses");
     expect(card("people")?.textContent).toContain("Officers and agents");
     expect(card("addresses")?.textContent).toContain("Addresses");
     expect(shown("people")).toBeNull();
-    expect(toggles()).toEqual([["Pick the business", "true"]]);
+    expect(toggles()).toEqual([["Enable the business", "true", "Enabled"]]);
 
     const person = mountOn("people").toggles();
     expect(person.slice(-2)).toEqual([
-      ["Pick the person", "false"],
-      ["Pick businesses", "true"],
+      ["Enable the person", "false", "Disabled"],
+      ["Enable businesses", "true", "Enabled"],
+    ]);
+  });
+
+  it("marks each drawn line enabled or disabled, as its toggle says", () => {
+    const listed = withListed(DEFAULT_STYLE, "people", "addresses", true);
+    const { view } = mountOn("people", listed);
+    const marks = [
+      ...view.container.querySelectorAll<HTMLElement>(".row-map-kind"),
+    ].map(kind => [
+      kind.dataset.relation,
+      kind.dataset.enabled,
+      kind.querySelector(".row-map-toggle")!.getAttribute("aria-pressed"),
+    ]);
+    expect(marks).toEqual([
+      ["head", "false", "false"],
+      ["businesses", "true", "true"],
+      ["addresses", "false", "false"],
     ]);
   });
 
@@ -586,7 +606,7 @@ describe("the row map as the row's configuration", () => {
     expect(again.onChange.mock.calls[0]![0].rows.businesses.list).toEqual([]);
   });
 
-  it("takes a hidden line's pick with it", () => {
+  it("disables a line that leaves the row", () => {
     const picked = withEnabled(
       withListed(DEFAULT_STYLE, "people", "addresses", true),
       "people",
@@ -617,18 +637,18 @@ describe("the row map as the row's configuration", () => {
     ]);
   });
 
-  it("toggles a drawn line's pick, the head's included", () => {
+  it("enables or disables a drawn line, the head included", () => {
     const { onChange, view } = mountOn("people");
-    const pick = (label: string) =>
+    const toggle = (label: string) =>
       view.container.querySelector<HTMLButtonElement>(
-        `.row-map-pick[aria-label="${label}"]`,
+        `.row-map-toggle[aria-label="${label}"]`,
       )!;
-    fireEvent.click(pick("Pick the person"));
+    fireEvent.click(toggle("Enable the person"));
     expect(onChange.mock.calls[0]![0].rows.people.enabled).toEqual([
       "person",
       "business",
     ]);
-    fireEvent.click(pick("Pick businesses"));
+    fireEvent.click(toggle("Enable businesses"));
     expect(onChange.mock.calls[1]![0].rows.people.enabled).toEqual([]);
   });
 
