@@ -66,8 +66,9 @@ actions:
     update:
       description: >-
         An API key of an application in your organization, from your
-        backend only. A sandbox application's key mints sessions that search
-        the sandbox's own made-up businesses.
+        backend only. A sandbox application's key mints sessions served from
+        the sandbox index once that is available on your deployment; until
+        then its mint is refused (422, code 483).
 
   - target: $.paths['/autocomplete/sessions'].post
     description: >-
@@ -155,7 +156,10 @@ actions:
             The body is malformed: `scope` names a route that does not exist,
             a relation its route's rows never carry, no route at all, or a
             `max_limit` outside 1 to 20, or the body has a key it does not
-            take. Fix the request; retrying will not help.
+            take. Fix the request; retrying will not help. On a deployment
+            that does not serve sandbox sessions yet, code 483: the key
+            belongs to a sandbox application, so use a production
+            application's key.
         "429":
           description: >-
             A session pool is spent (code 429). `metadata.scope` names it:
