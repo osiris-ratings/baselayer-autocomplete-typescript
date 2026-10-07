@@ -1,7 +1,8 @@
 // The test form's title, which says what the field searches for: "Autocomplete
-// a business · person · address". The words are tabs over the field, the
-// selected one underlined, and only the searches the session may make are
-// offered; with one, the title just names it.
+// a business · a person · an address". Each search, its article with it, is a
+// tab over the field, the selected one's noun underlined, and only the
+// searches the session may make are offered; with one, the title just names
+// it.
 
 import { Fragment, useRef, type KeyboardEvent } from "react";
 
@@ -66,14 +67,14 @@ export function SearchTitle({
     >
       <span className="demo-num">02</span>
       <span className="search-title">
-        Autocomplete {ARTICLES[route]}{" "}
+        Autocomplete{" "}
         {routes.length > 1 ? (
           <span role="tablist" aria-label="Search by" className="search-by">
             {routes.map((each, index) => (
               <Fragment key={each}>
                 {index > 0 && (
                   <span className="search-by-sep" aria-hidden="true">
-                    ·
+                    {" · "}
                   </span>
                 )}
                 <button
@@ -91,13 +92,14 @@ export function SearchTitle({
                   onClick={() => onRoute(each)}
                   onKeyDown={onKeyDown}
                 >
-                  {SEARCH_WORDS[each]}
+                  {ARTICLES[each]}{" "}
+                  <span className="search-by-noun">{SEARCH_WORDS[each]}</span>
                 </button>
               </Fragment>
             ))}
           </span>
         ) : (
-          SEARCH_WORDS[route]
+          `${ARTICLES[route]} ${SEARCH_WORDS[route]}`
         )}
       </span>
     </h2>

@@ -47,25 +47,32 @@ describe("the test form's title", () => {
       "Autocomplete a business",
     );
     const tabs = screen.getByRole("tablist", { name: "Search by" });
-    expect(tabs.textContent).toBe("business·person·address");
-    expect(selected()).toEqual(["business"]);
+    expect(
+      screen.getAllByRole("tab", { hidden: false }).map(tab => tab.textContent),
+    ).toEqual(["a business", "a person", "an address"]);
+    expect(tabs.textContent).toBe("a business · a person · an address");
+    expect(selected()).toEqual(["a business"]);
     for (const tab of screen.getAllByRole("tab")) {
       expect(tab.getAttribute("aria-controls")).toBe("panel");
     }
   });
 
-  it("takes the article its word needs", () => {
+  it("reads as a sentence whichever word is selected, each with its own article", () => {
     render(<Title />);
 
-    fireEvent.click(screen.getByRole("tab", { name: "address" }));
+    for (const [word, name] of [
+      ["a business", "Autocomplete a business"],
+      ["a person", "Autocomplete a person"],
+      ["an address", "Autocomplete an address"],
+    ] as const) {
+      fireEvent.click(screen.getByRole("tab", { name: word }));
 
-    expect(screen.getByRole("heading").getAttribute("aria-label")).toBe(
-      "Autocomplete an address",
-    );
-    expect(screen.getByRole("heading").textContent).toContain(
-      "Autocomplete an",
-    );
-    expect(selected()).toEqual(["address"]);
+      expect(screen.getByRole("heading").textContent).toBe(
+        "02Autocomplete a business · a person · an address",
+      );
+      expect(screen.getByRole("heading").getAttribute("aria-label")).toBe(name);
+      expect(selected()).toEqual([word]);
+    }
   });
 
   it("moves between the words with the arrow keys, Home and End, focus with it", () => {
@@ -77,27 +84,27 @@ describe("the test form's title", () => {
       screen.getAllByRole("tab").map(each => each.getAttribute("tabindex")),
     ).toEqual(["0", "-1", "-1"]);
 
-    tab("business").focus();
-    fireEvent.keyDown(tab("business"), { key: "ArrowRight" });
-    expect(selected()).toEqual(["person"]);
-    expect(document.activeElement).toBe(tab("person"));
+    tab("a business").focus();
+    fireEvent.keyDown(tab("a business"), { key: "ArrowRight" });
+    expect(selected()).toEqual(["a person"]);
+    expect(document.activeElement).toBe(tab("a person"));
 
-    fireEvent.keyDown(tab("person"), { key: "End" });
-    expect(selected()).toEqual(["address"]);
-    fireEvent.keyDown(tab("address"), { key: "ArrowRight" });
-    expect(selected()).toEqual(["business"]);
-    fireEvent.keyDown(tab("business"), { key: "ArrowLeft" });
-    expect(selected()).toEqual(["address"]);
-    fireEvent.keyDown(tab("address"), { key: "Home" });
-    expect(selected()).toEqual(["business"]);
-    expect(document.activeElement).toBe(tab("business"));
+    fireEvent.keyDown(tab("a person"), { key: "End" });
+    expect(selected()).toEqual(["an address"]);
+    fireEvent.keyDown(tab("an address"), { key: "ArrowRight" });
+    expect(selected()).toEqual(["a business"]);
+    fireEvent.keyDown(tab("a business"), { key: "ArrowLeft" });
+    expect(selected()).toEqual(["an address"]);
+    fireEvent.keyDown(tab("an address"), { key: "Home" });
+    expect(selected()).toEqual(["a business"]);
+    expect(document.activeElement).toBe(tab("a business"));
   });
 
   it("offers only the searches it is given, and no words at all for one", () => {
     const { unmount } = render(<Title routes={["businesses", "addresses"]} />);
     expect(screen.getAllByRole("tab").map(tab => tab.textContent)).toEqual([
-      "business",
-      "address",
+      "a business",
+      "an address",
     ]);
     unmount();
 

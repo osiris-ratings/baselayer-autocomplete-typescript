@@ -75,12 +75,12 @@ describe("searching by person or address", () => {
       within(searchBy)
         .getAllByRole("tab")
         .map(tab => tab.textContent),
-    ).toEqual(["business", "person", "address"]);
-    expect(checked("business")).toBe("true");
+    ).toEqual(["a business", "a person", "an address"]);
+    expect(checked("a business")).toBe("true");
     // The words switch the field's panel, named by the one selected.
     const panel = screen.getByRole("tabpanel");
     expect(panel.getAttribute("aria-labelledby")).toBe(
-      screen.getByRole("tab", { name: "business" }).id,
+      screen.getByRole("tab", { name: "a business" }).id,
     );
     expect(within(panel).getByRole("combobox")).toBeTruthy();
   });
@@ -88,7 +88,7 @@ describe("searching by person or address", () => {
   it("finds a business through a person, stays on Person with their name and the business under it, and names the officer in How it matched", async () => {
     const user = await connect(["businesses", "people", "addresses"]);
 
-    await user.click(screen.getByRole("tab", { name: "person" }));
+    await user.click(screen.getByRole("tab", { name: "a person" }));
     await user.type(field("demo-person"), "dana");
     const dana = await screen.findByRole("group", { name: "Dana Whitfield" });
     expect(within(dana).getByTestId("grouped-counts").textContent).toBe(
@@ -105,7 +105,7 @@ describe("searching by person or address", () => {
 
     // The pick stays where it was made: the person's name in the field, and
     // the business under it.
-    expect(checked("person")).toBe("true");
+    expect(checked("a person")).toBe("true");
     expect(field("demo-person").value).toBe("Dana Whitfield");
     expect(screen.getByTestId("grouped-selection").textContent).toBe(
       "HARBOR CONCRETE SUPPLY, INC.",
@@ -131,7 +131,7 @@ describe("searching by person or address", () => {
   it("finds a business through an address, stays on Address with the address, and names it in How it matched", async () => {
     const user = await connect(["businesses", "people", "addresses"]);
 
-    await user.click(screen.getByRole("tab", { name: "address" }));
+    await user.click(screen.getByRole("tab", { name: "an address" }));
     await user.type(field("demo-address"), "77 quill");
     // Matched by the part typing leaves whole: the typed prefix of a word is
     // a mark of its own, which jsdom names apart from the rest of the word.
@@ -145,7 +145,7 @@ describe("searching by person or address", () => {
       within(office).getByRole("option", { name: /NORTHSHORE PUMPING, LLC/ }),
     );
 
-    expect(checked("address")).toBe("true");
+    expect(checked("an address")).toBe("true");
     expect(field("demo-address").value).toBe(
       "77 Quillfeather Ln Ste 300, Dover, DE 19904",
     );
@@ -171,7 +171,7 @@ describe("searching by person or address", () => {
 
   it("lets the pick go once the field is edited", async () => {
     const user = await connect(["businesses", "people", "addresses"]);
-    await user.click(screen.getByRole("tab", { name: "person" }));
+    await user.click(screen.getByRole("tab", { name: "a person" }));
     await user.type(field("demo-person"), "dana");
     await user.click(
       await screen.findByRole("option", { name: /BAYSIDE HARBOR CONCRETE/ }),
@@ -188,7 +188,7 @@ describe("searching by person or address", () => {
 describe("a person's or an address's row, as Styling sets it", () => {
   it("lists a person's addresses, and picks one as the person's, with no search to run", async () => {
     const user = await connect(["businesses", "people", "addresses"]);
-    await user.click(screen.getByRole("tab", { name: "person" }));
+    await user.click(screen.getByRole("tab", { name: "a person" }));
     await user.click(screen.getByTestId("demo-styling-open"));
     await user.click(
       within(
@@ -226,7 +226,7 @@ describe("a person's or an address's row, as Styling sets it", () => {
 
     await user.click(screen.getByRole("tab", { name: "Address" }));
 
-    expect(checked("address")).toBe("true");
+    expect(checked("an address")).toBe("true");
     expect(
       document.querySelector('[data-drop="personTrailing"]'),
     ).not.toBeNull();
@@ -243,7 +243,7 @@ describe("Styling's sample rows", () => {
       0,
     );
 
-    await user.click(screen.getByRole("tab", { name: "person" }));
+    await user.click(screen.getByRole("tab", { name: "a person" }));
     const sample = screen.getAllByTestId("person-suggestion");
     expect(sample.length).toBeGreaterThan(1);
     expect(
@@ -251,7 +251,7 @@ describe("Styling's sample rows", () => {
     ).toBeGreaterThan(0);
     expect(screen.getByText(/Sample rows for/).textContent).toContain("dana");
 
-    await user.click(screen.getByRole("tab", { name: "address" }));
+    await user.click(screen.getByRole("tab", { name: "an address" }));
     expect(screen.getAllByTestId("address-suggestion").length).toBeGreaterThan(
       1,
     );

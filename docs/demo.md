@@ -104,12 +104,12 @@ origin. For another environment, pick **Custom URL** and give its API host.
 
 ## The test form
 
-**02 Autocomplete a business · person · address** is the component on a form of
-its own. Its title says what the field searches for, each search a word: the
-selected one underlined, the others muted and a click or an arrow key away. It
-offers only the searches the session's scope allows, and with businesses alone
-it reads **Autocomplete a business**; before you connect it offers all three, so
-Styling can show each. Business is the business name and
+**02 Autocomplete a business · a person · an address** is the component on a
+form of its own. Its title says what the field searches for, each search with
+its article: the selected one's noun underlined, the others muted and a click or
+an arrow key away. It offers only the searches the session's scope allows, and
+with businesses alone it reads **Autocomplete a business**; before you connect
+it offers all three, so Styling can show each. Business is the business name and
 its suggestions. Person and Address find the business another way: each
 person or address that fits comes with its counts (`7 businesses · 3
 addresses`), a person's first address, and a line for each of its first
