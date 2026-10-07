@@ -15,6 +15,12 @@ and a host can let the person, an address or a listed person be picked as well.
 A session is held to a scope, the searches it may make, which the mint answers
 and your backend can narrow, and the SDK never sends a request outside it.
 
+All three searches draw their rows from one model: a head, the lines it lists
+(`list`), which of them a visitor can pick (`enabledLines`), and an icon on
+each segment a host names (`iconSegments`). A business row can list its
+officers and agents and its addresses; listing nothing, it draws exactly as
+it did.
+
 Every closed value in a search's answer is now a typed union pinned to the API's
 contract, and one the SDK does not know is a `contract` error rather than kept:
 the SDK learns a value before the API sends it. A route or a relation the
@@ -114,32 +120,38 @@ release.
   `counts`, `role`, `more`.
 - The demo searches by business, person or address, offering what the
   session's scope allows, and `DEMO_API=sample pnpm demo` runs it on made-up
-  data with no network.
+  data with no network. In Styling, the row map builds each search's row: a
+  segment is dragged into a place, each line is switched Off, Visible or
+  Enabled, and a segment's icon goes on or off from its chip; the preview
+  draws the same row and the export writes its props.
 
 ### Changed
 
-- `RelatedItem` gains `address`, `states` and `domicile_state`, required as the
-  parser always fills them; a fixture that builds a related item by hand must
-  add them, null on a person or an address item.
-- `BusinessAutocompleteProps` is a union over `enabledLines` and `onPickEntity`,
-  so that a person or an address, once enabled, has somewhere to go. A wrapper
-  that takes `Omit<BusinessAutocompleteProps, …>` and spreads the rest needs an
-  `Omit` that distributes over the union (`T extends unknown ? Omit<T, K> :
-never`).
-- `ROUTES.people` and `ROUTES.addresses` are served, and their filters are
-  exactly what each serves: `{ business: { state } }` on people,
-  `{ state }` on addresses. `filterParams`, `hasFilters` and
-  `buildSuggestUrl` take the route and send only its own parameters.
-- `match`, `type`, `role`, `structure` and a source's `status` are typed
-  unions pinned to the API's contract, and an unknown value is a `contract`
-  error. A related item must be the entity its relation holds.
+- **Breaking:** `RelatedItem` gains `address`, `states` and `domicile_state`,
+  required as the parser always fills them; a fixture that builds a related item
+  by hand must add them, null on a person or an address item.
+- **Breaking:** `BusinessAutocompleteProps` is a union over `enabledLines` and
+  `onPickEntity`, so that a person or an address, once enabled, has somewhere to
+  go. A wrapper that takes `Omit<BusinessAutocompleteProps, …>` and spreads the
+  rest needs an `Omit` that distributes over the union:
+  `T extends unknown ? Omit<T, K> : never`.
+- **Breaking:** `ROUTES.people` and `ROUTES.addresses` are served, and their
+  filters are exactly what each serves: `{ business: { state } }` on people,
+  `{ state }` on addresses. `filterParams`, `hasFilters` and `buildSuggestUrl`
+  take the route and send only its own parameters.
+- **Breaking:** `match`, `type`, `role`, `structure` and a source's `status` are
+  typed unions pinned to the API's contract, and an unknown value is a
+  `contract` error. A related item must be the entity its relation holds.
+- **Breaking:** `Look` gains `disabledDim`, `AutocompleteMessages` the messages
+  for the new rows, and `SlotName` the new slots, so a complete literal of any
+  of them needs them too.
+- **Breaking:** `PersonRole` is `RelatedRole`'s `officer` and `agent`;
+  `AddressRole` is gone (use `RelatedRole`).
+- **Breaking:** every field of an address's `components` (`line1`, `line2`,
+  `city`, `state`, `postal_code`) is `string | null`: null, or absent, where the
+  filing did not carry it.
 - The hooks and components ask for 5 rows or the session's most, whichever
   is fewer, and leave out an `include` member the scope does not grant.
-- `PersonRole` is `RelatedRole`'s `officer` and `agent`; `AddressRole` is
-  gone (use `RelatedRole`).
-- Every field of an address's `components` (`line1`, `line2`, `city`,
-  `state`, `postal_code`) is `string | null`: null, or absent, where the
-  filing did not carry it.
 
 ## [0.3.0] - 2026-10-06
 
