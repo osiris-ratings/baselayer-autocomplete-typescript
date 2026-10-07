@@ -235,6 +235,28 @@ function business(
   return { type: "business", token: sampleToken(label), label, role, matched };
 }
 
+/** A slug for a sample person or address, as a token spells it. */
+function slug(label: string): string {
+  return label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+}
+
+/**
+ * A business offered under `owner`, its token pinning what it was reached
+ * through, as the autocomplete service seals it: `~officer~<person>` for an
+ * officer (an agent pins nothing), `~address~<address>` under an address.
+ */
+function pinned(set: RelatedSet, pin: (item: RelatedItem) => string | null) {
+  return {
+    ...set,
+    items: set.items.map(item => {
+      const suffix = pin(item);
+      return suffix === null
+        ? item
+        : { ...item, token: `${item.token}${suffix}` };
+    }),
+  };
+}
+
 function personRow(
   label: string,
   businesses: RelatedSet,
@@ -242,12 +264,17 @@ function personRow(
 ): PersonSuggestion {
   return {
     type: "person",
-    token: `sample-person-${label.toLowerCase().replace(/[^a-z]+/g, "-")}`,
+    token: `sample-person-${slug(label)}`,
     label,
     matched_name: null,
     match: "strong",
     highlight: highlightFor(label, queryTokens(SAMPLE_PEOPLE_QUERY)),
-    related: { businesses, addresses },
+    related: {
+      businesses: pinned(businesses, item =>
+        item.role === "officer" ? `~officer~${slug(label)}` : null,
+      ),
+      addresses,
+    },
   };
 }
 
@@ -314,13 +341,16 @@ function addressRow(
   const label = `${first}, ${city}, ${state} ${postalCode}`;
   return {
     type: "address",
-    token: `sample-address-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    token: `sample-address-${slug(label)}`,
     label,
     matched_name: null,
     match: "strong",
     highlight: highlightFor(label, queryTokens(SAMPLE_ADDRESSES_QUERY)),
     components: { line1, line2, city, state, postal_code: postalCode },
-    related: { businesses, people: NOT_REQUESTED },
+    related: {
+      businesses: pinned(businesses, () => `~address~${slug(label)}`),
+      people: NOT_REQUESTED,
+    },
   };
 }
 

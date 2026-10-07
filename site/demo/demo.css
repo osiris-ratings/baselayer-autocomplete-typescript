@@ -1765,6 +1765,46 @@
   border-color: var(--blue);
 }
 
+/* What the field searches for, above it: the side panes' switch, as a radio
+   group, offering only the searches the session's scope allows. */
+.search-by {
+  display: inline-flex;
+  gap: 2px;
+  margin-bottom: 16px;
+  padding: 3px;
+  background: var(--faded);
+  border: 1px solid var(--line-soft);
+  border-radius: 2px;
+}
+
+.search-by-option {
+  padding: 7px 14px;
+  background: none;
+  border: 0;
+  border-radius: 2px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.search-by-option:hover {
+  color: var(--ink);
+}
+
+.search-by-option[aria-checked="true"] {
+  background: var(--paper);
+  box-shadow: 0 1px 2px rgba(9, 35, 79, 0.14);
+  color: var(--ink);
+}
+
+/* Under the business name a person or address pick handed over. */
+.demo-through {
+  margin: 6px 0 0;
+}
+
 .fold-chevron[data-open="true"] {
   margin-bottom: -2px;
   transform: rotate(-135deg);

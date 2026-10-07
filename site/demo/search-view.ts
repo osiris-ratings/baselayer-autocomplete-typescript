@@ -6,9 +6,13 @@ import {
   queryTokens,
   structureLabel,
   typedPrefixLength,
+  type BusinessPick,
   type BusinessStructure,
+  type BusinessSuggestion,
   type MatchedOn,
+  type RelatedRole,
 } from "@baselayer-sdk/autocomplete";
+import type { Pick } from "@baselayer-sdk/autocomplete/react";
 
 import type {
   Address,
@@ -324,6 +328,15 @@ export interface Matched {
   states: string[];
   /** What was typed, which the report underlines where it matched. */
   typed: Typed;
+  /** The person or address the pick came through; null for a business row's. */
+  through: Through | null;
+}
+
+/** The person or address a business was picked through, and its role there. */
+export interface Through {
+  route: "people" | "addresses";
+  label: string;
+  role: RelatedRole | null;
 }
 
 export const NOTHING_MATCHED: Matched = {
@@ -333,6 +346,7 @@ export const NOTHING_MATCHED: Matched = {
   asked: [],
   states: [],
   typed: NOTHING_TYPED,
+  through: null,
 };
 
 /**
@@ -354,6 +368,7 @@ export function matchedOf(
     ),
     states: [],
     typed,
+    through: null,
   };
   for (const match of matchedOn) {
     switch (match.kind) {
@@ -374,6 +389,91 @@ export function matchedOf(
     }
   }
   return matched;
+}
+
+/** The business step 03 searches for, whichever row it was picked from. */
+export interface PickToSearch {
+  /** The business's name, as the row showed it. */
+  name: string;
+  /** Where it is registered, or what it was found through. */
+  about: string;
+  businessToken: string;
+  /** Advisory: when the token stops being redeemable. */
+  expiresAt: number;
+  matched: Matched;
+}
+
+/** A business row's pick, as step 03 searches for it. */
+export function pickFromRow(
+  suggestion: BusinessSuggestion,
+  pick: Pick,
+  asked: readonly string[],
+  typed: Typed,
+): PickToSearch {
+  return {
+    name: suggestion.label,
+    about: `Domiciled in ${suggestion.domicile_state}, registered in ${suggestion.states.join(", ")}.`,
+    businessToken: pick.businessToken,
+    expiresAt: pick.expiresAt,
+    matched: matchedOf(pick.matchedOn, asked, typed),
+  };
+}
+
+const ROLE_UNDER_PERSON: Partial<Record<RelatedRole, string>> = {
+  officer: "an officer",
+  agent: "its registered agent",
+};
+
+const ROLE_AT_ADDRESS: Record<RelatedRole, string> = {
+  principal: "its principal office",
+  mailing: "its mailing address",
+  agent: "its registered agent's office",
+  officer: "an officer's address",
+};
+
+/**
+ * A business picked through a person or an address, as step 03 searches for
+ * it: the person is the officer it matched, the address the address it did.
+ * `typed` is what was typed to find them, `asked` the states a filter named.
+ */
+export function pickThrough(
+  pick: BusinessPick,
+  { typed, asked }: { typed: string; asked: readonly string[] },
+): PickToSearch {
+  const { through } = pick;
+  const label =
+    through.route === "people" ? through.person.label : through.address.label;
+  const role =
+    through.role === null
+      ? undefined
+      : through.route === "people"
+        ? ROLE_UNDER_PERSON[through.role]
+        : ROLE_AT_ADDRESS[through.role];
+  const matchedOn: MatchedOn[] =
+    through.route === "people"
+      ? [
+          {
+            kind: through.role === "agent" ? "agent" : "officer",
+            names: [label],
+            of: null,
+          },
+        ]
+      : [{ kind: "address", label, role: null }];
+  const matched = matchedOf(matchedOn, asked, {
+    name: "",
+    person: through.route === "people" ? typed : "",
+    address: through.route === "addresses" ? typed : "",
+  });
+  return {
+    name: pick.businessName,
+    about: `${through.route === "people" ? "Found through" : "Found at"} ${label}${role === undefined ? "" : `, ${role}`}.`,
+    businessToken: pick.businessToken,
+    expiresAt: pick.expiresAt,
+    matched: {
+      ...matched,
+      through: { route: through.route, label, role: through.role },
+    },
+  };
 }
 
 /** A stretch of a found text, and whether what the visitor typed matched it. */

@@ -1,19 +1,28 @@
 import {
+  DEFAULT_SESSION_SCOPE,
+  allowedFilters,
   createAutocompleteClient,
   includeForLayout,
+  offeredRoutes,
   pickedNameOf,
+  type AddressesFilters,
   type AutocompleteClient,
-  type BusinessSuggestion,
+  type BusinessPick,
   type Filters,
+  type PeopleFilters,
+  type Route,
   type SessionPhase,
+  type SessionScope,
 } from "@baselayer-sdk/autocomplete";
 import {
+  AddressAutocomplete,
   BusinessAutocomplete,
   BusinessAutocompleteView,
+  PersonAutocomplete,
   useAutocompleteSession,
-  type Pick,
 } from "@baselayer-sdk/autocomplete/react";
 import {
+  useCallback,
   useEffect,
   useId,
   useMemo,
@@ -32,7 +41,7 @@ import { Collapsible, FOLD_MS, Field, Select } from "./controls";
 import { keyMint, readClaims } from "./credentials";
 import { useExit } from "./exit";
 import { useFocusWithin } from "./focus";
-import type { Typed } from "./search-view";
+import { pickFromRow, pickThrough, type PickToSearch } from "./search-view";
 import { NetworkLog } from "./network";
 import { NetworkCount, NetworkTimeline } from "./NetworkTimeline";
 import {
@@ -124,6 +133,42 @@ function useClient(applied: Applied | null, network: NetworkLog) {
     });
   }, [applied, network]);
 }
+
+/**
+ * What the connected session may search: its grant's scope, the first grant's
+ * until one is held, and the default before any key is applied.
+ */
+function useSessionScope(
+  client: AutocompleteClient | null,
+  applied: Applied | null,
+): SessionScope {
+  const subscribe = useCallback(
+    (onChange: () => void) =>
+      client === null ? () => {} : client.on("stateChange", onChange),
+    [client],
+  );
+  const phase = useSyncExternalStore(
+    subscribe,
+    () => client?.getSnapshot().session ?? null,
+  );
+  if (phase?.phase === "ready") {
+    return phase.grant.scope;
+  }
+  return applied?.firstGrant?.grant.scope ?? DEFAULT_SESSION_SCOPE;
+}
+
+/** What the switch above the field calls each search. */
+const SEARCH_BY_LABELS: Record<Route, string> = {
+  businesses: "Business",
+  people: "Person",
+  addresses: "Address",
+};
+
+/** The field's label in each search but the business one, which Styling sets. */
+const FIELD_LABELS: Record<Exclude<Route, "businesses">, string> = {
+  people: "Person's name",
+  addresses: "Address",
+};
 
 function useLog(client: AutocompleteClient | null): [LogLine[], () => void] {
   const [lines, setLines] = useState<LogLine[]>([]);
@@ -389,12 +434,17 @@ export function App() {
   const debugTabsId = useId();
   const [name, setName] = useState("");
   const [picked, setPicked] = useState<{
-    suggestion: BusinessSuggestion;
-    pick: Pick;
-    /** The state codes the visitor had filtered by when they picked. */
-    asked: readonly string[];
-    /** What else they had typed: the name, and the person and address filters. */
-    typed: Typed;
+    /** The business step 03 searches for. */
+    toSearch: PickToSearch;
+    /** What the pick wrote into the field: editing it lets the pick go. */
+    fill: string;
+  } | null>(null);
+  // Which search the field runs, and what a pick through a person or an
+  // address handed to the business name: shown under it until it is edited.
+  const [searchBy, setSearchBy] = useState<Route>("businesses");
+  const [reached, setReached] = useState<{
+    fill: string;
+    through: string;
   } | null>(null);
   const [person, setPerson] = useState("");
   const [states, setStates] = useState("");
@@ -414,6 +464,14 @@ export function App() {
   const apiHost = environment === "custom" ? customBase : PRODUCTION;
   const client = useClient(applied, network);
   const [log, clearLog] = useLog(client);
+  // The searches the session may offer, and the filters each may send: the
+  // switch and the filter fields show nothing the session would refuse.
+  const scope = useSessionScope(client, applied);
+  const offered = offeredRoutes(scope);
+  const mode: Route = offered.includes(searchBy) ? searchBy : "businesses";
+  const allowed = new Set(
+    allowedFilters(scope, mode).map(({ param }) => param),
+  );
 
   // When the last error happened, a refused or failed request or an error in
   // the log, against when the debug panel last showed it: the folded tab
@@ -466,19 +524,65 @@ export function App() {
     window.setTimeout(() => setCheck(result), FOLD_MS);
   };
 
+  // One field per filter, read by the search that takes it: the officer and
+  // address only by the business search, the states by all three (a
+  // business's own, a person's businesses', an address's own).
+  const showPerson = mode === "businesses" && allowed.has("person.name");
+  const showAddress = mode === "businesses" && allowed.has("address.text");
+  const showStates = allowed.has(
+    mode === "people" ? "business.state" : "state",
+  );
+  const codes = useMemo(() => parseStates(states), [states]);
   const filters: Filters | undefined = useMemo(() => {
     const f: Filters = {};
-    if (person.trim()) f.person = { name: person.trim() };
-    const codes = parseStates(states);
+    if (showPerson && person.trim()) f.person = { name: person.trim() };
     if (codes.length > 0) f.state = codes;
-    if (address.trim()) f.address = { text: address.trim() };
+    if (showAddress && address.trim()) f.address = { text: address.trim() };
     return Object.keys(f).length > 0 ? f : undefined;
-  }, [person, states, address]);
+  }, [person, codes, address, showPerson, showAddress]);
+  const peopleFilters: PeopleFilters | undefined = useMemo(
+    () =>
+      showStates && codes.length > 0
+        ? { business: { state: codes } }
+        : undefined,
+    [codes, showStates],
+  );
+  const addressFilters: AddressesFilters | undefined = useMemo(
+    () => (showStates && codes.length > 0 ? { state: codes } : undefined),
+    [codes, showStates],
+  );
   const filterCount = [
-    person.trim(),
-    parseStates(states).join(""),
-    address.trim(),
+    showPerson ? person.trim() : "",
+    showStates ? codes.join("") : "",
+    showAddress ? address.trim() : "",
   ].filter(Boolean).length;
+
+  // A business picked through a person or an address: its name goes to the
+  // business name field, the field goes back to searching businesses, and step
+  // 03 searches for it with the person or address it came through.
+  const pickedThrough = (pick: BusinessPick) => {
+    setPicked({
+      toSearch: pickThrough(pick, {
+        typed: name,
+        asked: mode === "people" ? codes : [],
+      }),
+      fill: pick.businessName,
+    });
+    setReached({
+      fill: pick.businessName,
+      through:
+        pick.through.route === "people"
+          ? pick.through.person.label
+          : pick.through.address.label,
+    });
+    setName(pick.businessName);
+    setSearchBy("businesses");
+  };
+  const editName = (value: string) => {
+    setName(value);
+    if (picked !== null && value !== picked.fill) setPicked(null);
+    if (reached !== null && value !== reached.fill) setReached(null);
+  };
 
   // The third step is for the pick it was made from: when the name or a filter
   // changes the pick goes, and the step closes up before it is taken away. It
@@ -503,7 +607,7 @@ export function App() {
 
   const label = (
     <>
-      {style.label}
+      {mode === "businesses" ? style.label : FIELD_LABELS[mode]}
       <span className="field-required" aria-hidden="true">
         *
       </span>
@@ -691,6 +795,27 @@ export function App() {
                 />
               </button>
             </div>
+            {offered.length > 1 && (
+              <div
+                className="search-by"
+                role="radiogroup"
+                aria-label="Search by"
+                data-testid="demo-search-by"
+              >
+                {offered.map(route => (
+                  <button
+                    key={route}
+                    type="button"
+                    role="radio"
+                    aria-checked={mode === route}
+                    className="search-by-option"
+                    onClick={() => setSearchBy(route)}
+                  >
+                    {SEARCH_BY_LABELS[route]}
+                  </button>
+                ))}
+              </div>
+            )}
             <div
               id="demo-filters"
               className="filters-panel"
@@ -698,7 +823,13 @@ export function App() {
               {...filterFocus}
             >
               <p className="hint" data-testid="demo-filters-hint">
-                Filters apply once the business name has{" "}
+                Filters apply once the{" "}
+                {mode === "businesses"
+                  ? "business name"
+                  : mode === "people"
+                    ? "person's name"
+                    : "address"}{" "}
+                has{" "}
                 {client === null ? (
                   "enough characters to narrow by"
                 ) : (
@@ -708,43 +839,51 @@ export function App() {
                 filter narrows the list, and the row says which one it matched:
                 the officer or the address is marked, a state on its flag.
               </p>
-              <Field label="Officer or agent name" optional>
-                <input
-                  value={person}
-                  onChange={e => {
-                    setPerson(e.target.value);
-                    setPicked(null);
-                  }}
-                  placeholder="dana"
-                  autoComplete="off"
-                />
-              </Field>
-              <Field
-                label="States"
-                optional
-                hint="Two-letter codes, separated by commas."
-              >
-                <input
-                  value={states}
-                  onChange={e => {
-                    setStates(e.target.value);
-                    setPicked(null);
-                  }}
-                  placeholder="PA, OH"
-                  autoComplete="off"
-                />
-              </Field>
-              <Field label="Address" optional>
-                <input
-                  value={address}
-                  onChange={e => {
-                    setAddress(e.target.value);
-                    setPicked(null);
-                  }}
-                  placeholder="1200 River Rd"
-                  autoComplete="off"
-                />
-              </Field>
+              {showPerson && (
+                <Field label="Officer or agent name" optional>
+                  <input
+                    value={person}
+                    onChange={e => {
+                      setPerson(e.target.value);
+                      setPicked(null);
+                    }}
+                    placeholder="dana"
+                    autoComplete="off"
+                  />
+                </Field>
+              )}
+              {showStates && (
+                <Field
+                  label={
+                    mode === "people" ? "Their businesses' states" : "States"
+                  }
+                  optional
+                  hint="Two-letter codes, separated by commas."
+                >
+                  <input
+                    value={states}
+                    onChange={e => {
+                      setStates(e.target.value);
+                      setPicked(null);
+                    }}
+                    placeholder="PA, OH"
+                    autoComplete="off"
+                  />
+                </Field>
+              )}
+              {showAddress && (
+                <Field label="Address" optional>
+                  <input
+                    value={address}
+                    onChange={e => {
+                      setAddress(e.target.value);
+                      setPicked(null);
+                    }}
+                    placeholder="1200 River Rd"
+                    autoComplete="off"
+                  />
+                </Field>
+              )}
             </div>
             <div
               className="demo-preview"
@@ -770,45 +909,101 @@ export function App() {
                 </div>
               ) : (
                 <>
-                  <BusinessAutocomplete
-                    key={applied?.id}
-                    client={client}
-                    id="demo-business"
-                    label={label}
-                    value={name}
-                    onChange={value => {
-                      setName(value);
-                      if (
-                        picked !== null &&
-                        value !== pickedNameOf(picked.suggestion)
-                      )
-                        setPicked(null);
-                    }}
-                    onPick={(suggestion, pick) =>
-                      setPicked({
-                        suggestion,
-                        pick,
-                        asked: filters?.state ?? [],
-                        // The field holds the pick's fill by now; the closure
-                        // still holds what was typed to find it.
-                        typed: { name, person, address },
-                      })
-                    }
-                    look={{ ...changedLook(style) }}
-                    limit={style.limit}
-                    minChars={style.minChars}
-                    debounceMs={style.debounceMs}
-                    mintOn={style.mintOn}
-                    menuFollowsInputWidth={style.menuFollowsInputWidth}
-                    messages={messages}
-                    unstyled={style.unstyled}
-                    open={styling || filtering}
-                    layout={style.layout}
-                    {...(style.pageInput
-                      ? { classNames: { input: "demo-input" } }
-                      : {})}
-                    {...(filters !== undefined ? { filters } : {})}
-                  />
+                  {mode === "businesses" ? (
+                    <BusinessAutocomplete
+                      key={`${applied?.id}:businesses`}
+                      client={client}
+                      id="demo-business"
+                      label={label}
+                      value={name}
+                      onChange={editName}
+                      // The name a person or address pick handed over is not
+                      // searched until it is edited: it is already picked.
+                      enabled={reached === null || name !== reached.fill}
+                      onPick={(suggestion, pick) =>
+                        setPicked({
+                          toSearch: pickFromRow(
+                            suggestion,
+                            pick,
+                            filters?.state ?? [],
+                            // The field holds the pick's fill by now; the
+                            // closure still holds what was typed to find it.
+                            { name, person, address },
+                          ),
+                          fill: pickedNameOf(suggestion),
+                        })
+                      }
+                      look={{ ...changedLook(style) }}
+                      limit={style.limit}
+                      minChars={style.minChars}
+                      debounceMs={style.debounceMs}
+                      mintOn={style.mintOn}
+                      menuFollowsInputWidth={style.menuFollowsInputWidth}
+                      messages={messages}
+                      unstyled={style.unstyled}
+                      open={styling || filtering}
+                      layout={style.layout}
+                      {...(style.pageInput
+                        ? { classNames: { input: "demo-input" } }
+                        : {})}
+                      {...(filters !== undefined ? { filters } : {})}
+                    />
+                  ) : mode === "people" ? (
+                    <PersonAutocomplete
+                      key={`${applied?.id}:people`}
+                      client={client}
+                      id="demo-person"
+                      label={label}
+                      value={name}
+                      onChange={editName}
+                      onPick={pickedThrough}
+                      look={{ ...changedLook(style) }}
+                      limit={style.limit}
+                      minChars={style.minChars}
+                      debounceMs={style.debounceMs}
+                      mintOn={style.mintOn}
+                      menuFollowsInputWidth={style.menuFollowsInputWidth}
+                      messages={messages}
+                      unstyled={style.unstyled}
+                      open={styling || filtering}
+                      {...(style.pageInput
+                        ? { classNames: { input: "demo-input" } }
+                        : {})}
+                      {...(peopleFilters !== undefined
+                        ? { filters: peopleFilters }
+                        : {})}
+                    />
+                  ) : (
+                    <AddressAutocomplete
+                      key={`${applied?.id}:addresses`}
+                      client={client}
+                      id="demo-address"
+                      label={label}
+                      value={name}
+                      onChange={editName}
+                      onPick={pickedThrough}
+                      look={{ ...changedLook(style) }}
+                      limit={style.limit}
+                      minChars={style.minChars}
+                      debounceMs={style.debounceMs}
+                      mintOn={style.mintOn}
+                      menuFollowsInputWidth={style.menuFollowsInputWidth}
+                      messages={messages}
+                      unstyled={style.unstyled}
+                      open={styling || filtering}
+                      {...(style.pageInput
+                        ? { classNames: { input: "demo-input" } }
+                        : {})}
+                      {...(addressFilters !== undefined
+                        ? { filters: addressFilters }
+                        : {})}
+                    />
+                  )}
+                  {reached !== null && name === reached.fill && (
+                    <p className="hint demo-through" data-testid="demo-through">
+                      via {reached.through}
+                    </p>
+                  )}
                 </>
               )}
               {styling && name.trim() === "" && (
@@ -877,7 +1072,7 @@ export function App() {
             <div className="step-exit-inner">
               {shownStep !== null && (
                 <SearchStep
-                  key={`${shownStep.applied.id}:${shownStep.picked.pick.businessToken}:${shownStep.picked.pick.pickedAt}`}
+                  key={`${shownStep.applied.id}:${shownStep.picked.toSearch.businessToken}:${shownStep.picked.toSearch.expiresAt}`}
                   apiKey={shownStep.applied.secret}
                   baseUrl={shownStep.applied.baseUrl}
                   // The host the applied connection reaches, not the form's:
@@ -887,7 +1082,7 @@ export function App() {
                       ? shownStep.applied.baseUrl
                       : PRODUCTION
                   }
-                  picked={shownStep.picked}
+                  picked={shownStep.picked.toSearch}
                   fetchImpl={network.fetch}
                   onShowDebug={showDebug}
                 />

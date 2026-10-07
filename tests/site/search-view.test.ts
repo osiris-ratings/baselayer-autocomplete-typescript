@@ -664,6 +664,7 @@ const pickMatched = {
     person: "thomas harl",
     address: "535 mission street",
   },
+  through: null,
 };
 
 describe("matchedOf", () => {
@@ -691,6 +692,7 @@ describe("matchedOf", () => {
       asked: ["NY", "DE", "AL"],
       states: ["DE", "NY"],
       typed: { name: "base", person: "thom", address: "535 mission" },
+      through: null,
     });
   });
 

@@ -724,6 +724,15 @@ export function SearchResult({
             </tbody>
           </table>
           <p className="sr-caption">
+            {matched.through !== null && (
+              <>
+                Picked from the businesses{" "}
+                {matched.through.route === "people"
+                  ? `of ${matched.through.label}`
+                  : `at ${matched.through.label}`}
+                .{" "}
+              </>
+            )}
             A picked business is searched by its token alone, so the name,
             address and officer come from the pick and match themselves; the
             states are the filter&apos;s, set against the business&apos;s

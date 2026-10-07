@@ -168,6 +168,7 @@ describe("the report for a pick a filter reached", () => {
       person: "dana",
       address: "535 mission street",
     },
+    through: null,
   };
   const markup = renderToStaticMarkup(
     <SearchResult search={search} elapsedMs={null} matched={matched} />,

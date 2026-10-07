@@ -6,7 +6,12 @@ import {
 } from "@baselayer-sdk/autocomplete";
 
 import { readClaims } from "../../site/demo/credentials";
-import { SAMPLE_SUGGESTIONS, sampleToken } from "../../site/demo/sample";
+import {
+  SAMPLE_ADDRESSES,
+  SAMPLE_PEOPLE,
+  SAMPLE_SUGGESTIONS,
+  sampleToken,
+} from "../../site/demo/sample";
 import { answerSample } from "../../site/demo/sample-api";
 import { parseSearch } from "../../site/demo/searches";
 
@@ -185,6 +190,42 @@ describe("the made-up API's business search", () => {
     expect(found?.business?.business_officers?.map(o => o.name)).toContain(
       "GRACE ODUYA",
     );
+  });
+
+  it("records the officer a person row's token pins, as the API does", () => {
+    const dana = SAMPLE_PEOPLE.find(row => row.label === "Dana Whitfield")!;
+    const supply = dana.related.businesses.items.find(
+      item => item.label === "HARBOR CONCRETE SUPPLY, INC.",
+    )!;
+    const found = parseSearch(search(supply.token!).body);
+
+    expect(found?.name).toBe("HARBOR CONCRETE SUPPLY, INC.");
+    expect(found?.officer_names).toEqual(["DANA WHITFIELD"]);
+    expect(found?.business?.business_officers?.map(o => o.name)).toContain(
+      "DANA WHITFIELD",
+    );
+  });
+
+  it("pins no officer through a registered agent", () => {
+    const meridian = SAMPLE_PEOPLE.find(row =>
+      row.label.startsWith("Meridian"),
+    )!;
+    const [northshore] = meridian.related.businesses.items;
+
+    expect(parseSearch(search(northshore!.token!).body)?.officer_names).toBe(
+      undefined,
+    );
+  });
+
+  it("records the address an address row's token pins, as the API does", () => {
+    const office = SAMPLE_ADDRESSES.find(
+      row => row.components.city === "Dover",
+    )!;
+    const [northshore] = office.related.businesses.items;
+    const found = parseSearch(search(northshore!.token!).body);
+
+    expect(found?.name).toBe("NORTHSHORE PUMPING, LLC");
+    expect(found?.address).toBe("77 QUILLFEATHER LN STE 300, DOVER, DE 19904");
   });
 
   it("refuses a token it never sealed, as the API does", () => {

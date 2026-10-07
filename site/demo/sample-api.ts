@@ -131,6 +131,30 @@ const BUSINESS_BY_TOKEN = new Map(
   SAMPLE_SUGGESTIONS.map(row => [row.token, row]),
 );
 
+/** The sample business a token names, whatever it pins. */
+function businessOf(token: string): BusinessSuggestion | undefined {
+  return BUSINESS_BY_TOKEN.get(token.split("~")[0] ?? "");
+}
+
+/**
+ * What a token pins, as the API records it on the search: the officer a
+ * person row's business was reached through, or the address.
+ */
+function pinOf(token: string): { officer?: string; address?: string } {
+  const [, kind, slug] = token.split("~");
+  const match = (label: string) =>
+    label.toLowerCase().replace(/[^a-z0-9]+/g, "-") === slug;
+  if (kind === "officer") {
+    const person = SAMPLE_PEOPLE.find(row => match(row.label));
+    return person === undefined ? {} : { officer: person.label };
+  }
+  if (kind === "address") {
+    const address = SAMPLE_ADDRESSES.find(row => match(row.label));
+    return address === undefined ? {} : { address: address.label };
+  }
+  return {};
+}
+
 /** A set's items, those `matches` holds marked, and how many matched. */
 function marked(
   set: RelatedSet,
@@ -181,7 +205,7 @@ function rowsFor(
         row => {
           if (states.length === 0) return [row];
           const businesses = marked(row.related.businesses, item =>
-            (BUSINESS_BY_TOKEN.get(item.token ?? "")?.states ?? []).some(s =>
+            (businessOf(item.token ?? "")?.states ?? []).some(s =>
               states.includes(s),
             ),
           );
@@ -303,9 +327,21 @@ function addressOf(label: string): Address {
  * business it is of, and for any other its name, its domicile, and the people
  * and addresses the sample rows tie to it.
  */
-function searchOf(row: BusinessSuggestion): Search {
+function searchOf(row: BusinessSuggestion, token: string): Search {
+  const pin = pinOf(token);
+  const pinned: Partial<Search> = {
+    ...(pin.officer !== undefined
+      ? { officer_names: [pin.officer.toUpperCase()] }
+      : {}),
+    ...(pin.address !== undefined
+      ? {
+          address: pin.address.toUpperCase(),
+          search_address: addressOf(pin.address),
+        }
+      : {}),
+  };
   if (row.label === SAMPLE_SEARCH.name) {
-    return SAMPLE_SEARCH;
+    return { ...SAMPLE_SEARCH, ...pinned };
   }
   const officers = [
     ...row.related.people.items
@@ -313,7 +349,7 @@ function searchOf(row: BusinessSuggestion): Search {
       .map(item => item.label),
     ...SAMPLE_PEOPLE.filter(person =>
       person.related.businesses.items.some(
-        item => item.token === row.token && item.role === "officer",
+        item => businessOf(item.token ?? "") === row && item.role === "officer",
       ),
     ).map(person => person.label),
   ].map(name => name.toUpperCase());
@@ -321,7 +357,9 @@ function searchOf(row: BusinessSuggestion): Search {
   const labels = [
     ...row.related.addresses.items.map(item => item.label),
     ...SAMPLE_ADDRESSES.filter(address =>
-      address.related.businesses.items.some(item => item.token === row.token),
+      address.related.businesses.items.some(
+        item => businessOf(item.token ?? "") === row,
+      ),
     ).map(address => address.label),
   ];
   const addresses = [...new Set(labels)].map(addressOf);
@@ -375,6 +413,7 @@ function searchOf(row: BusinessSuggestion): Search {
         sources: ["SOS"],
       })),
     },
+    ...pinned,
   };
 }
 
@@ -386,16 +425,15 @@ function search(request: SampleRequest): SampleReply {
   } catch {
     token = null;
   }
-  const row =
-    typeof token === "string" ? BUSINESS_BY_TOKEN.get(token) : undefined;
-  if (row === undefined) {
+  const row = typeof token === "string" ? businessOf(token) : undefined;
+  if (typeof token !== "string" || row === undefined) {
     return refusal(
       422,
       3040,
       "This business token was not sealed for your organization.",
     );
   }
-  return { status: 201, body: searchOf(row) };
+  return { status: 201, body: searchOf(row, token) };
 }
 
 /** The made-up API's answer to a request, or null for a path it does not serve. */
