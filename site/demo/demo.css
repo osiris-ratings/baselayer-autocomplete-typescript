@@ -1021,19 +1021,33 @@
    aligned left, like the search report's tables. */
 .row-map-reads {
   width: 100%;
-  margin-top: 12px;
+  margin-top: 6px;
   border-collapse: collapse;
   font-size: 12px;
 }
 
-.row-map-reads caption {
-  padding-bottom: 6px;
+/* Out of the way until asked for: a small label that opens it. */
+.row-map-reads-fold {
+  margin-top: 12px;
+}
+
+.row-map-reads-fold summary {
+  width: fit-content;
   color: var(--muted);
   font-family: var(--mono);
   font-size: 11px;
   letter-spacing: 0.08em;
-  text-align: left;
   text-transform: uppercase;
+  cursor: pointer;
+}
+
+.row-map-reads-fold summary:hover {
+  color: var(--ink);
+}
+
+.row-map-reads-fold summary:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
 }
 
 .row-map-reads th,

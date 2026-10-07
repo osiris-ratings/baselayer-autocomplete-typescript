@@ -742,29 +742,31 @@ function KindRowMap<P extends string, F extends string>({
           ))
         )}
       </div>
-      <table className="row-map-reads">
-        <caption>What each field reads</caption>
-        <thead>
-          <tr>
-            <th scope="col">Field</th>
-            <th scope="col">From the autocomplete service&apos;s answer</th>
-          </tr>
-        </thead>
-        <tbody>
-          {editor.kind.fields
-            .filter(field => shownFields.has(field))
-            .map(field => (
-              <tr key={field} data-field={field}>
-                <th scope="row">{editor.fieldLabels[field]}</th>
-                <td>
-                  {editor.fieldWire[field].map(source => (
-                    <code key={source}>{source}</code>
-                  ))}
-                </td>
-              </tr>
-            ))}
-        </tbody>
-      </table>
+      <details className="row-map-reads-fold">
+        <summary>What each field reads</summary>
+        <table className="row-map-reads">
+          <thead>
+            <tr>
+              <th scope="col">Field</th>
+              <th scope="col">From the autocomplete service&apos;s answer</th>
+            </tr>
+          </thead>
+          <tbody>
+            {editor.kind.fields
+              .filter(field => shownFields.has(field))
+              .map(field => (
+                <tr key={field} data-field={field}>
+                  <th scope="row">{editor.fieldLabels[field]}</th>
+                  <td>
+                    {editor.fieldWire[field].map(source => (
+                      <code key={source}>{source}</code>
+                    ))}
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      </details>
       {moving !== null &&
         createPortal(
           <Ghost

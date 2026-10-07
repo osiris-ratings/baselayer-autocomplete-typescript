@@ -427,6 +427,18 @@ describe("the Components fold's row", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it("keeps what each field reads behind a disclosure, closed until opened", () => {
+    const { view } = mount();
+    const disclosure = view.container.querySelector("details")!;
+    const summary = disclosure.querySelector("summary")!;
+
+    expect(summary.textContent).toBe("What each field reads");
+    expect(disclosure.open).toBe(false);
+    expect(disclosure.querySelector("table.row-map-reads")).not.toBeNull();
+    fireEvent.click(summary);
+    expect(disclosure.open).toBe(true);
+  });
+
   it("gives an empty place no handle: all of it is the dropdown", () => {
     const { spot } = mount();
     expect(spot("subtitleBadge").querySelector(".row-map-handle")).toBeNull();

@@ -63,6 +63,8 @@ describe("the Components fold's row, laid out", () => {
 
   it("lists the wire fields each field reads, in a table with its headings at the left", () => {
     const { host, done } = mount();
+    // Laid out once its disclosure is opened.
+    host.querySelector("details")!.open = true;
     const table = host.querySelector<HTMLElement>(".row-map-reads")!;
     const rows = [...table.querySelectorAll<HTMLElement>("tbody tr")];
 
