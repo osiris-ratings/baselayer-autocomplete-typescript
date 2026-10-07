@@ -8,9 +8,10 @@ import {
   ADDRESS_ROW,
   BUSINESS_ROW,
   BUSINESS_STRUCTURES,
+  DEFAULT_ENABLED_LINES,
+  DEFAULT_ICON_SEGMENTS,
   DEFAULT_LIST,
   DEFAULT_LOOK,
-  DEFAULT_ENABLED_LINES,
   ENTITY_OF,
   PERSON_ROW,
   ROUTES,
@@ -25,6 +26,7 @@ import {
   type BusinessRowLayout,
   type BusinessRowPlace,
   type EntityType,
+  type IconSegmentByRoute,
   type IncludeOf,
   type LayoutOf,
   type Look,
@@ -280,6 +282,8 @@ export interface RowState<R extends Route, L> {
   list: IncludeOf<R>[];
   /** The lines a visitor can choose: the head, and the lines' entities (`enabledLines`). */
   enabled: EntityType[];
+  /** The segments drawn with their icon (`iconSegments`). */
+  iconSegments: IconSegmentByRoute[R][];
 }
 
 /** Each search's row. */
@@ -320,16 +324,19 @@ export const DEFAULT_STYLE: StyleState = {
       layout: resolveLayout(BUSINESS_ROW),
       list: [...DEFAULT_LIST.businesses] as IncludeOf<"businesses">[],
       enabled: [...DEFAULT_ENABLED_LINES],
+      iconSegments: [...DEFAULT_ICON_SEGMENTS.businesses],
     },
     people: {
       layout: resolveLayout(PERSON_ROW),
       list: [...DEFAULT_LIST.people] as IncludeOf<"people">[],
       enabled: [...DEFAULT_ENABLED_LINES],
+      iconSegments: [...DEFAULT_ICON_SEGMENTS.people],
     },
     addresses: {
       layout: resolveLayout(ADDRESS_ROW),
       list: [...DEFAULT_LIST.addresses] as IncludeOf<"addresses">[],
       enabled: [...DEFAULT_ENABLED_LINES],
+      iconSegments: [...DEFAULT_ICON_SEGMENTS.addresses],
     },
   },
   vars: Object.fromEntries(
@@ -877,25 +884,106 @@ export function withLineState<R extends Route>(
     : withEnabled(listed, route, kind.entity, to === "enabled");
 }
 
+/** The entity a segment names, whose glyph its icon draws. */
+export const SEGMENT_ENTITY: {
+  readonly [R in Route]: Readonly<Record<IconSegmentByRoute[R], EntityType>>;
+} = {
+  businesses: {
+    name: "business",
+    address: "address",
+    people: "person",
+    personName: "person",
+    addressName: "address",
+  },
+  people: {
+    name: "person",
+    firstAddress: "address",
+    businessName: "business",
+    address: "address",
+    addressName: "address",
+  },
+  addresses: {
+    name: "address",
+    businessName: "business",
+    address: "address",
+    personName: "person",
+  },
+};
+
+/** The entity a segment of a search's row names. */
+export function segmentEntity(route: Route, segment: string): EntityType {
+  const entities: Readonly<Record<string, EntityType>> = SEGMENT_ENTITY[route];
+  return entities[segment]!;
+}
+
+/**
+ * The segment a line's name is, when an icon can ride on it: the head's is
+ * `name`, a listed line's its line's (`businessName`).
+ */
+export function nameSegment<R extends Route>(
+  route: R,
+  relation: Relation | null,
+  line: string,
+): IconSegmentByRoute[R] | null {
+  const segment = relation === null ? "name" : `${line}Name`;
+  const segments: readonly string[] = ROW_KINDS[route].iconSegments;
+  return segments.includes(segment) ? (segment as IconSegmentByRoute[R]) : null;
+}
+
+/** The segment a field is, when an icon can ride on it. */
+export function fieldSegment<R extends Route>(
+  route: R,
+  field: string,
+): IconSegmentByRoute[R] | null {
+  const segments: readonly string[] = ROW_KINDS[route].iconSegments;
+  return segments.includes(field) ? (field as IconSegmentByRoute[R]) : null;
+}
+
+/**
+ * The state with a segment drawn with its icon on a search's rows, or not, in
+ * the order the row's kind names its segments.
+ */
+export function withIconSegment<R extends Route>(
+  state: StyleState,
+  route: R,
+  segment: IconSegmentByRoute[R],
+  on: boolean,
+): StyleState {
+  const row: RowStates[R] = state.rows[route];
+  const segments: readonly string[] = row.iconSegments;
+  if (segments.includes(segment) === on) return state;
+  const order: readonly string[] = ROW_KINDS[route].iconSegments;
+  return withRow(state, route, {
+    ...row,
+    iconSegments: order.filter(each =>
+      each === segment ? on : segments.includes(each),
+    ) as IconSegmentByRoute[R][],
+  });
+}
+
 /**
  * What each search's component is handed for its row, as a host writes it:
- * the layout, the relations listed under each row, and the lines enabled.
+ * the layout, the relations listed under each row, the lines enabled, and
+ * the segments drawn with their icon.
  */
 export interface ComponentProps {
   businesses: {
     layout: BusinessRowLayout;
     list: IncludeOf<"businesses">[];
     enabledLines: EntityType[];
+    iconSegments: IconSegmentByRoute["businesses"][];
   };
   people: {
     layout: PersonRowLayout;
     list: IncludeOf<"people">[];
     enabledLines: EntityType[];
+    iconSegments: IconSegmentByRoute["people"][];
   };
   addresses: {
     layout: AddressRowLayout;
     list: IncludeOf<"addresses">[];
     enabledLines: EntityType[];
+    iconSegments: IconSegmentByRoute["addresses"][];
   };
 }
 
@@ -908,8 +996,13 @@ export function componentProps<R extends Route>(
   state: StyleState,
   route: R,
 ): ComponentProps[R] {
-  const { layout, list, enabled } = state.rows[route];
-  return { layout, list, enabledLines: enabled } as ComponentProps[R];
+  const { layout, list, enabled, iconSegments } = state.rows[route];
+  return {
+    layout,
+    list,
+    enabledLines: enabled,
+    iconSegments,
+  } as ComponentProps[R];
 }
 
 /** The preview's stylesheet: the changed variables, on the demo's component only. */
@@ -959,15 +1052,17 @@ export function changedRowLayout(
 
 /**
  * How many things the Components fold changed, on every search's row: the
- * places the map draws, what each row lists and which of its lines are enabled.
+ * places the map draws, what each row lists, which of its lines are enabled
+ * and which segments carry an icon.
  */
 export function componentChanges(state: StyleState): number {
   const routes: Route[] = ["businesses", "people", "addresses"];
   return routes.reduce((count, route) => {
-    const { list, enabledLines } = componentProps(state, route);
+    const { list, enabledLines, iconSegments } = componentProps(state, route);
     const lists: [readonly string[], readonly string[]][] = [
       [list, DEFAULT_LIST[route]],
       [enabledLines, DEFAULT_ENABLED_LINES],
+      [iconSegments, DEFAULT_ICON_SEGMENTS[route]],
     ];
     return (
       count +
@@ -1047,10 +1142,11 @@ export function exportCode(
   // What the row lists and which lines are enabled, as the component is handed
   // them; an enabled line that is not a business needs somewhere for its pick
   // to go.
-  const { list, enabledLines } = componentProps(state, route);
+  const { list, enabledLines, iconSegments } = componentProps(state, route);
   props.push(
     ...listProp("list", list, DEFAULT_LIST[route]),
     ...listProp("enabledLines", enabledLines, DEFAULT_ENABLED_LINES),
+    ...listProp("iconSegments", iconSegments, DEFAULT_ICON_SEGMENTS[route]),
   );
   if (enabledLines.some(type => type !== "business")) {
     props.push("onPickEntity={pick => …}");

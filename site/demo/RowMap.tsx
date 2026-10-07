@@ -5,7 +5,13 @@
 // fields the row leaves out; each place's chevron is a dropdown of what it can
 // show. Pointer events, so a mouse and a finger drag the same way.
 
-import type { LayoutOf, Relation, Route } from "@baselayer-sdk/autocomplete";
+import type {
+  EntityType,
+  IconSegmentByRoute,
+  LayoutOf,
+  Relation,
+  Route,
+} from "@baselayer-sdk/autocomplete";
 import {
   useEffect,
   useLayoutEffect,
@@ -19,6 +25,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { SegmentIcon } from "../../src/react/icons";
+
 import {
   ADDRESS_EDITOR,
   BUSINESS_EDITOR,
@@ -28,7 +36,11 @@ import {
   editorOps,
   lineFields,
   lineKinds,
+  fieldSegment,
   lineState,
+  nameSegment,
+  segmentEntity,
+  withIconSegment,
   withLineState,
   type LineKind,
   type LineState,
@@ -345,6 +357,11 @@ export function RowMap({
     stateOf: (kind: LineKind) => lineState(state, route, kind),
     onLine: (kind: LineKind, to: LineState) =>
       onChange(withLineState(state, route, kind, to)),
+    iconSegments: state.rows[route].iconSegments as readonly string[],
+    onIcon: (segment: string, on: boolean) =>
+      onChange(
+        withIconSegment(state, route, segment as IconSegmentByRoute[Route], on),
+      ),
     colors: rowMapColors(state),
   };
   switch (route) {
@@ -508,11 +525,59 @@ function LineSwitch({
   );
 }
 
+/** The map has no row to read a role off, so a segment draws its entity's glyph. */
+const NO_ROLE = null;
+
+/**
+ * A segment's icon, as a toggle at the start of its chip: the glyph the
+ * segment draws, solid when it carries it and faint when not.
+ */
+function IconToggle({
+  segment,
+  label,
+  entity,
+  on,
+  frozen,
+  onToggle,
+}: {
+  segment: string;
+  label: string;
+  entity: EntityType;
+  on: boolean;
+  frozen: boolean;
+  onToggle(on: boolean): void;
+}) {
+  return (
+    <button
+      type="button"
+      className="row-map-icon"
+      data-segment={segment}
+      aria-pressed={on}
+      aria-label={`Icon on ${label}`}
+      title={`${label}: ${on ? "drawn with its icon" : "drawn with no icon"} (iconSegments)`}
+      disabled={frozen}
+      // A press here is the toggle's, not the start of the field's drag.
+      onPointerDown={event => event.stopPropagation()}
+      onMouseDown={event => event.stopPropagation()}
+      onClick={() => onToggle(!on)}
+    >
+      <SegmentIcon
+        icons={undefined}
+        entity={entity}
+        role={NO_ROLE}
+        className="row-map-icon-glyph"
+      />
+    </button>
+  );
+}
+
 function KindRowMap<P extends string, F extends string>({
   editor,
   route,
   stateOf,
   onLine,
+  iconSegments,
+  onIcon,
   layout,
   onLayout,
   colors,
@@ -522,6 +587,9 @@ function KindRowMap<P extends string, F extends string>({
   /** How the row draws each of its line kinds. */
   stateOf(kind: LineKind): LineState;
   onLine(kind: LineKind, to: LineState): void;
+  /** The segments drawn with their icon. */
+  iconSegments: readonly string[];
+  onIcon(segment: string, on: boolean): void;
   layout: LayoutOf<P, F>;
   onLayout(layout: LayoutOf<P, F>): void;
   colors: CSSProperties;
@@ -573,10 +641,12 @@ function KindRowMap<P extends string, F extends string>({
     // second line's right with no lead.
     const closed = options.length === 1;
     const held = field !== null && !frozen.has(spot);
+    const segment = field === null ? null : fieldSegment(route, field);
     return (
       <span
         className="row-map-place"
         data-drop={spot}
+        data-icon={segment !== null || undefined}
         data-field={choice}
         data-badge={badge || undefined}
         data-trailing={trailing || undefined}
@@ -595,6 +665,16 @@ function KindRowMap<P extends string, F extends string>({
             // The grab cursor and the finger's hold; the place takes the press.
             // The dropdown does the same, from a keyboard too.
             aria-hidden="true"
+          />
+        )}
+        {segment !== null && field !== null && (
+          <IconToggle
+            segment={segment}
+            label={editor.fieldLabels[field]}
+            entity={segmentEntity(route, segment)}
+            on={iconSegments.includes(segment)}
+            frozen={frozen.has(spot)}
+            onToggle={on => onIcon(segment, on)}
           />
         )}
         <span className="row-map-face" aria-hidden="true">
@@ -660,36 +740,52 @@ function KindRowMap<P extends string, F extends string>({
                 />
               </span>
               <div className="row-map-kind-lines">
-                {kind.lines.map(({ line, lead, trailing }) => (
-                  <div key={line} className="row-map-line">
-                    {lead.field === null ? (
-                      // A line is the entity it names, so its name always shows.
-                      <span className="row-map-slot">
-                        <button
-                          type="button"
-                          className="row-map-name"
-                          disabled
-                          title="The name, always shown"
+                {kind.lines.map(({ line, lead, trailing }) => {
+                  const segment = nameSegment(route, relation, line);
+                  return (
+                    <div key={line} className="row-map-line">
+                      {lead.field === null ? (
+                        // A line is the entity it names, so its name always shows.
+                        <span
+                          className="row-map-slot"
+                          data-icon={segment !== null || undefined}
                         >
-                          <span className="row-map-name-long">
-                            {editor.lineNames[line]?.long}
-                          </span>
-                          <span className="row-map-name-short">
-                            {editor.lineNames[line]?.short}
-                          </span>
-                        </button>
-                      </span>
-                    ) : (
-                      place(lead.field as P)
-                    )}
-                    {place(lead.badge as P, { badge: true })}
-                    {place(trailing.badge as P, {
-                      badge: true,
-                      trailing: true,
-                    })}
-                    {place(trailing.field as P)}
-                  </div>
-                ))}
+                          {segment !== null && (
+                            <IconToggle
+                              segment={segment}
+                              label={editor.lineNames[line]?.long ?? ""}
+                              entity={segmentEntity(route, segment)}
+                              on={iconSegments.includes(segment)}
+                              frozen={value === "off"}
+                              onToggle={on => onIcon(segment, on)}
+                            />
+                          )}
+                          <button
+                            type="button"
+                            className="row-map-name"
+                            disabled
+                            title="The name, always shown"
+                          >
+                            <span className="row-map-name-long">
+                              {editor.lineNames[line]?.long}
+                            </span>
+                            <span className="row-map-name-short">
+                              {editor.lineNames[line]?.short}
+                            </span>
+                          </button>
+                        </span>
+                      ) : (
+                        place(lead.field as P)
+                      )}
+                      {place(lead.badge as P, { badge: true })}
+                      {place(trailing.badge as P, {
+                        badge: true,
+                        trailing: true,
+                      })}
+                      {place(trailing.field as P)}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );

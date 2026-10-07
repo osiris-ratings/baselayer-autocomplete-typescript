@@ -1,5 +1,6 @@
 import {
   ADDRESS_ROW,
+  DEFAULT_ICON_SEGMENTS,
   PERSON_ROW,
   resolveLayout,
 } from "@baselayer-sdk/autocomplete";
@@ -16,8 +17,9 @@ import {
   componentProps,
   editorOps,
   exportCode,
-  withListed,
   withEnabled,
+  withIconSegment,
+  withListed,
   type StyleState,
 } from "../../site/demo/style-state";
 
@@ -47,6 +49,7 @@ describe("the People and Addresses tabs' rows", () => {
           layout: { ...personDefault, headBadge: null },
           list: ["businesses", "addresses"],
           enabled: ["business", "address"],
+          iconSegments: ["name", "firstAddress"],
         },
       },
     };
@@ -55,17 +58,46 @@ describe("the People and Addresses tabs' rows", () => {
       layout: { ...personDefault, headBadge: null },
       list: ["businesses", "addresses"],
       enabledLines: ["business", "address"],
+      iconSegments: ["name", "firstAddress"],
     });
     expect(componentProps(state, "addresses")).toEqual({
       layout: addressDefault,
       list: ["businesses"],
       enabledLines: ["business"],
+      iconSegments: [...DEFAULT_ICON_SEGMENTS.addresses],
     });
     expect(componentProps(state, "businesses")).toEqual({
       layout: DEFAULT_STYLE.rows.businesses.layout,
       list: [],
       enabledLines: ["business"],
+      iconSegments: [],
     });
+  });
+
+  it("put an icon on the components' own segments by default", () => {
+    for (const route of ["businesses", "people", "addresses"] as const) {
+      expect(DEFAULT_STYLE.rows[route].iconSegments).toEqual(
+        DEFAULT_ICON_SEGMENTS[route],
+      );
+    }
+  });
+
+  it("put an icon on a segment or take it off, in the segments' own order", () => {
+    const on = withIconSegment(DEFAULT_STYLE, "people", "firstAddress", true);
+    expect(on.rows.people.iconSegments).toEqual([
+      "name",
+      "firstAddress",
+      "businessName",
+      "addressName",
+    ]);
+    expect(on.rows.addresses).toBe(DEFAULT_STYLE.rows.addresses);
+    const off = withIconSegment(on, "people", "name", false);
+    expect(off.rows.people.iconSegments).toEqual([
+      "firstAddress",
+      "businessName",
+      "addressName",
+    ]);
+    expect(withIconSegment(off, "people", "name", false)).toBe(off);
   });
 
   it("offer a place only its own line's fields", () => {
@@ -140,6 +172,7 @@ describe("the exported configuration of a person or an address field", () => {
       rows: {
         ...DEFAULT_STYLE.rows,
         people: {
+          ...DEFAULT_STYLE.rows.people,
           layout: { ...personDefault, headBadge: null },
           list: ["businesses", "addresses"],
           enabled: ["business", "address"],
@@ -179,6 +212,28 @@ describe("the exported configuration of a person or an address field", () => {
 });
 
 describe("the exported configuration follows the row map", () => {
+  it("writes the segments with an icon only when they are not the default", () => {
+    expect(exportCode(DEFAULT_STYLE, "people").tsx).not.toContain(
+      "iconSegments",
+    );
+    const state = withIconSegment(
+      withIconSegment(DEFAULT_STYLE, "businesses", "name", true),
+      "businesses",
+      "address",
+      true,
+    );
+    expect(exportCode(state, "businesses").tsx).toContain(
+      'iconSegments={["name", "address"]}',
+    );
+    expect(componentChanges(state)).toBe(1);
+    expect(
+      exportCode(
+        withIconSegment(DEFAULT_STYLE, "people", "addressName", false),
+        "people",
+      ).tsx,
+    ).toContain('iconSegments={["name", "businessName"]}');
+  });
+
   it("writes a place of a line the row draws, and none of a line it does not", () => {
     // The address line's role left out while the row does not list addresses.
     const hidden: StyleState = {

@@ -280,6 +280,21 @@ describe("Styling's sample rows", () => {
     expect(screen.getByText("412 businesses · 1 person")).toBeTruthy();
   });
 
+  it("draw a business's name with its icon once the row map puts it there", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByTestId("demo-styling-open"));
+    const [harbor] = screen.getAllByTestId("business-suggestion");
+    expect(harbor!.querySelector('[data-glyph="building"]')).toBeNull();
+
+    await user.click(
+      screen.getByRole("button", { name: "Icon on Business name" }),
+    );
+
+    const [again] = screen.getAllByTestId("business-suggestion");
+    expect(again!.querySelector('[data-glyph="building"]')).not.toBeNull();
+  });
+
   it("list what the row map shows under a business", async () => {
     const user = userEvent.setup();
     render(<App />);

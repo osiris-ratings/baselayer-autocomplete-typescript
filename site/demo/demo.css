@@ -740,8 +740,58 @@
 
 /* The name's slot is as wide as the name: no padding of its own. */
 .row-map-slot {
+  position: relative;
   display: inline-flex;
   flex: none;
+}
+
+/* A segment's icon, as a toggle at the start of its chip, in the chip's own
+   ink: solid when the segment carries it, faint when not. It sits over the
+   place's drag handle, and a press on it is its own. */
+.row-map-icon {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  color: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.row-map-icon[aria-pressed="false"] {
+  opacity: 0.3;
+}
+
+.row-map-icon:hover:not(:disabled) {
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+
+.row-map-icon:disabled {
+  cursor: not-allowed;
+}
+
+.row-map-icon:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 0;
+}
+
+.row-map-icon-glyph {
+  display: inline-flex;
+}
+
+.row-map-place[data-icon] .row-map-face,
+.row-map-slot[data-icon] .row-map-name {
+  padding-left: 24px;
 }
 
 .row-map-name {

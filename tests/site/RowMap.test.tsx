@@ -670,3 +670,131 @@ describe("the row map as the row's configuration", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 });
+
+describe("a segment's icon in the row map", () => {
+  function mountOn(
+    route: "businesses" | "people" | "addresses",
+    state: StyleState = DEFAULT_STYLE,
+  ) {
+    const onChange = vi.fn<(state: StyleState) => void>();
+    const view = render(
+      <RowMap state={state} onChange={onChange} route={route} />,
+    );
+    const toggle = (segment: string) =>
+      view.container.querySelector<HTMLButtonElement>(
+        `.row-map-icon[data-segment="${segment}"]`,
+      );
+    const toggles = () =>
+      Object.fromEntries(
+        [
+          ...view.container.querySelectorAll<HTMLButtonElement>(
+            ".row-map-icon",
+          ),
+        ].map(button => [
+          button.dataset.segment,
+          {
+            on: button.getAttribute("aria-pressed"),
+            frozen: button.disabled,
+            glyph:
+              button.querySelector<HTMLElement>("[data-glyph]")?.dataset.glyph,
+          },
+        ]),
+      );
+    return { view, onChange, toggle, toggles };
+  }
+
+  it("puts a toggle on each segment an icon can ride on, showing the glyph it draws", () => {
+    expect(mountOn("people").toggles()).toEqual({
+      name: { on: "true", frozen: false, glyph: "person" },
+      firstAddress: { on: "false", frozen: false, glyph: "pin" },
+      businessName: { on: "true", frozen: false, glyph: "building" },
+      address: { on: "false", frozen: false, glyph: "pin" },
+      // On a line switched off: frozen, as its places are.
+      addressName: { on: "true", frozen: true, glyph: "pin" },
+    });
+    cleanup();
+    const business = mountOn("businesses").toggles();
+    expect(business.name).toEqual({
+      on: "false",
+      frozen: false,
+      glyph: "building",
+    });
+    expect(business.people).toEqual({
+      on: "false",
+      frozen: false,
+      glyph: "person",
+    });
+  });
+
+  it("names each toggle for its segment", () => {
+    const { toggle } = mountOn("people");
+    expect(toggle("businessName")!.getAttribute("aria-label")).toBe(
+      "Icon on Business name",
+    );
+    expect(toggle("firstAddress")!.getAttribute("aria-label")).toBe(
+      "Icon on First address",
+    );
+  });
+
+  it("puts the icon on its segment or takes it off", () => {
+    const { onChange, toggle } = mountOn("people");
+    fireEvent.click(toggle("firstAddress")!);
+    expect(onChange.mock.calls[0]![0].rows.people.iconSegments).toEqual([
+      "name",
+      "firstAddress",
+      "businessName",
+      "addressName",
+    ]);
+    fireEvent.click(toggle("name")!);
+    expect(onChange.mock.calls[1]![0].rows.people.iconSegments).toEqual([
+      "businessName",
+      "addressName",
+    ]);
+  });
+
+  it("is pressed, not dragged: a press on it leaves the field where it is", () => {
+    const { onChange, toggle, view } = mountOn("people");
+    drag(
+      toggle("firstAddress")!,
+      view.container.querySelector('[data-drop="headTrailing"]')!,
+    );
+    expect(onChange).not.toHaveBeenCalled();
+    expect(document.querySelector(".row-map-ghost")).toBeNull();
+  });
+
+  it("freezes a field's toggle on a line switched off, as its name's", () => {
+    const [, businesses] = lineKinds("people");
+    const { toggle } = mountOn(
+      "people",
+      withLineState(DEFAULT_STYLE, "people", businesses!, "off"),
+    );
+    expect(toggle("businessName")!.disabled).toBe(true);
+    expect(toggle("address")!.disabled).toBe(true);
+    expect(toggle("firstAddress")!.disabled).toBe(false);
+  });
+
+  it("frees a line's toggles when the line is switched back on", () => {
+    const [, , addresses] = lineKinds("people");
+    const { toggle } = mountOn(
+      "people",
+      withLineState(DEFAULT_STYLE, "people", addresses!, "visible"),
+    );
+    expect(toggle("addressName")!.disabled).toBe(false);
+  });
+
+  it("puts no toggle on a segment the row leaves out", () => {
+    const row = DEFAULT_STYLE.rows.businesses;
+    const people = (
+      Object.keys(row.layout) as (keyof typeof row.layout)[]
+    ).find(place => row.layout[place] === "people")!;
+    const { toggle } = mountOn("businesses", {
+      ...DEFAULT_STYLE,
+      rows: {
+        ...DEFAULT_STYLE.rows,
+        businesses: { ...row, layout: { ...row.layout, [people]: null } },
+      },
+    });
+    expect(toggle("people")).toBeNull();
+    expect(toggle("address")).not.toBeNull();
+  });
+});
