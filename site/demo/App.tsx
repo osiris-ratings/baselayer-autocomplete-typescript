@@ -3,9 +3,9 @@ import {
   ROUTE_NAMES,
   allowedFilters,
   createAutocompleteClient,
-  includeForLayout,
   offeredRoutes,
   pickedNameOf,
+  requestFor,
   type AddressesFilters,
   type AutocompleteClient,
   type BusinessPick,
@@ -935,6 +935,9 @@ export function App() {
                       messages={messages}
                       unstyled={style.unstyled}
                       open={styling || filtering}
+                      // A person or an address picked: nothing redeems its
+                      // token, so there is no business for step 03 to search.
+                      onPickEntity={() => setPicked(null)}
                       {...componentProps(style, "businesses")}
                       {...(style.pageInput
                         ? { classNames: { input: "demo-input" } }
@@ -1016,9 +1019,11 @@ export function App() {
                         )}
                         suggestions={sampleRows({
                           limit: style.limit,
-                          include: includeForLayout(
+                          include: requestFor(
+                            "businesses",
                             componentProps(style, "businesses").layout,
-                          ),
+                            componentProps(style, "businesses").list,
+                          ).include,
                         })}
                         found={SAMPLE_META.found}
                         foundCapped={false}

@@ -185,6 +185,34 @@ describe("searching by person or address", () => {
   });
 });
 
+describe("a business's row, as Styling sets it", () => {
+  it("lists a business's officers and agents, and picks one as the business's, with no search to run", async () => {
+    const user = await connect(["businesses", "people", "addresses"]);
+    await user.click(screen.getByTestId("demo-styling-open"));
+    await user.click(
+      screen.getByRole("button", { name: "Show officers and agents" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Pick officers and agents" }),
+    );
+
+    await user.type(field("demo-business"), "harbor concrete pumping");
+    const [harbor] = await screen.findAllByTestId("business-group");
+    const [dana] = within(harbor!).getAllByTestId("person-line");
+    expect(dana!.textContent).toContain("Dana Whitfield");
+    await user.click(dana!);
+
+    expect(field("demo-business").value).toBe(
+      "HARBOR CONCRETE PUMPING CO., INC.",
+    );
+    const selection = screen.getByTestId("grouped-selection");
+    expect(selection.textContent).toBe("Dana Whitfield");
+    expect(selection.getAttribute("data-type")).toBe("person");
+    // Nothing redeems a person's token: there is no business to search.
+    expect(step()).toBeNull();
+  });
+});
+
 describe("a person's or an address's row, as Styling sets it", () => {
   it("lists a person's addresses, and picks one as the person's, with no search to run", async () => {
     const user = await connect(["businesses", "people", "addresses"]);
@@ -252,5 +280,21 @@ describe("Styling's sample rows", () => {
       1,
     );
     expect(screen.getByText("412 businesses · 1 person")).toBeTruthy();
+  });
+
+  it("list what the row map shows under a business", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(screen.getByTestId("demo-styling-open"));
+    expect(screen.queryAllByTestId("address-line")).toEqual([]);
+
+    await user.click(screen.getByRole("button", { name: "Show addresses" }));
+
+    const [harbor] = screen.getAllByTestId("business-group");
+    expect(
+      within(harbor!)
+        .getAllByTestId("address-line")
+        .map(line => line.textContent),
+    ).toEqual([expect.stringContaining("1200 Tallowmere Rd")]);
   });
 });

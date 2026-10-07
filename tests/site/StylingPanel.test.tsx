@@ -178,4 +178,16 @@ describe("the Components fold's searches", () => {
       screen.queryByRole("button", { name: "Pick their addresses" }),
     ).toBeNull();
   });
+
+  it("lists a business's officers and makes them pickable, as the other rows do", () => {
+    render(<RoutedPanel start="businesses" />);
+
+    expect(document.querySelector('[data-drop="titleBadge"]')).not.toBeNull();
+    fireEvent.click(handle("officers and agents"));
+    fireEvent.click(pick("officers and agents"));
+
+    expect(exported()).toContain('list={["people"]}');
+    expect(exported()).toContain('pickable={["business", "person"]}');
+    expect(exported()).toContain("onPickEntity={pick => …}");
+  });
 });

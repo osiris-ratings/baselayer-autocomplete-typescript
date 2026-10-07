@@ -1,6 +1,5 @@
 import {
   ADDRESS_ROW,
-  DEFAULT_ROW_LAYOUT,
   PERSON_ROW,
   resolveLayout,
 } from "@baselayer-sdk/autocomplete";
@@ -13,9 +12,12 @@ import {
   INITIAL_STYLE,
   PERSON_EDITOR,
   TRAY,
+  componentChanges,
   componentProps,
   editorOps,
   exportCode,
+  withListed,
+  withPickable,
   type StyleState,
 } from "../../site/demo/style-state";
 
@@ -36,7 +38,7 @@ describe("the People and Addresses tabs' rows", () => {
     }
   });
 
-  it("hand the preview's components each row as the props they take", () => {
+  it("hand each component its row as the props a host writes: the layout, the list and the picks", () => {
     const state: StyleState = {
       ...DEFAULT_STYLE,
       rows: {
@@ -59,9 +61,10 @@ describe("the People and Addresses tabs' rows", () => {
       list: ["businesses"],
       pickable: ["business"],
     });
-    // A business's component takes the head alone, the places it has always had.
     expect(componentProps(state, "businesses")).toEqual({
-      layout: DEFAULT_ROW_LAYOUT,
+      layout: DEFAULT_STYLE.rows.businesses.layout,
+      list: [],
+      pickable: ["business"],
     });
   });
 
@@ -151,7 +154,8 @@ describe("the exported configuration of a person or an address field", () => {
     ).toBe(true);
     expect(tsx.endsWith("\n/>")).toBe(true);
     expect(tsx).toContain("layout={{\n    headBadge: null,\n  }}");
-    expect(tsx).toContain('include={["businesses", "addresses"]}');
+    expect(tsx).toContain('list={["businesses", "addresses"]}');
+    expect(tsx).not.toContain("include=");
     expect(tsx).toContain('pickable={["business", "address"]}');
     expect(tsx).toContain("onPickEntity={pick => …}");
   });
@@ -171,5 +175,75 @@ describe("the exported configuration of a person or an address field", () => {
     expect(exportCode(state, "businesses").tsx).not.toContain("headBadge");
     expect(exportCode(state, "addresses").tsx).not.toContain("headBadge");
     expect(exportCode(state).tsx).toBe(exportCode(state, "businesses").tsx);
+  });
+});
+
+describe("the exported configuration follows the row map", () => {
+  it("writes a place of a line the row draws, and none of a line it does not", () => {
+    // The address line's role left out while the row does not list addresses.
+    const hidden: StyleState = {
+      ...DEFAULT_STYLE,
+      rows: {
+        ...DEFAULT_STYLE.rows,
+        people: {
+          ...DEFAULT_STYLE.rows.people,
+          layout: { ...personDefault, addressTrailing: null },
+        },
+      },
+    };
+    expect(exportCode(hidden, "people").tsx).not.toContain("layout=");
+
+    const listed = withListed(hidden, "people", "addresses", true);
+    const { tsx } = exportCode(listed, "people");
+    expect(tsx).toContain("layout={{\n    addressTrailing: null,\n  }}");
+    expect(tsx).toContain('list={["businesses", "addresses"]}');
+  });
+
+  it("writes the business's icon and the lines it lists, with somewhere for a person to go", () => {
+    const row = DEFAULT_STYLE.rows.businesses;
+    const state = withPickable(
+      withListed(
+        {
+          ...DEFAULT_STYLE,
+          rows: {
+            ...DEFAULT_STYLE.rows,
+            businesses: {
+              ...row,
+              layout: { ...row.layout, titleLead: "titleIcon" },
+            },
+          },
+        },
+        "businesses",
+        "people",
+        true,
+      ),
+      "businesses",
+      "person",
+      true,
+    );
+
+    const { tsx } = exportCode(state, "businesses");
+    expect(tsx).toContain('layout={{\n    titleLead: "titleIcon",\n  }}');
+    expect(tsx).toContain('list={["people"]}');
+    expect(tsx).toContain('pickable={["business", "person"]}');
+    expect(tsx).toContain("onPickEntity={pick => …}");
+    expect(componentChanges(state)).toBe(3);
+  });
+
+  it("writes what the component is handed: one reading of the row", () => {
+    const state = withPickable(
+      withListed(DEFAULT_STYLE, "addresses", "people", true),
+      "addresses",
+      "person",
+      true,
+    );
+    const { list, pickable } = componentProps(state, "addresses");
+    const { tsx } = exportCode(state, "addresses");
+    expect(tsx).toContain(
+      `list={${JSON.stringify(list).replaceAll(",", ", ")}}`,
+    );
+    expect(tsx).toContain(
+      `pickable={${JSON.stringify(pickable).replaceAll(",", ", ")}}`,
+    );
   });
 });

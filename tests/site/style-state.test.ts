@@ -20,7 +20,7 @@ import {
   PRESETS,
   STRUCTURE_FLAGS,
   applyPreset,
-  changedLayout,
+  changedRowLayout,
   changedVars,
   exportCode,
   INITIAL_STYLE,
@@ -131,7 +131,9 @@ describe("the Styling panel's exported configuration", () => {
       const state = withBusinessLayout(layout);
       const written = exportedLayout(exportCode(state).tsx) ?? {};
 
-      expect(written, JSON.stringify(layout)).toEqual(changedLayout(state));
+      expect(written, JSON.stringify(layout)).toEqual(
+        Object.fromEntries(changedRowLayout(state, "businesses")),
+      );
       expect(resolveRowLayout(written), JSON.stringify(layout)).toEqual(layout);
     }
     expect(layouts.length).toBeGreaterThan(100);

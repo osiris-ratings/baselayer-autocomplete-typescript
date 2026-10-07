@@ -11,12 +11,10 @@ import {
   DEFAULT_LIST,
   DEFAULT_LOOK,
   DEFAULT_PICKABLE,
-  DEFAULT_ROW_LAYOUT,
   ENTITY_OF,
   PERSON_ROW,
   ROUTES,
   ROW_KINDS,
-  ROW_PLACES,
   drawnLayout,
   resolveLayout,
   structureLabel,
@@ -39,7 +37,6 @@ import {
   type Route,
   type RowField,
   type RowKind,
-  type RowLayout,
   type RowLine,
   type RowPlace,
 } from "@baselayer-sdk/autocomplete";
@@ -746,23 +743,6 @@ export const ADDRESS_EDITOR: RowEditor<AddressRowPlace, AddressRowField> = {
 export const { canDrop, moveField, placeOptions, unplacedFields, withPlaced } =
   editorOps(BUSINESS_EDITOR);
 
-/** The places that show another field than the SDK's default, in reading order. */
-/** A business row's head: the places a business row has always had. */
-function headOf(layout: BusinessRowLayout): RowLayout {
-  return Object.fromEntries(
-    ROW_PLACES.map(place => [place, layout[place]]),
-  ) as RowLayout;
-}
-
-export function changedLayout(state: StyleState): Partial<RowLayout> {
-  const { layout } = state.rows.businesses;
-  return Object.fromEntries(
-    ROW_PLACES.filter(place => layout[place] !== DEFAULT_ROW_LAYOUT[place]).map(
-      place => [place, layout[place]],
-    ),
-  );
-}
-
 /**
  * A kind of line a row draws: its head, which is always drawn, or a relation
  * it can list, a line per item.
@@ -890,9 +870,16 @@ export function withPickable<R extends Route>(
   });
 }
 
-/** What the preview's component for each search takes from the Components fold. */
+/**
+ * What each search's component is handed for its row, as a host writes it:
+ * the layout, the relations listed under each row, and what can be picked.
+ */
 export interface ComponentProps {
-  businesses: { layout: RowLayout };
+  businesses: {
+    layout: BusinessRowLayout;
+    list: IncludeOf<"businesses">[];
+    pickable: EntityType[];
+  };
   people: {
     layout: PersonRowLayout;
     list: IncludeOf<"people">[];
@@ -906,28 +893,16 @@ export interface ComponentProps {
 }
 
 /**
- * The props the preview spreads on the component for `route`, so it draws the
- * row the Components fold shows.
+ * The props of the component for `route` that the Components fold sets: the
+ * one reading of a row, which the exported configuration writes and the
+ * preview draws.
  */
 export function componentProps<R extends Route>(
   state: StyleState,
   route: R,
 ): ComponentProps[R] {
-  const { businesses, people, addresses } = state.rows;
-  const props: ComponentProps = {
-    businesses: { layout: headOf(businesses.layout) },
-    people: {
-      layout: people.layout,
-      list: people.list,
-      pickable: people.pickable,
-    },
-    addresses: {
-      layout: addresses.layout,
-      list: addresses.list,
-      pickable: addresses.pickable,
-    },
-  };
-  return props[route];
+  const { layout, list, pickable } = state.rows[route];
+  return { layout, list, pickable } as ComponentProps[R];
 }
 
 /** The preview's stylesheet: the changed variables, on the demo's component only. */
@@ -941,38 +916,60 @@ function literal(value: unknown): string {
   return typeof value === "string" ? JSON.stringify(value) : String(value);
 }
 
-/** The places of a person's or an address's row that differ from the SDK's default. */
-export function changedGroupedLayout(
+/**
+ * The places of a search's row that the map draws and that show another field
+ * than its component's default, in reading order: a line the row does not
+ * list is not drawn, so nothing of it is written.
+ */
+export function changedRowLayout(
   state: StyleState,
-  route: "people" | "addresses",
+  route: Route,
 ): [string, string | null][] {
-  const layout: Readonly<Record<string, string | null>> =
-    state.rows[route].layout;
-  const defaults: Readonly<Record<string, string | null>> =
-    route === "people" ? resolveLayout(PERSON_ROW) : resolveLayout(ADDRESS_ROW);
-  return Object.keys(defaults)
-    .filter(place => layout[place] !== defaults[place])
+  const layout: Readonly<Record<string, string | null>> = componentProps(
+    state,
+    route,
+  ).layout;
+  const kind: { places: readonly string[] } = ROW_KINDS[route];
+  const defaults: Readonly<Record<string, string | null>> = resolveLayout(
+    ROW_KINDS[route] as RowKind<string, string>,
+  );
+  const list: readonly Relation[] = state.rows[route].list;
+  const drawn = new Set(
+    lineKinds(route)
+      .filter(each => each.relation === null || list.includes(each.relation))
+      .flatMap(each => each.lines)
+      .flatMap(({ leading, lead, trailing }) => [
+        leading,
+        lead.field,
+        lead.badge,
+        trailing.badge,
+        trailing.field,
+      ]),
+  );
+  return kind.places
+    .filter(place => drawn.has(place) && layout[place] !== defaults[place])
     .map(place => [place, layout[place] ?? null]);
 }
 
 /**
  * How many things the Components fold changed, on every search's row: the
- * places, and what a person's and an address's rows list and can pick.
+ * places the map draws, what each row lists and what can be picked on it.
  */
 export function componentChanges(state: StyleState): number {
-  const { people, addresses } = state.rows;
-  const lists: [readonly string[], readonly string[]][] = [
-    [people.list, DEFAULT_LIST.people],
-    [people.pickable, DEFAULT_PICKABLE],
-    [addresses.list, DEFAULT_LIST.addresses],
-    [addresses.pickable, DEFAULT_PICKABLE],
-  ];
-  return (
-    Object.keys(changedLayout(state)).length +
-    changedGroupedLayout(state, "people").length +
-    changedGroupedLayout(state, "addresses").length +
-    lists.filter(([value, defaults]) => value.join() !== defaults.join()).length
-  );
+  const routes: Route[] = ["businesses", "people", "addresses"];
+  return routes.reduce((count, route) => {
+    const { list, pickable } = componentProps(state, route);
+    const lists: [readonly string[], readonly string[]][] = [
+      [list, DEFAULT_LIST[route]],
+      [pickable, DEFAULT_PICKABLE],
+    ];
+    return (
+      count +
+      changedRowLayout(state, route).length +
+      lists.filter(([value, defaults]) => value.join() !== defaults.join())
+        .length
+    );
+  }, 0);
 }
 
 /** A list prop, unless it is the default. */
@@ -1035,24 +1032,21 @@ export function exportCode(
       `look={{\n${look.map(([key, value]) => `    ${key}: ${literal(value)},`).join("\n")}\n  }}`,
     );
   }
-  const layout =
-    route === "businesses"
-      ? Object.entries(changedLayout(state))
-      : changedGroupedLayout(state, route);
+  const layout = changedRowLayout(state, route);
   if (layout.length > 0) {
     props.push(
       `layout={{\n${layout.map(([place, field]) => `    ${place}: ${field === null ? "null" : JSON.stringify(field)},`).join("\n")}\n  }}`,
     );
   }
-  if (route !== "businesses") {
-    const { list: include, pickable } = state.rows[route];
-    props.push(
-      ...listProp("include", include, DEFAULT_LIST[route]),
-      ...listProp("pickable", pickable, DEFAULT_PICKABLE),
-    );
-    if (pickable.some(type => type !== "business")) {
-      props.push("onPickEntity={pick => …}");
-    }
+  // What the row lists and what can be picked, as the component is handed them;
+  // a pick that is not a business needs somewhere to go.
+  const { list, pickable } = componentProps(state, route);
+  props.push(
+    ...listProp("list", list, DEFAULT_LIST[route]),
+    ...listProp("pickable", pickable, DEFAULT_PICKABLE),
+  );
+  if (pickable.some(type => type !== "business")) {
+    props.push("onPickEntity={pick => …}");
   }
   if (state.limit !== DEFAULT_STYLE.limit) props.push(`limit={${state.limit}}`);
   if (state.minChars !== DEFAULT_STYLE.minChars)
