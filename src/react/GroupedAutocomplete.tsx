@@ -329,7 +329,7 @@ function Connected<R extends GroupedRoute>({
       value={value}
       inputName={name}
       messages={messages}
-      include={request.listed as IncludeOf<R>[]}
+      include={request.list as IncludeOf<R>[]}
       layout={layout}
       suggestions={state.suggestions}
       found={state.found}
@@ -493,7 +493,7 @@ function GroupedView<R extends GroupedRoute>({
   const cx = classes(unstyled, classNames);
   const drawnLayout = drawnFor(route, layoutInput);
   const layout: Readonly<Record<string, string | null>> = drawnLayout;
-  const { listed } = requestOf(route, drawnLayout, include);
+  const { list: listed } = requestOf(route, drawnLayout, include);
   const rows: GroupedRow[] = suggestions;
   const drawn = rows.map(row => ({
     row,

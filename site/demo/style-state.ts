@@ -7,7 +7,7 @@
 import {
   ADDRESS_ROW,
   BUSINESS_STRUCTURES,
-  DEFAULT_LISTED,
+  DEFAULT_LIST,
   DEFAULT_LOOK,
   DEFAULT_PICKABLE,
   DEFAULT_ROW_LAYOUT,
@@ -305,10 +305,10 @@ export const DEFAULT_STYLE: StyleState = {
   look: { ...DEFAULT_LOOK },
   layout: { ...DEFAULT_ROW_LAYOUT },
   personLayout: resolveLayout(PERSON_ROW),
-  personInclude: [...DEFAULT_LISTED],
+  personInclude: [...DEFAULT_LIST.people] as IncludeOf<"people">[],
   personPickable: [...DEFAULT_PICKABLE],
   addressLayout: resolveLayout(ADDRESS_ROW),
-  addressInclude: [...DEFAULT_LISTED],
+  addressInclude: [...DEFAULT_LIST.addresses] as IncludeOf<"addresses">[],
   addressPickable: [...DEFAULT_PICKABLE],
   vars: Object.fromEntries(
     Object.entries(CSS_VARIABLES).map(([name, spec]) => [name, spec.value]),
@@ -583,17 +583,23 @@ const BUSINESS_LINE_WIRE = {
 export const PERSON_EDITOR: RowEditor<PersonRowPlace, PersonRowField> = {
   kind: PERSON_ROW,
   placeLabels: {
+    headLead: "Before the name",
     headBadge: "Beside the name",
     headTrailingBadge: "Beside head, right",
     headTrailing: "Head, right",
+    businessLead: "Before business",
     businessBadge: "Beside business",
     businessTrailingBadge: "Beside business, right",
     businessTrailing: "Business, right",
+    addressLead: "Before address",
     addressBadge: "Beside address",
     addressTrailingBadge: "Beside address, right",
     addressTrailing: "Address, right",
   },
   fieldLabels: {
+    headIcon: "Icon",
+    businessIcon: "Icon",
+    addressIcon: "Icon",
     firstAddress: "First address",
     counts: "Counts",
     address: "Address",
@@ -609,6 +615,9 @@ export const PERSON_EDITOR: RowEditor<PersonRowPlace, PersonRowField> = {
     counts: ["related.businesses.count", "related.addresses.count"],
     ...BUSINESS_LINE_WIRE,
     addressRole: ["related.addresses.items[].role"],
+    headIcon: ["type"],
+    businessIcon: ["related.businesses.items[].type"],
+    addressIcon: ["related.addresses.items[].type"],
   },
   lineNames: {
     head: { long: "Person's name", short: "Name" },
@@ -621,17 +630,23 @@ export const PERSON_EDITOR: RowEditor<PersonRowPlace, PersonRowField> = {
 export const ADDRESS_EDITOR: RowEditor<AddressRowPlace, AddressRowField> = {
   kind: ADDRESS_ROW,
   placeLabels: {
+    headLead: "Before the address",
     headBadge: "Beside the address",
     headTrailingBadge: "Beside head, right",
     headTrailing: "Head, right",
+    businessLead: "Before business",
     businessBadge: "Beside business",
     businessTrailingBadge: "Beside business, right",
     businessTrailing: "Business, right",
+    personLead: "Before person",
     personBadge: "Beside person",
     personTrailingBadge: "Beside person, right",
     personTrailing: "Person, right",
   },
   fieldLabels: {
+    headIcon: "Icon",
+    businessIcon: "Icon",
+    personIcon: "Icon",
     counts: "Counts",
     address: "Its own address",
     states: "States",
@@ -642,6 +657,9 @@ export const ADDRESS_EDITOR: RowEditor<AddressRowPlace, AddressRowField> = {
     counts: ["related.businesses.count", "related.people.count"],
     ...BUSINESS_LINE_WIRE,
     personRole: ["related.people.items[].role"],
+    headIcon: ["type"],
+    businessIcon: ["related.businesses.items[].type"],
+    personIcon: ["related.people.items[].type"],
   },
   lineNames: {
     head: { long: "Address", short: "Address" },
@@ -693,9 +711,9 @@ export function changedGroupedLayout(
  */
 export function componentChanges(state: StyleState): number {
   const lists: [readonly string[], readonly string[]][] = [
-    [state.personInclude, DEFAULT_LISTED],
+    [state.personInclude, DEFAULT_LIST.people],
     [state.personPickable, DEFAULT_PICKABLE],
-    [state.addressInclude, DEFAULT_LISTED],
+    [state.addressInclude, DEFAULT_LIST.addresses],
     [state.addressPickable, DEFAULT_PICKABLE],
   ];
   return (
@@ -781,7 +799,7 @@ export function exportCode(
         ? [state.personInclude, state.personPickable]
         : [state.addressInclude, state.addressPickable];
     props.push(
-      ...listProp("include", include, DEFAULT_LISTED),
+      ...listProp("include", include, DEFAULT_LIST[route]),
       ...listProp("pickable", pickable, DEFAULT_PICKABLE),
     );
     if (pickable.some(type => type !== "business")) {

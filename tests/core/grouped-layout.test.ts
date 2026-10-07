@@ -15,12 +15,15 @@ describe("a person's row", () => {
     //   ACME HOLDINGS LLC   1200 Tallowmere Rd, Wilm… ..... [DE][FL] +1   officer
     //   12 Fernhallow Ln, Dover, DE 19901 ................................. officer
     expect(resolveLayout(PERSON_ROW)).toEqual({
+      headLead: "headIcon",
       headBadge: "firstAddress",
       headTrailingBadge: null,
       headTrailing: "counts",
+      businessLead: "businessIcon",
       businessBadge: "address",
       businessTrailingBadge: "states",
       businessTrailing: "role",
+      addressLead: "addressIcon",
       addressBadge: null,
       addressTrailingBadge: null,
       addressTrailing: "addressRole",
@@ -57,12 +60,15 @@ describe("a person's row", () => {
 describe("an address's row", () => {
   it("draws, by default, the head with its counts, the business lines and the people lines", () => {
     expect(resolveLayout(ADDRESS_ROW)).toEqual({
+      headLead: "headIcon",
       headBadge: null,
       headTrailingBadge: null,
       headTrailing: "counts",
+      businessLead: "businessIcon",
       businessBadge: "address",
       businessTrailingBadge: "states",
       businessTrailing: "role",
+      personLead: "personIcon",
       personBadge: null,
       personTrailingBadge: null,
       personTrailing: "personRole",
@@ -81,7 +87,7 @@ describe("an address's row", () => {
 describe("requestFor", () => {
   it("lists a person's businesses, and asks for their addresses too, for the head's first address and count", () => {
     expect(requestFor("people", resolveLayout(PERSON_ROW))).toEqual({
-      listed: ["businesses"],
+      list: ["businesses"],
       include: ["businesses", "addresses"],
     });
   });
@@ -91,12 +97,12 @@ describe("requestFor", () => {
     expect(
       requestFor("people", resolveLayout(PERSON_ROW, { headBadge: null })),
     ).toEqual({
-      listed: ["businesses"],
+      list: ["businesses"],
       include: ["businesses", "addresses"],
     });
     // 412 businesses · 2 people.
     expect(requestFor("addresses", resolveLayout(ADDRESS_ROW))).toEqual({
-      listed: ["businesses"],
+      list: ["businesses"],
       include: ["businesses", "people"],
     });
   });
@@ -107,7 +113,7 @@ describe("requestFor", () => {
         "people",
         resolveLayout(PERSON_ROW, { headBadge: null, headTrailing: null }),
       ),
-    ).toEqual({ listed: ["businesses"], include: ["businesses"] });
+    ).toEqual({ list: ["businesses"], include: ["businesses"] });
   });
 
   it("lists what the host asks for, in the route's order", () => {
@@ -117,12 +123,12 @@ describe("requestFor", () => {
         "businesses",
       ]),
     ).toEqual({
-      listed: ["businesses", "addresses"],
+      list: ["businesses", "addresses"],
       include: ["businesses", "addresses"],
     });
     expect(
       requestFor("addresses", resolveLayout(ADDRESS_ROW), ["people"]),
-    ).toEqual({ listed: ["people"], include: ["businesses", "people"] });
+    ).toEqual({ list: ["people"], include: ["businesses", "people"] });
   });
 
   describe("under a session's scope", () => {
@@ -145,7 +151,7 @@ describe("requestFor", () => {
           undefined,
           businessesOnly,
         ),
-      ).toEqual({ listed: ["businesses"], include: ["businesses"] });
+      ).toEqual({ list: ["businesses"], include: ["businesses"] });
       expect(
         requestFor(
           "addresses",
@@ -153,7 +159,7 @@ describe("requestFor", () => {
           undefined,
           businessesOnly,
         ),
-      ).toEqual({ listed: ["businesses"], include: ["businesses"] });
+      ).toEqual({ list: ["businesses"], include: ["businesses"] });
     });
 
     it("drops a listed relation the scope does not grant, rather than failing", () => {
@@ -164,7 +170,7 @@ describe("requestFor", () => {
           ["addresses"],
           businessesOnly,
         ),
-      ).toEqual({ listed: [], include: ["businesses"] });
+      ).toEqual({ list: [], include: ["businesses"] });
     });
 
     it("asks for nothing on a route the scope leaves out", () => {
@@ -173,7 +179,7 @@ describe("requestFor", () => {
           routes: { businesses: ["people"] },
           maxLimit: 20,
         }),
-      ).toEqual({ listed: [], include: [] });
+      ).toEqual({ list: [], include: [] });
     });
 
     it("asks for all it would without one when the scope grants it all", () => {
@@ -188,7 +194,7 @@ describe("requestFor", () => {
           },
         ),
       ).toEqual({
-        listed: ["businesses", "people"],
+        list: ["businesses", "people"],
         include: ["businesses", "people"],
       });
     });

@@ -4,7 +4,7 @@
  * each place shows. See docs/styling.md, "A row's places and fields".
  */
 
-import { ROUTES } from "./entities";
+import { ROUTES, type EntityType, type Relation } from "./entities";
 import type { Include } from "./wire";
 
 /**
@@ -64,9 +64,15 @@ export interface RowLine<
   L extends string = "title" | "subtitle",
 > {
   line: L;
+  /** The place before the name, for its icon, on a line that draws a name. */
+  leading?: P;
   /** When the lead's field is the row's name, which no place holds: null. */
   lead: RowCorner<P | null, P>;
   trailing: RowCorner<P, P>;
+  /** The entity the line draws, and so what `pickable` names to pick it. */
+  entity?: EntityType;
+  /** The relation a line lists, one line per item; null on the row's head. */
+  relation?: Relation | null;
 }
 
 /**
@@ -180,7 +186,7 @@ export function drawnLayout<P extends string, F extends string>(
  * build cannot use counts as left out, and so does a null layout.
  */
 export function resolveRowLayout(input: RowLayoutInput | null = {}): RowLayout {
-  return resolveLayout(BUSINESS_ROW, input);
+  return resolveLayout(BUSINESS_HEAD, input);
 }
 
 /**
@@ -201,8 +207,11 @@ export const ROW_LINES = [
   },
 ] as const satisfies readonly RowLine<RowPlace, "title" | "subtitle">[];
 
-/** A business row as a kind: any field may go in any place. */
-export const BUSINESS_ROW: RowKind<RowPlace, RowField> = {
+/**
+ * A business row's head as a kind: any of its fields may go in any of its
+ * places. `BUSINESS_ROW` is the whole row, the lines it can list included.
+ */
+const BUSINESS_HEAD: RowKind<RowPlace, RowField> = {
   places: ROW_PLACES,
   fields: ROW_FIELDS,
   lines: ROW_LINES,
@@ -211,7 +220,7 @@ export const BUSINESS_ROW: RowKind<RowPlace, RowField> = {
 
 /** The layout as a business row draws it (`drawnLayout` for a business row). */
 export function drawnRowLayout(layout: RowLayout): RowLayout {
-  return drawnLayout(BUSINESS_ROW, layout);
+  return drawnLayout(BUSINESS_HEAD, layout);
 }
 
 /** The related entity a field is drawn from; the states and the structure come on the row. */
