@@ -93,8 +93,8 @@ function capitalized(name: string): string {
 }
 
 /**
- * The look's colors and corners, as the drawn row paints its places, and the
- * tint the menu gives the line under the pointer, which an enabled line takes.
+ * The look's colors and corners, as the drawn row paints its places, its inks,
+ * and how much it dims a disabled line and a hidden one.
  */
 function rowMapColors(state: StyleState): CSSProperties {
   const { look, vars } = state;
@@ -102,9 +102,8 @@ function rowMapColors(state: StyleState): CSSProperties {
   return {
     "--map-ink": inks.ink,
     "--map-soft": inks.soft,
-    "--map-ink-disabled": inks.disabled,
-    "--map-ink-hidden": inks.hidden,
-    "--map-enabled-bg": vars["--bl-ac-highlight-bg"],
+    "--map-dim-disabled": String(inks.dim.disabled),
+    "--map-dim-hidden": String(inks.dim.hidden),
     "--map-bg": look.backgroundColor,
     "--map-border": vars["--bl-ac-border"],
     "--map-radius": vars["--bl-ac-radius"],

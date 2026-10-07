@@ -128,26 +128,22 @@ describe("the row map's drawers", () => {
     }
   });
 
-  it("tints an enabled line's box, greys a disabled one, and a hidden one more", () => {
+  it("draws an enabled line plainly, dims a disabled one whole, head too, and a hidden one more", () => {
     const { kind, done } = mount();
     try {
       const lines = (relation: string) =>
         getComputedStyle(kind(relation).querySelector(".row-map-kind-lines")!);
-      expect(lines("businesses").backgroundColor).toBe(
-        rgb(DEFAULT_STYLE.vars["--bl-ac-highlight-bg"]!),
-      );
       const inks = mapInks(DEFAULT_STYLE);
-      expect(lines("businesses").filter).toBe("none");
-      expect(lines("businesses").color).toBe(rgb(inks.ink));
-      // The person is shown, and disabled by default: its colour gone and its
-      // ink faded, never its opacity, which would leave a dark look unread.
-      expect(lines("head").filter).toBe("saturate(0)");
-      expect(lines("head").color).toBe(rgb(inks.disabled));
-      expect(lines("addresses").filter).toBe("saturate(0)");
-      expect(lines("addresses").color).toBe(rgb(inks.hidden));
       for (const relation of ["head", "businesses", "addresses"]) {
-        expect(lines(relation).opacity).toBe("1");
+        // No tint on any line, and every line in the one ink.
+        expect(lines(relation).backgroundColor).toBe("rgba(0, 0, 0, 0)");
+        expect(lines(relation).filter).toBe("none");
+        expect(lines(relation).color).toBe(rgb(inks.ink));
       }
+      expect(lines("businesses").opacity).toBe("1");
+      // The person is shown, and disabled by default.
+      expect(lines("head").opacity).toBe("0.58");
+      expect(Number(lines("addresses").opacity)).toBeLessThan(0.58);
       // The controls are never greyed.
       for (const [relation, controls] of [
         ["head", [".row-map-check-cell", ".row-map-grip-cell"]],

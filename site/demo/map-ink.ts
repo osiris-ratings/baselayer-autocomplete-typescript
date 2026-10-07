@@ -94,21 +94,42 @@ function nearest(ink: Rgb, to: Rgb, holds: (rgb: Rgb) => boolean): Rgb {
 }
 
 /** The inks the row map draws in. */
+/** How much a line is dimmed, by design: a disabled line, and a hidden one. */
+const DIM = { disabled: 0.58, hidden: 0.45 };
+
+/** An ink on its ground, and the least contrast it is to keep when dimmed. */
+interface Kept {
+  ink: Rgb;
+  on: Rgb;
+  floor: number;
+}
+
+/**
+ * Whether what a dimmed line draws keeps its floor at `opacity` over the card:
+ * its labels' and its frozen icons' ink, and each badge's text on its own
+ * ground. A thin label loses more to antialiasing than a bold badge does.
+ */
+function keeps(kept: readonly Kept[], ground: Rgb, opacity: number): boolean {
+  const over = (rgb: Rgb) => mix(ground, rgb, opacity);
+  return kept.every(
+    ({ ink, on, floor }) => ratio(over(ink), over(on)) >= floor,
+  );
+}
+
+/** The inks the row map draws in, and how much it dims a line. */
 export interface MapInks {
   /** A label or a heading. */
   ink: string;
   /** What only has to be seen: a grip, an empty place, an icon left off. */
   soft: string;
-  /** A disabled line's labels. */
-  disabled: string;
-  /** A hidden line's labels. */
-  hidden: string;
+  /** The opacity of a disabled line, and of a hidden one. */
+  dim: { disabled: number; hidden: number };
 }
 
 /**
  * The row map's inks for the look: labels from the subtitle's colour, darkened
  * toward the title's until they read as text on the card and on an enabled
- * line's tint; the rest faded toward the card no further than a floor.
+ * line's tint, and a softer ink faded toward the card no further than a floor.
  */
 export function mapInks(state: StyleState): MapInks {
   const { look, vars } = state;
@@ -116,16 +137,22 @@ export function mapInks(state: StyleState): MapInks {
   const tint = parse(vars["--bl-ac-highlight-bg"]);
   const title = parse(look.titleColor);
   const subtitle = parse(look.subtitleColor);
-  if (ground === null || tint === null || title === null || subtitle === null) {
+  const pill = [look.pillForegroundColor, look.pillBackgroundColor].map(parse);
+  const structure = [
+    look.structurePillForegroundColor,
+    look.structurePillBackgroundColor,
+  ].map(parse);
+  if (
+    ground === null ||
+    tint === null ||
+    title === null ||
+    subtitle === null ||
+    [...pill, ...structure].includes(null)
+  ) {
     // A colour this cannot read: the stylesheet mixes, with no floor.
     const mixed = (share: number) =>
       `color-mix(in srgb, ${look.titleColor} ${share}%, ${look.backgroundColor})`;
-    return {
-      ink: mixed(85),
-      soft: mixed(60),
-      disabled: mixed(65),
-      hidden: mixed(55),
-    };
+    return { ink: mixed(85), soft: mixed(60), dim: { ...DIM } };
   }
   const both = [ground, tint];
   // As little of the title's colour as reads as text: toward the title is
@@ -133,12 +160,21 @@ export function mapInks(state: StyleState): MapInks {
   // The floors are above WCAG's 4.5 and 3 by what antialiasing costs a thin
   // stroke on screen.
   const ink = nearest(subtitle, title, rgb => weakest(rgb, both) >= 7);
-  const fade = (most: number, floor: number, grounds: readonly Rgb[]) =>
-    hex(furthest(ink, ground, most, rgb => weakest(rgb, grounds) >= floor));
+  const soft = furthest(ink, ground, 0.45, rgb => weakest(rgb, both) >= 4.5);
+  const kept: Kept[] = [
+    { ink, on: ground, floor: 2.5 },
+    { ink: pill[0]!, on: pill[1]!, floor: 2.15 },
+    { ink: structure[0]!, on: structure[1]!, floor: 2.15 },
+  ];
+  // A dimmed line may read poorly, as a disabled one does in the menu, but
+  // never vanish: a look that would lose a hidden line dims it less.
+  let hidden = DIM.hidden;
+  while (hidden < DIM.disabled && !keeps(kept, ground, hidden)) {
+    hidden = Math.round((hidden + 0.01) * 100) / 100;
+  }
   return {
     ink: hex(ink),
-    soft: fade(0.45, 4.5, both),
-    disabled: fade(0.35, 4.6, [ground]),
-    hidden: fade(0.5, 4.2, [ground]),
+    soft: hex(soft),
+    dim: { disabled: DIM.disabled, hidden },
   };
 }

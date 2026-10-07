@@ -14,6 +14,16 @@ const forcedColors: BrowserCommand<[active: boolean]> = async (
   });
 };
 
+/** Emulates a wish for reduced motion, or lifts it, for the page under test. */
+const reducedMotion: BrowserCommand<[active: boolean]> = async (
+  context,
+  active,
+) => {
+  await context.page.emulateMedia({
+    reducedMotion: active ? "reduce" : "no-preference",
+  });
+};
+
 // The tests that need a real layout engine: jsdom lays nothing out, so a row
 // that overflows its menu passes there. Run with `pnpm test:browser`.
 export default defineConfig({
@@ -30,7 +40,7 @@ export default defineConfig({
       // allows (`100vw - 2rem`), and the default iframe is a phone's width.
       viewport: { width: 1280, height: 900 },
       instances: [{ browser: "chromium" }],
-      commands: { forcedColors },
+      commands: { forcedColors, reducedMotion },
     },
   },
 });

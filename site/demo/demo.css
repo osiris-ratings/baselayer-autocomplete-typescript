@@ -636,6 +636,11 @@
   scroll-padding-inline: var(--map-grip-cell) var(--map-check-cell);
 }
 
+/* Hidden holds listed lines only: its title starts where theirs do. */
+.row-map-hidden .row-map-drawer-label {
+  padding-left: calc(var(--map-indent) + var(--map-box-pad));
+}
+
 .row-map-head,
 .row-map-hint-row,
 .row-map-kind {
@@ -713,6 +718,9 @@
      chips do. */
   --map-box-pad: 6px;
   --map-line-radius: 8px;
+  /* A listed line's indent under the head, the menu's own: its group line's
+     left padding past its head's. */
+  --map-indent: 0.875rem;
 }
 
 /* The grip's and the checkbox's columns with their gutters, on the card,
@@ -781,15 +789,15 @@
 .row-map-drawer-hint {
   grid-column: 2;
   margin: 0;
-  padding: 6px 0 6px var(--map-box-pad);
+  padding: 6px 0 6px calc(var(--map-indent) + var(--map-box-pad));
   color: var(--map-ink);
   font-size: 12px;
 }
 
-/* The box of a line kind's lines. An enabled one is tinted as the menu tints
-   the line under the pointer; a disabled one is greyed, all its colour gone
-   and its ink faded toward the card, a hidden one more, each no further than
-   it still reads (`map-ink.ts`); nothing of a hidden one moves. */
+/* The box of a line kind's lines, a listed one indented under the head as
+   the menu indents it. An enabled line is drawn plainly; a disabled one, the
+   head too, is dimmed whole, and a hidden one more (`map-ink.ts`); nothing of
+   a hidden one moves. */
 .row-map-kind-lines {
   display: grid;
   gap: 8px;
@@ -798,35 +806,24 @@
   border-radius: var(--map-line-radius);
 }
 
-.row-map-kind[data-state="enabled"] .row-map-kind-lines {
-  background: var(--map-enabled-bg, #f1f6fd);
-}
-
 .row-map-kind-lines {
   color: var(--map-ink);
 }
 
-.row-map-kind:not([data-state="enabled"]) .row-map-kind-lines {
-  filter: saturate(0);
+.row-map-kind:not([data-relation="head"]) .row-map-kind-lines {
+  margin-left: var(--map-indent);
 }
 
 .row-map-kind[data-state="disabled"] .row-map-kind-lines {
-  --map-ink: var(--map-ink-disabled);
+  opacity: var(--map-dim-disabled, 0.58);
 }
 
 .row-map-kind[data-state="hidden"] .row-map-kind-lines {
-  --map-ink: var(--map-ink-hidden);
+  opacity: var(--map-dim-hidden, 0.45);
 }
 
 .row-map-kind[data-state="hidden"] .row-map-place :is(select, .row-map-face) {
   cursor: not-allowed;
-}
-
-/* Forced colours draw the text in the system's own; greying it would not. */
-@media (forced-colors: active) {
-  .row-map-kind:not([data-state="enabled"]) .row-map-kind-lines {
-    filter: none;
-  }
 }
 
 /* A line's grip: dragged between the drawers by a pointer, pressed from the
@@ -1016,6 +1013,9 @@
 .row-map-icon:disabled {
   background: transparent;
   border-style: none;
+  /* In the ink, which a hidden line's dim leaves readable; the slash still
+     says off. */
+  color: var(--map-ink);
   cursor: not-allowed;
 }
 
@@ -1247,7 +1247,9 @@
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
-  padding-left: calc(var(--map-grip) + var(--map-col-gap) + var(--map-box-pad));
+  padding-left: calc(
+    var(--map-grip-cell) + var(--map-indent) + var(--map-box-pad)
+  );
   font-size: 12px;
 }
 

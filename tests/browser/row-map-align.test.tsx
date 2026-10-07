@@ -38,6 +38,9 @@ function textLeft(element: Element): number {
   return range.getBoundingClientRect().left;
 }
 
+/** The component's own indent of a listed line under its head (0.875rem). */
+const INDENT = 14;
+
 /** Where a drawer's first line's first chip starts. */
 function firstChip(drawer: Element): number {
   return drawer
@@ -74,15 +77,57 @@ describe("the row map's drawers, lined up", () => {
         const hidden = host.querySelector('[data-drawer="hidden"]')!;
         const note = hidden.querySelector(".row-map-drawer-hint")!;
         expect(note.textContent).toContain("grip");
-        expect(Math.abs(textLeft(note) - firstChip(shown))).toBeLessThanOrEqual(
-          1,
-        );
+        // Where a listed line's chips start: one indent in from the head's.
+        const listed = shown
+          .querySelector(
+            '.row-map-kind:not([data-relation="head"]) .row-map-line > :first-child',
+          )!
+          .getBoundingClientRect().left;
+        expect(listed - firstChip(shown)).toBeCloseTo(INDENT, 0);
+        expect(Math.abs(textLeft(note) - listed)).toBeLessThanOrEqual(1);
         expect(
           Math.abs(
-            textLeft(hidden.querySelector(".row-map-drawer-label")!) -
-              firstChip(shown),
+            textLeft(hidden.querySelector(".row-map-drawer-label")!) - listed,
           ),
         ).toBeLessThanOrEqual(1);
+      } finally {
+        done();
+      }
+    });
+  }
+});
+
+describe("a row's listed lines", () => {
+  for (const width of [560, 400, 320]) {
+    it(`start one indent in from the head, in either drawer, in ${width}px`, () => {
+      const { host, done } = mount(
+        withListed(DEFAULT_STYLE, "people", "addresses", false),
+        "people",
+        width,
+      );
+      try {
+        const head = host
+          .querySelector(
+            '[data-drawer="shown"] .row-map-kind[data-relation="head"] .row-map-line > :first-child',
+          )!
+          .getBoundingClientRect().left;
+        const listed = [
+          ...host.querySelectorAll(
+            '.row-map-kind:not([data-relation="head"]) .row-map-line > :first-child',
+          ),
+        ];
+        expect(listed.length).toBe(2);
+        for (const chip of listed) {
+          expect(chip.getBoundingClientRect().left - head).toBeCloseTo(
+            INDENT,
+            0,
+          );
+        }
+        // The grips and the Disabled column stay where they are.
+        const grips = [...host.querySelectorAll(".row-map-grip-cell")].map(
+          cell => Math.round(cell.getBoundingClientRect().left),
+        );
+        expect(new Set(grips).size).toBe(1);
       } finally {
         done();
       }

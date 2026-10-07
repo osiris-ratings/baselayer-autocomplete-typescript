@@ -2,6 +2,7 @@ import { useState } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
+import { commands } from "vitest/browser";
 
 import { RowMap } from "../../site/demo/RowMap";
 import {
@@ -12,6 +13,13 @@ import {
 
 import "../../site/shared/brand.css";
 import "../../site/demo/demo.css";
+
+declare module "vitest/browser" {
+  interface BrowserCommands {
+    /** Emulates `prefers-reduced-motion: reduce`, or lifts it. */
+    reducedMotion: (active: boolean) => Promise<void>;
+  }
+}
 
 /** The map with its state kept, the latest state read back. */
 function mount(initial: StyleState) {
@@ -138,6 +146,17 @@ describe("lines reordered by their grips", () => {
       ]);
     } finally {
       done();
+    }
+  });
+
+  it("does not slide for a reader who asks for less motion", async () => {
+    await commands.reducedMotion(true);
+    const { kind, done } = mount(BOTH);
+    try {
+      expect(getComputedStyle(kind("people")).transitionDuration).toBe("0s");
+    } finally {
+      done();
+      await commands.reducedMotion(false);
     }
   });
 

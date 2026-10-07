@@ -157,7 +157,9 @@ describe("the row map in every preset", () => {
             ".row-map-kind",
           )) {
             const state = kind.dataset.state!;
-            const label = state === "enabled" ? 4.5 : 3;
+            // A dimmed line is drawn at its state's dim, held only to what keeps
+            // it visible: an enabled one reads as text.
+            const label = state === "enabled" ? 4.5 : 2;
             const at = `${kind.dataset.relation} (${state})`;
             for (const face of kind.querySelectorAll<HTMLElement>(
               '.row-map-place:not([data-closed]):not([data-field="empty"]) .row-map-face',
@@ -172,7 +174,11 @@ describe("the row map in every preset", () => {
             for (const glyph of kind.querySelectorAll<HTMLElement>(
               ".row-map-icon svg",
             )) {
-              check(`icon of ${at}`, glyph.getBoundingClientRect(), 3);
+              check(
+                `icon of ${at}`,
+                glyph.getBoundingClientRect(),
+                state === "enabled" ? 3 : 2,
+              );
             }
             const grip = kind.querySelector<HTMLElement>(
               ".row-map-grip:not([data-spacer])",

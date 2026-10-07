@@ -26,16 +26,11 @@ describe("the row map's inks, from the look", () => {
         expect(contrast(inks.ink, on)).toBeGreaterThanOrEqual(4.5);
         expect(contrast(inks.soft, on)).toBeGreaterThanOrEqual(3);
       }
-      // A disabled or a hidden line is on the card, untinted.
-      expect(contrast(inks.disabled, ground)).toBeGreaterThanOrEqual(3);
-      expect(contrast(inks.hidden, ground)).toBeGreaterThanOrEqual(3);
-      // Each step fades: a hidden line no darker than a disabled one.
-      expect(contrast(inks.disabled, ground)).toBeLessThan(
-        contrast(inks.ink, ground),
-      );
-      expect(contrast(inks.hidden, ground)).toBeLessThanOrEqual(
-        contrast(inks.disabled, ground),
-      );
+      // A disabled line is dimmed at 0.58 and a hidden one at 0.45, or
+      // less where a look would lose a hidden line altogether.
+      expect(inks.dim.disabled).toBe(0.58);
+      expect(inks.dim.hidden).toBeGreaterThanOrEqual(0.45);
+      expect(inks.dim.hidden).toBeLessThan(inks.dim.disabled);
     });
   }
 
