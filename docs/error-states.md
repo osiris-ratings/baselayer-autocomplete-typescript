@@ -105,7 +105,8 @@ character that folds to `% _ * ?` under NFKC, so `a%%` passes the
 ## Submitting the pick
 
 Your search can refuse the `business_token`: 422 with code 3040 (not
-Baselayer's, or another organization's), 3042 (expired, after 15 minutes),
+Baselayer's, or another organization's or environment's, such as a sandbox
+pick searched with a production key), 3042 (expired, after 15 minutes),
 3023 (the business is gone), or 503 code 3041.
 In every one of those cases drop the token and search by the `name` and
 `address` as typed. `refusedThePin(status, code)` is true for all of them, as

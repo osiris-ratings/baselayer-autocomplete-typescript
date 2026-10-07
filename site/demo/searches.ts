@@ -216,7 +216,7 @@ export function describeSearchRefusal(
   if (status === 403 && code === 37)
     return "Autocomplete is not enabled for this organization, so a pick cannot be searched.";
   if (status === 422 && code === 3040)
-    return "This pick does not belong to this key's organization. Pick the business again.";
+    return "This pick does not belong to this key's organization or environment. Pick the business again.";
   if (status === 422 && code === 3042)
     return `This pick expired: it is good for ${BUSINESS_TOKEN_TTL_SECONDS / 60} minutes. Pick the business again.`;
   if (status === 422 && code === 3023)

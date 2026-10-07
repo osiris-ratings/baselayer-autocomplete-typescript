@@ -246,7 +246,12 @@ describe("runSearch", () => {
     [402, null, /locked/, false],
     [403, 30, /searches\.create/, false],
     [403, 37, /Autocomplete is not enabled/, false],
-    [422, 3040, /does not belong to this key's organization/, true],
+    [
+      422,
+      3040,
+      /does not belong to this key's organization or environment/,
+      true,
+    ],
     [422, 3042, /expired.*15 minutes/, true],
     [422, 3023, /no longer on file/, true],
     [422, 3043, /sandbox application/, false],
