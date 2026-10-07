@@ -141,7 +141,7 @@
         "type": "string"
       },
       "ErrorEnvelope": {
-        "description": "The API's catalog error envelope.",
+        "description": "The error envelope the API answers with: a numeric `code`, a `message`, and\n`metadata` that names the reason.",
         "properties": {
           "code": {
             "format": "int32",
@@ -340,7 +340,7 @@
             ]
           },
           "token": {
-            "description": "Opaque handle for this business, person or address, sealed the same way the suggestion's own `token` is and bound to the same organization: it expires a quarter of an hour after it is sealed. A business's is a `business_token` that `POST /searches` redeems; a person's or an address's is redeemed nowhere yet. Null when the autocomplete service cannot name the row: its id was unreadable, or it is a kind of row this service version cannot seal yet.",
+            "description": "Opaque handle for this row, sealed the way the suggestion's own `token` is\nand bound to the same organization and fifteen minutes. A business's handle\n(on a person row) is a `business_token` `POST /searches` redeems; nothing\nredeems a person's or an address's handle yet. Null when the autocomplete service cannot\nname the row: its id was unreadable, or it is a kind of row this service\nversion cannot seal yet.",
             "type": [
               "string",
               "null"
