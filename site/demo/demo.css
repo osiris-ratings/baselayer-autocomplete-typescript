@@ -609,7 +609,6 @@
 
 .row-map-line {
   display: flex;
-  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
   min-width: 0;
@@ -623,12 +622,24 @@
   margin-top: 8px;
 }
 
+/* A drawer's lines, each on one row: out of room, they scroll sideways here,
+   and the grips, the Disabled column and its heading stay put at its edges,
+   over what scrolls under them. */
+.row-map-scroll {
+  display: grid;
+  gap: 8px;
+  overflow-x: auto;
+}
+
 .row-map-head,
 .row-map-kind {
   display: grid;
+  box-sizing: border-box;
   grid-template-columns: var(--map-grip) minmax(0, 1fr) var(--map-check);
   gap: 6px;
   align-items: start;
+  width: max-content;
+  min-width: 100%;
 }
 
 .row-map-wrap {
@@ -647,11 +658,18 @@
 }
 
 .row-map-drawer-label {
+  position: sticky;
+  left: calc(var(--map-grip) + 6px);
   grid-column: 2;
+  justify-self: start;
 }
 
 .row-map-check-head {
+  position: sticky;
+  z-index: 3;
+  right: 0;
   grid-column: 3;
+  background: var(--map-bg, var(--paper));
   text-align: center;
 }
 
@@ -700,12 +718,17 @@
 /* A line's grip: dragged between the drawers by a pointer, pressed from the
    keyboard. */
 .row-map-grip {
+  position: sticky;
+  z-index: 3;
+  left: 0;
   align-self: center;
   width: var(--map-grip);
   height: 20px;
   padding: 0;
-  background: radial-gradient(currentColor 1px, transparent 1.5px) 1px 1px / 5px
-    5px;
+  background:
+    radial-gradient(currentColor 1px, transparent 1.5px) 1px 1px / 5px 5px,
+    var(--map-bg, var(--paper));
+  box-shadow: 6px 0 0 var(--map-bg, var(--paper));
   border: 0;
   border-radius: 3px;
   color: var(--faded);
@@ -731,9 +754,17 @@
 
 /* Whether the line is disabled, a plain checkbox in its own column. */
 .row-map-check-cell {
+  position: sticky;
+  z-index: 3;
+  right: 0;
   display: flex;
-  align-self: center;
+  align-items: center;
+  align-self: stretch;
   justify-content: center;
+  background: var(--map-bg, var(--paper));
+  box-shadow:
+    -6px 0 0 var(--map-bg, var(--paper)),
+    -12px 0 8px -8px rgba(9, 35, 79, 0.18);
 }
 
 .row-map-check {

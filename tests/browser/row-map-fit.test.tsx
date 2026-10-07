@@ -57,12 +57,9 @@ function placed(
 
 /** What is drawn cut short or outside the row, by its text. */
 function cut(host: HTMLElement, editor: RowEditor<string, string>): string[] {
-  const map = host
-    .querySelector<HTMLElement>(".row-map")!
-    .getBoundingClientRect();
   const drawn = [
     ...host.querySelectorAll<HTMLElement>(
-      ".row-map-place:not([data-closed]) .row-map-face, .row-map-name, .row-map-chip, .row-map-line-card",
+      ".row-map-place:not([data-closed]) .row-map-face, .row-map-name, .row-map-chip",
     ),
   ];
   // Each filled place draws its field's name, where it can be measured.
@@ -80,9 +77,15 @@ function cut(host: HTMLElement, editor: RowEditor<string, string>): string[] {
     drawn.flatMap(element => {
       const box = element.getBoundingClientRect();
       const clipped = element.scrollWidth > element.clientWidth + 0.5;
+      // Within what its drawer scrolls through, when it is in one.
+      const scroller = element.closest<HTMLElement>(".row-map-scroll");
+      const area = scroller?.getBoundingClientRect();
       const outside =
-        element.closest(".row-map") !== null &&
-        (box.left < map.left - 0.5 || box.right > map.right + 0.5);
+        scroller !== null &&
+        area !== undefined &&
+        (box.left < area.left - scroller.scrollLeft - 0.5 ||
+          box.right >
+            area.left - scroller.scrollLeft + scroller.scrollWidth + 0.5);
       return clipped || outside
         ? [`${element.textContent} (${clipped ? "clipped" : "outside"})`]
         : [];

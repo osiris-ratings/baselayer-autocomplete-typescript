@@ -805,11 +805,14 @@ function KindRowMap<P extends string, F extends string>({
           aria-label="A row's places"
           data-dragging={moving !== null || undefined}
         >
-          <div className="row-map-head" aria-hidden="true">
-            <span className="row-map-drawer-label">Shown</span>
-            <span className="row-map-check-head">Disabled</span>
+          {/* Out of room, the lines scroll here, the page not at all. */}
+          <div className="row-map-scroll">
+            <div className="row-map-head" aria-hidden="true">
+              <span className="row-map-drawer-label">Shown</span>
+              <span className="row-map-check-head">Disabled</span>
+            </div>
+            {shown.map(kindRow)}
           </div>
-          {shown.map(kindRow)}
         </div>
       </div>
       <div
@@ -824,16 +827,18 @@ function KindRowMap<P extends string, F extends string>({
           role="group"
           aria-label="Hidden lines"
         >
-          <div className="row-map-head" aria-hidden="true">
-            <span className="row-map-drawer-label">Hidden</span>
+          <div className="row-map-scroll">
+            <div className="row-map-head" aria-hidden="true">
+              <span className="row-map-drawer-label">Hidden</span>
+            </div>
+            {hidden.length === 0 ? (
+              <p className="row-map-drawer-hint">
+                Drag a line here by its grip to hide it
+              </p>
+            ) : (
+              hidden.map(kindRow)
+            )}
           </div>
-          {hidden.length === 0 ? (
-            <p className="row-map-drawer-hint">
-              Drag a line here by its grip to hide it
-            </p>
-          ) : (
-            hidden.map(kindRow)
-          )}
         </div>
       </div>
       <div
