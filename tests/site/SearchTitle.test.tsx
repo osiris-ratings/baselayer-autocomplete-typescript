@@ -50,7 +50,7 @@ describe("the test form's title", () => {
     expect(
       screen.getAllByRole("tab", { hidden: false }).map(tab => tab.textContent),
     ).toEqual(["a business", "a person", "an address"]);
-    expect(tabs.textContent).toBe("a business · a person · an address");
+    expect(tabs.textContent).toBe("a business, a person, or an address");
     expect(selected()).toEqual(["a business"]);
     for (const tab of screen.getAllByRole("tab")) {
       expect(tab.getAttribute("aria-controls")).toBe("panel");
@@ -68,7 +68,7 @@ describe("the test form's title", () => {
       fireEvent.click(screen.getByRole("tab", { name: word }));
 
       expect(screen.getByRole("heading").textContent).toBe(
-        "02Autocomplete a business · a person · an address",
+        "02Autocomplete a business, a person, or an address",
       );
       expect(screen.getByRole("heading").getAttribute("aria-label")).toBe(name);
       expect(selected()).toEqual([word]);
@@ -100,18 +100,37 @@ describe("the test form's title", () => {
     expect(document.activeElement).toBe(tab("a business"));
   });
 
-  it("offers only the searches it is given, and no words at all for one", () => {
-    const { unmount } = render(<Title routes={["businesses", "addresses"]} />);
-    expect(screen.getAllByRole("tab").map(tab => tab.textContent)).toEqual([
-      "a business",
-      "an address",
-    ]);
-    unmount();
+  it("reads as a sentence for every set of searches the scope can allow", () => {
+    const sentences: [readonly Route[], string][] = [
+      [["businesses"], "Autocomplete a business"],
+      [["people"], "Autocomplete a person"],
+      [["addresses"], "Autocomplete an address"],
+      [["businesses", "people"], "Autocomplete a business or a person"],
+      [["businesses", "addresses"], "Autocomplete a business or an address"],
+      [["people", "addresses"], "Autocomplete a person or an address"],
+      [
+        ["businesses", "people", "addresses"],
+        "Autocomplete a business, a person, or an address",
+      ],
+    ];
+    for (const [routes, sentence] of sentences) {
+      const { unmount } = render(<Title routes={routes} start={routes[0]!} />);
 
-    render(<Title routes={["businesses"]} />);
-    expect(screen.queryByRole("tablist")).toBeNull();
-    expect(screen.getByRole("heading").textContent).toBe(
-      "02Autocomplete a business",
-    );
+      expect(screen.getByRole("heading").textContent).toBe(`02${sentence}`);
+      // The commas and the "or" are the sentence's, never a tab's.
+      expect(screen.queryAllByRole("tab").map(tab => tab.textContent)).toEqual(
+        routes.length > 1
+          ? routes.map(route =>
+              route === "addresses"
+                ? "an address"
+                : route === "people"
+                  ? "a person"
+                  : "a business",
+            )
+          : [],
+      );
+      expect(screen.queryByRole("tablist") === null).toBe(routes.length === 1);
+      unmount();
+    }
   });
 });

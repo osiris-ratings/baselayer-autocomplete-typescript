@@ -1,8 +1,8 @@
-// The test form's title, which says what the field searches for: "Autocomplete
-// a business · a person · an address". Each search, its article with it, is a
-// tab over the field, the selected one's noun underlined, and only the
-// searches the session may make are offered; with one, the title just names
-// it.
+// The test form's title, which says what the field searches for:
+// "Autocomplete a business, a person, or an address". Each search, its article
+// with it, is a tab over the field, the selected one's noun underlined; the
+// commas and the "or" are the sentence's. Only the searches the session may
+// make are offered; with one, the title just names it.
 
 import { Fragment, useRef, type KeyboardEvent } from "react";
 
@@ -20,6 +20,12 @@ const ARTICLES: Record<Route, string> = {
   people: "a",
   addresses: "an",
 };
+
+/** What joins the search at `index` to the one before it, as a sentence does. */
+function joiner(index: number, count: number): string {
+  if (count === 2) return " or ";
+  return index === count - 1 ? ", or " : ", ";
+}
 
 export function SearchTitle({
   id,
@@ -74,7 +80,7 @@ export function SearchTitle({
               <Fragment key={each}>
                 {index > 0 && (
                   <span className="search-by-sep" aria-hidden="true">
-                    {" · "}
+                    {joiner(index, routes.length)}
                   </span>
                 )}
                 <button

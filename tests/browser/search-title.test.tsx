@@ -104,6 +104,10 @@ describe("the test form's title", () => {
         const { host, done } = draw(width, route);
         try {
           expect(host.querySelectorAll(".search-by-word")).toHaveLength(3);
+          // The whole sentence, its longest form, at every width.
+          expect(host.querySelector(".search-title")!.textContent).toBe(
+            "Autocomplete a business, a person, or an address",
+          );
           expect(faults(host)).toEqual([]);
         } finally {
           done();
