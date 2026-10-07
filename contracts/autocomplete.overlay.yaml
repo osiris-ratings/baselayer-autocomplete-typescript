@@ -292,7 +292,7 @@ actions:
                             items:
                               - type: address
                                 token: A2leF7_gomJWvMMtp4…
-                                label: 1200 River Rd, Pittsburgh, PA 15212
+                                label: 1200 Tallowmere Rd, Pittsburgh, PA 15212
                                 role: principal
                                 matched: false
                         highlight:
@@ -479,10 +479,10 @@ actions:
           content:
             application/json:
               examples:
-                river:
-                  summary: "`1200 river`, one address kept"
+                tallowmere:
+                  summary: "`1200 tallowmere`, one address kept"
                   value:
-                    query: 1200 river
+                    query: 1200 tallowmere
                     found: 1
                     found_capped: false
                     truncated: false
@@ -492,11 +492,11 @@ actions:
                     suggestions:
                       - type: address
                         token: A2leF7_gomJWvMMtp4…
-                        label: 1200 River Rd, Pittsburgh, PA 15212
+                        label: 1200 Tallowmere Rd, Pittsburgh, PA 15212
                         matched_name: null
                         match: strong
                         components:
-                          line1: 1200 River Rd
+                          line1: 1200 Tallowmere Rd
                           line2: null
                           city: Pittsburgh
                           state: PA
@@ -512,6 +512,9 @@ actions:
                                 label: HARBOR CONCRETE PUMPING CO., INC.
                                 role: principal
                                 matched: false
+                                address: 1200 Tallowmere Rd, Pittsburgh, PA 15212
+                                states: [MD, NY, OH, PA, WV]
+                                domicile_state: PA
                           people:
                             count: null
                             matched: null
@@ -520,13 +523,13 @@ actions:
                         highlight:
                           - { text: "1200", matched: true }
                           - { text: " ", matched: false }
-                          - { text: River, matched: true }
+                          - { text: Tallowmere, matched: true }
                           - { text: " Rd, Pittsburgh, PA 15212", matched: false }
       x-codeSamples:
         - lang: shell
           label: curl
           source: |-
-            curl -s "https://api.baselayer.com/autocomplete/addresses?q=1200%20river&limit=5" \
+            curl -s "https://api.baselayer.com/autocomplete/addresses?q=1200%20tallowmere&limit=5" \
               -H "X-Autocomplete-Session: $SESSION" \
               -H "Origin: https://app.example.com"
         - lang: typescript
@@ -534,6 +537,6 @@ actions:
           source: |-
             const { response } = await client.search(
               "addresses",
-              { q: "1200 river", filters: { state: ["PA"] } },
+              { q: "1200 tallowmere", filters: { state: ["PA"] } },
               { signal },
             );

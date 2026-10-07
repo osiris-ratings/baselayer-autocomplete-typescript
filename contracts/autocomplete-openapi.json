@@ -11,7 +11,7 @@
             ]
           },
           "line1": {
-            "description": "The number, directions, street name and suffix: `1200 River Rd`.",
+            "description": "The number, directions, street name and suffix: `1200 Quillfeather Ln`.",
             "type": [
               "string",
               "null"
