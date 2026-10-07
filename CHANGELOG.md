@@ -15,10 +15,12 @@ and a host can let the person, an address or a listed person be picked as well.
 A session is held to a scope, the searches it may make, which the mint answers
 and your backend can narrow, and the SDK never sends a request outside it.
 
-Every closed value on the wire is now a typed union, and a value the SDK does
-not know is refused rather than kept: the SDK learns a value before the API
-sends it. With the changed filters of the two routes and the new error kind,
-this ships as a minor release.
+Every closed value in a search's answer is now a typed union pinned to the API's
+contract, and one the SDK does not know is a `contract` error rather than kept:
+the SDK learns a value before the API sends it. A route or a relation the
+session's scope names but the SDK does not know is dropped. With the changed
+filters of the two routes and the new error kinds, this ships as a minor
+release.
 
 ### Added
 
