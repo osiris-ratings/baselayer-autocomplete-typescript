@@ -5,15 +5,18 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   createAutocompleteClient,
+  parseSuggestResponse,
   type EntityPick,
   type EntityType,
   type FetchLike,
   type MintFunction,
   type ResponseLike,
+  type SessionScope,
 } from "@baselayer-sdk/autocomplete";
 
 import {
   BusinessAutocomplete,
+  BusinessAutocompleteView,
   type BusinessAutocompleteProps,
 } from "../../src/react";
 
@@ -90,7 +93,7 @@ const BODY = {
   ],
 };
 
-function setup(body: unknown = BODY) {
+function setup(body: unknown = BODY, scope?: SessionScope) {
   const fetch = vi.fn<FetchLike>(async () => reply(body));
   const mint: MintFunction = async () => ({
     kind: "granted",
@@ -100,6 +103,7 @@ function setup(body: unknown = BODY) {
       requestBudget: 50,
       pivotAllowance: 5,
       filterMinStem: 3,
+      ...(scope !== undefined ? { scope } : {}),
     },
   });
   return {
@@ -225,6 +229,68 @@ describe("a business row that lists its officers and addresses", () => {
       "address-line",
       "person-line",
     ]);
+  });
+
+  it("draws a relation listed twice once, each option once", async () => {
+    await typeHarbor({
+      list: ["addresses", "people", "addresses"],
+      enabledLines: ["business", "person", "address"],
+    });
+
+    const harbor = screen.getByRole("group");
+    expect(
+      [...harbor.querySelectorAll<HTMLElement>("[data-list]")].map(
+        list => list.dataset.list,
+      ),
+    ).toEqual(["addresses", "people"]);
+    const ids = screen.getAllByRole("option").map(option => option.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("draws a relation listed twice once, handed to the view as it is", () => {
+    const { suggestions } = parseSuggestResponse("businesses", BODY);
+    render(
+      <BusinessAutocompleteView
+        id="business"
+        value="harbor"
+        onInputChange={() => {}}
+        onSelect={() => {}}
+        suggestions={suggestions}
+        found={1}
+        foundCapped={false}
+        truncated={false}
+        indexTag={null}
+        roundTripMs={null}
+        isSearching={false}
+        error={null}
+        open
+        list={["addresses", "people", "addresses"]}
+        enabledLines={["business", "person", "address"]}
+      />,
+    );
+
+    expect(
+      [...document.querySelectorAll<HTMLElement>("[data-list]")].map(
+        list => list.dataset.list,
+      ),
+    ).toEqual(["addresses", "people"]);
+    const ids = screen.getAllByRole("option").map(option => option.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("draws only what the session's scope lists, and a row left nothing to list as the one option it always was", async () => {
+    const { client } = setup(BODY, {
+      routes: { businesses: ["people"] },
+      maxLimit: 20,
+    });
+    const user = userEvent.setup();
+    render(<Host client={client} list={["addresses"]} />);
+    await user.type(screen.getByRole("combobox"), "harbor");
+
+    const [row] = await screen.findAllByRole("option");
+    expect(screen.queryByRole("group")).toBeNull();
+    expect(document.querySelector("[data-list]")).toBeNull();
+    expect(row).toHaveAttribute("data-testid", "business-suggestion");
   });
 
   it("asks for what it lists, though the layout draws none of it", async () => {

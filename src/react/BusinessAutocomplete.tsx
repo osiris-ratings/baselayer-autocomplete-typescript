@@ -43,6 +43,7 @@ import {
   filtersKeyOf,
   useBusinessAutocomplete,
 } from "./useBusinessAutocomplete";
+import { useSessionScope } from "./useAutocompleteSession";
 
 /**
  * When the component mints its session. `focus` (the default) mints as the
@@ -260,13 +261,14 @@ function Connected({
   // The fields drawn decide what is fetched unless the host says: a field
   // placed nowhere is not asked for. With none needing a related entity the
   // autocomplete service's default stands, since it refuses an empty include.
-  const include =
-    includeGiven ??
-    requestFor(
-      "businesses",
-      drawnLayout(BUSINESS_ROW, resolveLayout(BUSINESS_ROW, layout)),
-      list,
-    ).include;
+  // What is fetched does not wait on the session: the hook drops what its
+  // scope does not grant as it asks. What is drawn lists only what the scope
+  // grants, since an ungranted relation comes back empty, and a row left
+  // nothing to list is the one option it always was.
+  const drawn = drawnLayout(BUSINESS_ROW, resolveLayout(BUSINESS_ROW, layout));
+  const include = includeGiven ?? requestFor("businesses", drawn, list).include;
+  const scope = useSessionScope(client);
+  const listed = requestFor("businesses", drawn, list, scope).list;
   const { selection, pick } = usePickedSelection(value, showSelection);
   const {
     unavailable,
@@ -334,7 +336,7 @@ function Connected({
         onPickEntity?.(entity);
       }}
       selection={selection}
-      list={list}
+      list={listed}
       enabledLines={enabledLines}
       icons={icons}
       iconSegments={iconSegments}

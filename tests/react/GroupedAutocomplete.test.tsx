@@ -1062,6 +1062,27 @@ describe("the order of a row's lines", () => {
     ]);
   });
 
+  it("moves the keys through an address's lines in the order they are drawn", async () => {
+    const { client } = setup();
+    const user = userEvent.setup();
+    render(
+      <AddressHost
+        client={client}
+        list={["people", "businesses"]}
+        enabledLines={["business", "person"]}
+      />,
+    );
+    await user.type(screen.getByRole("combobox"), "45 corvel");
+    await screen.findByRole("group", { name: /45 Corvel/ });
+
+    expect(await keyOrder(user, 4)).toEqual([
+      "person",
+      "person",
+      "business",
+      "business",
+    ]);
+  });
+
   it("draws an address's lines in the list's order, the head first", async () => {
     const { client } = setup();
     const user = userEvent.setup();
@@ -1076,6 +1097,38 @@ describe("the order of a row's lines", () => {
       "business",
       "business",
     ]);
+  });
+});
+
+describe("a listed relation the session's scope leaves out", () => {
+  const listsOf = (group: HTMLElement) =>
+    [...group.querySelectorAll<HTMLElement>("[data-list]")].map(
+      list => list.dataset.list,
+    );
+
+  it("is not drawn under a person, though the host lists it", async () => {
+    const { client } = setup({
+      routes: { people: ["businesses"] },
+      maxLimit: 20,
+    });
+    const { dana } = await typeDana(client, {
+      list: ["addresses", "businesses"],
+    });
+
+    expect(listsOf(dana)).toEqual(["businesses"]);
+  });
+
+  it("is not drawn under an address, though the host lists it", async () => {
+    const { client } = setup({
+      routes: { addresses: ["businesses"] },
+      maxLimit: 20,
+    });
+    const user = userEvent.setup();
+    render(<AddressHost client={client} list={["people", "businesses"]} />);
+    await user.type(screen.getByRole("combobox"), "45 corvel");
+    const corvel = await screen.findByRole("group", { name: /45 Corvel/ });
+
+    expect(listsOf(corvel)).toEqual(["businesses"]);
   });
 });
 

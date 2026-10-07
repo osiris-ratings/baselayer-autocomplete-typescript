@@ -42,6 +42,7 @@ import {
   type RelatedRole,
   type RelatedSet,
   type Relation,
+  type SessionScope,
   type SuggestionByRelation,
 } from "@baselayer-sdk/autocomplete";
 
@@ -54,6 +55,7 @@ import {
   type PickTargets,
 } from "./selection";
 import { resolveMessages, type AutocompleteMessages } from "./messages";
+import { useSessionScope } from "./useAutocompleteSession";
 import { useEntityAutocomplete } from "./useBusinessAutocomplete";
 import { useSuggestionCombobox } from "./useBusinessCombobox";
 import {
@@ -241,17 +243,20 @@ function requestOf(
   route: GroupedRoute,
   layout: PersonRowLayout | AddressRowLayout,
   list: readonly Relation[] | undefined,
+  scope?: SessionScope,
 ): GroupedRequest<GroupedRoute> {
   return route === "people"
     ? requestFor(
         "people",
         layout as PersonRowLayout,
         list as IncludeOf<"people">[] | undefined,
+        scope,
       )
     : requestFor(
         "addresses",
         layout as AddressRowLayout,
         list as IncludeOf<"addresses">[] | undefined,
+        scope,
       );
 }
 
@@ -281,9 +286,13 @@ function Connected<R extends GroupedRoute>({
 }: ConnectedProps<R> & { client: AutocompleteClient }) {
   const client = useResolvedClient(given);
   const { selection, pick } = usePickedSelection(value, showSelection);
-  // What the rows draw decides what is asked for; the hook drops whatever the
-  // session's scope does not grant.
-  const request = requestOf(route, drawnFor(route, layout), list);
+  // What the rows draw decides what is asked for, and the hook drops what the
+  // session's scope does not grant as it asks. The rows list only what the
+  // scope grants, since an ungranted relation comes back empty.
+  const drawnRow = drawnFor(route, layout);
+  const request = requestOf(route, drawnRow, list);
+  const scope = useSessionScope(client);
+  const listed = requestOf(route, drawnRow, list, scope).list;
   const { unavailable, ...state } = useEntityAutocomplete<R>({
     relation: route,
     client,
@@ -311,7 +320,7 @@ function Connected<R extends GroupedRoute>({
       value={value}
       inputName={name}
       messages={messages}
-      list={request.list as IncludeOf<R>[]}
+      list={listed as IncludeOf<R>[]}
       layout={layout}
       suggestions={state.suggestions}
       found={state.found}

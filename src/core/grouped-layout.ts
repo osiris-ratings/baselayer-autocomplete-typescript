@@ -481,7 +481,7 @@ export function groupedLines(
               pick: { type: row.type, token: row.token, label: row.label },
             },
     },
-    lists: listed.flatMap(relation => {
+    lists: [...new Set(listed)].flatMap(relation => {
       const set = related[relation];
       if (set === undefined) {
         return [];

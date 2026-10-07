@@ -362,7 +362,9 @@ autocomplete service sealed no token for is drawn and disabled, whatever
 `PersonAutocompleteView` and `AddressAutocompleteView` draw the same rows
 from state you supply, and `BusinessAutocompleteView` takes `list`,
 `enabledLines`, `icons`, `iconSegments`, `selection` and `onSelectEntity`
-for a business row's
-lines. `useEntityAutocomplete({ relation, query, ... })` is the hook for any
-route, and `groupedLines` and `groupedOptions` turn a row into its lines and
-picks (see [Headless use](headless.md)).
+for a business row's lines. A view draws the `list` it is handed, so hand it
+`requestFor(route, layout, list, scope).list`: the autocomplete service
+answers a relation the session's scope leaves out as an empty set, which
+would draw as an empty list. `useEntityAutocomplete({ relation, query, ... })`
+is the hook for any route, and `groupedLines` and `groupedOptions` turn a row
+into its lines and picks (see [Headless use](headless.md)).

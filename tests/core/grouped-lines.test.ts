@@ -98,6 +98,14 @@ describe("groupedLines", () => {
     ).toEqual(["address", "business"]);
   });
 
+  it("lists a relation named twice once", () => {
+    expect(
+      groupedLines(jane, ["addresses", "addresses", "businesses"]).lists.map(
+        list => list.relation,
+      ),
+    ).toEqual(["addresses", "businesses"]);
+  });
+
   it("says how many each list leaves out: its full count past the items shown", () => {
     const [businesses, addresses] = groupedLines(jane, [
       "businesses",
