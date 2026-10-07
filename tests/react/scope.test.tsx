@@ -163,3 +163,54 @@ describe("the typeahead under a session's scope", () => {
     expect(result.current.error).toBe(DEFAULT_MESSAGES.outOfScope);
   });
 });
+
+describe("a route the deployment cannot answer yet", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("says the search is not available yet, instead of an HTTP error", async () => {
+    const fetch = vi.fn<FetchLike>(async () =>
+      reply(503, {
+        code: 503,
+        message: "This replica cannot answer people search yet.",
+        uri: null,
+        metadata: { reason: "index_too_old", current: 3, required: 4 },
+      }),
+    );
+    const mint: MintFunction = async () => ({
+      kind: "granted",
+      grant: {
+        sessionToken: "grant-1",
+        expiresIn: 600,
+        requestBudget: 10,
+        pivotAllowance: 5,
+        filterMinStem: 3,
+        scope: { routes: { people: ["businesses"] }, maxLimit: 20 },
+      },
+    });
+    const client = createAutocompleteClient({
+      baseUrl: "https://api.test",
+      mint,
+      fetch,
+    });
+
+    const { result } = renderHook(() =>
+      useEntityAutocomplete({
+        relation: "people",
+        query: "dana whitfield",
+        enabled: true,
+        client,
+      }),
+    );
+    await settle();
+
+    expect(result.current.errorKind).toBe("route_unserved");
+    expect(result.current.error).toBe(DEFAULT_MESSAGES.routeUnserved);
+    expect(result.current.isSearching).toBe(false);
+  });
+});

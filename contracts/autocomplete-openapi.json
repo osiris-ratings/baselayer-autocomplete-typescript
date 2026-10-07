@@ -403,6 +403,65 @@
         ],
         "type": "object"
       },
+      "RouteUnservedEnvelope": {
+        "description": "The error envelope of a 503 for a route this replica cannot answer yet.",
+        "properties": {
+          "code": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/RouteUnservedMetadata"
+          },
+          "uri": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "metadata"
+        ],
+        "type": "object"
+      },
+      "RouteUnservedMetadata": {
+        "description": "The `metadata` of a 503 for a route this replica cannot answer yet: what it has\n(`current`: the index's schema, or the token version it seals) and the least the\nroute needs (`required`).",
+        "properties": {
+          "current": {
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "reason": {
+            "$ref": "#/components/schemas/RouteUnservedReason"
+          },
+          "required": {
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        "required": [
+          "reason",
+          "current",
+          "required"
+        ],
+        "type": "object"
+      },
+      "RouteUnservedReason": {
+        "description": "Why a route this service has cannot answer on this replica yet.",
+        "enum": [
+          "index_too_old",
+          "token_version_too_old"
+        ],
+        "type": "string"
+      },
       "Source": {
         "properties": {
           "status": {
@@ -876,11 +935,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ErrorEnvelope"
+                  "$ref": "#/components/schemas/RouteUnservedEnvelope"
                 }
               }
             },
-            "description": "No index is being served yet, the one served predates people search (`metadata.reason` `index_too_old`), or the autocomplete service seals tokens older than version 6 (`token_version_too_old`)"
+            "description": "This replica cannot answer people search yet: the served index predates it (`metadata.reason` `index_too_old`) or the autocomplete service seals tokens older than version 6 (`token_version_too_old`), with what it has as `current` and the least the route needs as `required`. A 503 with no index served yet, or with every query worker busy, carries an ErrorEnvelope instead."
           }
         },
         "security": [

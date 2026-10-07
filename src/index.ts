@@ -56,6 +56,7 @@ export {
   isAutocompleteError,
   type AutocompleteErrorKind,
   type MintScope,
+  type RouteUnserved,
 } from "./core/errors";
 export {
   DEFAULT_ROW_LAYOUT,
@@ -147,6 +148,7 @@ export {
   ContractViolation,
   MATCH_GRADES,
   RELATED_ROLES,
+  ROUTE_UNSERVED_REASONS,
   SOURCE_STATUSES,
   parseBusinessesResponse,
   parseErrorEnvelope,
@@ -164,6 +166,7 @@ export {
   type RelatedItem,
   type RelatedRole,
   type RelatedSet,
+  type RouteUnservedReason,
   type Source,
   type SourceStatus,
   type Suggestion,

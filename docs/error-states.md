@@ -40,20 +40,21 @@ on one, your organization may not reach, and a 422 that it is malformed (see
 
 ## Asking the autocomplete service
 
-| Answer                               | Recovery                                 | Shown                               |
-| ------------------------------------ | ---------------------------------------- | ----------------------------------- |
-| 200                                  |                                          | rows                                |
-| 401, codes 27, 28, 29                | re-mint once, replay                     | nothing                             |
-| 429, code 480 (budget spent)         | re-mint once, replay                     | nothing                             |
-| 429, code 482 (too many pivots)      | re-mint once, replay                     | nothing                             |
-| 429, `rate_limited`                  | wait `Retry-After` (at most 2 s), replay | nothing                             |
-| 403, code 501 (route out of scope)   | none                                     | `outOfScope`                        |
-| 403, code 502 (relation out of it)   | none                                     | `outOfScope`                        |
-| 422                                  | none                                     | the validation message              |
-| 503                                  | none                                     | the autocomplete service's message  |
-| 500, 504                             | none                                     | "Autocomplete unavailable (HTTP n)" |
-| the network                          | none                                     | "Autocomplete unavailable"          |
-| a 2xx whose body is not the contract | none                                     | "Autocomplete unavailable"          |
+| Answer                                          | Recovery                                 | Shown                               |
+| ----------------------------------------------- | ---------------------------------------- | ----------------------------------- |
+| 200                                             |                                          | rows                                |
+| 401, codes 27, 28, 29                           | re-mint once, replay                     | nothing                             |
+| 429, code 480 (budget spent)                    | re-mint once, replay                     | nothing                             |
+| 429, code 482 (too many pivots)                 | re-mint once, replay                     | nothing                             |
+| 429, `rate_limited`                             | wait `Retry-After` (at most 2 s), replay | nothing                             |
+| 403, code 501 (route out of scope)              | none                                     | `outOfScope`                        |
+| 403, code 502 (relation out of it)              | none                                     | `outOfScope`                        |
+| 422                                             | none                                     | the validation message              |
+| 503, `index_too_old` or `token_version_too_old` | none                                     | `routeUnserved`                     |
+| 503                                             | none                                     | the autocomplete service's message  |
+| 500, 504                                        | none                                     | "Autocomplete unavailable (HTTP n)" |
+| the network                                     | none                                     | "Autocomplete unavailable"          |
+| a 2xx whose body is not the contract            | none                                     | "Autocomplete unavailable"          |
 
 Every answer with no recovery rejects with `kind: "request_failed"`, except
 a 403 with code 501 or 502, which rejects with `kind: "out_of_scope"`, and a
@@ -64,9 +65,14 @@ sends anything (below), so the 403 means the session and the request
 disagree with the autocomplete service.
 
 A 503 on the people or the addresses route whose `metadata.reason` is
-`index_too_old` or `token_version_too_old` means the deployment does not
-serve that route yet: the index it serves, or the tokens it seals, predate
-it. Searching businesses still works.
+`index_too_old` or `token_version_too_old` means the deployment has the route
+but cannot answer it yet: the index it serves, or the tokens it seals,
+predate it. It rejects with `kind: "route_unserved"`, never retried, and its
+`unserved` says why (`reason`, a `RouteUnservedReason`), what the deployment
+has (`current`: the index's schema, or its token version) and what the route
+needs (`required`). The footer shows `routeUnserved`. Searching businesses
+still works. Any other 503 (no index served yet, every worker busy) is a
+`request_failed` as above.
 A `request_failed` carries the answer's `status` (0 for the network),
 `code`, `reason`, `userMessage` and `retryAfterMs`. The footer shows
 `userMessage` when the answer had one, else `httpFallback(status)`, and
@@ -133,6 +139,7 @@ second bundled copy of the core. Beside `kind` and `message` it carries:
 | `route`        | on `out_of_scope`, the route asked                                                                                     |
 | `relation`     | on `out_of_scope`, the relation the scope leaves out; null when it leaves out the route                                |
 | `param`        | on `out_of_scope`, the parameter that touched it: `include` or a filter's name                                         |
+| `unserved`     | on `route_unserved`, `{ reason, current, required }`: why, what the deployment has, what the route needs               |
 
 A field that does not apply is `null`.
 
@@ -157,6 +164,7 @@ All of them are overridable through `messages`:
 | `authUnavailable`        | Autocomplete unavailable: the session could not be verified                                                     |
 | `httpFallback(status)`   | Autocomplete unavailable (HTTP status)                                                                          |
 | `outOfScope`             | This search is not available here                                                                               |
+| `routeUnserved`          | This search is not available here yet                                                                           |
 | `person`, `people`       | person, people: the people search's footer                                                                      |
 | `address`, `addresses`   | address, addresses: the address search's footer                                                                 |
 | `businessesOfPerson(n)`  | `n businesses` beside a person (`1 business`)                                                                   |

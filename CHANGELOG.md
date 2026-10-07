@@ -40,6 +40,11 @@ this ships as a minor release.
 - `out_of_scope`, an error kind with `route`, `relation` and `param`: a
   request its session's scope leaves out, refused before it is sent, or the
   autocomplete service's 403 code 501 or 502, which is never retried.
+- `route_unserved`, an error kind with `unserved` (`reason`, `current`,
+  `required`): a deployment that has the people or addresses route but
+  cannot answer it yet, its index or its tokens too old. Never retried; the
+  hooks show `messages.routeUnserved`. `ROUTE_UNSERVED_REASONS` and
+  `RouteUnservedReason` are the reasons, pinned to the contract.
 - `ROUTE_NAMES`, `RELATIONS`, `LEGAL_RELATIONS`, `Route`, `FILTER_PARAMS`,
   `setFilters`, and the unions `MatchGrade`, `SourceStatus`, `RelatedRole`
   and `EntityType` with their value lists (`MATCH_GRADES`, …).

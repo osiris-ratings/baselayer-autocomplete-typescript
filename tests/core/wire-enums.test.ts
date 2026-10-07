@@ -9,6 +9,7 @@ import {
   ENTITY_TYPES,
   MATCH_GRADES,
   RELATED_ROLES,
+  ROUTE_UNSERVED_REASONS,
   SOURCE_STATUSES,
   parseBusinessesResponse,
   parseSuggestResponse,
@@ -95,6 +96,7 @@ describe("the closed values on the wire", () => {
     ["SourceStatus", SOURCE_STATUSES],
     ["RelatedRole", RELATED_ROLES],
     ["BusinessStructure", BUSINESS_STRUCTURES],
+    ["RouteUnservedReason", ROUTE_UNSERVED_REASONS],
   ] as const)(
     "knows exactly the %s values the contract lists, in its order",
     (name, values) => {

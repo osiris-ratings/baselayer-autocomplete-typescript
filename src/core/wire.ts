@@ -62,6 +62,18 @@ export const RELATED_ROLES = [
  */
 export type RelatedRole = (typeof RELATED_ROLES)[number];
 
+/** Why a deployment cannot answer a route it has yet, in the contract's order. */
+export const ROUTE_UNSERVED_REASONS = [
+  "index_too_old",
+  "token_version_too_old",
+] as const;
+
+/**
+ * `index_too_old`: the index it serves predates the route. `token_version_too_old`:
+ * the tokens it seals are older than the route needs.
+ */
+export type RouteUnservedReason = (typeof ROUTE_UNSERVED_REASONS)[number];
+
 export interface RelatedItem {
   /** Always the entity its relation holds: a `business` under `businesses`. */
   type: EntityType;

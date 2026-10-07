@@ -61,6 +61,8 @@ export interface AutocompleteMessages {
   authUnavailable: string;
   /** The session's scope does not reach this search, or one of its filters. */
   outOfScope: string;
+  /** The deployment has this search but cannot answer it yet. */
+  routeUnserved: string;
   /** An autocomplete service refusal with no message of its own. */
   httpFallback: (status: number) => string;
 }
@@ -107,6 +109,7 @@ export const DEFAULT_MESSAGES: Readonly<AutocompleteMessages> = Object.freeze({
   authUnavailable:
     "Autocomplete unavailable: the session could not be verified",
   outOfScope: "This search is not available here",
+  routeUnserved: "This search is not available here yet",
   httpFallback: (status: number) => `Autocomplete unavailable (HTTP ${status})`,
 });
 

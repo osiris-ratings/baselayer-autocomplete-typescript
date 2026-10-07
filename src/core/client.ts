@@ -12,7 +12,12 @@ import {
   type ShortStemPolicy,
 } from "./businesses";
 import { ROUTE_NAMES, type Relation, type Route } from "./entities";
-import { AutocompleteError, abortError, isAbortError } from "./errors";
+import {
+  AutocompleteError,
+  abortError,
+  isAbortError,
+  type RouteUnserved,
+} from "./errors";
 import type { MintFunction } from "./mint";
 import {
   DEFAULT_SESSION_SCOPE,
@@ -37,6 +42,7 @@ import {
 } from "./session";
 import {
   ContractViolation,
+  ROUTE_UNSERVED_REASONS,
   firstValidationMessage,
   parseErrorEnvelope,
   parseSuggestResponse,
@@ -331,6 +337,25 @@ function noRequests(): Record<Route, number> {
     Route,
     number
   >;
+}
+
+/** A 503's reading as a route the deployment cannot answer yet, or null. */
+function routeUnservedOf(
+  metadata: Record<string, unknown> | null,
+): RouteUnserved | null {
+  const reason = ROUTE_UNSERVED_REASONS.find(
+    known => known === metadata?.reason,
+  );
+  if (reason === undefined) {
+    return null;
+  }
+  const integer = (value: unknown) =>
+    typeof value === "number" && Number.isInteger(value) ? value : null;
+  return {
+    reason,
+    current: integer(metadata?.current),
+    required: integer(metadata?.required),
+  };
 }
 
 /** The scope codes the autocomplete service refuses a request with, on a 403. */
@@ -686,8 +711,14 @@ export function createAutocompleteClient(
           response.status === 403 &&
           failure.code !== null &&
           OUT_OF_SCOPE_CODES.has(failure.code);
+        const unserved =
+          response.status === 503 ? routeUnservedOf(failure.metadata) : null;
         const error = new AutocompleteError({
-          kind: outside ? "out_of_scope" : "request_failed",
+          kind: outside
+            ? "out_of_scope"
+            : unserved !== null
+              ? "route_unserved"
+              : "request_failed",
           message: failure.message,
           status: response.status,
           code: failure.code,
@@ -705,6 +736,7 @@ export function createAutocompleteClient(
                     : null,
               }
             : {}),
+          ...(unserved !== null ? { route: relation, unserved } : {}),
         });
         emitRequest(
           requestEvent(

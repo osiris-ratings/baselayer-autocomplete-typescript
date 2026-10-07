@@ -1,4 +1,5 @@
 import type { Relation, Route } from "./entities";
+import type { RouteUnservedReason } from "./wire";
 
 /**
  * Every failure the client reports, as one class with a discriminant. Hosts
@@ -25,12 +26,27 @@ export type AutocompleteErrorKind =
    * (code 501 or 502). Never retried: a new session has the same scope.
    */
   | "out_of_scope"
+  /**
+   * The deployment has the route but cannot answer it yet (a 503 whose
+   * `metadata.reason` says why); `unserved` says what it has and needs. Not
+   * retried: it lasts until the deployment is upgraded.
+   */
+  | "route_unserved"
   /** The autocomplete service refused and no recovery applied. */
   | "request_failed"
   /** A body did not match the wire types. */
   | "contract";
 
 export type MintScope = "window" | "day";
+
+/** Why a deployment cannot answer a route yet, what it has, and what it needs. */
+export interface RouteUnserved {
+  reason: RouteUnservedReason;
+  /** The index's schema, or the token version the deployment seals; null when not said. */
+  current: number | null;
+  /** The least the route needs of the same; null when not said. */
+  required: number | null;
+}
 
 export interface AutocompleteErrorFields {
   kind: AutocompleteErrorKind;
@@ -54,6 +70,8 @@ export interface AutocompleteErrorFields {
   relation?: Relation | null;
   /** On `out_of_scope`: the parameter that touched it (`include`, a filter). */
   param?: string | null;
+  /** On `route_unserved`: why, what the deployment has, and what it needs. */
+  unserved?: RouteUnserved | null;
   cause?: unknown;
 }
 
@@ -69,6 +87,7 @@ export class AutocompleteError extends Error {
   readonly route: Route | null;
   readonly relation: Relation | null;
   readonly param: string | null;
+  readonly unserved: RouteUnserved | null;
 
   constructor(fields: AutocompleteErrorFields) {
     super(
@@ -87,6 +106,7 @@ export class AutocompleteError extends Error {
     this.route = fields.route ?? null;
     this.relation = fields.relation ?? null;
     this.param = fields.param ?? null;
+    this.unserved = fields.unserved ?? null;
   }
 }
 

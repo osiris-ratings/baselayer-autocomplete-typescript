@@ -284,6 +284,13 @@ export function useEntityAutocomplete<R extends Relation>({
               errorKind: error.kind,
             });
             return;
+          case "route_unserved":
+            setState({
+              ...emptyState<R>(),
+              error: textRef.current.routeUnserved,
+              errorKind: error.kind,
+            });
+            return;
           case "auth_braked":
             setState({
               ...emptyState<R>(),
