@@ -651,25 +651,22 @@ describe("the row map as the row's configuration", () => {
     expect(onChange.mock.calls[1]![0].rows.people.enabled).toEqual([]);
   });
 
-  it("says a hidden line is hidden on its checkbox, though it stays enabled for later", () => {
-    const { check } = mountOn(
+  it("gives a hidden line no Disabled checkbox, and a shown one back its own", () => {
+    const hidden = mountOn(
       "people",
       withListed(DEFAULT_STYLE, "people", "businesses", false),
     );
-    expect(check("businesses").title).toBe(
-      "Businesses: hidden, not drawn (enabledLines)",
-    );
+    expect(
+      hidden.kind("businesses").querySelector(".row-map-check"),
+    ).toBeNull();
+    expect(hidden.kind("addresses").querySelector(".row-map-check")).toBeNull();
     cleanup();
-    expect(mountOn("people").check("businesses").title).toBe(
+    // Shown again, as it was: enabled.
+    const { check } = mountOn("people");
+    expect(check("businesses").checked).toBe(false);
+    expect(check("businesses").title).toBe(
       "Businesses: enabled, a choice in the menu (enabledLines)",
     );
-  });
-
-  it("leaves a hidden line's checkbox disabled", () => {
-    const { check } = mountOn("people");
-    expect(check("addresses").disabled).toBe(true);
-    expect(check("addresses").checked).toBe(false);
-    expect(check("businesses").disabled).toBe(false);
   });
 
   it("keeps the grip's focus as its line moves to the other drawer", () => {

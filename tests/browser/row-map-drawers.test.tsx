@@ -149,8 +149,11 @@ describe("the row map's drawers", () => {
         expect(lines(relation).opacity).toBe("1");
       }
       // The controls are never greyed.
-      for (const relation of ["head", "addresses"]) {
-        for (const control of [".row-map-check-cell", ".row-map-grip"]) {
+      for (const [relation, controls] of [
+        ["head", [".row-map-check-cell", ".row-map-grip-cell"]],
+        ["addresses", [".row-map-grip-cell"]],
+      ] as const) {
+        for (const control of controls) {
           const style = getComputedStyle(
             kind(relation).querySelector(control)!,
           );

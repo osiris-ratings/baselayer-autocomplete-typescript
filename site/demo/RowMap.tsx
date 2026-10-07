@@ -20,6 +20,9 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type FocusEvent as ReactFocusEvent,
+  type RefObject,
+  type UIEvent as ReactUIEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
@@ -72,6 +75,16 @@ function relationOf(item: string): Relation | null {
 /** The drawers a line is dragged between. */
 const SHOWN = "shown";
 const HIDDEN = "hidden";
+
+/** Marks a scroller's frame with the edges there is more beyond. */
+function markEdges(scroller: HTMLElement) {
+  const frame = scroller.parentElement!;
+  frame.toggleAttribute("data-more-before", scroller.scrollLeft > 0.5);
+  frame.toggleAttribute(
+    "data-more-after",
+    scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 0.5,
+  );
+}
 
 /** "their addresses" as a line's tooltip starts it. */
 function capitalized(name: string): string {
@@ -692,6 +705,38 @@ function KindRowMap<P extends string, F extends string>({
   const unplaced = unplacedFields(layout).filter(field =>
     shownFields.has(field),
   );
+  // A drawer out of room scrolls its lines sideways: its frame shadows each
+  // edge there is more beyond, as it scrolls and as its lines change.
+  const shownScroller = useRef<HTMLDivElement | null>(null);
+  const hiddenScroller = useRef<HTMLDivElement | null>(null);
+  useLayoutEffect(() => {
+    for (const scroller of [shownScroller.current, hiddenScroller.current]) {
+      if (scroller !== null) markEdges(scroller);
+    }
+  });
+  useEffect(() => {
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(entries => {
+      for (const entry of entries) markEdges(entry.target as HTMLElement);
+    });
+    for (const scroller of [shownScroller.current, hiddenScroller.current]) {
+      if (scroller !== null) observer.observe(scroller);
+    }
+    return () => observer.disconnect();
+  }, []);
+  const edges = (scroller: RefObject<HTMLDivElement | null>) => ({
+    ref: scroller,
+    onScroll: (event: ReactUIEvent<HTMLDivElement>) =>
+      markEdges(event.currentTarget),
+    // What the keyboard reaches is brought clear of the sticky grips and the
+    // Disabled column; a press that starts a drag is not.
+    onFocus: (event: ReactFocusEvent<HTMLDivElement>) => {
+      const target = event.target as HTMLElement;
+      if (!target.matches(":focus-visible")) return;
+      target.scrollIntoView({ block: "nearest", inline: "nearest" });
+    },
+  });
+
   /**
    * A line kind: its grip at the left, its lines in their box, and the
    * checkbox that disables it at the right.
@@ -713,24 +758,26 @@ function KindRowMap<P extends string, F extends string>({
             : undefined
         }
       >
-        {relation === null ? (
-          // A row always shows its head: no grip, but its room.
-          <span className="row-map-grip" data-spacer aria-hidden="true" />
-        ) : (
-          <button
-            type="button"
-            className="row-map-grip"
-            data-relation={relation}
-            aria-label={`${isListed ? "Hide" : "Show"} ${name}`}
-            title={`${capitalized(name)}: drag to ${isListed ? "Hidden" : "Shown"}, or press, to ${isListed ? "hide" : "show"} them (list)`}
-            {...handle(lineItem(relation))}
-            onClick={() => {
-              if (!clicked()) return;
-              refocus.current = relation;
-              onList(relation, !isListed);
-            }}
-          />
-        )}
+        <span className="row-map-grip-cell">
+          {relation === null ? (
+            // A row always shows its head: no grip, but its room.
+            <span className="row-map-grip" data-spacer aria-hidden="true" />
+          ) : (
+            <button
+              type="button"
+              className="row-map-grip"
+              data-relation={relation}
+              aria-label={`${isListed ? "Hide" : "Show"} ${name}`}
+              title={`${capitalized(name)}: drag to ${isListed ? "Hidden" : "Shown"}, or press, to ${isListed ? "hide" : "show"} them (list)`}
+              {...handle(lineItem(relation))}
+              onClick={() => {
+                if (!clicked()) return;
+                refocus.current = relation;
+                onList(relation, !isListed);
+              }}
+            />
+          )}
+        </span>
         <div className="row-map-kind-lines">
           {kind.lines.map(({ line, lead, trailing }) => {
             const segment = nameSegment(route, relation, line);
@@ -779,18 +826,19 @@ function KindRowMap<P extends string, F extends string>({
             );
           })}
         </div>
-        <span className="row-map-check-cell">
-          <input
-            type="checkbox"
-            className="row-map-check"
-            aria-label={`Disable ${name}`}
-            title={`${capitalized(name)}: ${!isListed ? "hidden, not drawn" : on ? "enabled, a choice in the menu" : "disabled, drawn greyed in the menu"} (enabledLines)`}
-            checked={isListed && !on}
-            // A hidden line is not drawn, so not a choice either.
-            disabled={!isListed}
-            onChange={event => onEnable(kind.entity, !event.target.checked)}
-          />
-        </span>
+        {/* A hidden line is not drawn, so is no choice either: no checkbox. */}
+        {isListed && (
+          <span className="row-map-check-cell">
+            <input
+              type="checkbox"
+              className="row-map-check"
+              aria-label={`Disable ${name}`}
+              title={`${capitalized(name)}: ${on ? "enabled, a choice in the menu" : "disabled, drawn greyed in the menu"} (enabledLines)`}
+              checked={!on}
+              onChange={event => onEnable(kind.entity, !event.target.checked)}
+            />
+          </span>
+        )}
       </div>
     );
   };
@@ -811,12 +859,14 @@ function KindRowMap<P extends string, F extends string>({
           data-dragging={moving !== null || undefined}
         >
           {/* Out of room, the lines scroll here, the page not at all. */}
-          <div className="row-map-scroll">
-            <div className="row-map-head" aria-hidden="true">
-              <span className="row-map-drawer-label">Shown</span>
-              <span className="row-map-check-head">Disabled</span>
+          <div className="row-map-scroll-frame">
+            <div className="row-map-scroll" {...edges(shownScroller)}>
+              <div className="row-map-head" aria-hidden="true">
+                <span className="row-map-drawer-label">Shown</span>
+                <span className="row-map-check-head">Disabled</span>
+              </div>
+              {shown.map(kindRow)}
             </div>
-            {shown.map(kindRow)}
           </div>
         </div>
       </div>
@@ -832,18 +882,20 @@ function KindRowMap<P extends string, F extends string>({
           role="group"
           aria-label="Hidden lines"
         >
-          <div className="row-map-scroll">
-            <div className="row-map-head" aria-hidden="true">
-              <span className="row-map-drawer-label">Hidden</span>
-            </div>
-            {hidden.length === 0 && unplaced.length === 0 && (
-              <div className="row-map-hint-row">
-                <p className="row-map-drawer-hint">
-                  Drag a line by its grip, or a field, here to hide it
-                </p>
+          <div className="row-map-scroll-frame">
+            <div className="row-map-scroll" {...edges(hiddenScroller)}>
+              <div className="row-map-head" aria-hidden="true">
+                <span className="row-map-drawer-label">Hidden</span>
               </div>
-            )}
-            {hidden.map(kindRow)}
+              {hidden.length === 0 && unplaced.length === 0 && (
+                <div className="row-map-hint-row">
+                  <p className="row-map-drawer-hint">
+                    Drag a line by its grip, or a field, here to hide it
+                  </p>
+                </div>
+              )}
+              {hidden.map(kindRow)}
+            </div>
           </div>
           {/* The fields the row leaves out, under its hidden lines. */}
           <div

@@ -104,9 +104,8 @@ describe("the row map on a narrow screen", () => {
                   "rgba(0, 0, 0, 0)",
                 );
               }
-              const grip = scroller.querySelector<HTMLElement>(
-                ".row-map-grip:not([data-spacer])",
-              );
+              const grip =
+                scroller.querySelector<HTMLElement>(".row-map-grip-cell");
               if (grip !== null) {
                 expect(getComputedStyle(grip).backgroundColor).not.toBe(
                   "rgba(0, 0, 0, 0)",
@@ -119,16 +118,23 @@ describe("the row map on a narrow screen", () => {
             for (const kind of scroller.querySelectorAll<HTMLElement>(
               ".row-map-kind",
             )) {
+              // A hidden line has no checkbox, but keeps its column.
               const column = kind
-                .querySelector(".row-map-check-cell")!
-                .getBoundingClientRect();
+                .querySelector(".row-map-kind-lines")!
+                .getBoundingClientRect().right;
+              const check = kind.querySelector(".row-map-check-cell");
+              if (check !== null) {
+                expect(column).toBeLessThanOrEqual(
+                  check.getBoundingClientRect().left + 0.5,
+                );
+              }
               for (const place of kind.querySelectorAll<HTMLElement>(
                 ".row-map-place:not([data-closed]), .row-map-name",
               )) {
                 expect(
                   place.getBoundingClientRect().right,
                   `${place.dataset.drop ?? "name"} of ${kind.dataset.relation}`,
-                ).toBeLessThanOrEqual(column.left + 0.5);
+                ).toBeLessThanOrEqual(column + 0.5);
               }
             }
           }
@@ -137,5 +143,56 @@ describe("the row map on a narrow screen", () => {
         }
       });
     }
+  }
+
+  for (const width of [560, 400, 320]) {
+    it(`centres each grip on its line, whole, in ${width}px`, () => {
+      const { host, done } = mount("people", width);
+      try {
+        for (const grip of host.querySelectorAll<HTMLElement>(
+          ".row-map-grip:not([data-spacer])",
+        )) {
+          const box = grip.getBoundingClientRect();
+          const line = grip
+            .closest(".row-map-kind")!
+            .querySelector(".row-map-kind-lines")!
+            .getBoundingClientRect();
+          expect(
+            Math.abs((box.top + box.bottom) / 2 - (line.top + line.bottom) / 2),
+          ).toBeLessThanOrEqual(1);
+          const card = grip.closest(".row-map")!.getBoundingClientRect();
+          expect(box.left).toBeGreaterThanOrEqual(card.left);
+          expect(box.right).toBeLessThanOrEqual(card.right);
+          // Every dot whole: the box is a whole number of dot tiles.
+          expect(box.width % 6).toBe(0);
+          expect(box.height % 6).toBe(0);
+        }
+      } finally {
+        done();
+      }
+    });
+
+    it(`keeps the Disabled column to the checkbox, its heading at the drawer's right, in ${width}px`, () => {
+      const { host, done } = mount("people", width);
+      try {
+        const scroller = host.querySelector<HTMLElement>(
+          '[data-drawer="shown"] .row-map-scroll',
+        )!;
+        const view = scroller.getBoundingClientRect();
+        for (const cell of scroller.querySelectorAll(".row-map-check-cell")) {
+          expect(cell.getBoundingClientRect().width).toBeLessThanOrEqual(36);
+        }
+        const heading = scroller.querySelector<HTMLElement>(
+          ".row-map-check-head",
+        )!;
+        expect(heading.textContent).toBe("Disabled");
+        expect(
+          Math.abs(heading.getBoundingClientRect().right - view.right),
+        ).toBeLessThanOrEqual(1);
+        expect(heading.scrollWidth).toBeLessThanOrEqual(heading.clientWidth);
+      } finally {
+        done();
+      }
+    });
   }
 });

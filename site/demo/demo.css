@@ -627,11 +627,13 @@
 
 /* A drawer's lines, each on one row: out of room, they scroll sideways here,
    and the grips, the Disabled column and its heading stay put at its edges,
-   over what scrolls under them. */
+   each cell taking its gutter with it, so what scrolls goes under them and
+   shows only between them. What the keyboard reaches stops clear of them. */
 .row-map-scroll {
   display: grid;
   gap: 8px;
   overflow-x: auto;
+  scroll-padding-inline: var(--map-grip-cell) var(--map-check-cell);
 }
 
 .row-map-head,
@@ -639,20 +641,81 @@
 .row-map-kind {
   display: grid;
   box-sizing: border-box;
-  grid-template-columns: var(--map-grip) minmax(0, 1fr) var(--map-check);
-  gap: var(--map-col-gap);
+  grid-template-columns: var(--map-grip-cell) minmax(0, 1fr) var(
+      --map-check-cell
+    );
+  column-gap: 0;
   align-items: start;
   width: max-content;
   min-width: 100%;
 }
 
+/* Each edge there is more beyond is shadowed, over the lines, where they go
+   under the grips or the Disabled column. */
+.row-map-scroll-frame {
+  position: relative;
+  /* A grid item as narrow as the card, so the lines scroll inside it. */
+  min-width: 0;
+}
+
+.row-map-scroll-frame::before,
+.row-map-scroll-frame::after {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  bottom: 0;
+  width: 14px;
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.row-map-scroll-frame::before {
+  left: var(--map-grip-cell);
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--map-ink) 45%, transparent),
+    transparent
+  );
+}
+
+.row-map-scroll-frame::after {
+  right: var(--map-check-cell);
+  background: linear-gradient(
+    to left,
+    color-mix(in srgb, var(--map-ink) 45%, transparent),
+    transparent
+  );
+}
+
+.row-map-scroll-frame[data-more-before]::before,
+.row-map-scroll-frame[data-more-after]::after {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-map-scroll-frame::before,
+  .row-map-scroll-frame::after {
+    transition: none;
+  }
+}
+
 .row-map-wrap {
   --map-grip: 12px;
-  --map-check: 3.5rem;
+  /* The checkbox and a little room: its heading may run left of it. */
+  --map-check: 28px;
   --map-col-gap: 6px;
   /* A line's box's padding: a drawer's title and note start where its
      chips do. */
   --map-box-pad: 6px;
+}
+
+/* The grip's and the checkbox's columns with their gutters, on the card,
+   where a narrow panel's gutter is set too. */
+.row-map {
+  --map-grip-cell: calc(var(--map-grip) + var(--map-col-gap));
+  --map-check-cell: calc(var(--map-check) + var(--map-col-gap));
 }
 
 .row-map-head {
@@ -667,19 +730,25 @@
 
 .row-map-drawer-label {
   position: sticky;
-  left: calc(var(--map-grip) + var(--map-col-gap));
+  left: var(--map-grip-cell);
   grid-column: 2;
   justify-self: start;
   padding-left: var(--map-box-pad);
 }
 
+/* Pinned to the drawer's right edge, its words running left over the
+   gutter above the lines, so they do not widen the column. */
 .row-map-check-head {
   position: sticky;
   z-index: 3;
   right: 0;
   grid-column: 3;
+  justify-self: end;
+  width: max-content;
+  padding-left: var(--map-col-gap);
   background: var(--map-bg, var(--paper));
-  text-align: center;
+  text-align: right;
+  white-space: nowrap;
 }
 
 .row-map-drawer-hint {
@@ -735,19 +804,30 @@
 
 /* A line's grip: dragged between the drawers by a pointer, pressed from the
    keyboard. */
-.row-map-grip {
+/* The grip's cell: its whole column, gutter and all, as tall as its line and
+   on the card's ground, so nothing that scrolls shows beside the grip. */
+.row-map-grip-cell {
   position: sticky;
   z-index: 3;
   left: 0;
-  align-self: center;
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  background: var(--map-bg, var(--paper));
+}
+
+/* Two columns of three dots, each whole in its tile. */
+.row-map-grip {
+  flex: none;
   width: var(--map-grip);
-  height: 20px;
+  height: 18px;
   padding: 0;
-  background:
-    radial-gradient(currentColor 1.25px, transparent 1.75px) 0.5px 1px / 5.5px
-      5.5px,
-    var(--map-bg, var(--paper));
-  box-shadow: var(--map-col-gap) 0 0 var(--map-bg, var(--paper));
+  background: radial-gradient(
+      circle at center,
+      currentColor 1.25px,
+      transparent 1.75px
+    )
+    0 0 / 6px 6px;
   border: 0;
   border-radius: 3px;
   color: var(--map-soft);
@@ -777,13 +857,12 @@
   z-index: 3;
   right: 0;
   display: flex;
+  box-sizing: border-box;
   align-items: center;
   align-self: stretch;
   justify-content: center;
+  padding-left: var(--map-col-gap);
   background: var(--map-bg, var(--paper));
-  box-shadow:
-    calc(-1 * var(--map-col-gap)) 0 0 var(--map-bg, var(--paper)),
-    -12px 0 8px -8px color-mix(in srgb, var(--map-ink) 35%, transparent);
 }
 
 .row-map-check {
