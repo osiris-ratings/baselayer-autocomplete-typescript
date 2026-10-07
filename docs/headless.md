@@ -231,9 +231,9 @@ Its state, besides `suggestions`, `isSearching` and `unavailable`:
   is null (a window backoff, an invalid query)
 - `indexTag`, `roundTripMs` and `requestId`: the shown answer's, or null
 - `filtersWithheld`: the filters were held back for a short stem
-- `expanded`: the relations the shown rows were asked to expand, as the
-  session's scope allowed then; list only these under a row, since one
-  outside it comes back empty
+- `expanded`: the relations the shown rows expanded, those the answer's
+  `sources` mark `ok`, whatever was asked for; list only these under a row,
+  since any other came back empty (`not_requested`) or was not looked at
 
 `EMPTY_AUTOCOMPLETE_STATE` is the state before anything is asked.
 
@@ -262,7 +262,7 @@ const state = useEntityAutocomplete({
   enabled: true,
   include: request.include,
 });
-// List only what the rows were asked to expand, under the scope of the time.
+// List only what the rows expanded: their answer's sources say.
 const listed = request.list.filter(relation =>
   state.expanded.includes(relation),
 );
@@ -307,8 +307,8 @@ components draw it: give `useSuggestionCombobox` every line as an item and
 `isItemDisabled` for those `groupedLines` hands no option, and a screen reader
 calls it unavailable while the keys pass over it. The hook leaves out any
 relation the session's scope does not grant, and its `expanded` says what the
-shown rows were asked to expand: list only those, as above, and a grant that
-changes while they are on screen draws no empty list.
+shown rows expanded: list only those, as above, and a grant that changes while
+they are on screen draws no empty list.
 
 `useBusinessCombobox` is downshift's combobox with three decisions made: the
 caret never jumps on a mid-word insert, a blur never commits the highlighted

@@ -361,13 +361,14 @@ autocomplete service sealed no token for is drawn and disabled, whatever
 
 ### Without the styled components
 
-`PersonAutocompleteView` and `AddressAutocompleteView` draw the same rows
-from state you supply, and `BusinessAutocompleteView` takes `list`,
-`enabledLines`, `icons`, `iconSegments`, `selection` and `onSelectEntity`
-for a business row's lines. A view draws the `list` it is handed, so hand it
-only what the rows were asked to expand: `requestFor(...).list` filtered by
-the hook's `expanded`. The autocomplete service answers a relation it was
-not asked for, one the session's scope left out, as an empty set, which
-would draw as an empty list. `useEntityAutocomplete({ relation, query, ... })`
-is the hook for any route, and `groupedLines` and `groupedOptions` turn a row
-into its lines and picks (see [Headless use](headless.md)).
+`PersonAutocompleteView` and `AddressAutocompleteView` draw the same rows from
+state you supply, and `BusinessAutocompleteView` takes `list`, `enabledLines`,
+`icons`, `iconSegments`, `selection` and `onSelectEntity` for a business row's
+lines. A view draws the `list` it is handed, so hand it only what the rows
+expanded: `requestFor(...).list` filtered by the hook's `expanded`, the
+relations the answer's `sources` mark `ok`. The autocomplete service answers a
+relation it was not asked for, one the session's scope left out, as an empty
+set marked `not_requested`, which would draw as an empty list.
+`useEntityAutocomplete({ relation, query, ... })` is the hook for any route,
+and `groupedLines` and `groupedOptions` turn a row into its lines and picks
+(see [Headless use](headless.md)).

@@ -78,9 +78,10 @@ export interface EntityAutocompleteState<R extends Relation> {
    */
   appliedFilters: FiltersByRelation[R] | undefined;
   /**
-   * The relations `suggestions` were asked to expand, as the session's scope
-   * allowed then. A relation outside it comes back empty, so a row lists only
-   * these, whatever a grant since allows.
+   * The relations `suggestions` expanded: those the answer's `sources` mark
+   * `ok`, whatever was asked for. Any other comes back empty (`not_requested`,
+   * as one the session's scope left out) or not looked at, so a row lists
+   * only these, whatever a grant since allows.
    */
   expanded: IncludeOf<R>[];
   requestId: string | null;
@@ -111,6 +112,15 @@ const UNAVAILABLE_STATE: BusinessAutocompleteState = Object.freeze({
   unavailable: true,
   errorKind: "session_unavailable",
 }) as BusinessAutocompleteState;
+
+/** The relations an answer expanded: those its `sources` mark `ok`. */
+function expandedIn<R extends Relation>(
+  sources: Record<IncludeOf<R>, { status: string }>,
+): IncludeOf<R>[] {
+  return (Object.keys(sources) as IncludeOf<R>[]).filter(
+    relation => sources[relation].status === "ok",
+  );
+}
 
 // One frozen empty state serves every route: its rows are an empty array.
 function emptyState<R extends Relation>(): EntityAutocompleteState<R> {
@@ -252,7 +262,7 @@ export function useEntityAutocomplete<R extends Relation>({
           errorKind: null,
           filtersWithheld: result.filtersWithheld,
           appliedFilters: result.filtersWithheld ? undefined : stableFilters,
-          expanded: included ?? [],
+          expanded: expandedIn(result.response.sources),
           requestId: result.requestId,
         });
       } catch (error) {

@@ -1,4 +1,11 @@
-import { act, render, screen, within } from "@testing-library/react";
+import {
+  act,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -24,6 +31,7 @@ import {
   DEFAULT_MESSAGES,
   PersonAutocomplete,
   PersonAutocompleteView,
+  useEntityAutocomplete,
   type IconSet,
 } from "../../src/react";
 
@@ -1218,6 +1226,30 @@ describe("a listed relation the session's scope leaves out", () => {
     noEmptyList();
   });
 
+  it("keeps the rows' lists while the next answer is on its way", async () => {
+    const { client, fetch } = setup();
+    const { user, dana } = await typeDana(client, {
+      list: ["businesses", "addresses"],
+    });
+    expect(listsOf(dana)).toEqual(["businesses", "addresses"]);
+
+    let release = () => {};
+    const held = new Promise<void>(resolve => (release = resolve));
+    const answer = fetch.getMockImplementation()!;
+    fetch.mockImplementation(async (...args) => {
+      await held;
+      return answer(...args);
+    });
+    await user.type(screen.getByRole("combobox"), "w");
+    await aMoment();
+
+    expect(
+      listsOf(screen.getByRole("group", { name: "Dana Whitfield" })),
+    ).toEqual(["businesses", "addresses"]);
+    noEmptyList();
+    release();
+  });
+
   it("is not drawn under an address, though the host lists it", async () => {
     const { client } = setup({
       routes: { addresses: ["businesses"] },
@@ -1229,6 +1261,50 @@ describe("a listed relation the session's scope leaves out", () => {
     const corvel = await screen.findByRole("group", { name: /45 Corvel/ });
 
     expect(listsOf(corvel)).toEqual(["businesses"]);
+  });
+});
+
+describe("what the hook says its rows expanded", () => {
+  async function expandedFor(
+    client: Client,
+    include?: ("businesses" | "addresses")[],
+  ) {
+    const { result } = renderHook(() =>
+      useEntityAutocomplete({
+        relation: "people",
+        query: "dana",
+        enabled: true,
+        client,
+        debounceMs: 0,
+        ...(include !== undefined ? { include } : {}),
+      }),
+    );
+    await waitFor(() => expect(result.current.suggestions).not.toHaveLength(0));
+    return result.current.expanded;
+  }
+
+  it("is what the answer's sources say were looked at, with no include sent", async () => {
+    const { client } = setup();
+    // The service expands its default, businesses, and says so.
+    expect(await expandedFor(client)).toEqual(["businesses"]);
+  });
+
+  it("is what was asked for, with an include sent", async () => {
+    const { client } = setup();
+    expect(await expandedFor(client, ["businesses", "addresses"])).toEqual([
+      "businesses",
+      "addresses",
+    ]);
+  });
+
+  it("leaves out a relation the session's scope does not grant", async () => {
+    const { client } = setup({
+      routes: { people: ["businesses"] },
+      maxLimit: 20,
+    });
+    expect(await expandedFor(client, ["businesses", "addresses"])).toEqual([
+      "businesses",
+    ]);
   });
 });
 

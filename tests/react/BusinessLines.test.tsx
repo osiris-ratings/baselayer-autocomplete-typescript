@@ -297,7 +297,30 @@ describe("a business row that lists its officers and addresses", () => {
   });
 
   it("draws only what the session's scope lists, and a row left nothing to list as the one option it always was", async () => {
-    const { client } = setup(BODY, {
+    // Addresses are not asked for, and the service answers them as it does
+    // any relation it was not asked for: not looked at, and empty.
+    const unasked = {
+      ...BODY,
+      sources: {
+        people: { status: "ok" },
+        addresses: { status: "not_requested" },
+      },
+      suggestions: [
+        {
+          ...BODY.suggestions[0]!,
+          related: {
+            ...BODY.suggestions[0]!.related,
+            addresses: {
+              count: null,
+              matched: null,
+              truncated: false,
+              items: [],
+            },
+          },
+        },
+      ],
+    };
+    const { client } = setup(unasked, {
       routes: { businesses: ["people"] },
       maxLimit: 20,
     });

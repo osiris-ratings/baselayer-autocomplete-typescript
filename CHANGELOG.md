@@ -118,9 +118,10 @@ release.
 - `ROUTE_NAMES`, `RELATIONS`, `LEGAL_RELATIONS`, `Route`, `FILTER_PARAMS`,
   `setFilters`, and the unions `MatchGrade`, `SourceStatus`, `RelatedRole`
   and `EntityType` with their value lists (`MATCH_GRADES`, …).
-- `expanded` on the hooks' state: the relations the shown rows were asked to
-  expand, as the session's scope allowed then. The components list only these
-  under a row, so a grant that has changed since never draws an empty list.
+- `expanded` on the hooks' state: the relations the shown rows expanded, those
+  their answer's `sources` mark `ok`. The components list only these under a
+  row, so a relation left out, or a grant that has changed since, never draws
+  an empty list.
 - `usage.requestsByRoute` on the snapshot and `requestsOnRoute` on each
   request event: the requests on the current session, per route, as the
   autocomplete service budgets them.
@@ -165,7 +166,7 @@ release.
   `route_unserved`, so a switch over it that ends in `never`, or a record keyed
   by it, needs them.
 - **Breaking:** `EntityAutocompleteState` requires `expanded`, the relations
-  the shown rows were asked to expand, so a state built by hand needs it.
+  the shown rows expanded, so a state built by hand needs it.
 - **Breaking:** `Grant` requires `scope`, the snapshot's `usage`
   `requestsByRoute` and a `RequestEvent` `requestsOnRoute`, so a fixture or a
   fake client that builds one needs them; a `mint` is unchanged.
