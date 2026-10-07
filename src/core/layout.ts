@@ -61,7 +61,7 @@ export interface RowCorner<
 /** A line of a row: its lead corner, then its trailing corner. */
 export interface RowLine<
   P extends string = RowPlace,
-  L extends string = string,
+  L extends string = "title" | "subtitle",
 > {
   line: L;
   /** When the lead's field is the row's name, which no place holds: null. */
@@ -78,7 +78,7 @@ export interface RowLine<
 export interface RowKind<P extends string, F extends string> {
   places: readonly P[];
   fields: readonly F[];
-  lines: readonly RowLine<P>[];
+  lines: readonly RowLine<P, string>[];
   defaults: Readonly<Record<P, F | null>>;
   accepts?: (place: P, field: F) => boolean;
 }

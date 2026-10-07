@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 import {
   DEFAULT_ROW_LAYOUT,
@@ -11,6 +11,7 @@ import {
   type RowField,
   type RowLayout,
   type RowLayoutInput,
+  type RowLine,
   type RowPlace,
 } from "@baselayer-sdk/autocomplete";
 
@@ -327,6 +328,10 @@ describe("drawnRowLayout", () => {
 });
 
 describe("ROW_LINES", () => {
+  it("types a bare RowLine's line as a business row's, so a switch over it stays exhaustive", () => {
+    expectTypeOf<RowLine["line"]>().toEqualTypeOf<"title" | "subtitle">();
+  });
+
   it("groups every place into its line's two corners, in reading order", () => {
     expect(
       ROW_LINES.flatMap(({ lead, trailing }) => [
