@@ -81,6 +81,27 @@ export function pickableBusinesses(
   );
 }
 
+/**
+ * A person or an address picked from a person's or an address's row: the row
+ * itself, or one it lists. Nothing redeems its token yet; keep it as the
+ * opaque handle it is.
+ */
+export interface EntityPick {
+  type: "person" | "address";
+  token: string;
+  label: string;
+}
+
+/** What a pickable line of a person's or an address's row hands when picked. */
+export type GroupedOption =
+  | {
+      kind: "business";
+      /** The row it was reached through, for `businessPickFrom`. */
+      row: PersonSuggestion | AddressSuggestion;
+      business: PickableBusiness;
+    }
+  | { kind: "entity"; pick: EntityPick };
+
 /** The pick of `business` from `row`, made at `pickedAt` (epoch ms). */
 export function businessPickFrom(
   row: PersonSuggestion | AddressSuggestion,

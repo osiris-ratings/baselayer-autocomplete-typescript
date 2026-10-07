@@ -7,8 +7,21 @@
  * "Person and address rows".
  */
 
-import { ROUTES, type IncludeOf, type Relation } from "./entities";
+import {
+  ENTITY_OF,
+  ROUTES,
+  type EntityType,
+  type IncludeOf,
+  type Relation,
+} from "./entities";
 import type { LayoutInputOf, LayoutOf, RowKind, RowLine } from "./layout";
+import type { GroupedOption, PickableBusiness } from "./pick";
+import type {
+  AddressSuggestion,
+  PersonSuggestion,
+  RelatedItem,
+  RelatedSet,
+} from "./wire";
 
 /** A line's three places: the badge after its name, and its trailing corner. */
 function linePlaces<L extends string>(line: L) {
@@ -181,4 +194,87 @@ export function requestFor(
     listed: order.filter(relation => listed.includes(relation)),
     include: order.filter(relation => needed.has(relation)),
   } as GroupedRequest<"people" | "addresses">;
+}
+
+/** What a row offers to pick when the host names nothing: its businesses. */
+export const DEFAULT_PICKABLE = ["business"] as const;
+
+/** A line under the head: one item of a listed relation. */
+export interface GroupedItemLine {
+  item: RelatedItem;
+  /** What picking it hands; null when the line is inert. */
+  option: GroupedOption | null;
+}
+
+/** A listed relation's lines, named for the entity each one is. */
+export interface GroupedList {
+  relation: Relation;
+  line: EntityType;
+  lines: GroupedItemLine[];
+  /** How many there are past the lines shown: its full count, less them. */
+  notShown: number;
+}
+
+export interface GroupedLines {
+  /** What picking the head hands; null when the row's own type is not pickable. */
+  head: { option: GroupedOption | null };
+  lists: GroupedList[];
+}
+
+/**
+ * A person's or an address's row as lines: the head, then a list per relation
+ * in `listed`, each item a line. A line is pickable when its type is in
+ * `pickable` and the autocomplete service gave it a token; a business hands a
+ * business option, a person or an address a typed pick.
+ */
+export function groupedLines(
+  row: PersonSuggestion | AddressSuggestion,
+  listed: readonly Relation[],
+  pickable: readonly EntityType[] = DEFAULT_PICKABLE,
+): GroupedLines {
+  const related: Partial<Record<Relation, RelatedSet>> = row.related;
+  const optionOf = (item: RelatedItem): GroupedOption | null => {
+    if (item.token === null || !pickable.includes(item.type)) {
+      return null;
+    }
+    if (item.type === "business") {
+      return { kind: "business", row, business: item as PickableBusiness };
+    }
+    return {
+      kind: "entity",
+      pick: { type: item.type, token: item.token, label: item.label },
+    };
+  };
+  return {
+    head: {
+      option: pickable.includes(row.type)
+        ? {
+            kind: "entity",
+            pick: { type: row.type, token: row.token, label: row.label },
+          }
+        : null,
+    },
+    lists: listed.flatMap(relation => {
+      const set = related[relation];
+      if (set === undefined) {
+        return [];
+      }
+      return [
+        {
+          relation,
+          line: ENTITY_OF[relation],
+          lines: set.items.map(item => ({ item, option: optionOf(item) })),
+          notShown: Math.max(0, (set.count ?? 0) - set.items.length),
+        },
+      ];
+    }),
+  };
+}
+
+/** Every pickable line of `lines`, in the order they are drawn. */
+export function groupedOptions(lines: GroupedLines): GroupedOption[] {
+  return [
+    lines.head.option,
+    ...lines.lists.flatMap(list => list.lines.map(line => line.option)),
+  ].filter((option): option is GroupedOption => option !== null);
 }
