@@ -382,17 +382,31 @@
   margin-left: auto;
 }
 
-/* A disabled line fades: all of it loses colour, and only its
-   name, icon and squares, which have the contrast to spare, a little ink, so
-   its secondary text is no fainter than it is unfaded. The look's
-   `disabledDim` sets both; the fallbacks are its default, 0.6. */
+/* A disabled line reads as inactive: drained of colour, its text faded
+   toward the ground no further than it stays readable, its squares dimmed.
+   The component sets the inks from the look (`disabledInks`); the fallbacks
+   are the default look's, mixed from whatever colours are set. */
 .bl-ac-group-line:not([data-enabled]) {
-  filter: var(--bl-ac-disabled-filter, saturate(0.4));
+  filter: var(--bl-ac-disabled-filter, saturate(0));
+}
+
+.bl-ac-group-line:not([data-enabled]) .bl-ac-line-name {
+  color: var(
+    --bl-ac-disabled-name,
+    color-mix(in srgb, var(--bl-ac-title) 61.7%, var(--bl-ac-bg))
+  );
 }
 
 .bl-ac-group-line:not([data-enabled])
-  :is(.bl-ac-line-name, .bl-ac-icon, .bl-ac-state) {
-  opacity: var(--bl-ac-disabled-opacity, 0.91);
+  :is(.bl-ac-address, .bl-ac-role, .bl-ac-icon) {
+  color: var(
+    --bl-ac-disabled-text,
+    color-mix(in srgb, var(--bl-ac-subtitle) 48.3%, var(--bl-ac-bg))
+  );
+}
+
+.bl-ac-group-line:not([data-enabled]) .bl-ac-states {
+  opacity: var(--bl-ac-disabled-opacity, 0.52);
 }
 
 /* Forced colours draw the text in the system's own; fading it would not. */
@@ -401,8 +415,7 @@
     filter: none;
   }
 
-  .bl-ac-group-line:not([data-enabled])
-    :is(.bl-ac-line-name, .bl-ac-icon, .bl-ac-state) {
+  .bl-ac-group-line:not([data-enabled]) .bl-ac-states {
     opacity: 1;
   }
 }

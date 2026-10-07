@@ -70,8 +70,10 @@ release.
   by it. It names the picked line while the field holds the name the pick put
   there, and any other edit lets it go.
 - `disabledDim` on `look`: how far a disabled line under a row fades, 0 to 1 and
-  0.6 by default. It drains the line's colour and lightens only its name, icon
-  and state squares, so its secondary text is no fainter; nothing fades under
+  0.6 by default, so it reads as inactive. It drains the line's colour, fades
+  its text toward the menu's ground and dims its state squares, with floors
+  worked out from the look's colours: a name keeps 4.6:1 (3:1 or more as
+  drawn) and the rest 40% of its contrast, at least 1.8:1. Nothing fades under
   forced colours.
 - One row model for all three searches: `BUSINESS_ROW`, `PERSON_ROW` and
   `ADDRESS_ROW` (`ROW_KINDS`), each a `RowKind`: its places

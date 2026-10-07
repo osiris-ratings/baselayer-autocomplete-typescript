@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { DEFAULT_LOOK, type Look } from "@baselayer-sdk/autocomplete";
 
-import { disabledFade } from "../../src/react/viewParts";
+import { disabledInks } from "../../src/react/disabled";
 
 const css = readFileSync(join(__dirname, "../../src/react/styles.css"), "utf8");
 
@@ -186,17 +186,39 @@ describe("the type", () => {
 });
 
 describe("a disabled line", () => {
-  it("fades by the look's default when the component sets nothing", () => {
-    // The component sets the variables only for another `disabledDim`, so the
-    // fallbacks must be the default's: its colour by 1 - d, its name, icon
-    // and squares by 0.15 d.
-    const d = DEFAULT_LOOK.disabledDim;
+  it("is drawn by the default look's inks when the component sets none", () => {
+    // The component sets the variables only for another look, so each
+    // fallback must be the default's: the filter, the squares' opacity, and
+    // the share of the title's and the subtitle's colour each text keeps.
+    const inks = disabledInks(DEFAULT_LOOK);
     expect(rule(".bl-ac-group-line:not([data-enabled])")).toContain(
-      `filter: var(--bl-ac-disabled-filter, saturate(${1 - d}));`,
+      `filter: var(--bl-ac-disabled-filter, ${inks.filter});`,
     );
-    expect(css).toContain(
-      `opacity: var(--bl-ac-disabled-opacity, ${Math.round((1 - d * 0.15) * 1000) / 1000});`,
+    const flat = css.replace(/\s+/g, " ");
+    expect(flat).toContain(
+      `color: var( --bl-ac-disabled-name, color-mix(in srgb, var(--bl-ac-title) ${inks.nameShare}%, var(--bl-ac-bg)) );`,
     );
+    expect(flat).toContain(
+      `color: var( --bl-ac-disabled-text, color-mix(in srgb, var(--bl-ac-subtitle) ${inks.textShare}%, var(--bl-ac-bg)) );`,
+    );
+    expect(flat).toContain(
+      `opacity: var(--bl-ac-disabled-opacity, ${inks.opacity});`,
+    );
+  });
+
+  it("fades nothing at 0, and the default far enough to read as inactive", () => {
+    expect(disabledInks({ ...DEFAULT_LOOK, disabledDim: 0 })).toMatchObject({
+      filter: "none",
+      opacity: "1",
+      name: DEFAULT_LOOK.titleColor.toLowerCase(),
+      text: DEFAULT_LOOK.subtitleColor.toLowerCase(),
+      nameShare: 100,
+      textShare: 100,
+    });
+    expect(disabledInks(DEFAULT_LOOK)).toMatchObject({
+      filter: "saturate(0)",
+      opacity: "0.52",
+    });
   });
 });
 
@@ -232,20 +254,5 @@ describe("the stylesheet's colors", () => {
 
     expect(flag).toContain("color: var(--bl-ac-structure-fg);");
     expect(flag).toContain("background: var(--bl-ac-structure-bg);");
-  });
-});
-
-describe("a disabled line's fade", () => {
-  it("is the stylesheet's fallbacks at the look's default, and nothing at 0", () => {
-    const d = DEFAULT_LOOK.disabledDim;
-    const fade = disabledFade(d);
-    expect(rule(".bl-ac-group-line:not([data-enabled])")).toContain(
-      `filter: var(--bl-ac-disabled-filter, ${fade.filter});`,
-    );
-    expect(css).toContain(
-      `opacity: var(--bl-ac-disabled-opacity, ${fade.opacity});`,
-    );
-    expect(disabledFade(0)).toEqual({ filter: "none", opacity: "1" });
-    expect(disabledFade(1)).toEqual({ filter: "saturate(0)", opacity: "0.85" });
   });
 });
