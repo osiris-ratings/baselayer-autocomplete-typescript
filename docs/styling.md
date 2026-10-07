@@ -145,7 +145,8 @@ Every element has a `bl-ac-*` class, and `classNames` adds yours per slot:
 `nameGroup`, `name`, `also`, `mark`, `structure`, `states`, `state`,
 `moreStates`, `subtitleLine`, `corner`, `address`, `people`, `footer`,
 `count`, `debug`, and on a person's or an address's row `group`,
-`groupHead`, `groupLine`, `lineName`, `counts`, `role`, `more`. The title
+`groupHead`, `groupLine`, `lineName`, `counts`, `role`, `more`, and under
+its field after a pick, `selection`. The title
 holds the name group (the name and the badge pinned to its end) and
 `also …`; each line's other corners are `corner`.
 
@@ -250,6 +251,9 @@ is inert. A list ends, fainter, in how many it leaves out (`bl-ac-more`:
 `--bl-ac-border`. `look` colours them as it does a business's row: the names
 in `titleColor`, addresses, counts and roles in `subtitleColor`, the
 highlighted line on `--bl-ac-highlight-bg`.
+
+After a pick, the line under the field (`bl-ac-selection`, `data-type` the
+picked line's type) names what was picked, in `subtitleColor`.
 
 ## 5. A row's places and fields
 

@@ -41,6 +41,7 @@ export type SlotName =
   | "groupLine"
   | "lineName"
   | "counts"
+  | "selection"
   | "role"
   | "more";
 

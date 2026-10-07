@@ -268,6 +268,7 @@ function PersonHost({
   include,
   pickable,
   layout,
+  showSelection,
 }: {
   client: Client;
   onPick?: (pick: BusinessPick) => void;
@@ -275,22 +276,29 @@ function PersonHost({
   include?: ("businesses" | "addresses")[];
   pickable?: EntityType[];
   layout?: PersonRowLayoutInput;
+  showSelection?: boolean;
 }) {
   const [value, setValue] = useState("");
   return (
-    <PersonAutocomplete
-      client={client}
-      id="person"
-      label="Person"
-      value={value}
-      debounceMs={0}
-      onChange={setValue}
-      onPick={onPick}
-      onPickEntity={onPickEntity}
-      {...(include !== undefined ? { include } : {})}
-      pickable={pickable ?? DEFAULT_PICKABLE}
-      {...(layout !== undefined ? { layout } : {})}
-    />
+    <>
+      <button type="button" onClick={() => setValue("")}>
+        Start over
+      </button>
+      <PersonAutocomplete
+        client={client}
+        id="person"
+        label="Person"
+        value={value}
+        debounceMs={0}
+        onChange={setValue}
+        onPick={onPick}
+        onPickEntity={onPickEntity}
+        {...(include !== undefined ? { include } : {})}
+        pickable={pickable ?? DEFAULT_PICKABLE}
+        {...(layout !== undefined ? { layout } : {})}
+        {...(showSelection !== undefined ? { showSelection } : {})}
+      />
+    </>
   );
 }
 
@@ -685,5 +693,132 @@ describe("AddressAutocomplete", () => {
       token: "tok-p-ada",
       label: "Ada Fox",
     });
+  });
+});
+
+describe("the selection line", () => {
+  const selection = () => screen.queryByTestId("grouped-selection");
+  const input = () => screen.getByRole<HTMLInputElement>("combobox");
+
+  it("puts the person's name in the field, not what was typed, and names the business picked under it", async () => {
+    const { client } = setup();
+    const { user } = await typeDana(client);
+
+    await user.click(
+      screen.getByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    expect(input().value).toBe("Dana Whitfield");
+    expect(selection()).toHaveTextContent("Cobalt Tile Supply LLC");
+    expect(input()).toHaveAccessibleDescription("Cobalt Tile Supply LLC");
+  });
+
+  it("names the address picked, or the person, when they are what was picked", async () => {
+    const { client } = setup();
+    const { user } = await typeDana(client, {
+      include: ["businesses", "addresses"],
+      pickable: ["person", "address"],
+    });
+
+    const [oak] = screen.getAllByTestId("address-line");
+    await user.click(oak!);
+    expect(input().value).toBe("Dana Whitfield");
+    expect(selection()).toHaveTextContent("12 Oak Ln, Dover, DE 19901");
+    expect(selection()).toHaveAttribute("data-type", "address");
+
+    await user.clear(input());
+    await user.type(input(), "danae");
+    await user.click(
+      await screen.findByRole("option", { name: /^Danae Ortega/ }),
+    );
+    expect(input().value).toBe("Danae Ortega");
+    expect(selection()).toHaveTextContent("Danae Ortega");
+    expect(selection()).toHaveAttribute("data-type", "person");
+  });
+
+  it("goes with any edit, and stays gone when the edit is undone", async () => {
+    const { client } = setup();
+    const onPick = vi.fn<(pick: BusinessPick) => void>();
+    const { user } = await typeDana(client, { onPick });
+    await user.click(
+      screen.getByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    await user.type(input(), "x");
+    expect(selection()).toBeNull();
+    expect(input()).not.toHaveAccessibleDescription();
+
+    // Back to the very name the pick put there: still no pick.
+    await user.type(input(), "{Backspace}");
+    expect(input().value).toBe("Dana Whitfield");
+    expect(selection()).toBeNull();
+  });
+
+  it("goes when the host empties the field", async () => {
+    const { client } = setup();
+    const { user } = await typeDana(client);
+    await user.click(
+      screen.getByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Start over" }));
+
+    expect(input().value).toBe("");
+    expect(selection()).toBeNull();
+  });
+
+  it("comes back when the same business is picked again after an edit", async () => {
+    const { client } = setup();
+    const onPick = vi.fn<(pick: BusinessPick) => void>();
+    const { user } = await typeDana(client, { onPick });
+    await user.click(
+      screen.getByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    await user.clear(input());
+    await user.type(input(), "dana");
+    await user.click(
+      await screen.findByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    expect(onPick).toHaveBeenCalledTimes(2);
+    expect(selection()).toHaveTextContent("Cobalt Tile Supply LLC");
+  });
+
+  it("is left to the host with showSelection off, and the field still takes the name", async () => {
+    const { client } = setup();
+    const { user } = await typeDana(client, { showSelection: false });
+
+    await user.click(
+      screen.getByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    expect(input().value).toBe("Dana Whitfield");
+    expect(selection()).toBeNull();
+  });
+
+  it("puts the address in an address field, and names the business or the person picked at it", async () => {
+    const { client } = setup();
+    const user = userEvent.setup();
+    render(
+      <AddressHost
+        client={client}
+        include={["businesses", "people"]}
+        pickable={["business", "person"]}
+      />,
+    );
+
+    await user.type(input(), "45 ferry");
+    await user.click(
+      await screen.findByRole("option", { name: /Ridgeline Freight LLC/ }),
+    );
+    expect(input().value).toBe("45 Ferry Landing Ste 200, Erie, PA 16507");
+    expect(selection()).toHaveTextContent("Ridgeline Freight LLC");
+
+    await user.clear(input());
+    await user.type(input(), "45 ferry");
+    await user.click(await screen.findByRole("option", { name: /Ada Fox/ }));
+    expect(selection()).toHaveTextContent("Ada Fox");
+    expect(selection()).toHaveAttribute("data-type", "person");
   });
 });

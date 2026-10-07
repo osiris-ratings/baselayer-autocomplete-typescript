@@ -409,6 +409,16 @@
   padding: 0.125rem 0.875rem 0.25rem 1.75rem;
 }
 
+/* Under the field, after a pick: what was picked. */
+.bl-ac-selection {
+  margin: 0.25rem 0 0;
+  overflow: hidden;
+  font-size: 14px;
+  color: var(--bl-ac-subtitle);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .bl-ac-footer {
   display: flex;
   gap: 0.5rem;

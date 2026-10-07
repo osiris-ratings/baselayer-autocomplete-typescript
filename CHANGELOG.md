@@ -31,7 +31,8 @@ this ships as a minor release.
   `BusinessPick`: `businessToken`, `businessName`, `pickedAt`, `expiresAt`,
   and `through`, the person or address it was reached by with the business's
   role there; `onPickEntity` hands an `EntityPick` for a person or an
-  address. `PersonAutocompleteView` and `AddressAutocompleteView` draw the
+  address. A pick puts the row's own name in the field, and a line under it
+  names what was picked until the next edit (`showSelection`). `PersonAutocompleteView` and `AddressAutocompleteView` draw the
   same rows from state a host supplies.
 - `PERSON_ROW` and `ADDRESS_ROW`, the places and fields of those rows, and
   `requestFor(route, layout, listed, scope)`, what to ask for them;

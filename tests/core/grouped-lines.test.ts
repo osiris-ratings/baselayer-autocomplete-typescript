@@ -125,15 +125,18 @@ describe("groupedLines", () => {
 
     expect(lines.head.option).toEqual({
       kind: "entity",
+      row: jane,
       pick: { type: "person", token: "tok-jane", label: "Jane Q Doe" },
     });
     // Businesses are not pickable here: their lines are inert.
     expect(lines.lists[0]!.lines.every(line => line.option === null)).toBe(
       true,
     );
+    // A listed address carries the row that lists it.
     expect(lines.lists[1]!.lines.map(line => line.option)).toEqual([
       {
         kind: "entity",
+        row: jane,
         pick: {
           type: "address",
           token: "tok-oak",
@@ -157,6 +160,7 @@ describe("groupedLines", () => {
     expect(lines.lists.map(list => list.line)).toEqual(["business", "person"]);
     expect(lines.lists[1]!.lines[0]!.option).toEqual({
       kind: "entity",
+      row: pier,
       pick: { type: "person", token: "tok-jane", label: "Jane Q Doe" },
     });
   });

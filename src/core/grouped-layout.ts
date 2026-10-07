@@ -256,6 +256,7 @@ export function groupedLines(
     }
     return {
       kind: "entity",
+      row,
       pick: { type: item.type, token: item.token, label: item.label },
     };
   };
@@ -264,6 +265,7 @@ export function groupedLines(
       option: pickable.includes(row.type)
         ? {
             kind: "entity",
+            row,
             pick: { type: row.type, token: row.token, label: row.label },
           }
         : null,

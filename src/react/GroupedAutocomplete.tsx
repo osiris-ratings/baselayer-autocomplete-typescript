@@ -1,6 +1,7 @@
 import {
   useEffect,
   useRef,
+  useState,
   type ReactElement,
   type ReactNode,
   type Ref,
@@ -65,6 +66,12 @@ type GroupedRow = PersonSuggestion | AddressSuggestion;
 interface LayoutInputByRoute {
   people: PersonRowLayoutInput;
   addresses: AddressRowLayoutInput;
+}
+
+/** What the line under the field names: the picked line's label and type. */
+export interface GroupedSelection {
+  type: EntityType;
+  label: string;
 }
 
 /** A pickable line as the combobox holds it: what it hands, and its name. */
@@ -139,6 +146,12 @@ interface GroupedCommonProps<R extends GroupedRoute> {
   menuFollowsInputWidth?: boolean;
   /** The deployment cannot mint (503 code 481), or can again. */
   onUnavailable?: (state: { unavailable: boolean }) => void;
+  /**
+   * After a pick, a line under the field names what was picked (the default),
+   * while the field holds the row's own name. Off, draw your own from
+   * `onPick`; the field still takes the name.
+   */
+  showSelection?: boolean;
 }
 
 /** One of: a client, a `mint` function, or a `mintUrl` on the host's backend. */
@@ -259,9 +272,20 @@ function Connected<R extends GroupedRoute>({
   debounceMs,
   messages,
   onUnavailable,
+  showSelection = true,
   ...view
 }: ConnectedProps<R> & { client: AutocompleteClient }) {
   const client = useResolvedClient(given);
+  // The pick, and the name it put in the field. Any typing drops it; so does
+  // a host that puts anything else there.
+  const [picked, setPicked] = useState<{
+    field: string;
+    selection: GroupedSelection;
+  } | null>(null);
+  const selection =
+    showSelection && picked !== null && picked.field === value
+      ? picked.selection
+      : null;
   // What the rows draw decides what is asked for; the hook drops whatever the
   // session's scope does not grant.
   const request = requestOf(route, drawnFor(route, layout), include);
@@ -302,17 +326,32 @@ function Connected<R extends GroupedRoute>({
       roundTripMs={state.roundTripMs}
       isSearching={state.isSearching}
       error={state.error}
+      selection={selection}
       onInputChange={next => {
+        setPicked(null);
         if (mintOn === "keystroke" && enabled && next !== "") {
           client.prewarm();
         }
         onChange(next);
       }}
-      onSelect={option =>
-        option.kind === "business"
-          ? onPick(businessPickFrom(option.row, option.business, Date.now()))
-          : onPickEntity?.(option.pick)
-      }
+      onSelect={option => {
+        // The field takes the row's own name, not what was typed, and the
+        // line under it names what was picked.
+        const field = option.row.label;
+        setPicked({
+          field,
+          selection:
+            option.kind === "business"
+              ? { type: "business", label: option.business.label }
+              : { type: option.pick.type, label: option.pick.label },
+        });
+        onChange(field);
+        if (option.kind === "business") {
+          onPick(businessPickFrom(option.row, option.business, Date.now()));
+        } else {
+          onPickEntity?.(option.pick);
+        }
+      }}
       onInputFocus={() => {
         if (mintOn === "focus" && enabled) {
           client.prewarm();
@@ -354,6 +393,8 @@ interface GroupedViewCommonProps<R extends GroupedRoute> {
   pickable?: readonly EntityType[] | undefined;
   /** The field each place of a row's lines shows. */
   layout?: LayoutInputByRoute[R] | undefined;
+  /** What the line under the field names; none drawn when null. */
+  selection?: GroupedSelection | null | undefined;
   /** Hold the menu open whatever focus does: a style preview. */
   open?: boolean | undefined;
   /**
@@ -422,6 +463,7 @@ function GroupedView<R extends GroupedRoute>({
   include,
   pickable,
   layout: layoutInput,
+  selection = null,
   open = false,
   menuFollowsInputWidth = true,
   look: lookInput,
@@ -601,12 +643,14 @@ function GroupedView<R extends GroupedRoute>({
   }
 
   const labelProps = combobox.getLabelProps() as Record<string, unknown>;
+  const selectionId = `${id}-selection`;
   const inputProps = combobox.getInputProps({
     ref: inputRef,
     name: inputName,
     onFocus: onInputFocus,
     onBlur: onInputBlur,
     autoComplete: "off",
+    "aria-describedby": selection !== null ? selectionId : undefined,
   });
 
   let optionIndex = 0;
@@ -787,6 +831,17 @@ function GroupedView<R extends GroupedRoute>({
           </div>
         )}
       </div>
+      {/* After the menu, which floats over it: it sits right under the field. */}
+      {selection !== null && (
+        <div
+          id={selectionId}
+          className={cx("selection", "bl-ac-selection")}
+          data-type={selection.type}
+          data-testid="grouped-selection"
+        >
+          {selection.label}
+        </div>
+      )}
     </div>
   );
 }

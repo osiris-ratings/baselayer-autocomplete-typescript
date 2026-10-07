@@ -37,6 +37,7 @@ export {
   PersonAutocompleteView,
   type AddressAutocompleteProps,
   type AddressAutocompleteViewProps,
+  type GroupedSelection,
   type PersonAutocompleteProps,
   type PersonAutocompleteViewProps,
 } from "./GroupedAutocomplete";

@@ -190,8 +190,14 @@ yet. Any other line is drawn but not pickable. A relation the session's
 scope does not grant is neither asked for nor drawn, and the search still
 runs.
 
-A pick leaves the field as it was typed; put `pick.businessName` in your
-business name field. `PersonAutocompleteView` and `AddressAutocompleteView`
-draw the same rows from state you supply, and `useEntityAutocomplete({
+A pick puts the row's own name in the field, the person's or the address's
+rather than what was typed, and a line under it names what was picked: the
+business, or the address or person. The field describes itself by that
+line. Any edit clears the pick and the line. With `showSelection={false}`
+the field still takes the name, and you draw your own line from `onPick`.
+Put `pick.businessName` in your business name field.
+
+`PersonAutocompleteView` and `AddressAutocompleteView` draw the same rows
+from state you supply, with `selection` for the line under the field, and `useEntityAutocomplete({
 relation, query, ... })` is the hook for any route (see
 [Headless use](headless.md)).

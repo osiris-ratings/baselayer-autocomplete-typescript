@@ -100,7 +100,12 @@ export type GroupedOption =
       row: PersonSuggestion | AddressSuggestion;
       business: PickableBusiness;
     }
-  | { kind: "entity"; pick: EntityPick };
+  | {
+      kind: "entity";
+      /** The row it is, or the row that lists it. */
+      row: PersonSuggestion | AddressSuggestion;
+      pick: EntityPick;
+    };
 
 /** The pick of `business` from `row`, made at `pickedAt` (epoch ms). */
 export function businessPickFrom(
