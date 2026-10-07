@@ -5,8 +5,10 @@
  * outside it, so the SDK never sends a request the scope leaves out.
  */
 
+import { setFilters } from "./businesses";
 import {
   LEGAL_RELATIONS,
+  RELATIONS,
   ROUTE_NAMES,
   type Relation,
   type Route,
@@ -77,4 +79,50 @@ export function parseSessionScope(value: unknown): SessionScope | null {
     routes[route] = legal.filter(relation => relations.includes(relation));
   }
   return { routes: routes as ScopeRoutes, maxLimit };
+}
+
+/** What a request asks for that its session's scope leaves out. */
+export interface ScopeViolation {
+  route: Route;
+  /** The relation it touches, or null when the route itself is left out. */
+  relation: Relation | null;
+  /** `include` or the filter parameter that touches it; null for the route. */
+  param: string | null;
+}
+
+/**
+ * The first thing a request on `route` asks for that `scope` leaves out (the
+ * route, an `include` member, a filter on a relation), or null when the scope
+ * allows all of it. The autocomplete service answers each with a 403.
+ */
+export function scopeViolation(
+  scope: SessionScope,
+  route: Route,
+  request: { include?: readonly Relation[]; filters?: object },
+): ScopeViolation | null {
+  const granted: readonly Relation[] | undefined = scope.routes[route];
+  if (granted === undefined) {
+    return { route, relation: null, param: null };
+  }
+  for (const relation of request.include ?? []) {
+    if (!granted.includes(relation)) {
+      return { route, relation, param: "include" };
+    }
+  }
+  for (const { param, relation } of setFilters(route, request.filters)) {
+    if (relation !== null && !granted.includes(relation)) {
+      return { route, relation, param };
+    }
+  }
+  return null;
+}
+
+/** `value` when it names a route, else null. */
+export function routeNamed(value: unknown): Route | null {
+  return ROUTE_NAMES.find(route => route === value) ?? null;
+}
+
+/** `value` when it names a relation, else null. */
+export function relationNamed(value: unknown): Relation | null {
+  return RELATIONS.find(relation => relation === value) ?? null;
 }

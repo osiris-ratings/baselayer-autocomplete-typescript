@@ -26,6 +26,7 @@ function snapshotWith(session: SessionPhase): ClientSnapshot {
     brake: null,
     usage: {
       requestsSinceMint: 0,
+      requestsByRoute: { businesses: 0, people: 0, addresses: 0 },
       requestBudget: null,
       pivotAllowance: null,
       pivotsExceededEvents: 0,

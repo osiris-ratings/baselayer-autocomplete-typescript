@@ -191,6 +191,10 @@ describe("client.search", () => {
         requestBudget: 30,
         pivotAllowance: 5,
         filterMinStem: 3,
+        scope: {
+          routes: { people: ["businesses", "addresses"] },
+          maxLimit: 20,
+        },
       },
     });
     const client = createAutocompleteClient({

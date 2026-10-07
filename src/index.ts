@@ -110,8 +110,10 @@ export {
   DEFAULT_SESSION_SCOPE,
   MAX_LIMIT,
   parseSessionScope,
+  scopeViolation,
   type RelationsOf,
   type ScopeRoutes,
+  type ScopeViolation,
   type SessionScope,
 } from "./core/scope";
 export type { Grant, MintEvent, SessionPhase } from "./core/session";

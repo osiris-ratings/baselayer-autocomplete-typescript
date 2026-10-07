@@ -1,3 +1,5 @@
+import type { Relation, Route } from "./entities";
+
 /**
  * Every failure the client reports, as one class with a discriminant. Hosts
  * branch on `kind`; the other fields carry what the answer said.
@@ -16,6 +18,13 @@ export type AutocompleteErrorKind =
   | "mint_refused"
   /** Two fresh grants were refused in a row; minting is off until `until`. */
   | "auth_braked"
+  /**
+   * The session's scope leaves out the route, an `include` member or a
+   * filter's relation; `route`, `relation` and `param` say which. Refused
+   * before sending when the SDK can tell, else the autocomplete service's 403
+   * (code 501 or 502). Never retried: a new session has the same scope.
+   */
+  | "out_of_scope"
   /** The autocomplete service refused and no recovery applied. */
   | "request_failed"
   /** A body did not match the wire types. */
@@ -39,6 +48,12 @@ export interface AutocompleteErrorFields {
   retryAfterMs?: number | null;
   /** The envelope's own message, or a validation message, when there was one. */
   userMessage?: string | null;
+  /** On `out_of_scope`: the route asked. */
+  route?: Route | null;
+  /** On `out_of_scope`: the relation the scope leaves out, if not the route. */
+  relation?: Relation | null;
+  /** On `out_of_scope`: the parameter that touched it (`include`, a filter). */
+  param?: string | null;
   cause?: unknown;
 }
 
@@ -51,6 +66,9 @@ export class AutocompleteError extends Error {
   readonly scope: MintScope | null;
   readonly retryAfterMs: number | null;
   readonly userMessage: string | null;
+  readonly route: Route | null;
+  readonly relation: Relation | null;
+  readonly param: string | null;
 
   constructor(fields: AutocompleteErrorFields) {
     super(
@@ -66,6 +84,9 @@ export class AutocompleteError extends Error {
     this.scope = fields.scope ?? null;
     this.retryAfterMs = fields.retryAfterMs ?? null;
     this.userMessage = fields.userMessage ?? null;
+    this.route = fields.route ?? null;
+    this.relation = fields.relation ?? null;
+    this.param = fields.param ?? null;
   }
 }
 

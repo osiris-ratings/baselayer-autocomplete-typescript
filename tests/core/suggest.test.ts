@@ -999,6 +999,7 @@ describe("client.suggest", () => {
           q: "cind",
           status: 200,
           requestsSinceMint: 1,
+          requestsOnRoute: 1,
           requestBudget: 150,
           recovery: "none",
           indexTag: "v1/202609131644",
@@ -1012,6 +1013,7 @@ describe("client.suggest", () => {
       expect(events[0]?.roundTripMs).toBeGreaterThanOrEqual(0);
       expect(client.getSnapshot().usage).toEqual({
         requestsSinceMint: 2,
+        requestsByRoute: { businesses: 2, people: 0, addresses: 0 },
         requestBudget: 150,
         pivotAllowance: 6,
         pivotsExceededEvents: 0,

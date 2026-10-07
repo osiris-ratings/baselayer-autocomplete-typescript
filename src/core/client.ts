@@ -11,10 +11,18 @@ import {
   type RouteQuery,
   type ShortStemPolicy,
 } from "./businesses";
-import type { Relation } from "./entities";
+import { ROUTE_NAMES, type Relation, type Route } from "./entities";
 import { AutocompleteError, abortError, isAbortError } from "./errors";
 import type { MintFunction } from "./mint";
-import { DEFAULT_SESSION_SCOPE, MAX_LIMIT, parseSessionScope } from "./scope";
+import {
+  DEFAULT_SESSION_SCOPE,
+  MAX_LIMIT,
+  parseSessionScope,
+  relationNamed,
+  routeNamed,
+  scopeViolation,
+  type SessionScope,
+} from "./scope";
 import {
   DEFAULT_REQUEST_POLICY,
   DEFAULT_SESSION_POLICY,
@@ -100,8 +108,13 @@ export interface ClientSnapshot {
   session: SessionPhase;
   brake: BrakeState | null;
   usage: {
-    /** Autocomplete requests on the current grant, counted here. */
+    /** Autocomplete requests on the current grant, counted here, every route. */
     requestsSinceMint: number;
+    /**
+     * The same, per route: the autocomplete service budgets each route's
+     * requests on its own (`requestBudget` per route).
+     */
+    requestsByRoute: Record<Route, number>;
     requestBudget: number | null;
     pivotAllowance: number | null;
     /**
@@ -127,6 +140,8 @@ export interface RequestEvent {
   serverTiming: string | null;
   recovery: Recovery;
   requestsSinceMint: number;
+  /** Requests on this route on the grant, this one included. */
+  requestsOnRoute: number;
   requestBudget: number | null;
   error: AutocompleteError | null;
 }
@@ -250,6 +265,7 @@ interface Failure {
   userMessage: string | null;
   reason: string | null;
   code: number | null;
+  metadata: Record<string, unknown> | null;
 }
 
 async function readFailure(response: ResponseLike): Promise<Failure> {
@@ -258,7 +274,13 @@ async function readFailure(response: ResponseLike): Promise<Failure> {
   try {
     body = await response.json();
   } catch {
-    return { message: fallback, userMessage: null, reason: null, code: null };
+    return {
+      message: fallback,
+      userMessage: null,
+      reason: null,
+      code: null,
+      metadata: null,
+    };
   }
   const envelope = parseErrorEnvelope(body);
   if (envelope !== null) {
@@ -268,12 +290,17 @@ async function readFailure(response: ResponseLike): Promise<Failure> {
       userMessage: envelope.message.length > 0 ? envelope.message : null,
       reason: typeof reason === "string" ? reason : null,
       code: envelope.code,
+      metadata: envelope.metadata,
     };
   }
   const detail = firstValidationMessage(body);
-  return detail !== null
-    ? { message: detail, userMessage: detail, reason: null, code: null }
-    : { message: fallback, userMessage: null, reason: null, code: null };
+  return {
+    message: detail ?? fallback,
+    userMessage: detail,
+    reason: null,
+    code: null,
+    metadata: null,
+  };
 }
 
 function wait(ms: number, signal?: AbortSignal): Promise<void> {
@@ -297,6 +324,49 @@ function wait(ms: number, signal?: AbortSignal): Promise<void> {
 }
 
 type Listeners = { [E in keyof ClientEvents]: Set<ClientEvents[E]> };
+
+function noRequests(): Record<Route, number> {
+  return Object.fromEntries(ROUTE_NAMES.map(route => [route, 0])) as Record<
+    Route,
+    number
+  >;
+}
+
+/** The scope codes the autocomplete service refuses a request with, on a 403. */
+const OUT_OF_SCOPE_CODES = new Set([501, 502]);
+
+/**
+ * The refusal for a query its session's scope cannot serve, before anything is
+ * sent: a route, an `include` member or a filter it leaves out, or a `limit`
+ * past its most. Null when the scope allows the query.
+ */
+function outOfScope(
+  route: Route,
+  query: RouteQuery<Route>,
+  scope: SessionScope,
+): AutocompleteError | null {
+  const violation = scopeViolation(scope, route, {
+    ...(query.include !== undefined ? { include: query.include } : {}),
+    ...(query.filters !== undefined ? { filters: query.filters } : {}),
+  });
+  if (violation !== null) {
+    return new AutocompleteError({
+      kind: "out_of_scope",
+      message:
+        violation.relation === null
+          ? `This session may not search ${route}`
+          : `This session may not reach ${violation.relation} on ${route} (${violation.param})`,
+      ...violation,
+    });
+  }
+  if (query.limit !== undefined && query.limit > scope.maxLimit) {
+    return new AutocompleteError({
+      kind: "query_invalid",
+      message: `limit must be at most ${scope.maxLimit}, this session's most`,
+    });
+  }
+  return null;
+}
 
 /**
  * The client a host creates once per page (or per signed-in identity) and
@@ -330,6 +400,7 @@ export function createAutocompleteClient(
   let consecutiveAuthFailures = 0;
   let authBrakeUntil = 0;
   let requestsSinceMint = 0;
+  let requestsByRoute = noRequests();
   let pivotsExceededEvents = 0;
   let lastIndexTag: string | null = null;
   let snapshot: ClientSnapshot | null = null;
@@ -351,6 +422,7 @@ export function createAutocompleteClient(
       onMint: event => {
         if (event.grant !== null) {
           requestsSinceMint = 0;
+          requestsByRoute = noRequests();
         }
         listeners.mint.forEach(handler => handler(event));
       },
@@ -381,6 +453,7 @@ export function createAutocompleteClient(
       brake: now() < authBrakeUntil ? { until: authBrakeUntil } : null,
       usage: {
         requestsSinceMint,
+        requestsByRoute: { ...requestsByRoute },
         requestBudget: grant?.requestBudget ?? null,
         pivotAllowance: grant?.pivotAllowance ?? null,
         pivotsExceededEvents,
@@ -482,6 +555,11 @@ export function createAutocompleteClient(
       if (signal?.aborted) {
         throw abortError();
       }
+      // Checked against the grant in hand, which a re-mint may have replaced.
+      const refused = outOfScope(relation, query, grant.scope);
+      if (refused !== null) {
+        throw refused;
+      }
       const shortStem_ = filtered && stemLength(query.q) < grant.filterMinStem;
       if (shortStem_ && shortStem === "throw") {
         throw new AutocompleteError({
@@ -495,6 +573,7 @@ export function createAutocompleteClient(
       });
       const startedAt = elapsed();
       requestsSinceMint += 1;
+      requestsByRoute[relation] += 1;
       let response: ResponseLike;
       try {
         response = await fetchImpl(url, {
@@ -602,14 +681,29 @@ export function createAutocompleteClient(
         if (attempted === "remint" && recovery === "remint") {
           recordAuthFailure();
         }
+        const outside =
+          response.status === 403 &&
+          failure.code !== null &&
+          OUT_OF_SCOPE_CODES.has(failure.code);
         const error = new AutocompleteError({
-          kind: "request_failed",
+          kind: outside ? "out_of_scope" : "request_failed",
           message: failure.message,
           status: response.status,
           code: failure.code,
           reason: failure.reason,
           userMessage: failure.userMessage,
           retryAfterMs: headerRetryAfterMs(response),
+          ...(outside
+            ? {
+                // The mint names the route, the service the parameter.
+                route: routeNamed(failure.metadata?.route) ?? relation,
+                relation: relationNamed(failure.metadata?.relation),
+                param:
+                  typeof failure.metadata?.param === "string"
+                    ? failure.metadata.param
+                    : null,
+              }
+            : {}),
         });
         emitRequest(
           requestEvent(
@@ -662,6 +756,7 @@ export function createAutocompleteClient(
       serverTiming: response?.headers.get("Server-Timing") ?? null,
       recovery,
       requestsSinceMint,
+      requestsOnRoute: requestsByRoute[relation],
       requestBudget: grant.requestBudget,
       error,
     };
@@ -679,6 +774,7 @@ export function createAutocompleteClient(
       consecutiveAuthFailures = 0;
       authBrakeUntil = 0;
       requestsSinceMint = 0;
+      requestsByRoute = noRequests();
       pivotsExceededEvents = 0;
       lastIndexTag = null;
       if (brakeTimer !== null) {
