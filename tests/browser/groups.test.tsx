@@ -233,7 +233,11 @@ function inside(inner: Element, outer: Element): boolean {
 }
 
 /** What is wrong with the groups as drawn, one entry a fault. */
-function faults(): string[] {
+/**
+ * What a drawn menu gets wrong. `narrow`: too narrow for the columns, where a
+ * role gives way as text does.
+ */
+function faults(narrow = false): string[] {
   const found: string[] = [];
   const list = host.querySelector<HTMLElement>(".bl-ac-list")!;
   if (list.scrollWidth > list.clientWidth) {
@@ -251,9 +255,13 @@ function faults(): string[] {
           `line ${index} overflows by ${line.scrollWidth - line.clientWidth}px`,
         );
       }
+      // The squares keep their width, and the role too wherever the columns
+      // fit; text, the counts too, gives way after the name.
       line
         .querySelectorAll<HTMLElement>(
-          ".bl-ac-group-count, .bl-ac-role, .bl-ac-state, .bl-ac-more-states",
+          narrow
+            ? ".bl-ac-state, .bl-ac-more-states"
+            : ".bl-ac-role, .bl-ac-state, .bl-ac-more-states",
         )
         .forEach(tag => {
           if (!inside(tag, line) || tag.scrollWidth > tag.clientWidth) {
@@ -267,16 +275,23 @@ function faults(): string[] {
         found.push(`line ${index}: the name is squeezed to nothing`);
       }
       // The badge after a name gives way first: a name is cut only once its
-      // badge has given all its room. A business row's head keeps its flag
-      // pinned beside the name instead, as a business row always has.
+      // badge has given all its room, or at its cap, 60% of the line, so a
+      // long name still leaves the rest something. A business row's head
+      // keeps its flag pinned beside the name instead, as it always has.
       const badge = line.classList.contains("bl-ac-row")
         ? null
         : name?.nextElementSibling;
+      const style = getComputedStyle(line);
+      const room =
+        line.clientWidth -
+        parseFloat(style.paddingLeft) -
+        parseFloat(style.paddingRight);
       if (
         name != null &&
         badge != null &&
         name.scrollWidth > name.clientWidth &&
-        badge.getBoundingClientRect().width > 1
+        badge.getBoundingClientRect().width > 1 &&
+        name.getBoundingClientRect().width < 0.59 * room
       ) {
         found.push(`line ${index}: the name is cut while its badge has room`);
       }
@@ -287,10 +302,10 @@ function faults(): string[] {
 describe("person, address and business groups", () => {
   for (const route of ROUTES) {
     for (const width of WIDTHS) {
-      it(`keep every count and role whole, and the names in their line, on ${route} at ${width}px`, () => {
+      it(`keep every role and square whole, and the names in their line, on ${route} at ${width}px`, () => {
         draw(route, width);
         expect(host.querySelectorAll(".bl-ac-group").length).toBe(1);
-        expect(faults()).toEqual([]);
+        expect(faults(width <= 360)).toEqual([]);
       });
     }
   }

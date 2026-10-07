@@ -309,6 +309,7 @@
  * the keys and the pointer move to; any other line is disabled.
  */
 .bl-ac-group {
+  container-type: inline-size;
   margin: 0;
   padding: 0.25rem 0;
 }
@@ -324,7 +325,7 @@
 .bl-ac-group-head,
 .bl-ac-group-line {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
   align-items: baseline;
   margin: 0;
 }
@@ -347,20 +348,21 @@
   background: var(--bl-ac-highlight-bg);
 }
 
-/* The lead takes the room the trailing corner leaves it. The name keeps its
-   width and its badge takes what is left, so out of room the badge gives way
-   first, down to nothing, and only then the name, which keeps a few letters. */
-.bl-ac-group-lead {
-  display: flex;
-  flex: 1 1 0;
-  gap: 0.5rem;
-  align-items: baseline;
-  min-width: 0;
+/* A line's segments are one row, given way to in reading order: the name
+   keeps its own width, up to 60% of the line, and gives way only once all
+   the text after it has, down to a few letters. That text takes what room is
+   left, each up to its own width, and the flags, the icons and the role keep
+   theirs. Whatever gives way is cut with an ellipsis, inside its own box. */
+.bl-ac-group-lead,
+.bl-ac-group-trailing {
+  display: contents;
 }
 
-.bl-ac-group-lead > * {
+.bl-ac-group-lead > *,
+.bl-ac-group-trailing > * {
   flex: 1 1 0;
   min-width: 0;
+  max-width: max-content;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -370,15 +372,12 @@
 .bl-ac-group-lead > .bl-ac-line-name {
   flex: 0 1 auto;
   min-width: 3rem;
+  max-width: 60%;
 }
 
-/* The trailing corner keeps its width at the right, so its column lines up
-   down the group. */
-.bl-ac-group-trailing {
-  display: flex;
-  flex: none;
-  gap: 0.5rem;
-  align-items: baseline;
+/* The trailing corner starts at the right, so its columns line up down the
+   group. */
+.bl-ac-group-trailing > :first-child {
   margin-left: auto;
 }
 
@@ -460,7 +459,9 @@
   vertical-align: -0.125em;
 }
 
-.bl-ac-group-lead > .bl-ac-states {
+.bl-ac-group-lead > .bl-ac-states,
+.bl-ac-group-trailing > .bl-ac-states,
+.bl-ac-group-line .bl-ac-role {
   flex: none;
   overflow: visible;
 }
@@ -489,6 +490,21 @@
   min-width: calc(var(--bl-ac-role-chars, 0) * 1ch);
   font-size: 13px;
   text-align: right;
+}
+
+/* Too narrow for the columns, the squares take only their own room, and the
+   role, last on its line, gives way as text does, before the name. */
+@container (max-width: 22.5rem) {
+  .bl-ac-group-trailing > .bl-ac-states {
+    min-width: 0;
+  }
+
+  .bl-ac-group-line .bl-ac-role {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: max-content;
+    overflow: hidden;
+  }
 }
 
 .bl-ac-group-count,

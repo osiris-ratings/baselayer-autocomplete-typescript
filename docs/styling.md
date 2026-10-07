@@ -291,6 +291,14 @@ states and the role are columns: the states as wide as three squares and a `+N`,
 the role as wide as the menu's longest (`--bl-ac-role-chars`) and a step
 quieter, so the squares start at one edge down the group.
 
+A line that runs out of room, the head's too, gives way in reading order,
+whatever the layout: the name keeps its own width, up to 60% of the line, and
+is cut only once the text after it (an address, the counts) has given all its
+room; that text takes what is left, each up to its own width. The squares, the
+icons and the role keep theirs, each segment's icon inside its own box, so
+nothing overlaps. In a group narrower than 22.5rem the columns go: the squares
+take only their own room, and the role gives way as text does.
+
 A disabled line under a row reads as inactive: all of it loses its colour
 (`--bl-ac-disabled-filter`), its name and its other text fade toward the menu's
 ground (`--bl-ac-disabled-name`, `--bl-ac-disabled-text`, the icon with the
