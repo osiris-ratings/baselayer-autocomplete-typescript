@@ -108,16 +108,24 @@ function textBox(element: Element): DOMRect {
   return range.getBoundingClientRect();
 }
 
-/** Every line shown but the row's last, which is hidden. */
+/**
+ * Every line shown but the row's last, which is hidden, and the head's last
+ * field left out, so the Hidden drawer holds a line and a field.
+ */
 function oneHidden(state: StyleState, route: Route): StyleState {
-  const relations = lineKinds(route).flatMap(kind =>
-    kind.relation === null ? [] : [kind.relation],
-  );
+  const [head, ...lines] = lineKinds(route);
+  const relations = lines.map(kind => kind.relation!);
+  const left = head!.lines.at(-1)!.trailing.field;
+  const row = state.rows[route];
   return {
     ...state,
     rows: {
       ...state.rows,
-      [route]: { ...state.rows[route], list: relations.slice(0, -1) },
+      [route]: {
+        ...row,
+        list: relations.slice(0, -1),
+        layout: { ...row.layout, [left]: null },
+      },
     },
   };
 }
@@ -173,6 +181,14 @@ describe("the row map in every preset", () => {
               check(`grip of ${at}`, grip.getBoundingClientRect(), 3);
             }
           }
+          for (const chip of wrap.querySelectorAll<HTMLElement>(
+            ".row-map-tray .row-map-chip",
+          )) {
+            check(`${chip.textContent} in Hidden`, textBox(chip), 3);
+          }
+          expect(
+            wrap.querySelectorAll(".row-map-tray .row-map-chip").length,
+          ).toBeGreaterThan(0);
           for (const heading of wrap.querySelectorAll<HTMLElement>(
             ".row-map-drawer-label, .row-map-check-head",
           )) {

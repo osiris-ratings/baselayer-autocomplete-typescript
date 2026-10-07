@@ -567,21 +567,22 @@ function KindRowMap<P extends string, F extends string>({
   );
   /**
    * A line goes to the drawer it is not in. A field goes on a place of its
-   * own line that would draw it, or on the tray: a gap of the row is no place,
-   * so it takes none. A hidden line gives up no field to carry, and the tray
-   * holds none of its own.
+   * own line that would draw it, or anywhere in the Hidden drawer, to be left
+   * out: a gap of the row is no place, so it takes none. A hidden line gives
+   * up no field to carry, and the Hidden drawer holds none of its own.
    */
+  const fieldSpot = (to: DropSpot) => (to === HIDDEN ? TRAY : to);
   const takes = (item: string, to: DropSpot) => {
     const relation = relationOf(item);
     if (relation !== null) {
       return to === (list.includes(relation) ? HIDDEN : SHOWN);
     }
-    return canDrop(layout, item as F, to as P);
+    return to !== TRAY && canDrop(layout, item as F, fieldSpot(to) as P);
   };
   const { drag, handle, clicked } = useFieldDrag(takes, (item, to) => {
     const relation = relationOf(item);
     if (relation === null) {
-      onLayout(moveField(layout, item as F, to as P));
+      onLayout(moveField(layout, item as F, fieldSpot(to) as P));
     } else {
       onList(relation, to === SHOWN);
     }
@@ -806,7 +807,7 @@ function KindRowMap<P extends string, F extends string>({
         <div
           className="row-map"
           role="group"
-          aria-label="A row's places"
+          aria-label="Shown lines"
           data-dragging={moving !== null || undefined}
         >
           {/* Out of room, the lines scroll here, the page not at all. */}
@@ -835,43 +836,35 @@ function KindRowMap<P extends string, F extends string>({
             <div className="row-map-head" aria-hidden="true">
               <span className="row-map-drawer-label">Hidden</span>
             </div>
-            {hidden.length === 0 ? (
+            {hidden.length === 0 && unplaced.length === 0 && (
               <div className="row-map-hint-row">
                 <p className="row-map-drawer-hint">
-                  Drag a line here by its grip to hide it
+                  Drag a line by its grip, or a field, here to hide it
                 </p>
               </div>
-            ) : (
-              hidden.map(kindRow)
             )}
+            {hidden.map(kindRow)}
+          </div>
+          {/* The fields the row leaves out, under its hidden lines. */}
+          <div
+            className="row-map-tray"
+            data-drop={TRAY}
+            data-ruled={(hidden.length > 0 && unplaced.length > 0) || undefined}
+          >
+            {unplaced.map(field => (
+              <span
+                key={field}
+                className="row-map-chip"
+                data-field={field}
+                title={`Drag ${editor.fieldLabels[field]} onto a place · reads ${editor.fieldWire[field].join(", ")}`}
+                {...handle(field)}
+                data-dragged={moving?.field === field || undefined}
+              >
+                {editor.fieldLabels[field]}
+              </span>
+            ))}
           </div>
         </div>
-      </div>
-      <div
-        className="row-map-tray"
-        data-drop={TRAY}
-        data-accepts={accepts(TRAY)}
-        data-over={over === TRAY || undefined}
-      >
-        <span className="row-map-tray-label">Not shown</span>
-        {unplaced.length === 0 ? (
-          <span className="row-map-tray-hint">
-            Drag a field here to leave it out
-          </span>
-        ) : (
-          unplaced.map(field => (
-            <span
-              key={field}
-              className="row-map-chip"
-              data-field={field}
-              title={`Drag ${editor.fieldLabels[field]} onto a place · reads ${editor.fieldWire[field].join(", ")}`}
-              {...handle(field)}
-              data-dragged={moving?.field === field || undefined}
-            >
-              {editor.fieldLabels[field]}
-            </span>
-          ))
-        )}
       </div>
       <details className="row-map-reads-fold">
         <summary>What each field reads</summary>

@@ -190,7 +190,9 @@ describe("the Components fold's searches", () => {
     render(<RoutedPanel start="people" />);
     grip("Show their addresses");
 
-    const note = screen.getByText(/Not shown/, { selector: "p.fold-note" });
+    const note = screen.getByText(/Shown and Hidden/, {
+      selector: "p.fold-note",
+    });
     expect(note.textContent!.trim().split(/(?<=\.)\s+/)).toHaveLength(1);
     expect(note.textContent).toMatch(/disabled/i);
     const said = [note, document.querySelector(".row-map-wrap")!].flatMap(

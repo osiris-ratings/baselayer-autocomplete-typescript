@@ -1093,18 +1093,12 @@
 
 /* While a field is dragged, every spot that takes it says so, the one under
    the pointer most; a spot that does not is faded, and so is the field's own. */
-.row-map-place[data-accepts][data-field] .row-map-face,
-.row-map-tray[data-accepts] {
+.row-map-place[data-accepts][data-field] .row-map-face {
   border-color: var(--blue);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 14%, transparent);
 }
 
-.row-map-tray[data-accepts] {
-  background: color-mix(in srgb, var(--blue) 5%, transparent);
-}
-
-.row-map-place[data-over][data-field] .row-map-face,
-.row-map-tray[data-over] {
+.row-map-place[data-over][data-field] .row-map-face {
   border-style: solid;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 32%, transparent);
 }
@@ -1121,29 +1115,25 @@
   visibility: hidden;
 }
 
-/* The fields the row leaves out, to drag back in. */
+/* The fields the row leaves out, in the Hidden drawer under its hidden
+   lines, ruled off from them, and starting where the lines' chips do. */
 .row-map-tray {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
-  min-height: 36px;
-  margin-top: 8px;
-  padding: 4px 8px;
-  border: 1px dashed var(--line);
-  border-radius: 4px;
-  color: var(--muted);
+  padding-left: calc(var(--map-grip) + var(--map-col-gap) + var(--map-box-pad));
   font-size: 12px;
 }
 
-.row-map-tray-label {
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+.row-map-tray:empty {
+  display: none;
 }
 
-.row-map-tray-hint {
-  opacity: 0.8;
+.row-map-tray[data-ruled] {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--map-border, var(--line-soft));
 }
 
 .row-map-chip {

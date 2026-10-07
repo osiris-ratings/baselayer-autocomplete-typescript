@@ -89,3 +89,44 @@ describe("the row map's drawers, lined up", () => {
     });
   }
 });
+
+describe("the Hidden drawer's fields", () => {
+  for (const width of [560, 400]) {
+    it(`start where the lines' chips do, ruled off from the hidden lines, in ${width}px`, () => {
+      const { host, done } = mount(
+        {
+          ...DEFAULT_STYLE,
+          rows: {
+            ...DEFAULT_STYLE.rows,
+            people: {
+              ...DEFAULT_STYLE.rows.people,
+              layout: {
+                ...DEFAULT_STYLE.rows.people.layout,
+                businessTrailing: null,
+              },
+            },
+          },
+        },
+        "people",
+        width,
+      );
+      try {
+        const hidden = host.querySelector('[data-drawer="hidden"]')!;
+        const tray = hidden.querySelector<HTMLElement>(".row-map-tray")!;
+        const chip = tray.querySelector(".row-map-chip")!;
+        expect(
+          Math.abs(chip.getBoundingClientRect().left - firstChip(hidden)),
+        ).toBeLessThanOrEqual(1);
+        // A rule between the hidden lines and the fields.
+        const rule = getComputedStyle(tray);
+        expect(rule.borderTopStyle).toBe("solid");
+        expect(parseFloat(rule.borderTopWidth)).toBeGreaterThan(0);
+        expect(tray.getBoundingClientRect().top).toBeGreaterThanOrEqual(
+          hidden.querySelector(".row-map-kind")!.getBoundingClientRect().bottom,
+        );
+      } finally {
+        done();
+      }
+    });
+  }
+});

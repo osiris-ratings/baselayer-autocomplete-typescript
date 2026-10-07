@@ -176,7 +176,8 @@ describe("the Components fold's row", () => {
       "titleTrailingBadge",
       "titleTrailing",
       "subtitleTrailing",
-      "tray",
+      // The Hidden drawer, all of it, to leave the field out.
+      "hidden",
     ]);
     expect(document.querySelector(".row-map-ghost")).toHaveProperty(
       "textContent",
@@ -702,6 +703,142 @@ describe("the row map as the row's configuration", () => {
       count(withListed(DEFAULT_STYLE, "people", "addresses", true)),
       count(withListed(DEFAULT_STYLE, "people", "businesses", false)),
     ]).toEqual([3, 3, 3]);
+  });
+
+  /** The person's row with their businesses' role taken off its line. */
+  const roleOut = (state: StyleState): StyleState => ({
+    ...state,
+    rows: {
+      ...state.rows,
+      people: {
+        ...state.rows.people,
+        layout: { ...state.rows.people.layout, businessTrailing: null },
+      },
+    },
+  });
+
+  it("keeps the fields the row leaves out in the Hidden drawer, ruled off from its hidden lines", () => {
+    const { drawer, view } = mountOn("people", roleOut(DEFAULT_STYLE));
+    const tray = drawer("hidden").querySelector<HTMLElement>(".row-map-tray")!;
+    expect(
+      [...tray.querySelectorAll<HTMLElement>(".row-map-chip")].map(
+        chip => chip.dataset.field,
+      ),
+    ).toEqual(["role"]);
+    // Under the hidden addresses: a rule between them.
+    expect(tray.dataset.ruled).toBe("true");
+    expect(view.container.textContent).not.toContain("Not shown");
+    expect(
+      view.container.querySelector(".row-map-wrap > .row-map-tray"),
+    ).toBeNull();
+
+    cleanup();
+    const shown = mountOn(
+      "people",
+      roleOut(withListed(DEFAULT_STYLE, "people", "addresses", true)),
+    );
+    // No hidden line above it: no rule.
+    expect(
+      shown.drawer("hidden").querySelector<HTMLElement>(".row-map-tray")!
+        .dataset.ruled,
+    ).toBeUndefined();
+  });
+
+  it("takes a field dropped anywhere in the Hidden drawer", () => {
+    const { onChange, drawer, view } = mountOn("people");
+    drag(
+      view.container.querySelector(
+        '[data-drop="businessTrailing"] .row-map-handle',
+      )!,
+      drawer("hidden"),
+    );
+    // Left out: the role is in no place of the row.
+    expect(
+      Object.values(onChange.mock.calls[0]![0].rows.people.layout),
+    ).not.toContain("role");
+  });
+
+  it("says how to fill the Hidden drawer only while nothing is in it", () => {
+    const { drawer } = mountOn(
+      "people",
+      withListed(DEFAULT_STYLE, "people", "addresses", true),
+    );
+    expect(
+      drawer("hidden").querySelector(".row-map-drawer-hint")?.textContent,
+    ).toBe("Drag a line by its grip, or a field, here to hide it");
+    cleanup();
+    expect(
+      mountOn("people").drawer("hidden").querySelector(".row-map-drawer-hint"),
+    ).toBeNull();
+    cleanup();
+    expect(
+      mountOn(
+        "people",
+        roleOut(withListed(DEFAULT_STYLE, "people", "addresses", true)),
+      )
+        .drawer("hidden")
+        .querySelector(".row-map-drawer-hint"),
+    ).toBeNull();
+  });
+
+  it("names each drawer's group of lines", () => {
+    const { drawer } = mountOn("people");
+    expect(
+      drawer("shown")
+        .querySelector('[role="group"]')!
+        .getAttribute("aria-label"),
+    ).toBe("Shown lines");
+    expect(
+      drawer("hidden")
+        .querySelector('[role="group"]')!
+        .getAttribute("aria-label"),
+    ).toBe("Hidden lines");
+  });
+
+  it("lists what a field reads only for the lines the row shows", () => {
+    const reads = (view: ReturnType<typeof render>) =>
+      [
+        ...view.container.querySelectorAll<HTMLElement>(
+          ".row-map-reads tbody tr",
+        ),
+      ].map(row => row.dataset.field);
+    const hidden = mountOn("people");
+    expect(reads(hidden.view)).not.toContain("addressRole");
+    cleanup();
+    const shown = mountOn(
+      "people",
+      withListed(DEFAULT_STYLE, "people", "addresses", true),
+    );
+    expect(reads(shown.view)).toContain("addressRole");
+  });
+
+  it("carries a line as its name on a card, the line itself marked as carried", () => {
+    const { grip, drawer, kind } = mountOn("people");
+    vi.spyOn(document, "elementFromPoint").mockReturnValue(drawer("shown"));
+    const addresses = grip("addresses")!;
+    fireEvent.pointerDown(addresses, { button: 0, clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(addresses, { buttons: 1, clientX: 40, clientY: 30 });
+
+    const ghost = document.querySelector<HTMLElement>(".row-map-ghost")!;
+    expect(ghost.classList.contains("row-map-line-ghost")).toBe(true);
+    expect(ghost.classList.contains("row-map-place")).toBe(false);
+    expect(ghost.style.width).toBe("");
+    expect(kind("addresses").dataset.dragged).toBe("true");
+    fireEvent.pointerUp(addresses, { clientX: 40, clientY: 30 });
+    expect(kind("addresses").dataset.dragged).toBeUndefined();
+  });
+
+  it("carries a line by its grip from a bare mousedown, as Safari sends one", () => {
+    const { onChange, grip, drawer } = mountOn("people");
+    vi.spyOn(document, "elementFromPoint").mockReturnValue(drawer("shown"));
+    const addresses = grip("addresses")!;
+    fireEvent.mouseDown(addresses, { button: 0, clientX: 0, clientY: 0 });
+    fireEvent.mouseMove(addresses, { buttons: 1, clientX: 40, clientY: 30 });
+    fireEvent.mouseUp(addresses, { clientX: 40, clientY: 30 });
+    expect(onChange.mock.calls[0]![0].rows.people.list).toEqual([
+      "businesses",
+      "addresses",
+    ]);
   });
 
   it("takes a field on no gap of the row, only on a place", () => {
