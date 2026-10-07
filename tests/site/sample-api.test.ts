@@ -1,6 +1,8 @@
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import { build } from "vite";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -250,16 +252,27 @@ describe("what the made-up API does not answer", () => {
   });
 });
 
-describe("the made-up API in the dev server", () => {
-  it("is served only by `pnpm demo`, never in a build, and only under DEMO_API=sample", () => {
-    const config = readFileSync(
-      join(__dirname, "../../site/vite.config.ts"),
-      "utf8",
-    );
-    const plugin = config.slice(config.indexOf("function sampleApi(): Plugin"));
+describe("the made-up API in a build", () => {
+  it("never reaches the published site", async () => {
+    const outDir = mkdtempSync(join(tmpdir(), "site-build-"));
+    try {
+      await build({
+        configFile: join(__dirname, "../../site/vite.config.ts"),
+        logLevel: "silent",
+        build: { outDir, emptyOutDir: true },
+      });
+      const code = readdirSync(join(outDir, "assets"))
+        .filter(file => file.endsWith(".js"))
+        .map(file => readFileSync(join(outDir, "assets", file), "utf8"))
+        .join("\n");
 
-    expect(plugin).toContain('apply: "serve"');
-    expect(plugin).toContain("if (!sampleMode) return;");
-    expect(config).toContain('const sampleMode = demoApi === "sample";');
-  });
+      // The made-up rows ship, for Styling's preview: the scan sees them.
+      expect(code).toContain("Dana Whitfield");
+      // The made-up API's own strings do not.
+      expect(code).not.toContain("sample.invalid");
+      expect(code).not.toContain("not sealed for your organization");
+    } finally {
+      rmSync(outDir, { recursive: true, force: true });
+    }
+  }, 120_000);
 });
