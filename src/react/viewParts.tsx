@@ -60,8 +60,17 @@ export function classes(
 }
 
 /** The look's colors as CSS variables, only where they differ from the stylesheet's. */
+/** How much of a line's fading, when it is not a pick, is its ink rather than its colour. */
+const INERT_INK = 0.15;
+
 export function lookVariables(look: Look): CSSProperties {
   const vars: Record<string, string> = {};
+  // One knob, two variables: the stylesheet's fallbacks are the default's.
+  if (look.inertDim !== DEFAULT_LOOK.inertDim) {
+    const round = (value: number) => String(Math.round(value * 1000) / 1000);
+    vars["--bl-ac-inert-saturation"] = round(1 - look.inertDim);
+    vars["--bl-ac-inert-opacity"] = round(1 - look.inertDim * INERT_INK);
+  }
   const set = (name: string, value: string, fallback: string) => {
     if (value !== fallback) {
       vars[name] = value;

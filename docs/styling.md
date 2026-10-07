@@ -34,21 +34,22 @@ emphasis) keeps its default too.
 />
 ```
 
-| Knob                           | Default       | Sets                                   |
-| ------------------------------ | ------------- | -------------------------------------- |
-| `matchEmphasis`                | `"underline"` | how the marks are drawn                |
-| `matchEmphasisRegion`          | `"substring"` | the typed characters, or whole words   |
-| `matchEmphasisColor`           | `null`        | `--bl-ac-mark`                         |
-| `backgroundColor`              | `#FFFFFF`     | `--bl-ac-bg`                           |
-| `titleColor`                   | `#1A202C`     | `--bl-ac-title`                        |
-| `subtitleColor`                | `#718096`     | `--bl-ac-subtitle`                     |
-| `pillBackgroundColor`          | `#C6F6D5`     | `--bl-ac-pill-bg`                      |
-| `pillForegroundColor`          | `#22543D`     | `--bl-ac-pill-fg`                      |
-| `primaryPillBorderColor`       | `#48BB78`     | `--bl-ac-pill-primary-border`          |
-| `secondaryPillBackgroundColor` | `#EDF2F7`     | `--bl-ac-pill-secondary-bg`            |
-| `structurePillBackgroundColor` | `#EDF2F7`     | `--bl-ac-structure-bg`                 |
-| `structurePillForegroundColor` | `#4A5568`     | `--bl-ac-structure-fg`                 |
-| `showDebugInfo`                | `false`       | the round trip and index in the footer |
+| Knob                           | Default       | Sets                                                           |
+| ------------------------------ | ------------- | -------------------------------------------------------------- |
+| `matchEmphasis`                | `"underline"` | how the marks are drawn                                        |
+| `matchEmphasisRegion`          | `"substring"` | the typed characters, or whole words                           |
+| `matchEmphasisColor`           | `null`        | `--bl-ac-mark`                                                 |
+| `backgroundColor`              | `#FFFFFF`     | `--bl-ac-bg`                                                   |
+| `titleColor`                   | `#1A202C`     | `--bl-ac-title`                                                |
+| `subtitleColor`                | `#718096`     | `--bl-ac-subtitle`                                             |
+| `pillBackgroundColor`          | `#C6F6D5`     | `--bl-ac-pill-bg`                                              |
+| `pillForegroundColor`          | `#22543D`     | `--bl-ac-pill-fg`                                              |
+| `primaryPillBorderColor`       | `#48BB78`     | `--bl-ac-pill-primary-border`                                  |
+| `secondaryPillBackgroundColor` | `#EDF2F7`     | `--bl-ac-pill-secondary-bg`                                    |
+| `structurePillBackgroundColor` | `#EDF2F7`     | `--bl-ac-structure-bg`                                         |
+| `structurePillForegroundColor` | `#4A5568`     | `--bl-ac-structure-fg`                                         |
+| `showDebugInfo`                | `false`       | the round trip and index in the footer                         |
+| `inertDim`                     | `0.6`         | how far a line under a row fades when it is not a pick, 0 to 1 |
 
 Colors are hex: `#rgb`, `#rrggbb` or `#rrggbbaa`. `plain` draws no marks,
 `weight` sets the matched words bolder than the rest of the name, `ink`
@@ -265,6 +266,11 @@ is inert. A list ends, fainter, in how many it leaves out (`bl-ac-more`:
 `--bl-ac-border`. `look` colours them as it does a business's row: the names
 in `titleColor`, addresses, counts and roles in `subtitleColor`, the
 highlighted line on `--bl-ac-highlight-bg`.
+
+A line under a row that is not a pick fades, its icon, squares and text
+together: mostly its colour, a little its ink, so it stays readable
+(`look.inertDim`, 0 for none; `--bl-ac-inert-saturation` and `--bl-ac-inert-
+opacity` behind it). A pick and the row's head do not fade.
 
 After a pick from a line under a row, the line under the field
 (`bl-ac-selection`, `data-type` the picked line's type) names what was

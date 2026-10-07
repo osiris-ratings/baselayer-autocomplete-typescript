@@ -183,10 +183,23 @@ describe("the type", () => {
   });
 });
 
+describe("a line that is not a pick", () => {
+  it("fades by the look's default when the component sets nothing", () => {
+    // The component sets the variables only for another `inertDim`, so the
+    // fallbacks must be the default's: its colour by 1 - d, its ink by 0.15 d.
+    const fade = rule(".bl-ac-group-line:not([data-pickable])");
+    const d = DEFAULT_LOOK.inertDim;
+    expect(fade).toContain(`saturate(var(--bl-ac-inert-saturation, ${1 - d}))`);
+    expect(fade).toContain(
+      `opacity(var(--bl-ac-inert-opacity, ${Math.round((1 - d * 0.15) * 1000) / 1000}))`,
+    );
+  });
+});
+
 describe("the stylesheet's colors", () => {
   // Each color knob of `look`, and the variable it sets.
   const VARIABLES: Record<
-    Exclude<keyof Look, `match${string}` | "showDebugInfo">,
+    Exclude<keyof Look, `match${string}` | "showDebugInfo" | "inertDim">,
     string
   > = {
     backgroundColor: "--bl-ac-bg",
