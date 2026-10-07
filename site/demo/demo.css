@@ -631,7 +631,7 @@
    shows only between them. What the keyboard reaches stops clear of them. */
 .row-map-scroll {
   display: grid;
-  gap: 8px;
+  gap: var(--map-row-gap);
   overflow-x: auto;
   scroll-padding-inline: var(--map-grip-cell) var(--map-check-cell);
 }
@@ -711,6 +711,7 @@
 
 .row-map-wrap {
   --map-grip: 12px;
+  --map-row-gap: 8px;
   /* The checkbox and a little room: its heading may run left of it. */
   --map-check: 28px;
   --map-col-gap: 6px;
@@ -755,7 +756,6 @@
 
 .row-map-head {
   align-items: end;
-  margin-bottom: -2px;
   color: var(--map-ink);
   font-family: var(--mono);
   font-size: 10px;
@@ -887,6 +887,32 @@
   justify-content: center;
   padding-left: var(--map-col-gap);
   background: var(--map-bg, var(--paper));
+}
+
+/* A faint guide down the Disabled column, from just under its heading to
+   the last checkbox, broken clear of each box, so the heading and its
+   boxes read as one column. */
+.row-map-guide {
+  position: absolute;
+  left: calc(var(--map-col-gap) + (100% - var(--map-col-gap)) / 2);
+  width: 1px;
+  background: var(--map-soft);
+  pointer-events: none;
+}
+
+.row-map-guide[data-part="above"] {
+  /* Up through the gap between this line and the one above it. */
+  top: calc(-1 * var(--map-row-gap));
+  bottom: calc(50% + 7px + 4px);
+}
+
+.row-map-guide[data-part="below"] {
+  top: calc(50% + 7px + 4px);
+  bottom: 0;
+}
+
+.row-map-kind:last-child .row-map-guide[data-part="below"] {
+  display: none;
 }
 
 .row-map-check {

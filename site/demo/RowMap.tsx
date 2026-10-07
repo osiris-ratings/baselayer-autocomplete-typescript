@@ -937,6 +937,17 @@ function KindRowMap<P extends string, F extends string>({
               checked={!on}
               onChange={event => onEnable(kind.entity, !event.target.checked)}
             />
+            {/* The column's guide from its heading, broken around the box. */}
+            <span
+              className="row-map-guide"
+              data-part="above"
+              aria-hidden="true"
+            />
+            <span
+              className="row-map-guide"
+              data-part="below"
+              aria-hidden="true"
+            />
           </span>
         ) : (
           // A hidden line is not drawn, so is no choice either: no checkbox,
