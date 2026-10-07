@@ -5,17 +5,34 @@
 // which the stylesheet declares.
 
 import {
+  ADDRESS_ROW,
   BUSINESS_STRUCTURES,
+  DEFAULT_LISTED,
   DEFAULT_LOOK,
+  DEFAULT_PICKABLE,
   DEFAULT_ROW_LAYOUT,
+  PERSON_ROW,
   ROW_FIELDS,
+  ROW_LINES,
   ROW_PLACES,
-  drawnRowLayout,
+  drawnLayout,
+  resolveLayout,
   structureLabel,
+  type AddressRowField,
+  type AddressRowLayout,
+  type AddressRowPlace,
+  type EntityType,
+  type IncludeOf,
+  type LayoutOf,
   type Look,
   type MatchEmphasis,
   type MatchRegion,
+  type PersonRowField,
+  type PersonRowLayout,
+  type PersonRowPlace,
+  type Route,
   type RowField,
+  type RowKind,
   type RowLayout,
   type RowPlace,
 } from "@baselayer-sdk/autocomplete";
@@ -255,6 +272,14 @@ export interface StyleState {
   look: Look;
   /** The field each place of a row shows (`layout`). */
   layout: RowLayout;
+  /** The same for a person's row, and what it lists and can pick. */
+  personLayout: PersonRowLayout;
+  personInclude: IncludeOf<"people">[];
+  personPickable: EntityType[];
+  /** The same for an address's row. */
+  addressLayout: AddressRowLayout;
+  addressInclude: IncludeOf<"addresses">[];
+  addressPickable: EntityType[];
   vars: Record<CssVariable, string>;
   limit: number;
   minChars: number;
@@ -279,6 +304,12 @@ export const DEFAULT_LABEL = "Business name";
 export const DEFAULT_STYLE: StyleState = {
   look: { ...DEFAULT_LOOK },
   layout: { ...DEFAULT_ROW_LAYOUT },
+  personLayout: resolveLayout(PERSON_ROW),
+  personInclude: [...DEFAULT_LISTED],
+  personPickable: [...DEFAULT_PICKABLE],
+  addressLayout: resolveLayout(ADDRESS_ROW),
+  addressInclude: [...DEFAULT_LISTED],
+  addressPickable: [...DEFAULT_PICKABLE],
   vars: Object.fromEntries(
     Object.entries(CSS_VARIABLES).map(([name, spec]) => [name, spec.value]),
   ) as Record<CssVariable, string>,
@@ -361,6 +392,126 @@ export function changedStructures(state: StyleState): [Structure, string][] {
   ).map(structure => [structure, state.structures[structure]]);
 }
 
+/** Where a dragged field can land besides a place: out of the row. */
+export const TRAY = "tray";
+
+/** The choice that leaves a place empty. */
+export const EMPTY_PLACE = "empty";
+
+/**
+ * A kind of row as the Components fold edits it: its places and fields, what
+ * to call each, what each field reads off the wire, and each line's name.
+ */
+export interface RowEditor<P extends string, F extends string> {
+  kind: RowKind<P, F>;
+  placeLabels: Record<P, string>;
+  fieldLabels: Record<F, string>;
+  fieldWire: Record<F, readonly string[]>;
+  /** Each line's name, which no place holds: long, and for a narrow panel. */
+  lineNames: Record<string, { long: string; short: string }>;
+}
+
+/**
+ * What the Components fold does with a kind's layout: where a dragged field
+ * can land, what each place offers, and the layout after a drop or a pick,
+ * always as the row draws it.
+ */
+export function editorOps<P extends string, F extends string>(
+  editor: RowEditor<P, F>,
+) {
+  type Layout = LayoutOf<P, F>;
+  type Spot = P | typeof TRAY;
+  type Choice = F | typeof EMPTY_PLACE;
+  const { kind } = editor;
+  const placeOf = (layout: Layout, field: F) =>
+    kind.places.find(place => layout[place] === field);
+
+  /**
+   * The layout with a field dropped somewhere, as the row draws it. On a
+   * place, the field takes it and whatever the place held goes where the
+   * field came from (a swap, or out of the row when the field came from the
+   * tray); on the tray, the field leaves the row.
+   */
+  function moveField(layout: Layout, field: F, to: Spot): Layout {
+    const from = placeOf(layout, field);
+    const next = { ...layout };
+    if (to === TRAY) {
+      if (from !== undefined) next[from] = null;
+      return drawnLayout(kind, resolveLayout(kind, next));
+    }
+    const displaced = next[to];
+    if (from !== undefined) next[from] = displaced;
+    next[to] = field;
+    return drawnLayout(kind, resolveLayout(kind, next));
+  }
+
+  /**
+   * Whether a field can be dropped on a spot: on a place other than its own
+   * where the row would draw it, and on the tray when the row shows it. A
+   * badge beside nothing, the badge beside the field itself included, or a
+   * place on another line than the field's, takes nothing.
+   */
+  function canDrop(layout: Layout, field: F, to: Spot): boolean {
+    const from = placeOf(layout, field);
+    if (to === TRAY) return from !== undefined;
+    return to !== from && moveField(layout, field, to)[to] === field;
+  }
+
+  /** The fields the layout places nowhere, in their own order. */
+  function unplacedFields(layout: Layout): F[] {
+    const placed = new Set(kind.places.map(place => layout[place]));
+    return kind.fields.filter(field => !placed.has(field));
+  }
+
+  /**
+   * The layout with a choice made for one place, as the row draws it: a pick
+   * is the drop of that field on that place, so it swaps with what the place
+   * held, and empty sends the place's field out of the row.
+   */
+  function withPlaced(layout: Layout, place: P, choice: Choice): Layout {
+    if (choice !== EMPTY_PLACE) {
+      return moveField(layout, choice, place);
+    }
+    const field = layout[place];
+    return field === null
+      ? drawnLayout(kind, layout)
+      : moveField(layout, field, TRAY);
+  }
+
+  /**
+   * A place's options: empty, and every field the row would draw there. A
+   * field placed elsewhere says where it comes from, and that it swaps with
+   * the place's own field when the place holds one.
+   */
+  function placeOptions(
+    layout: Layout,
+    place: P,
+  ): { value: Choice; label: string }[] {
+    const choices: Choice[] = [EMPTY_PLACE, ...kind.fields];
+    const drawnHere = choices.filter(
+      choice =>
+        choice === EMPTY_PLACE ||
+        withPlaced(layout, place, choice)[place] === choice,
+    );
+    return drawnHere.map(choice => {
+      const label =
+        choice === EMPTY_PLACE ? "Empty" : editor.fieldLabels[choice];
+      const elsewhere = kind.places.find(
+        other => other !== place && layout[other] === choice,
+      );
+      return {
+        value: choice,
+        label:
+          elsewhere === undefined
+            ? label
+            : `${label}, ${layout[place] === null ? "from" : "swaps with"} ${editor.placeLabels[elsewhere]}`,
+      };
+    });
+  }
+
+  return { canDrop, moveField, placeOptions, unplacedFields, withPlaced };
+}
+
 /** Each place a host fills, named for where it sits. */
 export const PLACE_LABELS: Record<RowPlace, string> = {
   titleBadge: "Beside the name",
@@ -393,60 +544,8 @@ export const FIELD_WIRE: Record<RowField, readonly string[]> = {
   ],
 };
 
-/** Where a dragged field can land besides a place: out of the row. */
-export const TRAY = "tray";
 export type DropSpot = RowPlace | typeof TRAY;
-
-/**
- * Whether a field can be dropped on a spot: on a place other than its own
- * where the row would draw it, and on the tray when the row shows it. A
- * badge beside nothing, the badge beside the field itself included, or the
- * second line's right with no lead, is drawn elsewhere, so it takes nothing.
- */
-export function canDrop(
-  layout: RowLayout,
-  field: RowField,
-  to: DropSpot,
-): boolean {
-  const from = ROW_PLACES.find(place => layout[place] === field);
-  if (to === TRAY) return from !== undefined;
-  return to !== from && moveField(layout, field, to)[to] === field;
-}
-
-/** The fields the layout places nowhere, in their own order. */
-export function unplacedFields(layout: RowLayout): RowField[] {
-  const placed = new Set(ROW_PLACES.map(place => layout[place]));
-  return ROW_FIELDS.filter(field => !placed.has(field));
-}
-
-/**
- * The layout with a field dropped somewhere, as the row draws it. On a place,
- * the field takes it and whatever the place held goes where the field came
- * from (a swap, or out of the row when the field came from the tray); on the
- * tray, the field leaves the row.
- */
-export function moveField(
-  layout: RowLayout,
-  field: RowField,
-  to: DropSpot,
-): RowLayout {
-  const from = ROW_PLACES.find(place => layout[place] === field);
-  const next = { ...layout };
-  if (to === TRAY) {
-    if (from !== undefined) next[from] = null;
-    return drawnRowLayout(next);
-  }
-  const displaced = next[to];
-  if (from !== undefined) next[from] = displaced;
-  next[to] = field;
-  return drawnRowLayout(next);
-}
-
-/** The choice that leaves a place empty. */
-export const EMPTY_PLACE = "empty";
 export type PlaceChoice = RowField | typeof EMPTY_PLACE;
-
-const CHOICES: readonly PlaceChoice[] = [EMPTY_PLACE, ...ROW_FIELDS];
 
 export const CHOICE_LABELS: Record<PlaceChoice, string> = {
   [EMPTY_PLACE]: "Empty",
@@ -456,52 +555,103 @@ export const CHOICE_LABELS: Record<PlaceChoice, string> = {
   people: "People",
 };
 
-/**
- * A place's options: empty, and every field the row would draw there. A
- * field placed elsewhere says where it comes from, and that it swaps with
- * the place's own field when the place holds one.
- */
-export function placeOptions(
-  layout: RowLayout,
-  place: RowPlace,
-): { value: PlaceChoice; label: string }[] {
-  const drawnHere = CHOICES.filter(
-    choice =>
-      choice === EMPTY_PLACE ||
-      withPlaced(layout, place, choice)[place] === choice,
-  );
-  return drawnHere.map(choice => {
-    const elsewhere = ROW_PLACES.find(
-      other => other !== place && layout[other] === choice,
-    );
-    return {
-      value: choice,
-      label:
-        elsewhere === undefined
-          ? CHOICE_LABELS[choice]
-          : `${CHOICE_LABELS[choice]}, ${layout[place] === null ? "from" : "swaps with"} ${PLACE_LABELS[elsewhere]}`,
-    };
-  });
-}
+/** A business's row. */
+export const BUSINESS_EDITOR: RowEditor<RowPlace, RowField> = {
+  kind: {
+    places: ROW_PLACES,
+    fields: ROW_FIELDS,
+    lines: ROW_LINES,
+    defaults: DEFAULT_ROW_LAYOUT,
+  },
+  placeLabels: PLACE_LABELS,
+  fieldLabels: CHOICE_LABELS,
+  fieldWire: FIELD_WIRE,
+  lineNames: { title: { long: "Business name", short: "Name" } },
+};
 
-/**
- * The layout with a choice made for one place, as the row draws it: a pick
- * is the drop of that field on that place, so it swaps with what the place
- * held, and empty sends the place's field out of the row.
- */
-export function withPlaced(
-  layout: RowLayout,
-  place: RowPlace,
-  choice: PlaceChoice,
-): RowLayout {
-  if (choice !== EMPTY_PLACE) {
-    return moveField(layout, choice, place);
-  }
-  const field = layout[place];
-  return field === null
-    ? drawnRowLayout(layout)
-    : moveField(layout, field, TRAY);
-}
+/** What a business line reads, under a person or an address. */
+const BUSINESS_LINE_WIRE = {
+  address: ["related.businesses.items[].address"],
+  states: [
+    "related.businesses.items[].domicile_state",
+    "related.businesses.items[].states",
+  ],
+  role: ["related.businesses.items[].role"],
+} as const;
+
+/** A person's row. */
+export const PERSON_EDITOR: RowEditor<PersonRowPlace, PersonRowField> = {
+  kind: PERSON_ROW,
+  placeLabels: {
+    headBadge: "Beside the name",
+    headTrailingBadge: "Beside head, right",
+    headTrailing: "Head, right",
+    businessBadge: "Beside business",
+    businessTrailingBadge: "Beside business, right",
+    businessTrailing: "Business, right",
+    addressBadge: "Beside address",
+    addressTrailingBadge: "Beside address, right",
+    addressTrailing: "Address, right",
+  },
+  fieldLabels: {
+    firstAddress: "First address",
+    counts: "Counts",
+    address: "Address",
+    states: "States",
+    role: "Role",
+    addressRole: "Role there",
+  },
+  fieldWire: {
+    firstAddress: [
+      "related.addresses.items[0].label",
+      "related.addresses.count",
+    ],
+    counts: ["related.businesses.count", "related.addresses.count"],
+    ...BUSINESS_LINE_WIRE,
+    addressRole: ["related.addresses.items[].role"],
+  },
+  lineNames: {
+    head: { long: "Person's name", short: "Name" },
+    business: { long: "Business name", short: "Business" },
+    address: { long: "Their address", short: "Address" },
+  },
+};
+
+/** An address's row. */
+export const ADDRESS_EDITOR: RowEditor<AddressRowPlace, AddressRowField> = {
+  kind: ADDRESS_ROW,
+  placeLabels: {
+    headBadge: "Beside the address",
+    headTrailingBadge: "Beside head, right",
+    headTrailing: "Head, right",
+    businessBadge: "Beside business",
+    businessTrailingBadge: "Beside business, right",
+    businessTrailing: "Business, right",
+    personBadge: "Beside person",
+    personTrailingBadge: "Beside person, right",
+    personTrailing: "Person, right",
+  },
+  fieldLabels: {
+    counts: "Counts",
+    address: "Its own address",
+    states: "States",
+    role: "Held as",
+    personRole: "Role",
+  },
+  fieldWire: {
+    counts: ["related.businesses.count", "related.people.count"],
+    ...BUSINESS_LINE_WIRE,
+    personRole: ["related.people.items[].role"],
+  },
+  lineNames: {
+    head: { long: "Address", short: "Address" },
+    business: { long: "Business name", short: "Business" },
+    person: { long: "Person's name", short: "Person" },
+  },
+};
+
+export const { canDrop, moveField, placeOptions, unplacedFields, withPlaced } =
+  editorOps(BUSINESS_EDITOR);
 
 /** The places that show another field than the SDK's default, in reading order. */
 export function changedLayout(state: StyleState): Partial<RowLayout> {
@@ -523,8 +673,45 @@ function literal(value: unknown): string {
   return typeof value === "string" ? JSON.stringify(value) : String(value);
 }
 
-/** What a host writes to get this look: the props, and the CSS. */
-export function exportCode(state: StyleState): { tsx: string; css: string } {
+/** The places of a person's or an address's row that differ from the SDK's default. */
+function changedGroupedLayout(
+  state: StyleState,
+  route: "people" | "addresses",
+): [string, string | null][] {
+  const layout: Readonly<Record<string, string | null>> =
+    route === "people" ? state.personLayout : state.addressLayout;
+  const defaults: Readonly<Record<string, string | null>> =
+    route === "people" ? resolveLayout(PERSON_ROW) : resolveLayout(ADDRESS_ROW);
+  return Object.keys(defaults)
+    .filter(place => layout[place] !== defaults[place])
+    .map(place => [place, layout[place] ?? null]);
+}
+
+/** A list prop, unless it is the default. */
+function listProp(
+  name: string,
+  values: readonly string[],
+  defaults: readonly string[],
+): string[] {
+  return values.join() === defaults.join()
+    ? []
+    : [`${name}={[${values.map(value => JSON.stringify(value)).join(", ")}]}`];
+}
+
+const COMPONENT_OF: Record<Route, string> = {
+  businesses: "BusinessAutocomplete",
+  people: "PersonAutocomplete",
+  addresses: "AddressAutocomplete",
+};
+
+/**
+ * What a host writes to get this look on the field for `route`: the props,
+ * and the CSS. Each field's layout is its own row's.
+ */
+export function exportCode(
+  state: StyleState,
+  route: Route = "businesses",
+): { tsx: string; css: string } {
   const props: string[] = [];
   const look = Object.entries(changedLook(state));
   if (look.length > 0) {
@@ -532,11 +719,27 @@ export function exportCode(state: StyleState): { tsx: string; css: string } {
       `look={{\n${look.map(([key, value]) => `    ${key}: ${literal(value)},`).join("\n")}\n  }}`,
     );
   }
-  const layout = Object.entries(changedLayout(state));
+  const layout =
+    route === "businesses"
+      ? Object.entries(changedLayout(state))
+      : changedGroupedLayout(state, route);
   if (layout.length > 0) {
     props.push(
       `layout={{\n${layout.map(([place, field]) => `    ${place}: ${field === null ? "null" : JSON.stringify(field)},`).join("\n")}\n  }}`,
     );
+  }
+  if (route !== "businesses") {
+    const [include, pickable] =
+      route === "people"
+        ? [state.personInclude, state.personPickable]
+        : [state.addressInclude, state.addressPickable];
+    props.push(
+      ...listProp("include", include, DEFAULT_LISTED),
+      ...listProp("pickable", pickable, DEFAULT_PICKABLE),
+    );
+    if (pickable.some(type => type !== "business")) {
+      props.push("onPickEntity={pick => …}");
+    }
   }
   if (state.limit !== DEFAULT_STYLE.limit) props.push(`limit={${state.limit}}`);
   if (state.minChars !== DEFAULT_STYLE.minChars)
@@ -562,10 +765,11 @@ export function exportCode(state: StyleState): { tsx: string; css: string } {
   }
   if (state.pageInput) props.push('classNames={{ input: "your-input" }}');
   if (state.unstyled) props.push("unstyled");
+  const component = COMPONENT_OF[route];
   const tsx =
     props.length === 0
-      ? "<BusinessAutocomplete … />\n// Nothing changed from the defaults."
-      : `<BusinessAutocomplete\n  ${props.join("\n  ")}\n  …\n/>`;
+      ? `<${component} … />\n// Nothing changed from the defaults.`
+      : `<${component}\n  ${props.join("\n  ")}\n  …\n/>`;
   const vars = changedVars(state);
   const css =
     vars.length === 0
