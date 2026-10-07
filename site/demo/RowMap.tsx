@@ -3,7 +3,7 @@
 // the tray of fields the row leaves out; each place's chevron is a dropdown of
 // what it can show. Pointer events, so a mouse and a finger drag the same way.
 
-import type { LayoutOf, Route } from "@baselayer-sdk/autocomplete";
+import type { LayoutOf, Relation, Route } from "@baselayer-sdk/autocomplete";
 import {
   useEffect,
   useLayoutEffect,
@@ -22,6 +22,8 @@ import {
   PERSON_EDITOR,
   TRAY,
   editorOps,
+  lineFields,
+  lineKinds,
   type RowEditor,
   type StyleState,
 } from "./style-state";
@@ -325,6 +327,8 @@ export function RowMap({
       return (
         <KindRowMap
           editor={PERSON_EDITOR}
+          route="people"
+          list={state.rows.people.list}
           layout={state.rows.people.layout}
           onLayout={layout =>
             onChange({
@@ -339,6 +343,8 @@ export function RowMap({
       return (
         <KindRowMap
           editor={ADDRESS_EDITOR}
+          route="addresses"
+          list={state.rows.addresses.list}
           layout={state.rows.addresses.layout}
           onLayout={layout =>
             onChange({
@@ -356,6 +362,8 @@ export function RowMap({
       return (
         <KindRowMap
           editor={BUSINESS_EDITOR}
+          route="businesses"
+          list={state.rows.businesses.list}
           layout={state.rows.businesses.layout}
           onLayout={layout =>
             onChange({
@@ -374,11 +382,16 @@ export function RowMap({
 
 function KindRowMap<P extends string, F extends string>({
   editor,
+  route,
+  list,
   layout,
   onLayout,
   colors,
 }: {
   editor: RowEditor<P, F>;
+  route: Route;
+  /** The relations the row lists: their lines are drawn, the others are not. */
+  list: readonly Relation[];
   layout: LayoutOf<P, F>;
   onLayout(layout: LayoutOf<P, F>): void;
   colors: CSSProperties;
@@ -457,7 +470,16 @@ function KindRowMap<P extends string, F extends string>({
     );
   };
 
-  const unplaced = unplacedFields(layout);
+  const shown = lineKinds(route).filter(
+    kind => kind.relation === null || list.includes(kind.relation),
+  );
+  /** The fields a drawn line can show: only those go on the tray and in the table. */
+  const shownFields = new Set(
+    shown.flatMap(kind => lineFields(route, kind.relation)),
+  );
+  const unplaced = unplacedFields(layout).filter(field =>
+    shownFields.has(field),
+  );
   return (
     <div className="row-map-wrap" style={colors}>
       <div
@@ -466,33 +488,36 @@ function KindRowMap<P extends string, F extends string>({
         aria-label="A row's places"
         data-dragging={moving !== null || undefined}
       >
-        {editor.kind.lines.map(({ line, lead, trailing }) => (
-          <div key={line} className="row-map-line">
-            {lead.field === null ? (
-              // A line is the entity it names, so its name always shows.
-              <span className="row-map-slot">
-                <button
-                  type="button"
-                  className="row-map-name"
-                  disabled
-                  title="The name, always shown"
-                >
-                  <span className="row-map-name-long">
-                    {editor.lineNames[line]?.long}
-                  </span>
-                  <span className="row-map-name-short">
-                    {editor.lineNames[line]?.short}
-                  </span>
-                </button>
-              </span>
-            ) : (
-              place(lead.field)
-            )}
-            {place(lead.badge, { badge: true })}
-            {place(trailing.badge, { badge: true, trailing: true })}
-            {place(trailing.field)}
-          </div>
-        ))}
+        {shown
+          .flatMap(kind => kind.lines)
+          .map(({ line, leading, lead, trailing }) => (
+            <div key={line} className="row-map-line">
+              {leading !== undefined && place(leading as P)}
+              {lead.field === null ? (
+                // A line is the entity it names, so its name always shows.
+                <span className="row-map-slot">
+                  <button
+                    type="button"
+                    className="row-map-name"
+                    disabled
+                    title="The name, always shown"
+                  >
+                    <span className="row-map-name-long">
+                      {editor.lineNames[line]?.long}
+                    </span>
+                    <span className="row-map-name-short">
+                      {editor.lineNames[line]?.short}
+                    </span>
+                  </button>
+                </span>
+              ) : (
+                place(lead.field as P)
+              )}
+              {place(lead.badge as P, { badge: true })}
+              {place(trailing.badge as P, { badge: true, trailing: true })}
+              {place(trailing.field as P)}
+            </div>
+          ))}
       </div>
       <div
         className="row-map-tray"
@@ -529,16 +554,18 @@ function KindRowMap<P extends string, F extends string>({
           </tr>
         </thead>
         <tbody>
-          {editor.kind.fields.map(field => (
-            <tr key={field} data-field={field}>
-              <th scope="row">{editor.fieldLabels[field]}</th>
-              <td>
-                {editor.fieldWire[field].map(source => (
-                  <code key={source}>{source}</code>
-                ))}
-              </td>
-            </tr>
-          ))}
+          {editor.kind.fields
+            .filter(field => shownFields.has(field))
+            .map(field => (
+              <tr key={field} data-field={field}>
+                <th scope="row">{editor.fieldLabels[field]}</th>
+                <td>
+                  {editor.fieldWire[field].map(source => (
+                    <code key={source}>{source}</code>
+                  ))}
+                </td>
+              </tr>
+            ))}
         </tbody>
       </table>
       {moving !== null &&

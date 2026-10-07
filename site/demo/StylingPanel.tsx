@@ -46,6 +46,8 @@ import {
   changedStructures,
   componentChanges,
   exportCode,
+  withListed,
+  withPickable,
   type CssVariable,
   type StyleState,
   type TextMessage,
@@ -120,16 +122,6 @@ const GROUPED_LISTS = {
   }
 >;
 
-/** `values` with `value` in or out, in the order `order` lists them. */
-function toggled<T extends string>(
-  values: readonly T[],
-  value: T,
-  on: boolean,
-  order: readonly T[],
-): T[] {
-  return order.filter(item => (item === value ? on : values.includes(item)));
-}
-
 /** What a person's or an address's row lists under it, and what can be picked. */
 function GroupedLists({
   state,
@@ -144,18 +136,6 @@ function GroupedLists({
   const row = state.rows[route];
   const include: readonly Relation[] = row.list;
   const picks: readonly EntityType[] = row.pickable;
-  const listOrder = listed.map(([value]) => value);
-  const pickOrder = pickable.map(([value]) => value);
-  const setRow = (changes: { list?: Relation[]; pickable?: EntityType[] }) =>
-    onChange({
-      ...state,
-      rows: {
-        ...state.rows,
-        [route]: { ...row, ...changes },
-      } as StyleState["rows"],
-    });
-  const setInclude = (next: Relation[]) => setRow({ list: next });
-  const setPickable = (next: EntityType[]) => setRow({ pickable: next });
   return (
     <div className="field-grid grouped-lists">
       <fieldset className="field-row">
@@ -164,7 +144,16 @@ function GroupedLists({
           <Toggle
             key={value}
             checked={include.includes(value)}
-            onChange={on => setInclude(toggled(include, value, on, listOrder))}
+            onChange={on =>
+              onChange(
+                withListed(
+                  state,
+                  route,
+                  value as (typeof row.list)[number],
+                  on,
+                ),
+              )
+            }
           >
             {label}
           </Toggle>
@@ -176,7 +165,7 @@ function GroupedLists({
           <Toggle
             key={value}
             checked={picks.includes(value)}
-            onChange={on => setPickable(toggled(picks, value, on, pickOrder))}
+            onChange={on => onChange(withPickable(state, route, value, on))}
           >
             {label}
           </Toggle>

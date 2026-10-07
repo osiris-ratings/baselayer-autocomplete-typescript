@@ -227,9 +227,9 @@ describe("a person's or an address's row, as Styling sets it", () => {
     await user.click(screen.getByRole("tab", { name: "Address" }));
 
     expect(checked("an address")).toBe("true");
-    expect(
-      document.querySelector('[data-drop="personTrailing"]'),
-    ).not.toBeNull();
+    expect(document.querySelector(".row-map-name-long")?.textContent).toBe(
+      "Address",
+    );
   });
 });
 

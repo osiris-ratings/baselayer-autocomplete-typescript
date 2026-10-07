@@ -1,5 +1,6 @@
 import {
   ADDRESS_ROW,
+  DEFAULT_ROW_LAYOUT,
   PERSON_ROW,
   resolveLayout,
 } from "@baselayer-sdk/autocomplete";
@@ -58,8 +59,9 @@ describe("the People and Addresses tabs' rows", () => {
       list: ["businesses"],
       pickable: ["business"],
     });
+    // A business's component takes the head alone, the places it has always had.
     expect(componentProps(state, "businesses")).toEqual({
-      layout: DEFAULT_STYLE.rows.businesses.layout,
+      layout: DEFAULT_ROW_LAYOUT,
     });
   });
 

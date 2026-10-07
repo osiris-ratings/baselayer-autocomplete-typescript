@@ -135,9 +135,10 @@ describe("the Components fold's searches", () => {
       ),
     );
 
+    // What can be picked is in the order the row draws its lines: the head first.
     expect(lists()).toEqual([
       ["businesses", "addresses"],
-      ["business", "person"],
+      ["person", "business"],
       ["businesses"],
       ["business"],
     ]);

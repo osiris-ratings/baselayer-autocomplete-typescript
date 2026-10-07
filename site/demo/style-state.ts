@@ -6,6 +6,7 @@
 
 import {
   ADDRESS_ROW,
+  BUSINESS_ROW,
   BUSINESS_STRUCTURES,
   DEFAULT_LIST,
   DEFAULT_LOOK,
@@ -14,9 +15,7 @@ import {
   ENTITY_OF,
   PERSON_ROW,
   ROUTES,
-  ROW_FIELDS,
   ROW_KINDS,
-  ROW_LINES,
   ROW_PLACES,
   drawnLayout,
   resolveLayout,
@@ -24,6 +23,9 @@ import {
   type AddressRowField,
   type AddressRowLayout,
   type AddressRowPlace,
+  type BusinessRowField,
+  type BusinessRowLayout,
+  type BusinessRowPlace,
   type EntityType,
   type IncludeOf,
   type LayoutOf,
@@ -285,7 +287,7 @@ export interface RowState<R extends Route, L> {
 
 /** Each search's row. */
 export interface RowStates {
-  businesses: RowState<"businesses", RowLayout>;
+  businesses: RowState<"businesses", BusinessRowLayout>;
   people: RowState<"people", PersonRowLayout>;
   addresses: RowState<"addresses", AddressRowLayout>;
 }
@@ -318,7 +320,7 @@ export const DEFAULT_STYLE: StyleState = {
   look: { ...DEFAULT_LOOK },
   rows: {
     businesses: {
-      layout: { ...DEFAULT_ROW_LAYOUT },
+      layout: resolveLayout(BUSINESS_ROW),
       list: [...DEFAULT_LIST.businesses] as IncludeOf<"businesses">[],
       pickable: [...DEFAULT_PICKABLE],
     },
@@ -578,18 +580,48 @@ export const CHOICE_LABELS: Record<PlaceChoice, string> = {
   people: "People",
 };
 
-/** A business's row. */
-export const BUSINESS_EDITOR: RowEditor<RowPlace, RowField> = {
-  kind: {
-    places: ROW_PLACES,
-    fields: ROW_FIELDS,
-    lines: ROW_LINES,
-    defaults: DEFAULT_ROW_LAYOUT,
+/**
+ * A business's row: its head, as a business row has always drawn it, with the
+ * icon's place before the name, and the officers and addresses it can list.
+ */
+export const BUSINESS_EDITOR: RowEditor<BusinessRowPlace, BusinessRowField> = {
+  kind: BUSINESS_ROW,
+  placeLabels: {
+    titleLead: "Before the name",
+    ...PLACE_LABELS,
+    personLead: "Before person",
+    personBadge: "Beside person",
+    personTrailingBadge: "Beside person, right",
+    personTrailing: "Person, right",
+    addressLead: "Before address",
+    addressBadge: "Beside address",
+    addressTrailingBadge: "Beside address, right",
+    addressTrailing: "Address, right",
   },
-  placeLabels: PLACE_LABELS,
-  fieldLabels: CHOICE_LABELS,
-  fieldWire: FIELD_WIRE,
-  lineNames: { title: { long: "Business name", short: "Name" } },
+  fieldLabels: {
+    states: CHOICE_LABELS.states,
+    structure: CHOICE_LABELS.structure,
+    address: CHOICE_LABELS.address,
+    people: CHOICE_LABELS.people,
+    titleIcon: "Icon",
+    personIcon: "Icon",
+    personRole: "Role",
+    addressIcon: "Icon",
+    addressRole: "Held as",
+  },
+  fieldWire: {
+    ...FIELD_WIRE,
+    titleIcon: ["type"],
+    personIcon: ["related.people.items[].type"],
+    personRole: ["related.people.items[].role"],
+    addressIcon: ["related.addresses.items[].type"],
+    addressRole: ["related.addresses.items[].role"],
+  },
+  lineNames: {
+    title: { long: "Business name", short: "Name" },
+    person: { long: "Officer or agent", short: "Person" },
+    address: { long: "Address", short: "Address" },
+  },
 };
 
 /** What a business line reads, under a person or an address. */
@@ -695,6 +727,13 @@ export const { canDrop, moveField, placeOptions, unplacedFields, withPlaced } =
   editorOps(BUSINESS_EDITOR);
 
 /** The places that show another field than the SDK's default, in reading order. */
+/** A business row's head: the places a business row has always had. */
+function headOf(layout: BusinessRowLayout): RowLayout {
+  return Object.fromEntries(
+    ROW_PLACES.map(place => [place, layout[place]]),
+  ) as RowLayout;
+}
+
 export function changedLayout(state: StyleState): Partial<RowLayout> {
   const { layout } = state.rows.businesses;
   return Object.fromEntries(
@@ -739,6 +778,27 @@ export function lineKinds(route: Route): LineKind[] {
     }
   }
   return kinds;
+}
+
+/**
+ * The fields a line kind of a search's row can show: any its places take,
+ * in the row's own order.
+ */
+export function lineFields(route: Route, relation: Relation | null): string[] {
+  const fields: readonly string[] = ROW_KINDS[route].fields;
+  const accepts = ROW_KINDS[route].accepts as
+    ((place: string, field: string) => boolean) | undefined;
+  const places = lineKinds(route)
+    .filter(each => each.relation === relation)
+    .flatMap(each => each.lines)
+    .flatMap(({ leading, lead, trailing }) =>
+      [leading, lead.field, lead.badge, trailing.badge, trailing.field].filter(
+        (place): place is string => place !== null && place !== undefined,
+      ),
+    );
+  return fields.filter(field =>
+    places.some(place => accepts?.(place, field) ?? true),
+  );
 }
 
 /** The entities a search's row draws: its head's, and each listed line's. */
@@ -835,7 +895,7 @@ export function componentProps<R extends Route>(
 ): ComponentProps[R] {
   const { businesses, people, addresses } = state.rows;
   const props: ComponentProps = {
-    businesses: { layout: businesses.layout },
+    businesses: { layout: headOf(businesses.layout) },
     people: {
       layout: people.layout,
       list: people.list,

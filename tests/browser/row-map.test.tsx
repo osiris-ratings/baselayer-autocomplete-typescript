@@ -65,7 +65,11 @@ describe("the Components fold's row, laid out", () => {
     const table = host.querySelector<HTMLElement>(".row-map-reads")!;
     const rows = [...table.querySelectorAll<HTMLElement>("tbody tr")];
 
-    expect(rows.map(row => row.dataset.field)).toEqual([...ROW_FIELDS]);
+    // The head's fields, and its icon: no listed line is drawn by default.
+    expect(rows.map(row => row.dataset.field)).toEqual([
+      ...ROW_FIELDS,
+      "titleIcon",
+    ]);
     const reads = (field: string) =>
       [
         ...rows

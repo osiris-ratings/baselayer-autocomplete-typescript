@@ -3,10 +3,14 @@
 import { cleanup, fireEvent, render } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
-import { ROW_LINES, ROW_PLACES } from "@baselayer-sdk/autocomplete";
+import { BUSINESS_ROW } from "@baselayer-sdk/autocomplete";
 
 import { RowMap } from "../../site/demo/RowMap";
-import { DEFAULT_STYLE, type StyleState } from "../../site/demo/style-state";
+import {
+  DEFAULT_STYLE,
+  withListed,
+  type StyleState,
+} from "../../site/demo/style-state";
 
 beforeAll(() => {
   // jsdom has neither pointer events nor hit testing: a pointer event is a
@@ -45,24 +49,79 @@ function drag(handle: Element, target: Element) {
 }
 
 describe("the Components fold's row", () => {
-  it("draws every place, in its lines", () => {
-    const { view } = mount();
-    const lines = [...view.container.querySelectorAll(".row-map-line")].map(
-      line =>
-        [...line.querySelectorAll<HTMLElement>("[data-drop]")].map(
-          place => place.dataset.drop,
-        ),
-    );
-    // The row's own lines, as the core describes them: a place the core
-    // adds is drawn here too.
-    expect(lines).toEqual(
-      ROW_LINES.map(({ lead, trailing }) =>
-        [lead.field, lead.badge, trailing.badge, trailing.field].filter(
-          place => place !== null,
-        ),
+  /** Each drawn line's places, in reading order. */
+  const drawnLines = (container: HTMLElement) =>
+    [...container.querySelectorAll(".row-map-line")].map(line =>
+      [...line.querySelectorAll<HTMLElement>("[data-drop]")].map(
+        place => place.dataset.drop,
       ),
     );
-    expect(lines.flat()).toEqual(ROW_PLACES);
+
+  it("draws the head's every place, in its lines, and lists nothing under it", () => {
+    const { view } = mount();
+    // The row's head, as the core describes it: a place the core adds is
+    // drawn here too.
+    const head = BUSINESS_ROW.lines.filter(line => line.relation === null);
+    expect(drawnLines(view.container)).toEqual(
+      head.map(({ leading, lead, trailing }) =>
+        [
+          leading,
+          lead.field,
+          lead.badge,
+          trailing.badge,
+          trailing.field,
+        ].filter(place => place !== null && place !== undefined),
+      ),
+    );
+    expect(drawnLines(view.container)[0]![0]).toBe("titleLead");
+  });
+
+  it("draws a line kind's places once the row lists it", () => {
+    const listed = withListed(DEFAULT_STYLE, "businesses", "addresses", true);
+    const { view } = mount(listed);
+    expect(drawnLines(view.container).at(-1)).toEqual([
+      "addressLead",
+      "addressBadge",
+      "addressTrailingBadge",
+      "addressTrailing",
+    ]);
+  });
+
+  it("puts only a drawn line's fields on the tray", () => {
+    const { view } = mount();
+    const tray = () =>
+      [
+        ...view.container.querySelectorAll<HTMLElement>(
+          ".row-map-tray .row-map-chip",
+        ),
+      ].map(chip => chip.dataset.field);
+    // The business's icon is left out by default; the officers' and the
+    // addresses' fields are on lines the row does not draw.
+    expect(tray()).toEqual(["titleIcon"]);
+
+    // The officers' line listed, their role taken off it: on the tray.
+    const listed = withListed(DEFAULT_STYLE, "businesses", "people", true);
+    const roleOut: StyleState = {
+      ...listed,
+      rows: {
+        ...listed.rows,
+        businesses: {
+          ...listed.rows.businesses,
+          layout: { ...listed.rows.businesses.layout, personTrailing: null },
+        },
+      },
+    };
+    view.rerender(<RowMap state={roleOut} onChange={() => {}} />);
+    expect(tray()).toEqual(["titleIcon", "personRole"]);
+
+    // The line taken off the row again: its fields go with it.
+    view.rerender(
+      <RowMap
+        state={withListed(roleOut, "businesses", "people", false)}
+        onChange={() => {}}
+      />,
+    );
+    expect(tray()).toEqual(["titleIcon"]);
   });
 
   it("swaps a field picked from a place's dropdown with the place's own", () => {
@@ -405,17 +464,30 @@ describe("the Components fold's row on People and Addresses", () => {
     expect(lines).toEqual([
       {
         name: "Person's name",
-        places: ["headBadge", "headTrailingBadge", "headTrailing"],
+        places: ["headLead", "headBadge", "headTrailingBadge", "headTrailing"],
       },
       {
         name: "Business name",
-        places: ["businessBadge", "businessTrailingBadge", "businessTrailing"],
-      },
-      {
-        name: "Their address",
-        places: ["addressBadge", "addressTrailingBadge", "addressTrailing"],
+        places: [
+          "businessLead",
+          "businessBadge",
+          "businessTrailingBadge",
+          "businessTrailing",
+        ],
       },
     ]);
+  });
+
+  it("draws a person's addresses only once the row lists them", () => {
+    const listed = withListed(DEFAULT_STYLE, "people", "addresses", true);
+    const view = render(
+      <RowMap state={listed} onChange={() => {}} route="people" />,
+    );
+    expect(
+      [...view.container.querySelectorAll(".row-map-name-long")].map(
+        name => name.textContent,
+      ),
+    ).toEqual(["Person's name", "Business name", "Their address"]);
   });
 
   it("moves a person's field within its line, into the person's layout only", () => {
