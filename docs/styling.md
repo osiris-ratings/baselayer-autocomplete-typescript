@@ -216,12 +216,35 @@ Past that, drop the component and build on the hooks: see
 With `list`, a business row draws its officers and agents (`people`) and its
 addresses (`addresses`) under it, as a person's row draws its businesses:
 the row as it always was is the group's head, and each item a line
-(`bl-ac-group-line`, `data-line` `person` or `address`) with its icon before
-the name (`personLead`, `addressLead`) and the role at the right
-(`personTrailing`, `addressTrailing`: `messages.personRoles`,
-`messages.addressRoles`). Those places are `BUSINESS_ROW`'s, beside the
-head's `ROW_PLACES`, and `titleLead` puts the business's own icon before its
-name. A business row that lists nothing draws exactly as before.
+(`bl-ac-group-line`, `data-line` `person` or `address`). A business row that
+lists nothing draws exactly as before. The head keeps `ROW_PLACES` and
+`ROW_FIELDS`, and gains one place, before the name; each line has the four
+places every listed line has (`BUSINESS_ROW`):
+
+| Place                                  | Default       | Can show                                                           |
+| -------------------------------------- | ------------- | ------------------------------------------------------------------ |
+| `titleLead`                            | empty         | `titleIcon`, the business's own icon                               |
+| `personLead`                           | `personIcon`  | `personIcon`                                                       |
+| `personBadge`, `personTrailingBadge`   | empty         | `personRole`: officer or agent (`messages.personRoles`)            |
+| `personTrailing`                       | `personRole`  | `personRole`                                                       |
+| `addressLead`                          | `addressIcon` | `addressIcon`                                                      |
+| `addressBadge`, `addressTrailingBadge` | empty         | `addressRole`: how the business holds it (`messages.addressRoles`) |
+| `addressTrailing`                      | `addressRole` | `addressRole`                                                      |
+
+A line's fields go only on that line, and the head's only in the head;
+placed anywhere else, a field counts as left out. To draw the business's
+icon, and each officer's role right after their name:
+
+```tsx
+<BusinessAutocomplete
+  list={["people"]}
+  layout={{ titleLead: "titleIcon", personBadge: "personRole" }}
+  …
+/>
+```
+
+The role moved, `personTrailing` is left empty, as a field placed elsewhere
+always leaves its default place.
 
 ### Person and address rows
 
@@ -387,9 +410,65 @@ while the states and the structure come on the row itself.
 `includeForLayout(layout)` in the core says what a layout asks for. With
 neither placed, the autocomplete service refuses an empty `include`, so none is
 sent and its default, people and addresses, stands. A form that fills an address
-from the pick keeps the address placed. `include` on `BusinessAutocomplete` asks
-for what it names instead, whatever the layout places: rows you draw with
-`renderRow` name what they read, `include={["people"]}`.
+from the pick keeps the address placed. A relation `list` lists is asked for
+too, whatever the layout places. `include` on `BusinessAutocomplete` asks for
+what it names instead: rows you draw with `renderRow` name what they read,
+`include={["people"]}`.
+
+### Every kind of row
+
+A business row's head is one kind of row among three, and they share one
+model. `ROW_KINDS` holds each search's: `BUSINESS_ROW`, `PERSON_ROW` and
+`ADDRESS_ROW`. Each is a `RowKind`:
+
+| Member     | What it is                                                                                 |
+| ---------- | ------------------------------------------------------------------------------------------ |
+| `places`   | Its places in reading order (`BUSINESS_ROW_PLACES`, `PERSON_ROW_PLACES`, …)                |
+| `fields`   | Every field a place can show, by line in `BUSINESS_LINE_FIELDS`, `PERSON_LINE_FIELDS`, …   |
+| `lines`    | Its lines: each line's `leading` place (its icon's), its two corners, `entity`, `relation` |
+| `defaults` | The field each place shows when a layout leaves it out                                     |
+| `accepts`  | Which fields a place may hold: its own line's, and its icon only before the name           |
+
+A line's `entity` is what it draws, and so what `pickable` names to pick it;
+its `relation` is the relation it lists, one line per item, null on the
+row's head. Every listed line has the same four places, named for its line:
+`<line>Lead` before the name, which holds only `<line>Icon`, then
+`<line>Badge`, `<line>TrailingBadge` and `<line>Trailing`.
+
+`resolveLayout(kind, layout)` and `drawnLayout(kind, resolved)` do for any
+kind what `resolveRowLayout` and `drawnRowLayout` do for a business row's
+head, with the same rules: a place left out keeps its default unless its
+field went elsewhere, a field is drawn once, and a badge beside an empty
+field is drawn as that field.
+
+```ts
+import {
+  ROW_KINDS,
+  drawnLayout,
+  requestFor,
+  resolveLayout,
+} from "@baselayer-sdk/autocomplete";
+
+const kind = ROW_KINDS.people;
+const layout = drawnLayout(
+  kind,
+  resolveLayout(kind, { businessTrailing: null }),
+);
+layout.businessTrailing; // "states": the role gone, the states move over
+
+requestFor("people", layout, ["businesses"]);
+// { list: ["businesses"], include: ["businesses", "addresses"] }:
+// the head's first address and counts need the addresses too
+```
+
+`requestFor(route, layout, list, scope)` is what a search's rows need: the
+relations to list (the route's `DEFAULT_LIST` when left out) and what to
+ask the autocomplete service to expand for them and for what the layout
+draws. With a scope, a relation it does not grant is dropped from both. Each
+kind's layout is typed by its own places and fields (`BusinessRowLayoutInput`,
+`PersonRowLayoutInput`, `AddressRowLayoutInput`, and the resolved
+`…RowLayout`); `LayoutOf` and `LayoutInputOf` build them for any kind.
+`ROW_PLACES`, `ROW_FIELDS` and `RowLayout` stay a business row's head.
 
 ### What matched
 

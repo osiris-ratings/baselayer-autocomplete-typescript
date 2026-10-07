@@ -156,9 +156,22 @@ The first `mint` or `mintUrl` is kept for the component's life; a new
 - `onUnavailable({ unavailable })`: called when the deployment stops being
   able to mint (503 code 481), and again when it can; render your plain
   input meanwhile.
+- `list`: what each row lists under it, a line per item: the business's
+  officers and agents (`people`) and its `addresses`. None by default, and
+  each row is the one option it has always been
+  ([A business row's lines](docs/entities.md#a-business-rows-lines)).
+- `pickable` (`["business"]`) and `onPickEntity`: which lines can be picked.
+  Name `person` or `address` too, and an officer or an address picked goes to
+  `onPickEntity` as an `EntityPick`, which is then required
+  ([What can be picked](docs/entities.md#what-can-be-picked)).
+- `showSelection` (`true`): after an officer or an address is picked, a line
+  under the field names it
+  ([The line under the field](docs/entities.md#the-line-under-the-field)).
+- `icons`: the icon before each listed name, per entity, or `false` for none
+  ([Icons](docs/entities.md#icons)).
 - `include`: the related entities the autocomplete service expands for each row,
-  by default what `layout` places (`includeForLayout(layout)`). Rows you draw
-  yourself with `renderRow` name what they read: `include={["people"]}`.
+  by default what `layout` places and `list` lists. Rows you draw yourself
+  with `renderRow` name what they read: `include={["people"]}`.
 - `label`: the text of the default `<label>`; without it none is drawn.
 - `name`, `inputRef`, `onFocus` and `onBlur`: the input's, passed through.
 - `look`, `layout`, `menuFollowsInputWidth`, `open`, `classNames`,
@@ -195,10 +208,42 @@ reached.
 
 `PersonAutocomplete` and `AddressAutocomplete` find the business through a
 person or an address. Each person or address in the menu comes with how many
-businesses it leads to and the first of them, and a pick is one of those
-businesses: `onPick` hands you a `BusinessPick` with the same
+businesses it leads to and a line for each of the first, and a pick is one of
+those businesses: `onPick` hands you a `BusinessPick` with the same
 `businessToken`, the `businessName` for your name field, and `through`, the
-person or address it was reached by. See
+person or address it was reached by:
+
+```tsx
+<PersonAutocomplete
+  id="officer-name"
+  label="Officer's name"
+  baseUrl="https://api.baselayer.com"
+  mintUrl="/api/ac-session"
+  value={typed}
+  onChange={setTyped}
+  onPick={pick => {
+    setBusinessName(pick.businessName);
+    setBusinessToken(pick.businessToken);
+  }}
+/>
+```
+
+A business row can list what it leads to the same way, a line for each
+officer, agent and address under it, and let an officer be picked too:
+
+```tsx
+<BusinessAutocomplete
+  …
+  list={["people", "addresses"]}
+  pickable={["business", "person"]}
+  onPick={(_, pick) => setBusinessToken(pick.businessToken)}
+  onPickEntity={officer => setOfficer(officer)}
+/>
+```
+
+The business is picked from its row as it always was. An officer picked
+hands `onPickEntity` `{ type: "person", token, label }`, puts the business's
+name in the field, and is named on a line under it. See
 [Businesses, people and addresses](docs/entities.md).
 
 A session searches what its scope allows, which your mint endpoint can narrow

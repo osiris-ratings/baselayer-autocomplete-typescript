@@ -44,20 +44,33 @@ release.
   whose head is the row as it has always been, picked as it always was; an
   officer or an address picked hands `onPickEntity` an `EntityPick`, puts the
   business's name in the field, and is named on a line under it. With none of
-  them, a business row draws exactly as before.
+  them, a business row draws exactly as before. `titleLead: "titleIcon"` in
+  its layout draws the business's own icon. `BusinessAutocompleteView` takes
+  `list`, `pickable`, `icons`, `selection` and `onSelectEntity`.
+- The line under the field after a pick from a line under a row
+  (`bl-ac-selection`, a `GroupedSelection` on the views), the field described
+  by it. It names the picked line while the field holds the name the pick put
+  there, and any other edit lets it go.
 - `inertDim` on `look`: how far a line under a row fades when it is not a pick,
   0 to 1 and 0.6 by default. It drains the line's colour and lightens only its
   name, icon and state squares, so its secondary text is no fainter; nothing
   fades under forced colours.
 - One row model for all three searches: `BUSINESS_ROW`, `PERSON_ROW` and
-  `ADDRESS_ROW` (`ROW_KINDS`), each a head and the line kinds it can list, each
-  line naming the entity it draws and the relation it lists, with a place before
-  every name for its icon; `DEFAULT_LIST`; and `requestFor(route, layout, list,
-scope)`, what to ask for any of them. `groupedLines(row, listed, pickable)`
-  and `groupedOptions(lines)` give a row's lines and what each pickable one
-  hands. `RowKind`, `resolveLayout` and `drawnLayout` resolve any kind of row's
-  layout; `ROW_PLACES`, `ROW_FIELDS` and `RowLayout` are a business row's head,
-  as they always were.
+  `ADDRESS_ROW` (`ROW_KINDS`), each a `RowKind`: its places
+  (`BUSINESS_ROW_PLACES`, …), its fields by line (`BUSINESS_LINE_FIELDS`, …),
+  its lines, each naming the entity it draws and the relation it lists, with
+  a place before every name for its icon, and its defaults. `resolveLayout`
+  and `drawnLayout` resolve any kind's layout, typed by its own places and
+  fields (`BusinessRowLayoutInput`, `PersonRowLayoutInput`,
+  `AddressRowLayoutInput`; `LayoutOf` and `LayoutInputOf` for any kind).
+  `ROW_PLACES`, `ROW_FIELDS` and `RowLayout` are a business row's head, as
+  they always were.
+- `DEFAULT_LIST` and `requestFor(route, layout, list, scope)`: what any
+  search's rows list, and what to ask for them.
+- `groupedLines(row, list, pickable)` and `groupedOptions(lines)`: any row's
+  lines, and what each pickable one hands, a `GroupedOption` of kind `row` (a
+  business row's own head), `business` (a business under a person or an
+  address) or `entity` (an `EntityPick`). `DEFAULT_PICKABLE` is businesses.
 - `pickableBusinesses(row)` and `businessPickFrom(row, business, at)`: the
   businesses a person's or an address's row offers, and the pick of one.
 - `address`, `states` and `domicile_state` on a related item: a business

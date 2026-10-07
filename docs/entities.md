@@ -175,42 +175,164 @@ under it, with the business's address, its states and the role there.
 />
 ```
 
-Four props shape the rows:
+The same props shape the rows of all three:
 
-| Prop       | Default          | What it does                                                                                                      |
-| ---------- | ---------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `list`     | `["businesses"]` | The relations listed under each row: a person's `addresses`, an address's `people`, a line per item               |
-| `pickable` | `["business"]`   | Which lines can be picked: `business`, and `person` or `address`, the row itself or one it lists                  |
-| `layout`   | `PERSON_ROW`'s   | What each line draws where ([Person and address rows](styling.md#person-and-address-rows)), asked for as it draws |
-| `icons`    | the SDK's        | The icon before each name, per entity (`business`, `person`, `address`), or `false` for none                      |
-
-A business picked hands `onPick` a `BusinessPick`. A person or an address
-picked hands `onPickEntity` an `EntityPick` (`type`, `token`, `label`), which
-the component requires once `pickable` names one; nothing redeems its token
-yet. Any other line is drawn but not pickable. A relation the session's
-scope does not grant is neither asked for nor drawn, and the search still
-runs.
+| Prop            | Default            | What it does                                                                                  |
+| --------------- | ------------------ | --------------------------------------------------------------------------------------------- |
+| `list`          | the route's own    | The relations listed under each row, a line per item ([What a row lists](#what-a-row-lists))  |
+| `pickable`      | `["business"]`     | Which lines can be picked, by entity ([What can be picked](#what-can-be-picked))              |
+| `onPickEntity`  | none               | Where a person or an address picked goes; required once `pickable` names one                  |
+| `showSelection` | `true`             | The line under the field after a pick ([The line under the field](#the-line-under-the-field)) |
+| `icons`         | the SDK's          | The icon before each name, per entity, or `false` for none ([Icons](#icons))                  |
+| `layout`        | the row kind's own | What each line draws where ([Every kind of row](styling.md#every-kind-of-row))                |
+| `include`       | what is drawn      | What the request fetches; name it only to fetch something else                                |
 
 `include` is what the request fetches, by default what the rows list and
-the layout draws (`requestFor`); name it only to fetch something else.
+what the layout draws (`requestFor`); `list` is what is drawn. A relation the
+session's scope does not grant is neither asked for nor drawn, and the search
+still runs.
 
-A pick puts the row's own name in the field, the person's or the address's
-rather than what was typed. Picked from a line under the row, a line under
-the field names what was picked: the business, or the address or person,
-and the field describes itself by that line; the row itself picked, the
-field already says it, and no line is drawn. Any edit clears the pick and the line. With `showSelection={false}`
-the field still takes the name, and you draw your own line from `onPick`.
-Put `pick.businessName` in your business name field.
+### What a row lists
 
-`BusinessAutocomplete` takes the same `list`, `pickable`, `onPickEntity` and
-`icons`: `list={["people", "addresses"]}` draws each business's officers and
-agents and its addresses under it, a line each. Listing nothing, the default, a
-business row is the one option it has always been. Listing lines, it is a group
-whose head is that same row, picked as it always was; an officer or an address
-picked (`pickable={["business", "person"]}`) hands `onPickEntity` an
-`EntityPick`, puts the business's name in the field, and is named under it.
+Each item of a listed relation is a line under its row, the five the
+autocomplete service sends, and the list ends in how many it leaves out
+(`+2 more not shown`):
+
+| Search                 | It can list                                     | Listed by default (`DEFAULT_LIST`) |
+| ---------------------- | ----------------------------------------------- | ---------------------------------- |
+| `BusinessAutocomplete` | `people` (its officers and agents), `addresses` | nothing                            |
+| `PersonAutocomplete`   | `businesses`, `addresses`                       | `businesses`                       |
+| `AddressAutocomplete`  | `businesses`, `people`                          | `businesses`                       |
+
+```text
+Dana Whitfield  48 Wrenmoor St, Pittsburgh, PA … 2 businesses · 1 address
+  HARBOR CONCRETE PUMPING CO., INC.  1200 Tallow… ..... [PA][OH]  officer
+  NORTHSHORE PUMPING, LLC  300 Corvale Way, Erie… ........... [PA]  agent
+  48 Wrenmoor St, Pittsburgh, PA 15206 ........................... officer
+```
+
+That is `list={["businesses", "addresses"]}` on a person: each business with
+its address, states and the person's role there, then each address with
+theirs. Every line starts with its entity's icon.
+
+### What can be picked
+
+`pickable` names the entities a line can be picked as: `business`, and
+`person` or `address`, whether the line is the row itself or one it lists. A
+line is a pick only when its entity is named and the autocomplete service
+sealed it a token; any other line is drawn, faded and inert, and the keys
+pass over it. What a pick hands depends on what it is:
+
+| Picked                                  | Hands                                 |
+| --------------------------------------- | ------------------------------------- |
+| A business row (its head)               | `onPick(suggestion, pick)`, as always |
+| A business under a person or an address | `onPick(pick)`, a `BusinessPick`      |
+| A person or an address, a row or a line | `onPickEntity(pick)`, an `EntityPick` |
+
+```ts
+interface EntityPick {
+  type: "person" | "address";
+  /** Opaque: nothing redeems it yet, so keep it as the handle it is. */
+  token: string;
+  /** The name or the address, as its line drew it. */
+  label: string;
+}
+```
+
+The props are typed so that a person or an address made pickable has
+somewhere to go: with `pickable={["business", "person"]}`, leaving out
+`onPickEntity` is a type error. On a business search, a row whose business is
+not named in `pickable` is a group whose head is inert, though it lists
+nothing.
+
+### The line under the field
+
+A pick puts a name in the field, the row's own rather than what was typed.
+Picked from a line under the row, a line under the field names what was
+picked, and the field describes itself by it (`aria-describedby`), so a
+screen reader hears it too. The row itself picked, the field already says
+it, and no line is drawn:
+
+| Picked                                               | The field takes       | The line under it names |
+| ---------------------------------------------------- | --------------------- | ----------------------- |
+| A business row                                       | the business's name   | nothing                 |
+| An officer or an address under a business            | the business's name   | the officer or address  |
+| A person's or an address's row itself                | the person or address | nothing                 |
+| A business under a person or an address              | the person or address | the business            |
+| An address under a person, a person under an address | the person or address | the one picked          |
+
+The line stays while the field holds the name the pick put there, including
+when your `onChange` sets it a render or more later. Any other edit lets the
+pick go for good, and the line with it: the same name typed again later is
+not the pick. With `showSelection={false}` the field still takes the name,
+and you draw your own line from `onPick` or `onPickEntity`. On a business
+search, put the field's own value in your business name field; on a person
+or an address search, `pick.businessName`.
+
+The views (`BusinessAutocompleteView`, `PersonAutocompleteView`,
+`AddressAutocompleteView`) take the line to draw as `selection`, a
+`GroupedSelection` (`{ type, label }`), or null for none.
+
+### Icons
+
+Every line starts with its entity's icon: an office building for a business,
+a person for a person and a map pin for an address, drawn at the size of the
+text in `subtitleColor` and hidden from screen readers. A business row draws
+none before its own name unless its layout asks (`titleLead: "titleIcon"`),
+so a row that lists nothing draws exactly as before. `icons` replaces any of
+them with a node of your own, or turns them all off:
+
+```tsx
+<PersonAutocomplete
+  // A storefront for a business; a person and an address keep the SDK's.
+  icons={{ business: <StorefrontIcon aria-hidden /> }}
+  …
+/>
+<AddressAutocomplete icons={false} … />
+```
+
+To drop one line's icon and keep the rest, empty its place in the layout:
+`layout={{ businessLead: null }}`.
+
+### A business row's lines
+
+`BusinessAutocomplete` lists a business's officers and agents and its
+addresses as a person's row lists businesses. Listing nothing, the default, a
+business row is the one option it has always been. Listing lines, it is a
+group whose head is that same row, picked as it always was:
+
+```tsx
+<BusinessAutocomplete
+  list={["people", "addresses"]}
+  pickable={["business", "person"]}
+  onPick={(_, pick) => setBusinessToken(pick.businessToken)}
+  // An officer picked: { type: "person", token, label }.
+  onPickEntity={officer => setOfficer(officer)}
+  …
+/>
+```
+
+```text
+HARBOR CONCRETE PUMPING CO., INC. [C-Corp] ..................... [PA][OH]
+1200 Tallowmere Rd, Pittsburgh, PA 15212 ................ Dana Whitfield
+  Dana Whitfield .................................................. officer
+  Meridian Registered Agents, LLC ................................... agent
+  +2 more not shown
+  1200 Tallowmere Rd, Pittsburgh, PA 15212 ................ principal office
+```
+
+An officer picked here hands `onPickEntity` its `EntityPick`, puts the
+business's name in the field and names the officer under it; the business
+itself picked hands `onPick` its pick, as it always has. A line the
+autocomplete service sealed no token for is drawn and inert, whatever
+`pickable` names. Each line's places and fields are under
+[A business row's lines](styling.md#a-business-rows-lines).
+
+### Without the styled components
 
 `PersonAutocompleteView` and `AddressAutocompleteView` draw the same rows
-from state you supply, with `selection` for the line under the field, and `useEntityAutocomplete({
-relation, query, ... })` is the hook for any route (see
-[Headless use](headless.md)).
+from state you supply, and `BusinessAutocompleteView` takes `list`,
+`pickable`, `icons`, `selection` and `onSelectEntity` for a business row's
+lines. `useEntityAutocomplete({ relation, query, ... })` is the hook for any
+route, and `groupedLines` and `groupedOptions` turn a row into its lines and
+picks (see [Headless use](headless.md)).
