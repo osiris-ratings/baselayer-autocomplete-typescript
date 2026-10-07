@@ -1,42 +1,78 @@
 /**
- * The wire shapes of `GET /autocomplete/{relation}` and the error envelope, as
+ * The wire shapes of `GET /autocomplete/{route}` and the error envelope, as
  * the autocomplete service serves them: snake_case, nulls spelled out. Every
  * route answers the same envelope and the same row, and each entity type adds
- * its own fields to the row (see `entities.ts`; only businesses is served
- * today).
+ * its own fields to the row (see `entities.ts`).
  *
  * Hand-written types and a small structural validator rather than a schema
  * library. Three shapes do not justify a validator dependency in a snippet
  * customers embed on their own pages, and every host would have to agree on
  * its version.
  *
- * Two liberties, both so an autocomplete service release never turns every
- * keystroke into a contract error over a new value or a field it adds. Closed
- * enums (`RelatedItem.type`, `match`, `sources.*.status`, `structure`) are read
- * as strings, so a value this build does not know is kept. And the keys the
- * autocomplete service's OpenAPI leaves out of `required` (`matched_name`,
+ * Every closed value (`match`, `type`, `sources.*.status`, `role`,
+ * `structure`) is a typed union pinned to the contract's enum, and a value
+ * this build does not know is refused as a contract error: the SDK learns a
+ * value before the autocomplete service sends it. One liberty is kept: the
+ * keys the contract leaves out of `required` (`matched_name`,
  * `RelatedItem.token`, `role`, `RelatedSet.count`, `RelatedSet.matched`,
  * `structure`) may be absent as well as null; either reads as null.
  */
 
 import {
   ENTITY_OF,
+  ENTITY_TYPES,
   ROUTES,
   type EntityType,
   type IncludeOf,
   type Relation,
+  type Route,
 } from "./entities";
 
 /** The relations `GET /autocomplete/businesses` can expand. */
 export type Include = IncludeOf<"businesses">;
 
+/** How a name fits the typed one, in the contract's order. */
+export const MATCH_GRADES = ["exact", "strong", "partial"] as const;
+
+/**
+ * How the best of a row's names fits the typed name: `exact` is the name
+ * itself, `strong` starts with it or has it at a later word, and `partial`
+ * has every word of it. Order rows by position, never by this.
+ */
+export type MatchGrade = (typeof MATCH_GRADES)[number];
+
+/** What came of a relation the request could expand, in the contract's order. */
+export const SOURCE_STATUSES = ["ok", "not_requested", "unavailable"] as const;
+
+export type SourceStatus = (typeof SOURCE_STATUSES)[number];
+
+/** The roles a related item stands in, in the contract's order. */
+export const RELATED_ROLES = [
+  "officer",
+  "agent",
+  "principal",
+  "mailing",
+] as const;
+
+/**
+ * The role a related item stands in. A business's people and a person's
+ * businesses: `officer` or `agent`. An address: the role it was filed under
+ * (`principal`, `mailing`, `agent`, `officer`), or the role of the person
+ * standing at it.
+ */
+export type RelatedRole = (typeof RELATED_ROLES)[number];
+
 export interface RelatedItem {
-  /** `business`, `person`, `address` today; open. */
-  type: string;
-  /** An opaque handle for the person or address; nothing redeems one yet. */
+  /** Always the entity its relation holds: a `business` under `businesses`. */
+  type: EntityType;
+  /**
+   * An opaque handle. A business's is a `business_token` `POST /searches`
+   * redeems; a person's or an address's is redeemed nowhere yet.
+   */
   token: string | null;
   label: string;
-  role: string | null;
+  /** Null when the filing names none. */
+  role: RelatedRole | null;
   /** This item is why the row is here. */
   matched: boolean;
 }
@@ -61,7 +97,7 @@ export interface HighlightPart {
 }
 
 /** What every row carries, whatever the route. */
-export interface SuggestionBase<T extends EntityType, R extends Relation> {
+export interface SuggestionBase<T extends EntityType, R extends Route> {
   type: T;
   /**
    * An opaque handle for the entity, sealed by the autocomplete service. A
@@ -71,8 +107,8 @@ export interface SuggestionBase<T extends EntityType, R extends Relation> {
   label: string;
   /** The indexed name that matched, when it is not `label`. */
   matched_name: string | null;
-  /** `exact`, `strong`, `partial` today; open. Order the rows by position, never by this. */
-  match: string;
+  /** Order the rows by position, never by this. */
+  match: MatchGrade;
   related: Record<IncludeOf<R>, RelatedSet>;
   /**
    * The name that matched, split into parts, the words a typed token starts
@@ -107,13 +143,8 @@ export const BUSINESS_STRUCTURES = [
   "OTHER",
 ] as const;
 
-/**
- * A business's legal structure: one of `BUSINESS_STRUCTURES`, or a value a
- * newer autocomplete service sends, kept as the string it is.
- */
-// `string & {}` admits any string and keeps the known values' completions.
-export type BusinessStructure =
-  (typeof BUSINESS_STRUCTURES)[number] | (string & {});
+/** A business's legal structure. */
+export type BusinessStructure = (typeof BUSINESS_STRUCTURES)[number];
 
 export interface BusinessSuggestion extends SuggestionBase<
   "business",
@@ -155,14 +186,13 @@ export interface SuggestionByRelation {
 }
 
 /** A row from any route. */
-export type Suggestion = SuggestionByRelation[Relation];
+export type Suggestion = SuggestionByRelation[Route];
 
 export interface Source {
-  /** `ok`, `not_requested`, `unavailable` today; open. */
-  status: string;
+  status: SourceStatus;
 }
 
-export interface SuggestResponse<R extends Relation = "businesses"> {
+export interface SuggestResponse<R extends Route = "businesses"> {
   query: string;
   found: number;
   /** The count stopped at the cap: `found` is a floor, drawn as `500+`. */
@@ -254,6 +284,22 @@ function array<T>(
   return value.map((entry, index) => item(entry, `${path}[${index}]`));
 }
 
+/** One of `values`, or a contract error naming them. */
+function oneOf<T extends string>(values: readonly T[]) {
+  return (value: Json, path: string): T => {
+    if (typeof value !== "string" || !values.includes(value as T)) {
+      throw new ContractViolation(path, `one of ${values.join(", ")}`);
+    }
+    return value as T;
+  };
+}
+
+const matchGrade = oneOf(MATCH_GRADES);
+const sourceStatus = oneOf(SOURCE_STATUSES);
+const relatedRole = oneOf(RELATED_ROLES);
+const businessStructure = oneOf(BUSINESS_STRUCTURES);
+const entityType = oneOf(ENTITY_TYPES);
+
 /** Absent or null reads as null; anything else must parse. */
 function nullable<T>(
   value: Json,
@@ -263,24 +309,34 @@ function nullable<T>(
   return value === undefined || value === null ? null : parse(value, path);
 }
 
-function relatedItem(value: Json, path: string): RelatedItem {
+function relatedItem(
+  value: Json,
+  path: string,
+  holds: EntityType,
+): RelatedItem {
   const o = object(value, path);
+  const type = entityType(o.type, `${path}.type`);
+  if (type !== holds) {
+    throw new ContractViolation(`${path}.type`, `"${holds}"`);
+  }
   return {
-    type: string(o.type, `${path}.type`),
+    type,
     token: nullable(o.token, `${path}.token`, string),
     label: string(o.label, `${path}.label`),
-    role: nullable(o.role, `${path}.role`, string),
+    role: nullable(o.role, `${path}.role`, relatedRole),
     matched: boolean(o.matched, `${path}.matched`),
   };
 }
 
-function relatedSet(value: Json, path: string): RelatedSet {
+function relatedSet(value: Json, path: string, relation: Relation): RelatedSet {
   const o = object(value, path);
   return {
     count: nullable(o.count, `${path}.count`, count),
     matched: nullable(o.matched, `${path}.matched`, count),
     truncated: boolean(o.truncated, `${path}.truncated`),
-    items: array(o.items, `${path}.items`, relatedItem),
+    items: array(o.items, `${path}.items`, (v, p) =>
+      relatedItem(v, p, ENTITY_OF[relation]),
+    ),
   };
 }
 
@@ -292,16 +348,16 @@ function highlightPart(value: Json, path: string): HighlightPart {
   };
 }
 
-function relations<K extends string, T>(
+function relations<K extends Relation, T>(
   keys: readonly K[],
   value: Json,
   path: string,
-  parse: (v: Json, p: string) => T,
+  parse: (v: Json, p: string, key: K) => T,
 ): Record<K, T> {
   const o = object(value, path);
   const out = {} as Record<K, T>;
   for (const key of keys) {
-    out[key] = parse(o[key], `${path}.${key}`);
+    out[key] = parse(o[key], `${path}.${key}`, key);
   }
   return out;
 }
@@ -319,7 +375,7 @@ function addressComponents(value: Json, path: string): AddressComponents {
 
 /** The fields each entity type adds to the row. */
 const OWN_FIELDS: {
-  [R in Relation]: (
+  [R in Route]: (
     o: Record<string, unknown>,
     path: string,
   ) => Omit<SuggestionByRelation[R], keyof SuggestionBase<EntityType, R>>;
@@ -327,7 +383,7 @@ const OWN_FIELDS: {
   businesses: (o, path) => ({
     domicile_state: string(o.domicile_state, `${path}.domicile_state`),
     states: array(o.states, `${path}.states`, string),
-    structure: nullable(o.structure, `${path}.structure`, string),
+    structure: nullable(o.structure, `${path}.structure`, businessStructure),
   }),
   people: () => ({}),
   addresses: (o, path) => ({
@@ -335,7 +391,7 @@ const OWN_FIELDS: {
   }),
 };
 
-function suggestion<R extends Relation>(
+function suggestion<R extends Route>(
   relation: R,
   value: Json,
   path: string,
@@ -350,7 +406,7 @@ function suggestion<R extends Relation>(
     token: nonEmptyString(o.token, `${path}.token`),
     label: string(o.label, `${path}.label`),
     matched_name: nullable(o.matched_name, `${path}.matched_name`, string),
-    match: string(o.match, `${path}.match`),
+    match: matchGrade(o.match, `${path}.match`),
     ...OWN_FIELDS[relation](o, path),
     related: relations(
       ROUTES[relation].includes,
@@ -364,7 +420,7 @@ function suggestion<R extends Relation>(
 
 function source(value: Json, path: string): Source {
   const o = object(value, path);
-  return { status: string(o.status, `${path}.status`) };
+  return { status: sourceStatus(o.status, `${path}.status`) };
 }
 
 /**
@@ -372,7 +428,7 @@ function source(value: Json, path: string): Source {
  * keys are dropped, so the value a caller sees is exactly this type; unknown
  * enum values are kept as the strings they are.
  */
-export function parseSuggestResponse<R extends Relation>(
+export function parseSuggestResponse<R extends Route>(
   relation: R,
   body: Json,
 ): SuggestResponse<R> {

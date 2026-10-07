@@ -36,6 +36,7 @@ export {
 } from "./core/businesses";
 export {
   ENTITY_OF,
+  ENTITY_TYPES,
   LEGAL_RELATIONS,
   RELATIONS,
   RELATION_OF,
@@ -125,6 +126,9 @@ export {
 export {
   BUSINESS_STRUCTURES,
   ContractViolation,
+  MATCH_GRADES,
+  RELATED_ROLES,
+  SOURCE_STATUSES,
   parseBusinessesResponse,
   parseErrorEnvelope,
   parseSuggestResponse,
@@ -136,10 +140,13 @@ export {
   type ErrorEnvelope,
   type HighlightPart,
   type Include,
+  type MatchGrade,
   type PersonSuggestion,
   type RelatedItem,
+  type RelatedRole,
   type RelatedSet,
   type Source,
+  type SourceStatus,
   type Suggestion,
   type SuggestionBase,
   type SuggestionByRelation,

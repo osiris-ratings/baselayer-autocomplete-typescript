@@ -7,6 +7,7 @@ import {
   peopleLineOf,
   type BusinessSuggestion,
   type RelatedItem,
+  type RelatedRole,
   type RelatedSet,
 } from "@baselayer-sdk/autocomplete";
 
@@ -20,7 +21,7 @@ function person(
 
 function address(
   label: string,
-  role: string | null,
+  role: RelatedRole | null,
   matched = false,
 ): RelatedItem {
   return { type: "address", token: null, label, role, matched };
@@ -200,7 +201,6 @@ describe("matchedOn", () => {
     ["principal", "principal"],
     // The family's own mailing address is its own filing too.
     ["mailing", "principal"],
-    ["registered_office", null],
     [null, null],
   ] as const)("reads an address role of %s as %s", (wire, owner) => {
     const row = withRelated({
@@ -247,7 +247,7 @@ describe("matchedOn", () => {
     const row = {
       ...harbor,
       matched_name: "BASELAYER",
-      match: "partial",
+      match: "partial" as const,
       highlight: [],
     };
     expect(matchedOn(row, {})).toEqual([{ kind: "alias", name: "BASELAYER" }]);

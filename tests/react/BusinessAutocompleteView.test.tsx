@@ -13,6 +13,7 @@ import {
   ROW_FIELDS,
   ROW_PLACES,
   type BusinessSuggestion,
+  type RelatedRole,
   type RowField,
   type RowLayoutInput,
   type RowPlace,
@@ -1657,13 +1658,12 @@ describe("the row's places and fields", () => {
     renderTypeahead({
       suggestions: [
         { ...cinder, token: "tok-other", structure: "OTHER" },
-        { ...cinder, token: "tok-unknown", structure: "FOUNDATION" },
         { ...cinder, token: "tok-none", structure: null },
       ],
-      found: 3,
+      found: 2,
     });
 
-    expect(screen.getAllByTestId("business-suggestion")).toHaveLength(3);
+    expect(screen.getAllByTestId("business-suggestion")).toHaveLength(2);
     expect(
       screen.queryAllByTestId("business-suggestion-structure"),
     ).toHaveLength(0);
@@ -1696,7 +1696,10 @@ describe("what a row matched on", () => {
   }
   const marks = (element: Element) =>
     [...element.querySelectorAll(".bl-ac-mark")].map(mark => mark.textContent);
-  const addressesOf = (role: string, matched: boolean): BusinessSuggestion => ({
+  const addressesOf = (
+    role: RelatedRole,
+    matched: boolean,
+  ): BusinessSuggestion => ({
     ...cinder,
     related: {
       ...cinder.related,

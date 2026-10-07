@@ -3,6 +3,7 @@ import type {
   BusinessStructure,
   BusinessSuggestion,
   HighlightPart,
+  RelatedRole,
 } from "./wire";
 
 /**
@@ -41,13 +42,13 @@ export interface AddressLine {
   matched: boolean;
   /**
    * Whose it is: `principal` for the family's own filing (its principal or
-   * mailing address), `officer` or `agent` for a person's; null for a role
-   * this build does not know.
+   * mailing address), `officer` or `agent` for a person's; null when the
+   * filing names no role.
    */
   role: AddressOwner | null;
 }
 
-function ownerOf(role: string | null): AddressOwner | null {
+function ownerOf(role: RelatedRole | null): AddressOwner | null {
   switch (role) {
     case "officer":
     case "agent":
@@ -55,7 +56,7 @@ function ownerOf(role: string | null): AddressOwner | null {
     case "principal":
     case "mailing":
       return "principal";
-    default:
+    case null:
       return null;
   }
 }
@@ -267,9 +268,10 @@ const STRUCTURE_LABELS: Partial<Record<BusinessStructure, string>> = {
 /** `labels[key]` when it is a string of the object's own, else undefined. */
 function ownLabel(
   labels: Partial<Record<BusinessStructure, string>> | null,
-  key: string,
+  key: BusinessStructure,
 ): string | undefined {
-  // The key comes off the wire, so it may name a member of every object.
+  // A host may call this with untyped data, so the key may name a member of
+  // every object.
   const label: unknown =
     labels !== null && Object.prototype.hasOwnProperty.call(labels, key)
       ? labels[key]
@@ -278,9 +280,9 @@ function ownLabel(
 }
 
 /**
- * The flag a business's structure draws, or null for none: `OTHER`, no
- * structure, and a value this build has no label for draw none. `labels`
- * relabels any value, one at a time, and `""` hides that value's flag.
+ * The flag a business's structure draws, or null for none: `OTHER` and no
+ * structure draw none. `labels` relabels any value, one at a time, and `""`
+ * hides that value's flag.
  */
 export function structureLabel(
   structure: BusinessStructure | null,

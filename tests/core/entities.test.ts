@@ -109,20 +109,13 @@ describe("parseSuggestResponse", () => {
     ).toThrow(ContractViolation);
   });
 
-  it("tolerates enum values and fields it has never seen", () => {
+  it("drops fields it has never seen", () => {
     const relations = ["businesses", "addresses"];
     const row = {
       ...base("person", relations),
-      match: "phonetic",
       a_field_from_a_later_release: true,
     };
-    const body = envelope(relations, [row]);
-    (body.sources as Record<string, { status: string }>)["businesses"] = {
-      status: "degraded",
-    };
-    const parsed = parseSuggestResponse("people", body);
-    expect(parsed.suggestions[0]!.match).toBe("phonetic");
-    expect(parsed.sources.businesses.status).toBe("degraded");
+    const parsed = parseSuggestResponse("people", envelope(relations, [row]));
     expect(parsed.suggestions[0]).not.toHaveProperty(
       "a_field_from_a_later_release",
     );

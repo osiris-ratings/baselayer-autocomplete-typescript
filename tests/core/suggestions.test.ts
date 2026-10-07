@@ -296,10 +296,10 @@ describe("structureLabel", () => {
     expect(structureLabel("PROFESSIONAL_ASSOCIATION")).not.toBe("PA");
   });
 
-  it("draws no flag for no structure, or for one this build has no label for", () => {
-    // `structure` is open: a newer autocomplete service's value is kept, and
-    // draws nothing until a build labels it. So does a value that happens to
-    // name a member of every object.
+  it("draws no flag for no structure, or for a value untyped data slips in", () => {
+    // The parser refuses a structure the contract does not list, but a host
+    // calling this with untyped data still gets no flag, even for a value
+    // that names a member of every object.
     for (const structure of [
       null,
       "FOUNDATION",
@@ -308,7 +308,10 @@ describe("structureLabel", () => {
       "toString",
       "__proto__",
     ]) {
-      expect(structureLabel(structure), String(structure)).toBeNull();
+      expect(
+        structureLabel(structure as BusinessStructure | null),
+        String(structure),
+      ).toBeNull();
     }
   });
 
@@ -317,14 +320,12 @@ describe("structureLabel", () => {
       LLC: "L.L.C.",
       C_CORPORATION: "",
       OTHER: "Other",
-      FOUNDATION: "Foundation",
     };
 
     expect(structureLabel("LLC", labels)).toBe("L.L.C.");
     expect(structureLabel("S_CORPORATION", labels)).toBe("S-Corp");
     expect(structureLabel("C_CORPORATION", labels)).toBeNull();
     expect(structureLabel("OTHER", labels)).toBe("Other");
-    expect(structureLabel("FOUNDATION", labels)).toBe("Foundation");
     expect(structureLabel(null, labels)).toBeNull();
   });
 

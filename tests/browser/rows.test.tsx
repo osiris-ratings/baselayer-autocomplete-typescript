@@ -56,7 +56,10 @@ function changes(layout: RowLayout): Partial<RowLayout> {
   );
 }
 
-function related(type: string, items: Omit<RelatedItem, "type">[]) {
+function related(
+  type: RelatedItem["type"],
+  items: Omit<RelatedItem, "type">[],
+) {
   return {
     count: items.length,
     matched: null,

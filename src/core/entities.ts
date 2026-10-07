@@ -18,8 +18,11 @@ export type Route = (typeof ROUTE_NAMES)[number];
 /** The relations a row may carry, in the order the SDK lists them. */
 export const RELATIONS = ["businesses", "people", "addresses"] as const;
 
-/** The singular value on a row: what the row is. */
-export type EntityType = "business" | "person" | "address";
+/** The singular value on a row: what the row is, in the contract's order. */
+export const ENTITY_TYPES = ["business", "person", "address"] as const;
+
+/** What a row, or an item it relates to, is. */
+export type EntityType = (typeof ENTITY_TYPES)[number];
 
 /** The plural token: an `include` value, a `sources` key, a `related` key. */
 export type Relation = (typeof RELATIONS)[number];
