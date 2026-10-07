@@ -107,6 +107,14 @@ describe("requestFor", () => {
     });
   });
 
+  it("asks for a person's addresses for their first address alone, counted or not", () => {
+    expect(
+      requestFor("people", resolveLayout(PERSON_ROW, { headTrailing: null }), [
+        "businesses",
+      ]),
+    ).toEqual({ list: ["businesses"], include: ["businesses", "addresses"] });
+  });
+
   it("asks for only what it lists when the head draws nothing that needs more", () => {
     expect(
       requestFor(

@@ -33,6 +33,7 @@ import type { GroupedOption, PickableBusiness } from "./pick";
 import type { SessionScope } from "./scope";
 import type {
   AddressSuggestion,
+  BusinessSuggestion,
   PersonSuggestion,
   RelatedItem,
   RelatedSet,
@@ -409,7 +410,7 @@ export interface GroupedLines {
  * business option, a person or an address a typed pick.
  */
 export function groupedLines(
-  row: PersonSuggestion | AddressSuggestion,
+  row: PersonSuggestion | AddressSuggestion | BusinessSuggestion,
   listed: readonly Relation[],
   pickable: readonly EntityType[] = DEFAULT_PICKABLE,
 ): GroupedLines {
@@ -419,7 +420,10 @@ export function groupedLines(
       return null;
     }
     if (item.type === "business") {
-      return { kind: "business", row, business: item as PickableBusiness };
+      // Only a person's or an address's row lists businesses.
+      return row.type === "business"
+        ? null
+        : { kind: "business", row, business: item as PickableBusiness };
     }
     return {
       kind: "entity",
@@ -429,13 +433,15 @@ export function groupedLines(
   };
   return {
     head: {
-      option: pickable.includes(row.type)
-        ? {
-            kind: "entity",
-            row,
-            pick: { type: row.type, token: row.token, label: row.label },
-          }
-        : null,
+      option: !pickable.includes(row.type)
+        ? null
+        : row.type === "business"
+          ? { kind: "row", row }
+          : {
+              kind: "entity",
+              row,
+              pick: { type: row.type, token: row.token, label: row.label },
+            },
     },
     lists: listed.flatMap(relation => {
       const set = related[relation];

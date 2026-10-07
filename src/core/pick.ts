@@ -1,5 +1,6 @@
 import type {
   AddressSuggestion,
+  BusinessSuggestion,
   PersonSuggestion,
   RelatedItem,
   RelatedRole,
@@ -95,6 +96,11 @@ export interface EntityPick {
 /** What a pickable line of a person's or an address's row hands when picked. */
 export type GroupedOption =
   | {
+      /** A business row's own head, picked as a business row always is. */
+      kind: "row";
+      row: BusinessSuggestion;
+    }
+  | {
       kind: "business";
       /** The row it was reached through, for `businessPickFrom`. */
       row: PersonSuggestion | AddressSuggestion;
@@ -103,7 +109,7 @@ export type GroupedOption =
   | {
       kind: "entity";
       /** The row it is, or the row that lists it. */
-      row: PersonSuggestion | AddressSuggestion;
+      row: PersonSuggestion | AddressSuggestion | BusinessSuggestion;
       pick: EntityPick;
     };
 

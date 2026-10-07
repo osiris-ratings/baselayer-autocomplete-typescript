@@ -202,6 +202,14 @@ field already says it, and no line is drawn. Any edit clears the pick and the li
 the field still takes the name, and you draw your own line from `onPick`.
 Put `pick.businessName` in your business name field.
 
+`BusinessAutocomplete` takes the same `list`, `pickable`, `onPickEntity` and
+`icons`: `list={["people", "addresses"]}` draws each business's officers and
+agents and its addresses under it, a line each. Listing nothing, the default, a
+business row is the one option it has always been. Listing lines, it is a group
+whose head is that same row, picked as it always was; an officer or an address
+picked (`pickable={["business", "person"]}`) hands `onPickEntity` an
+`EntityPick`, puts the business's name in the field, and is named under it.
+
 `PersonAutocompleteView` and `AddressAutocompleteView` draw the same rows
 from state you supply, with `selection` for the line under the field, and `useEntityAutocomplete({
 relation, query, ... })` is the hook for any route (see

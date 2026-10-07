@@ -1,12 +1,25 @@
 import { type ReactElement, type ReactNode, type Ref } from "react";
 
 import {
+  BUSINESS_ROW,
+  DEFAULT_PICKABLE,
+  ROUTES,
   ROW_LINES,
+  drawnLayout,
   drawnRowLayout,
+  groupedLines,
+  groupedOptions,
+  resolveLayout,
   resolveLook,
   resolveRowLayout,
+  type BusinessRowLayoutInput,
+  type EntityPick,
+  type EntityType,
+  type GroupedOption,
+  type Include,
   type Look,
   type LookInput,
+  type RelatedItem,
   type RowField,
   type RowLayout,
   type RowLayoutInput,
@@ -23,8 +36,10 @@ import {
 } from "@baselayer-sdk/autocomplete";
 import type { BusinessSuggestion, Filters } from "@baselayer-sdk/autocomplete";
 
+import { iconFor, type IconSet } from "./icons";
 import { resolveMessages, type AutocompleteMessages } from "./messages";
-import { useBusinessCombobox } from "./useBusinessCombobox";
+import type { GroupedSelection } from "./selection";
+import { useSuggestionCombobox } from "./useBusinessCombobox";
 import {
   StateSquares,
   classes,
@@ -36,6 +51,12 @@ import {
 
 export { STATE_SQUARES } from "./viewParts";
 export type { SlotName } from "./viewParts";
+
+/** A line a row under a group offers: what picking it hands, and its name. */
+interface OptionItem {
+  option: GroupedOption;
+  label: string;
+}
 
 export interface RowRenderProps {
   item: BusinessSuggestion;
@@ -76,7 +97,22 @@ export interface BusinessAutocompleteViewProps {
    * unless it is placed elsewhere, and null leaves a place empty. With
    * `subtitle` empty, the field in `subtitleTrailing` takes its place.
    */
-  layout?: RowLayoutInput | undefined;
+  layout?: BusinessRowLayoutInput | undefined;
+  /**
+   * The relations listed under each row, a line per item: a business's
+   * officers and agents (`people`) and its `addresses`. None by default, and
+   * then each row is the one option it has always been.
+   */
+  list?: readonly Include[] | undefined;
+  /** Which lines can be picked, by type: the business itself by default. */
+  pickable?: readonly EntityType[] | undefined;
+  /** The icon before each name, per entity; `false` draws none. */
+  icons?: IconSet | undefined;
+  /** What the line under the field names; none drawn when null. */
+  selection?: GroupedSelection | null | undefined;
+  /** An officer or an address picked from a line under `row`. */
+  onSelectEntity?:
+    ((pick: EntityPick, row: BusinessSuggestion) => void) | undefined;
   /**
    * The filters `suggestions` were fetched with (`appliedFilters` of
    * `useBusinessAutocomplete`), none when there were none or the client withheld
@@ -138,6 +174,10 @@ interface DefaultRowProps {
   cx: ClassFor;
   /** The states the filters the rows were fetched with named, if any. */
   stateFilter: readonly string[] | undefined;
+  /** An id for the name, which labels the row's group when it lists lines. */
+  nameId?: string | undefined;
+  /** The icon before the name, where the layout places one. */
+  icon?: ReactNode;
 }
 
 /**
@@ -153,6 +193,8 @@ function DefaultRow({
   text,
   cx,
   stateFilter,
+  nameId,
+  icon,
 }: DefaultRowProps) {
   const region = look.matchEmphasisRegion;
   // Plain draws none of the marks, which is no parts at all.
@@ -278,7 +320,9 @@ function DefaultRow({
       {/* One piece, so `also …` leaves the line whole rather than splitting
           the name from its badge. */}
       <span className={cx("nameGroup", "bl-ac-name-group")}>
+        {icon}
         <span
+          id={nameId}
           className={cx("name", "bl-ac-name")}
           data-testid="business-suggestion-name"
           data-emphasis={look.matchEmphasis}
@@ -375,22 +419,80 @@ export function BusinessAutocompleteView({
   renderRow,
   classNames,
   unstyled = false,
+  list,
+  pickable = DEFAULT_PICKABLE,
+  icons,
+  selection = null,
+  onSelectEntity,
 }: BusinessAutocompleteViewProps) {
   const look = resolveLook(lookInput ?? {});
-  // One layout for every row, from the places the host filled, as drawn.
-  const layout = drawnRowLayout(resolveRowLayout(layoutInput));
+  // One layout for every row, from the places the host filled, as drawn: the
+  // head's, as it has always been, and the whole row's, lines included.
+  const layout = drawnRowLayout(
+    resolveRowLayout(layoutInput as RowLayoutInput),
+  );
+  const rowLayout: Readonly<Record<string, string | null>> = drawnLayout(
+    BUSINESS_ROW,
+    resolveLayout(BUSINESS_ROW, layoutInput),
+  );
   const text = resolveMessages(messageOverrides);
   const cx = classes(unstyled, classNames);
   const hasFooter = isSearching || error !== null || roundTripMs !== null;
-  const combobox = useBusinessCombobox({
+  // A row that lists lines under it, or whose business is not itself a pick,
+  // is a group of lines; any other is the one option a row has always been.
+  const listed = ROUTES.businesses.includes.filter(relation =>
+    (list ?? []).includes(relation),
+  );
+  const grouped = listed.length > 0 || !pickable.includes("business");
+  const rowLines = grouped
+    ? suggestions.map(row => groupedLines(row, listed, pickable))
+    : [];
+  const items: (BusinessSuggestion | OptionItem)[] = grouped
+    ? rowLines.flatMap(lines =>
+        groupedOptions(lines).map(option => ({
+          option,
+          label:
+            option.kind === "entity" ? option.pick.label : option.row.label,
+        })),
+      )
+    : suggestions;
+  const combobox = useSuggestionCombobox<BusinessSuggestion | OptionItem>({
     id,
-    items: suggestions,
+    items,
     inputValue: value,
     onInputChange,
-    onPick: onSelect,
+    onPick: item => {
+      if (!("option" in item)) {
+        onSelect(item);
+        return;
+      }
+      const { option } = item;
+      if (option.kind === "row") {
+        onSelect(option.row);
+      } else if (option.kind === "entity" && option.row.type === "business") {
+        onSelectEntity?.(option.pick, option.row);
+      }
+    },
     hasFooter,
     open,
   });
+  const headIcon =
+    rowLayout.titleLead === "titleIcon" ? iconFor(icons, "business") : null;
+  const iconNode = (entity: EntityType, place: string) => {
+    const icon = iconFor(icons, entity);
+    return (
+      icon !== null && (
+        <span
+          className={cx("icon", "bl-ac-icon")}
+          data-place={place}
+          data-entity={entity}
+          aria-hidden="true"
+        >
+          {icon}
+        </span>
+      )
+    );
+  };
   // What was typed, as the autocomplete service tokenizes it, for cutting a
   // marked word down to the typed characters under the `substring` region.
   const tokens = queryTokens(value);
@@ -413,13 +515,95 @@ export function BusinessAutocompleteView({
   }
 
   const labelProps = combobox.getLabelProps() as Record<string, unknown>;
+  const selectionId = `${id}-selection`;
   const inputProps = combobox.getInputProps({
     ref: inputRef,
     name: inputName,
     onFocus: onInputFocus,
     onBlur: onInputBlur,
     autoComplete: "off",
+    ...(selection !== null ? { "aria-describedby": selectionId } : {}),
   });
+
+  let optionIndex = 0;
+  /** A field of a line under a business, as drawn in `place`. */
+  const lineField = (place: string, related: RelatedItem): ReactNode => {
+    const name = rowLayout[place] ?? null;
+    if (name === null) return null;
+    if (name.endsWith("Icon")) return iconNode(related.type, place);
+    if (related.role === null) return null;
+    const role =
+      name === "addressRole"
+        ? text.addressRoles[related.role]
+        : text.personRoles[related.role];
+    return (
+      <span
+        className={cx("role", "bl-ac-role")}
+        data-place={place}
+        data-testid={`grouped-${name}`}
+      >
+        {role}
+      </span>
+    );
+  };
+  /**
+   * An officer's or an address's line under a business: its icon, its name,
+   * and the role at the right. A pickable one is an option; any other is
+   * inert, read through the group's description.
+   */
+  const listedLine = (
+    line: EntityType,
+    related: RelatedItem,
+    option: GroupedOption | null,
+    key: string,
+    headId: string,
+  ) => {
+    const index = option === null ? null : optionIndex++;
+    const props =
+      option === null || index === null
+        ? { role: "presentation", id: `${headId}-${key}` }
+        : combobox.getItemProps({
+            item: {
+              option,
+              label:
+                option.kind === "entity" ? option.pick.label : related.label,
+            },
+            index,
+          });
+    const trailingBadge = lineField(`${line}TrailingBadge`, related);
+    const trailing = lineField(`${line}Trailing`, related);
+    return (
+      <div
+        {...props}
+        key={key}
+        className={cx("groupLine", "bl-ac-group-line")}
+        data-line={line}
+        data-testid={`${line}-line`}
+        data-pickable={option !== null ? "true" : undefined}
+        data-highlighted={
+          index !== null && highlightedIndex === index ? "true" : undefined
+        }
+        data-matched={related.matched ? "true" : undefined}
+      >
+        <span className={cx("corner", "bl-ac-group-lead")} data-corner="lead">
+          {lineField(`${line}Lead`, related)}
+          <span className={cx("lineName", "bl-ac-line-name")}>
+            {related.label}
+          </span>
+          {lineField(`${line}Badge`, related)}
+        </span>
+        {(trailingBadge || trailing) && (
+          <span
+            className={cx("corner", "bl-ac-group-trailing")}
+            data-corner="trailing"
+          >
+            {trailingBadge}
+            {trailing}
+          </span>
+        )}
+      </div>
+    );
+  };
 
   const region = look.matchEmphasisRegion;
 
@@ -454,6 +638,95 @@ export function BusinessAutocompleteView({
             below it. Always mounted, as downshift requires of its menu. */}
         <div className={cx("list", "bl-ac-list")} {...combobox.getMenuProps()}>
           {hasRows &&
+            grouped &&
+            suggestions.map((item, rowIndex) => {
+              const lines = rowLines[rowIndex]!;
+              const headId = `${id}-group-${rowIndex}`;
+              const head = lines.head.option;
+              const headIndex = head === null ? null : optionIndex++;
+              const highlighted =
+                headIndex !== null && highlightedIndex === headIndex;
+              const defaultRow = (
+                <DefaultRow
+                  item={item}
+                  layout={layout}
+                  look={look}
+                  tokens={tokens}
+                  text={text}
+                  cx={cx}
+                  stateFilter={appliedFilters?.state}
+                  nameId={headId}
+                  icon={headIcon !== null && iconNode("business", "titleLead")}
+                />
+              );
+              // What the lines that are not picks say, and what each list
+              // leaves out: read as the group's description.
+              const describedBy = lines.lists.flatMap(list => [
+                ...list.lines.flatMap(({ option }, itemIndex) =>
+                  option === null
+                    ? [`${headId}-${list.line}-${itemIndex}`]
+                    : [],
+                ),
+                ...(list.notShown > 0
+                  ? [`${headId}-more-${list.relation}`]
+                  : []),
+              ]);
+              return (
+                <div
+                  key={item.token}
+                  role="group"
+                  aria-labelledby={headId}
+                  aria-describedby={describedBy.join(" ") || undefined}
+                  className={cx("group", "bl-ac-group")}
+                  data-testid="business-group"
+                >
+                  <div
+                    {...(head === null || headIndex === null
+                      ? { role: "presentation" }
+                      : combobox.getItemProps({
+                          item: { option: head, label: item.label },
+                          index: headIndex,
+                        }))}
+                    className={cx("row", "bl-ac-row")}
+                    data-highlighted={highlighted ? "true" : undefined}
+                    data-pickable={head !== null ? "true" : undefined}
+                    data-testid="business-suggestion"
+                  >
+                    {renderRow
+                      ? renderRow({
+                          item,
+                          index: rowIndex,
+                          highlighted,
+                          defaultRow,
+                        })
+                      : defaultRow}
+                  </div>
+                  {lines.lists.map(list => (
+                    <div key={list.relation} data-list={list.relation}>
+                      {list.lines.map(({ item: related, option }, itemIndex) =>
+                        listedLine(
+                          list.line,
+                          related,
+                          option,
+                          `${list.line}-${itemIndex}`,
+                          headId,
+                        ),
+                      )}
+                      {list.notShown > 0 && (
+                        <div
+                          id={`${headId}-more-${list.relation}`}
+                          className={cx("more", "bl-ac-more")}
+                        >
+                          {text.moreNotShown(list.notShown)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          {hasRows &&
+            !grouped &&
             suggestions.map((item, index) => {
               const highlighted = highlightedIndex === index;
               const defaultRow = (
@@ -465,6 +738,9 @@ export function BusinessAutocompleteView({
                   text={text}
                   cx={cx}
                   stateFilter={appliedFilters?.state}
+                  {...(headIcon !== null
+                    ? { icon: iconNode("business", "titleLead") }
+                    : {})}
                 />
               );
               return (
@@ -503,6 +779,17 @@ export function BusinessAutocompleteView({
           </div>
         )}
       </div>
+      {/* After the menu, which floats over it: it sits right under the field. */}
+      {selection !== null && (
+        <div
+          id={selectionId}
+          className={cx("selection", "bl-ac-selection")}
+          data-type={selection.type}
+          data-testid="grouped-selection"
+        >
+          {selection.label}
+        </div>
+      )}
     </div>
   );
 }

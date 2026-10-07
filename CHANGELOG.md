@@ -38,11 +38,22 @@ release.
   from a line under the row draws a line under the field naming it until the
   next edit (`showSelection`). `PersonAutocompleteView` and
   `AddressAutocompleteView` draw the same rows from state a host supplies.
-- `PERSON_ROW` and `ADDRESS_ROW`, the places and fields of those rows, and
-  `requestFor(route, layout, list, scope)`, what to ask for them;
-  `groupedLines(row, listed, pickable)` and `groupedOptions(lines)`, their
-  lines and what each pickable one hands. `RowKind`, `resolveLayout` and
-  `drawnLayout` resolve any kind of row's layout.
+- `list`, `pickable`, `onPickEntity`, `icons` and `showSelection` on
+  `BusinessAutocomplete`: a business row can list its officers and agents and
+  its addresses, a line each with an icon and the role. Such a row is a group
+  whose head is the row as it has always been, picked as it always was; an
+  officer or an address picked hands `onPickEntity` an `EntityPick`, puts the
+  business's name in the field, and is named on a line under it. With none of
+  them, a business row draws exactly as before.
+- One row model for all three searches: `BUSINESS_ROW`, `PERSON_ROW` and
+  `ADDRESS_ROW` (`ROW_KINDS`), each a head and the line kinds it can list, each
+  line naming the entity it draws and the relation it lists, with a place before
+  every name for its icon; `DEFAULT_LIST`; and `requestFor(route, layout, list,
+scope)`, what to ask for any of them. `groupedLines(row, listed, pickable)`
+  and `groupedOptions(lines)` give a row's lines and what each pickable one
+  hands. `RowKind`, `resolveLayout` and `drawnLayout` resolve any kind of row's
+  layout; `ROW_PLACES`, `ROW_FIELDS` and `RowLayout` are a business row's head,
+  as they always were.
 - `pickableBusinesses(row)` and `businessPickFrom(row, business, at)`: the
   businesses a person's or an address's row offers, and the pick of one.
 - `address`, `states` and `domicile_state` on a related item: a business
@@ -79,6 +90,11 @@ release.
 
 ### Changed
 
+- `BusinessAutocompleteProps` is a union over `pickable` and `onPickEntity`, so
+  that a person or an address made pickable needs somewhere to go. A wrapper
+  that takes `Omit<BusinessAutocompleteProps, …>` and spreads the rest needs an
+  `Omit` that distributes over the union (`T extends unknown ? Omit<T, K> :
+never`).
 - `ROUTES.people` and `ROUTES.addresses` are served, and their filters are
   exactly what each serves: `{ business: { state } }` on people,
   `{ state }` on addresses. `filterParams`, `hasFilters` and

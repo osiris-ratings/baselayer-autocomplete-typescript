@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_PICKABLE,
+  type BusinessSuggestion,
   groupedLines,
   groupedOptions,
   type AddressSuggestion,
@@ -177,6 +178,50 @@ describe("groupedLines", () => {
   });
 });
 
+describe("groupedLines on a business row", () => {
+  const harbor: BusinessSuggestion = {
+    type: "business",
+    token: "tok-harbor",
+    label: "HARBOR CONCRETE PUMPING CO., INC.",
+    matched_name: null,
+    match: "strong",
+    domicile_state: "PA",
+    states: ["PA"],
+    structure: null,
+    highlight: [],
+    related: {
+      people: set([item("person", "Jane Q Doe", "tok-jane")], 2),
+      addresses: set(
+        [item("address", "12 Fernhallow Ln, Dover, DE 19901", null)],
+        1,
+      ),
+    },
+  };
+
+  it("offers the business itself as a business row's pick, and its officers when they are pickable", () => {
+    const lines = groupedLines(
+      harbor,
+      ["people", "addresses"],
+      ["business", "person"],
+    );
+
+    expect(lines.head.option).toEqual({ kind: "row", row: harbor });
+    expect(lines.lists.map(list => list.line)).toEqual(["person", "address"]);
+    expect(lines.lists[0]!.lines[0]!.option).toEqual({
+      kind: "entity",
+      row: harbor,
+      pick: { type: "person", token: "tok-jane", label: "Jane Q Doe" },
+    });
+    expect(lines.lists[0]!.notShown).toBe(1);
+    // No token, no pick: the address stays inert.
+    expect(lines.lists[1]!.lines[0]!.option).toBeNull();
+  });
+
+  it("offers no head where businesses are not pickable", () => {
+    expect(groupedLines(harbor, ["people"], ["person"]).head.option).toBeNull();
+  });
+});
+
 describe("groupedOptions", () => {
   it("lists every pickable line in the order drawn: the head, then each list", () => {
     const options = groupedOptions(
@@ -191,7 +236,9 @@ describe("groupedOptions", () => {
       options.map(option =>
         option.kind === "business"
           ? option.business.label
-          : `${option.pick.type}: ${option.pick.label}`,
+          : option.kind === "entity"
+            ? `${option.pick.type}: ${option.pick.label}`
+            : option.row.label,
       ),
     ).toEqual([
       "person: Jane Q Doe",

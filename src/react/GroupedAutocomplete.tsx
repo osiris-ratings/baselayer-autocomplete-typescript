@@ -1,7 +1,6 @@
 import {
   useEffect,
   useRef,
-  useState,
   type ReactElement,
   type ReactNode,
   type Ref,
@@ -27,7 +26,6 @@ import {
   type AddressSuggestion,
   type AutocompleteClient,
   type BusinessPick,
-  type EntityPick,
   type EntityType,
   type FiltersByRelation,
   type GroupedOption,
@@ -47,6 +45,11 @@ import {
 import type { MintTiming } from "./BusinessAutocomplete";
 import { useAutocompleteClient, useResolvedClient } from "./context";
 import { iconFor, type IconSet } from "./icons";
+import {
+  usePickedSelection,
+  type GroupedSelection,
+  type PickTargets,
+} from "./selection";
 import { resolveMessages, type AutocompleteMessages } from "./messages";
 import { useEntityAutocomplete } from "./useBusinessAutocomplete";
 import { useSuggestionCombobox } from "./useBusinessCombobox";
@@ -69,34 +72,13 @@ interface LayoutInputByRoute {
   addresses: AddressRowLayoutInput;
 }
 
-/** What the line under the field names: the picked line's label and type. */
-export interface GroupedSelection {
-  type: EntityType;
-  label: string;
-}
+export type { GroupedSelection } from "./selection";
 
 /** A pickable line as the combobox holds it: what it hands, and its name. */
 interface OptionItem {
   option: GroupedOption;
   label: string;
 }
-
-/**
- * Where a pick goes. A business always goes to `onPick`; a person or an
- * address can be picked only where `pickable` names it, and goes to
- * `onPickEntity`, which is then required.
- */
-type PickTargets =
-  | {
-      /** Which lines can be picked, by type. Default: businesses. */
-      pickable?: readonly "business"[] | undefined;
-      onPickEntity?: ((pick: EntityPick) => void) | undefined;
-    }
-  | {
-      pickable: readonly EntityType[];
-      /** A person or an address picked: the row itself, or one it lists. */
-      onPickEntity(pick: EntityPick): void;
-    };
 
 interface GroupedCommonProps<R extends GroupedRoute> {
   id: string;
@@ -288,29 +270,7 @@ function Connected<R extends GroupedRoute>({
   ...view
 }: ConnectedProps<R> & { client: AutocompleteClient }) {
   const client = useResolvedClient(given);
-  // The pick: the name it puts in the field, what the field held when it was
-  // made, and whether the field has taken the name yet.
-  const [picked, setPicked] = useState<{
-    field: string;
-    before: string;
-    held: boolean;
-    selection: GroupedSelection | null;
-  } | null>(null);
-  // A host may take the name a render or more later: until then the field
-  // still holds what was typed, and the pick waits. Anything else, before the
-  // name or after it, lets the pick go for good, so a name typed or put back
-  // later is not the pick again.
-  if (picked !== null) {
-    if (value === picked.field) {
-      if (!picked.held) setPicked({ ...picked, held: true });
-    } else if (picked.held || value !== picked.before) {
-      setPicked(null);
-    }
-  }
-  const selection =
-    showSelection && picked !== null && value === picked.field
-      ? picked.selection
-      : null;
+  const { selection, pick } = usePickedSelection(value, showSelection);
   // What the rows draw decides what is asked for; the hook drops whatever the
   // session's scope does not grant.
   const request = requestOf(route, drawnFor(route, layout), list);
@@ -360,20 +320,25 @@ function Connected<R extends GroupedRoute>({
       }}
       onSelect={option => {
         // The field takes the row's own name, not what was typed, and the
-        // line under it names what was picked.
+        // line under it names what was picked from a line under the row; the
+        // row itself picked, the field names it, and no line is drawn.
         const field = option.row.label;
-        setPicked({
-          field,
-          before: value,
-          held: field === value,
-          // The row itself picked, the field names it: no line under it.
-          selection:
-            option.kind === "business"
-              ? { type: "business", label: option.business.label }
-              : option.pick.type === option.row.type
+        switch (option.kind) {
+          case "business":
+            pick(field, { type: "business", label: option.business.label });
+            break;
+          case "entity":
+            pick(
+              field,
+              option.pick.type === option.row.type
                 ? null
                 : { type: option.pick.type, label: option.pick.label },
-        });
+            );
+            break;
+          case "row":
+            // A business row's own head: no person's or address's row has one.
+            return;
+        }
         onChange(field);
         if (option.kind === "business") {
           onPick(businessPickFrom(option.row, option.business, Date.now()));
@@ -470,7 +435,14 @@ type LineOf =
   { line: "head"; row: GroupedRow } | { line: EntityType; item: RelatedItem };
 
 function optionLabel(option: GroupedOption): string {
-  return option.kind === "business" ? option.business.label : option.pick.label;
+  switch (option.kind) {
+    case "business":
+      return option.business.label;
+    case "row":
+      return option.row.label;
+    case "entity":
+      return option.pick.label;
+  }
 }
 
 function GroupedView<R extends GroupedRoute>({

@@ -210,6 +210,18 @@ element with `data-testid="autocomplete-menu"`.
 Past that, drop the component and build on the hooks: see
 [Headless use](headless.md).
 
+### A business row's lines
+
+With `list`, a business row draws its officers and agents (`people`) and its
+addresses (`addresses`) under it, as a person's row draws its businesses:
+the row as it always was is the group's head, and each item a line
+(`bl-ac-group-line`, `data-line` `person` or `address`) with its icon before
+the name (`personLead`, `addressLead`) and the role at the right
+(`personTrailing`, `addressTrailing`: `messages.personRoles`,
+`messages.addressRoles`). Those places are `BUSINESS_ROW`'s, beside the
+head's `ROW_PLACES`, and `titleLead` puts the business's own icon before its
+name. A business row that lists nothing draws exactly as before.
+
 ### Person and address rows
 
 A person or an address is a group in the menu (`bl-ac-group`,
