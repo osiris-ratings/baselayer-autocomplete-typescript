@@ -724,6 +724,34 @@ const COMPONENT_OF: Record<Route, string> = {
 };
 
 /**
+ * What every host gives the component, before anything it styles: the id
+ * filled in, and the client, the value and the handlers left to the host.
+ */
+const REQUIRED_PROPS: Record<Route, readonly string[]> = {
+  businesses: [
+    'id="business"',
+    "client={client}",
+    "value={value}",
+    "onChange={setValue}",
+    "onPick={(suggestion, pick) => …}",
+  ],
+  people: [
+    'id="person"',
+    "client={client}",
+    "value={value}",
+    "onChange={setValue}",
+    "onPick={pick => …}",
+  ],
+  addresses: [
+    'id="address"',
+    "client={client}",
+    "value={value}",
+    "onChange={setValue}",
+    "onPick={pick => …}",
+  ],
+};
+
+/**
  * What a host writes to get this look on the field for `route`: the props,
  * and the CSS. Each field's layout is its own row's.
  */
@@ -784,11 +812,10 @@ export function exportCode(
   }
   if (state.pageInput) props.push('classNames={{ input: "your-input" }}');
   if (state.unstyled) props.push("unstyled");
-  const component = COMPONENT_OF[route];
-  const tsx =
-    props.length === 0
-      ? `<${component} … />\n// Nothing changed from the defaults.`
-      : `<${component}\n  ${props.join("\n  ")}\n  …\n/>`;
+  const lines = [...REQUIRED_PROPS[route], ...props].join("\n  ");
+  const tsx = `<${COMPONENT_OF[route]}\n  ${lines}\n/>${
+    props.length === 0 ? "\n// Nothing else changed from the defaults." : ""
+  }`;
   const vars = changedVars(state);
   const css =
     vars.length === 0

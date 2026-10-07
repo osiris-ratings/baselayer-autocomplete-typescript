@@ -278,11 +278,12 @@ drawing none), and the markup switches (`classNames`, `unstyled`). Changes apply
 as you make them. A color changed from its preset's carries a reset inside its
 field, which puts back the value the last preset chosen gave it. **Your
 configuration** at the bottom is the code that reproduces the result, in a React
-tab and a CSS tab with a **Copy**: the props that differ from the defaults (the
-`layout` names only the places that differ from the SDK's), for the search
-the form is on, and the CSS
-variables to set. Its **Reset** puts the whole panel back as it opened: the
-Light preset and every default.
+tab and a CSS tab with a **Copy**: the props every host gives (the `id` filled
+in; the client, the value and the handlers left to you), then those that differ
+from the defaults (the `layout` names only the places that differ from the
+SDK's), for the search the form is on, and the CSS variables to set. Its
+**Reset** puts the whole panel back as it opened: the Light preset and every
+default.
 
 ![The styling panel](images/demo-styling.png)
 

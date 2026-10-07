@@ -82,12 +82,21 @@ describe("the People and Addresses tabs' rows", () => {
 });
 
 describe("the exported configuration of a person or an address field", () => {
-  it("names only the component while everything is the default", () => {
+  it("names only the props a host must give while everything is the default", () => {
     expect(exportCode(DEFAULT_STYLE, "people").tsx).toBe(
-      "<PersonAutocomplete … />\n// Nothing changed from the defaults.",
+      [
+        "<PersonAutocomplete",
+        '  id="person"',
+        "  client={client}",
+        "  value={value}",
+        "  onChange={setValue}",
+        "  onPick={pick => …}",
+        "/>",
+        "// Nothing else changed from the defaults.",
+      ].join("\n"),
     );
-    expect(exportCode(DEFAULT_STYLE, "addresses").tsx).toBe(
-      "<AddressAutocomplete … />\n// Nothing changed from the defaults.",
+    expect(exportCode(DEFAULT_STYLE, "addresses").tsx).toContain(
+      '<AddressAutocomplete\n  id="address"\n',
     );
   });
 
@@ -101,7 +110,10 @@ describe("the exported configuration of a person or an address field", () => {
 
     const { tsx } = exportCode(state, "people");
 
-    expect(tsx.startsWith("<PersonAutocomplete\n")).toBe(true);
+    expect(
+      tsx.startsWith('<PersonAutocomplete\n  id="person"\n  client={client}\n'),
+    ).toBe(true);
+    expect(tsx.endsWith("\n/>")).toBe(true);
     expect(tsx).toContain("layout={{\n    headBadge: null,\n  }}");
     expect(tsx).toContain('include={["businesses", "addresses"]}');
     expect(tsx).toContain('pickable={["business", "address"]}');

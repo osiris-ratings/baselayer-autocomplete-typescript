@@ -64,6 +64,26 @@ function everyLayout(): RowLayout[] {
 }
 
 describe("the Styling panel's exported configuration", () => {
+  it("gives the props a host must give, the id filled in, before what changed", () => {
+    expect(exportCode(DEFAULT_STYLE).tsx).toBe(
+      [
+        "<BusinessAutocomplete",
+        '  id="business"',
+        "  client={client}",
+        "  value={value}",
+        "  onChange={setValue}",
+        "  onPick={(suggestion, pick) => …}",
+        "/>",
+        "// Nothing else changed from the defaults.",
+      ].join("\n"),
+    );
+    expect(
+      exportCode({ ...DEFAULT_STYLE, limit: 8 })
+        .tsx.split("\n")
+        .slice(5, 7),
+    ).toEqual(["  onPick={(suggestion, pick) => …}", "  limit={8}"]);
+  });
+
   it("says nothing of the row's layout while every place shows its default", () => {
     expect(exportCode(DEFAULT_STYLE).tsx).not.toContain("layout=");
   });
