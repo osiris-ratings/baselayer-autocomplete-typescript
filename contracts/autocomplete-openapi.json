@@ -11,14 +11,14 @@
             ]
           },
           "line1": {
-            "description": "The number, directions, street name and suffix: `535 Mission St`.",
+            "description": "The number, directions, street name and suffix: `1200 River Rd`.",
             "type": [
               "string",
               "null"
             ]
           },
           "line2": {
-            "description": "The unit, designator and number: `Fl 14`.",
+            "description": "The unit, designator and number: `Ste 300`.",
             "type": [
               "string",
               "null"
@@ -481,6 +481,20 @@
       },
       "RelatedItem": {
         "properties": {
+          "address": {
+            "description": "A business item's lead address, the one its own row leads with; null when the\nfamily has none, and on a person or an address item.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "domicile_state": {
+            "description": "A business item's domicile state; null on a person or an address item.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "label": {
             "type": "string"
           },
@@ -498,8 +512,18 @@
               }
             ]
           },
+          "states": {
+            "description": "A business item's states, listed as its own row lists them; null on a person or\nan address item.",
+            "items": {
+              "type": "string"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "token": {
-            "description": "Opaque handle for this row, sealed the way the suggestion's own `token` is\nand bound to the same organization and fifteen minutes. A business's handle\n(on a person row) is a `business_token` `POST /searches` redeems; nothing\nredeems a person's or an address's handle yet. Null when the autocomplete service cannot\nname the row: its id was unreadable, or it is a kind of row this service\nversion cannot seal yet.",
+            "description": "Opaque handle for this row, sealed the way the suggestion's own `token` is\nand bound to the same organization and fifteen minutes. A business's handle,\non whatever row it is, is a `business_token` `POST /searches` redeems; nothing\nredeems a person's or an address's handle yet. Null when the autocomplete service cannot\nname the row: its id was unreadable, or it is a kind of row this service\nversion cannot seal yet.",
             "type": [
               "string",
               "null"

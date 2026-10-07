@@ -142,8 +142,8 @@ describe("the vendored autocomplete spec", () => {
     expect(schemas.RelatedItem?.properties?.token?.description).toBe(
       [
         "Opaque handle for this row, sealed the way the suggestion's own `token` is",
-        "and bound to the same organization and fifteen minutes. A business's handle",
-        "(on a person row) is a `business_token` `POST /searches` redeems; nothing",
+        "and bound to the same organization and fifteen minutes. A business's handle,",
+        "on whatever row it is, is a `business_token` `POST /searches` redeems; nothing",
         "redeems a person's or an address's handle yet. Null when the autocomplete service cannot",
         "name the row: its id was unreadable, or it is a kind of row this service",
         "version cannot seal yet.",

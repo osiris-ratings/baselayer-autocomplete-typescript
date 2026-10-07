@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -69,6 +72,38 @@ function personRow(businesses: object[], addresses: object[] = []) {
 }
 
 describe("a related business's address, states and domicile", () => {
+  it("are what the contract puts on a related item: nullable, and not required", () => {
+    const relatedItem = (
+      JSON.parse(
+        readFileSync(
+          join(__dirname, "../../contracts/autocomplete-openapi.json"),
+          "utf8",
+        ),
+      ) as {
+        components: {
+          schemas: Record<
+            string,
+            {
+              required?: string[];
+              properties: Record<string, { type?: string | string[] }>;
+            }
+          >;
+        };
+      }
+    ).components.schemas.RelatedItem!;
+
+    expect(relatedItem.properties.address?.type).toEqual(["string", "null"]);
+    expect(relatedItem.properties.states?.type).toEqual(["array", "null"]);
+    expect(relatedItem.properties.domicile_state?.type).toEqual([
+      "string",
+      "null",
+    ]);
+    // Left out of `required`, as `token` and `role` are: absent reads as null.
+    for (const key of ["address", "states", "domicile_state"]) {
+      expect(relatedItem.required).not.toContain(key);
+    }
+  });
+
   it("reads what a business under a person carries", () => {
     const [row] = parseSuggestResponse(
       "people",
