@@ -59,12 +59,10 @@ describe("the filters each route takes", () => {
     );
   });
 
-  it("takes the addresses route's direct state, and nothing else", () => {
-    // The addresses route's contract has not been published yet; this is the
-    // parameter set the service is being built with.
-    expect(FILTER_PARAMS.addresses.map(({ param }) => param)).toEqual([
-      "state",
-    ]);
+  it("takes exactly the addresses route's one filter, its own state", () => {
+    expect(FILTER_PARAMS.addresses.map(({ param }) => param)).toEqual(
+      contractFilters("/autocomplete/addresses"),
+    );
   });
 
   it("names the relation each filter touches, which its route's rows may carry", () => {

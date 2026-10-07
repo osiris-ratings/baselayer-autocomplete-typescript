@@ -1,6 +1,165 @@
 {
   "components": {
     "schemas": {
+      "AddressComponents": {
+        "description": "The parts of an address's label. Each is null when the filing did not carry it.",
+        "properties": {
+          "city": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "line1": {
+            "description": "The number, directions, street name and suffix: `535 Mission St`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "line2": {
+            "description": "The unit, designator and number: `Fl 14`.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "postal_code": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "state": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "AddressRelated": {
+        "properties": {
+          "businesses": {
+            "$ref": "#/components/schemas/RelatedSet",
+            "description": "The businesses filed at the address, the ones filed as their principal or\nmailing address first: each item's `token` is a `business_token`\n`POST /searches` redeems, pinned to this address. `count` is every business."
+          },
+          "people": {
+            "$ref": "#/components/schemas/RelatedSet",
+            "description": "The people who filed from the address, best known first, leaving out a\nregistered agent's company. `count` is everyone who serves a business."
+          }
+        },
+        "required": [
+          "businesses",
+          "people"
+        ],
+        "type": "object"
+      },
+      "AddressSuggestion": {
+        "properties": {
+          "components": {
+            "$ref": "#/components/schemas/AddressComponents"
+          },
+          "highlight": {
+            "items": {
+              "$ref": "#/components/schemas/HighlightPart"
+            },
+            "type": "array"
+          },
+          "label": {
+            "description": "The address as one line, rendered verbatim: the street, then the city, state\nand ZIP.",
+            "type": "string"
+          },
+          "match": {
+            "$ref": "#/components/schemas/MatchGrade"
+          },
+          "matched_name": {
+            "description": "Always null: an address is matched by the label it is shown under.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "related": {
+            "$ref": "#/components/schemas/AddressRelated"
+          },
+          "token": {
+            "description": "Opaque handle for the address, sealed like a business's and bound to the same\norganization and fifteen minutes. Nothing redeems one yet: pick one of the\naddress's businesses instead.",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/EntityType"
+          }
+        },
+        "required": [
+          "type",
+          "token",
+          "label",
+          "match",
+          "components",
+          "highlight",
+          "related"
+        ],
+        "type": "object"
+      },
+      "AddressesResponse": {
+        "description": "`GET /autocomplete/addresses`: the addresses typed text fits, most businesses first,\neach with the businesses filed there. A pick is one of those businesses.",
+        "properties": {
+          "found": {
+            "description": "Addresses matched before `limit`; a floor when `found_capped`.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "found_capped": {
+            "description": "`found` is a floor rather than an exact count.",
+            "type": "boolean"
+          },
+          "query": {
+            "description": "The `q` this answers.",
+            "type": "string"
+          },
+          "sources": {
+            "$ref": "#/components/schemas/AddressesSources"
+          },
+          "suggestions": {
+            "description": "Ordered best-first, at most `limit`.",
+            "items": {
+              "$ref": "#/components/schemas/AddressSuggestion"
+            },
+            "type": "array"
+          },
+          "truncated": {
+            "description": "The search did not finish, so an address that fits may be missing.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "query",
+          "found",
+          "found_capped",
+          "truncated",
+          "sources",
+          "suggestions"
+        ],
+        "type": "object"
+      },
+      "AddressesSources": {
+        "properties": {
+          "businesses": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "people": {
+            "$ref": "#/components/schemas/Source"
+          }
+        },
+        "required": [
+          "businesses",
+          "people"
+        ],
+        "type": "object"
+      },
       "BusinessStructure": {
         "description": "A business's legal structure.",
         "enum": [
@@ -602,7 +761,7 @@
     }
   },
   "info": {
-    "description": "Keystroke typeahead over businesses, and over the people who hold a role on them, served from the read-only SQLite index. Every request carries a session grant minted by `POST /autocomplete/sessions`.",
+    "description": "Keystroke typeahead over businesses, over the people who hold a role on them, and over the addresses they filed, served from the read-only SQLite index. Every request carries a session grant minted by `POST /autocomplete/sessions`.",
     "license": {
       "name": ""
     },
@@ -611,6 +770,137 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/autocomplete/addresses": {
+      "get": {
+        "operationId": "get_addresses",
+        "parameters": [
+          {
+            "description": "An address as it is written: every word but the last matched whole, the last as\nthe start of a word, accents and case ignored, and a street suffix, unit or\ndirection matched in every spelling USPS Publication 28 lists for it (`street`\nfinds `St`). Two or more characters, at most 256.",
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "description": "1\u201320, default 10.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Comma list of `businesses`, `people`; default `businesses`.",
+            "in": "query",
+            "name": "include",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma list of state codes; keeps the addresses in any of them.",
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressesResponse"
+                }
+              }
+            },
+            "description": "Addresses, most businesses first, each with the businesses a pick is made from",
+            "headers": {
+              "Server-Timing": {
+                "description": "total, sqlite, page-cache misses, driver",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Autocomplete-Index": {
+                "description": "`v<schema>-<recipe>-<ingestion id>`, the artifact that answered",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Session missing, invalid or expired: mint one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The session's scope does not reach this route (code 501), or `include` names a relation it leaves out (code 502, `metadata.param`)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationEnvelope"
+                }
+              }
+            },
+            "description": "A parameter is unknown, repeated or invalid, `limit` is past the session's most, or `state` was sent with a query too short to narrow"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Rate limited, the session's request budget is spent, or the session changed its query too many times"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RouteUnservedEnvelope"
+                }
+              }
+            },
+            "description": "This replica cannot answer address search yet: the served index predates it (`metadata.reason` `index_too_old`) or the autocomplete service seals tokens older than version 6 (`token_version_too_old`), with what it has as `current` and the least the route needs as `required`. A 503 with no index served yet, or with every query worker busy, carries an ErrorEnvelope instead."
+          }
+        },
+        "security": [
+          {
+            "autocomplete_session": []
+          }
+        ],
+        "summary": "Find an address, and the businesses filed there.",
+        "tags": [
+          "Autocomplete"
+        ]
+      }
+    },
     "/autocomplete/businesses": {
       "get": {
         "operationId": "get_businesses",

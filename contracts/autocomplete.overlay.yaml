@@ -27,12 +27,14 @@ actions:
           | [`POST /autocomplete/sessions`](#create-a-session) | Your backend | `X-API-Key` |
           | [`GET /autocomplete/businesses`](#search-businesses) | The browser | `X-Autocomplete-Session` |
           | [`GET /autocomplete/people`](#search-people) | The browser | `X-Autocomplete-Session` |
+          | [`GET /autocomplete/addresses`](#search-addresses) | The browser | `X-Autocomplete-Session` |
 
           Every route answers JSON. The mint takes an optional body, a `scope` that narrows what the session may search; the search takes none. Your API key is an application's key from Baselayer, with the `autocomplete.read` permission.
       tags:
         - name: Sessions
         - name: Businesses
         - name: People
+        - name: Addresses
         - name: Errors
           x-traitTag: true
           description: |
@@ -449,5 +451,89 @@ actions:
             const { response } = await client.search(
               "people",
               { q: "dana whit", filters: { business: { state: ["PA"] } } },
+              { signal },
+            );
+
+  - target: $.paths['/autocomplete/addresses'].get
+    description: >-
+      Belongs upstream, in the autocomplete service's OpenAPI annotations: the
+      public description, the Origin header and examples.
+    update:
+      tags: [Addresses]
+      summary: Search addresses
+      description: |
+        The addresses typed text fits, those with the most businesses first, each with the businesses filed there. A business under an address is what a pick spends: its `token` is a `business_token` that `POST /searches` redeems, pinned to that address. The address's own `token` is redeemed nowhere.
+
+        `related.businesses.count` is every business filed at the address, the exact address, suite included; `items` is the first five, those filed there as their principal or mailing address first, each with its `role` there. `state` keeps the addresses in any of those states. Each parameter may appear once, and the session's scope must list the route, and the `businesses` or `people` relation for whatever `include` asks for.
+
+        The route answers CORS as the businesses route does, and counts against the session's `request_budget` on its own.
+      parameters:
+        - name: Origin
+          in: header
+          description: >-
+            Set by the browser. It must equal the origin the session was
+            minted for, or the session is refused with 401 code 28.
+          schema: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                river:
+                  summary: "`1200 river`, one address kept"
+                  value:
+                    query: 1200 river
+                    found: 1
+                    found_capped: false
+                    truncated: false
+                    sources:
+                      businesses: { status: ok }
+                      people: { status: not_requested }
+                    suggestions:
+                      - type: address
+                        token: A2leF7_gomJWvMMtp4…
+                        label: 1200 River Rd, Pittsburgh, PA 15212
+                        matched_name: null
+                        match: strong
+                        components:
+                          line1: 1200 River Rd
+                          line2: null
+                          city: Pittsburgh
+                          state: PA
+                          postal_code: "15212"
+                        related:
+                          businesses:
+                            count: 2
+                            matched: null
+                            truncated: false
+                            items:
+                              - type: business
+                                token: A4uYMdTtN1PuVsmNF8…
+                                label: HARBOR CONCRETE PUMPING CO., INC.
+                                role: principal
+                                matched: false
+                          people:
+                            count: null
+                            matched: null
+                            truncated: false
+                            items: []
+                        highlight:
+                          - { text: "1200", matched: true }
+                          - { text: " ", matched: false }
+                          - { text: River, matched: true }
+                          - { text: " Rd, Pittsburgh, PA 15212", matched: false }
+      x-codeSamples:
+        - lang: shell
+          label: curl
+          source: |-
+            curl -s "https://api.baselayer.com/autocomplete/addresses?q=1200%20river&limit=5" \
+              -H "X-Autocomplete-Session: $SESSION" \
+              -H "Origin: https://app.example.com"
+        - lang: typescript
+          label: SDK
+          source: |-
+            const { response } = await client.search(
+              "addresses",
+              { q: "1200 river", filters: { state: ["PA"] } },
               { signal },
             );

@@ -224,4 +224,40 @@ describe("the closed values on the wire", () => {
       'response.suggestions[0].related.businesses.items[0].type: expected "business"',
     );
   });
+
+  it("reads an address's components as null where the filing did not carry them", () => {
+    const address = {
+      type: "address",
+      token: "tok-address",
+      label: "Pier 9, Erie",
+      matched_name: null,
+      match: "strong",
+      highlight: [{ text: "Pier", matched: true }],
+      components: { line1: "Pier 9", line2: null, city: "Erie" },
+      related: {
+        businesses: { count: 0, matched: null, truncated: false, items: [] },
+        people: { count: null, matched: null, truncated: false, items: [] },
+      },
+    };
+
+    const parsed = parseSuggestResponse("addresses", {
+      query: "pier 9",
+      found: 1,
+      found_capped: false,
+      truncated: false,
+      sources: {
+        businesses: { status: "ok" },
+        people: { status: "not_requested" },
+      },
+      suggestions: [address],
+    });
+
+    expect(parsed.suggestions[0]!.components).toEqual({
+      line1: "Pier 9",
+      line2: null,
+      city: "Erie",
+      state: null,
+      postal_code: null,
+    });
+  });
 });

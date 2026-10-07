@@ -41,7 +41,7 @@ contracts/autocomplete.overlay.yaml  what the specs lack          ─┘
 - The two specs are the ones the API publishes, vendored (see
   [CONTRIBUTING](../CONTRIBUTING.md#contracts)). Every search route the
   autocomplete service's spec carries is documented, each under its own tag
-  (Businesses, People), which the overlay gives it.
+  (Businesses, People, Addresses), which the overlay gives it.
 - The overlay is an OpenAPI Overlay 1.0 holding what the specs do not say
   yet: the `Origin` rule, the refusal codes, examples. Each action says
   where upstream its text belongs; the goal is an empty overlay.

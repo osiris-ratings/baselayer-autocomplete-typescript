@@ -15,7 +15,8 @@
  * value before the autocomplete service sends it. One liberty is kept: the
  * keys the contract leaves out of `required` (`matched_name`,
  * `RelatedItem.token`, `role`, `RelatedSet.count`, `RelatedSet.matched`,
- * `structure`) may be absent as well as null; either reads as null.
+ * `structure`, an address's components) may be absent as well as null;
+ * either reads as null.
  */
 
 import {
@@ -175,12 +176,15 @@ export interface BusinessSuggestion extends SuggestionBase<
 /** A person, with the businesses they hold a role on. A person has no jurisdiction of its own. */
 export type PersonSuggestion = SuggestionBase<"person", "people">;
 
+/** The parts of an address's label; each is null where the filing did not carry it. */
 export interface AddressComponents {
-  line1: string;
+  /** The number, directions, street name and suffix. */
+  line1: string | null;
+  /** The unit: its designator and number. */
   line2: string | null;
-  city: string;
-  state: string;
-  postal_code: string;
+  city: string | null;
+  state: string | null;
+  postal_code: string | null;
 }
 
 /** An address, with the businesses filed at it. */
@@ -377,11 +381,11 @@ function relations<K extends Relation, T>(
 function addressComponents(value: Json, path: string): AddressComponents {
   const o = object(value, path);
   return {
-    line1: string(o.line1, `${path}.line1`),
+    line1: nullable(o.line1, `${path}.line1`, string),
     line2: nullable(o.line2, `${path}.line2`, string),
-    city: string(o.city, `${path}.city`),
-    state: string(o.state, `${path}.state`),
-    postal_code: string(o.postal_code, `${path}.postal_code`),
+    city: nullable(o.city, `${path}.city`, string),
+    state: nullable(o.state, `${path}.state`, string),
+    postal_code: nullable(o.postal_code, `${path}.postal_code`, string),
   };
 }
 

@@ -220,7 +220,9 @@ function rowsFor(
       return SAMPLE_ADDRESSES.filter(
         row =>
           fits(row.label, tokens) &&
-          (states.length === 0 || states.includes(row.components.state)),
+          (states.length === 0 ||
+            (row.components.state !== null &&
+              states.includes(row.components.state))),
       );
     }
   }

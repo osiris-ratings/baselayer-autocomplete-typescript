@@ -91,11 +91,11 @@ cooldown and event works the same on each, and each `RequestEvent` names its
 Every row has `type`, `token`, `label`, `matched_name`, `match`, `related`
 and `highlight`. Each type adds its own fields:
 
-| Type       | Adds                                                           |
-| ---------- | -------------------------------------------------------------- |
-| `business` | `domicile_state`, `states`, `structure`                        |
-| `person`   | nothing: a person has no jurisdiction of its own               |
-| `address`  | `components`: `line1`, `line2`, `city`, `state`, `postal_code` |
+| Type       | Adds                                                                                                        |
+| ---------- | ----------------------------------------------------------------------------------------------------------- |
+| `business` | `domicile_state`, `states`, `structure`                                                                     |
+| `person`   | nothing: a person has no jurisdiction of its own                                                            |
+| `address`  | `components`: `line1`, `line2`, `city`, `state`, `postal_code`, each null where the filing did not carry it |
 
 `related` and `sources` carry one key per relation the route expands. Read
 `sources` before an empty `related` entry: an empty list under a source that

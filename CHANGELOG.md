@@ -72,6 +72,9 @@ this ships as a minor release.
   is fewer, and leave out an `include` member the scope does not grant.
 - `PersonRole` is `RelatedRole`'s `officer` and `agent`; `AddressRole` is
   gone (use `RelatedRole`).
+- Every field of an address's `components` (`line1`, `line2`, `city`,
+  `state`, `postal_code`) is `string | null`: null, or absent, where the
+  filing did not carry it.
 
 ## [0.3.0] - 2026-10-06
 

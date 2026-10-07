@@ -190,6 +190,7 @@ describe("assembleReference", () => {
       "POST /autocomplete/sessions",
       "GET /autocomplete/businesses",
       "GET /autocomplete/people",
+      "GET /autocomplete/addresses",
     ]);
   });
 
