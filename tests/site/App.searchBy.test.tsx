@@ -185,6 +185,35 @@ describe("searching by person or address", () => {
   });
 });
 
+describe("each search's own text and pick", () => {
+  it("keeps a business search's text and pick while a person is searched, and puts them back", async () => {
+    const user = await connect(["businesses", "people", "addresses"]);
+    await user.type(field("demo-business"), "harbor concrete pumping");
+    const [harbor] = await screen.findAllByTestId("business-suggestion");
+    await user.click(harbor!);
+    const pickedName = field("demo-business").value;
+    expect(pickedName).toMatch(/^HARBOR CONCRETE PUMPING/);
+    await waitFor(() => expect(step()).not.toBeNull());
+
+    // Person has its own field, empty, and no pick of its own.
+    await user.click(screen.getByRole("tab", { name: "a person" }));
+    expect(field("demo-person").value).toBe("");
+    await user.type(field("demo-person"), "dana");
+    await screen.findByRole("group", { name: "Dana Whitfield" });
+    await waitFor(() => expect(step()).toBeNull());
+
+    // Back on Business: its text and its pick, as they were.
+    await user.click(screen.getByRole("tab", { name: "a business" }));
+    expect(field("demo-business").value).toBe(pickedName);
+    await waitFor(() => expect(step()).not.toBeNull());
+    expect(step()!.textContent).toContain(pickedName);
+
+    // And Person's own text, as it was left.
+    await user.click(screen.getByRole("tab", { name: "a person" }));
+    expect(field("demo-person").value).toBe("dana");
+  });
+});
+
 describe("a business's row, as Styling sets it", () => {
   it("lists a business's officers and agents, and picks one as the business's, with no search to run", async () => {
     const user = await connect(["businesses", "people", "addresses"]);

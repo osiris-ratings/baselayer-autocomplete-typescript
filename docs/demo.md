@@ -117,7 +117,9 @@ addresses`), a person's first address, and a line for each of its first
 businesses, with the business's address, its states and the role there. Each
 business is a pick. A pick stays where it was made: the field takes the
 person's name or the address, and a line under it names the business picked,
-until you edit the field.
+until you edit the field. Each search keeps its own text and its own pick:
+switching to another and back puts them back as they were, and the search
+switched to shows what was last typed in it, not what the other field held.
 
 ![Searching by person: each person with their first address, their counts and their businesses](images/demo-person.png)
 

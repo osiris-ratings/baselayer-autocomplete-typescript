@@ -380,6 +380,26 @@ function parseStates(text: string): string[] {
     .filter(s => /^[A-Z]{2}$/.test(s));
 }
 
+/** A pick in a search's field, and the business step 03 searches for. */
+interface Picked {
+  /** The business step 03 searches for. */
+  toSearch: PickToSearch;
+  /** What the pick wrote into the field: editing it lets the pick go. */
+  fill: string;
+}
+
+const NO_NAMES: Readonly<Record<Route, string>> = Object.freeze({
+  businesses: "",
+  people: "",
+  addresses: "",
+});
+
+const NO_PICKS: Readonly<Record<Route, Picked | null>> = Object.freeze({
+  businesses: null,
+  people: null,
+  addresses: null,
+});
+
 export function App() {
   const network = useMemo(() => new NetworkLog(), []);
   const entries = useSyncExternalStore(network.subscribe, network.getSnapshot);
@@ -439,13 +459,10 @@ export function App() {
     else if (panel === "styling") switchSide("debug");
   };
   const debugTabsId = useId();
-  const [name, setName] = useState("");
-  const [picked, setPicked] = useState<{
-    /** The business step 03 searches for. */
-    toSearch: PickToSearch;
-    /** What the pick wrote into the field: editing it lets the pick go. */
-    fill: string;
-  } | null>(null);
+  // Each search keeps its own text and its own pick: switching back puts them
+  // back, rather than searching what another search's field held.
+  const [names, setNames] = useState<Record<Route, string>>(NO_NAMES);
+  const [picks, setPicks] = useState<Record<Route, Picked | null>>(NO_PICKS);
   // Which search the field runs.
   const [searchBy, setSearchBy] = useState<Route>("businesses");
   const [person, setPerson] = useState("");
@@ -474,6 +491,12 @@ export function App() {
   const offered: Route[] =
     client === null ? [...ROUTE_NAMES] : offeredRoutes(scope);
   const mode: Route = offered.includes(searchBy) ? searchBy : "businesses";
+  const name = names[mode];
+  const picked = picks[mode];
+  const setName = (value: string) =>
+    setNames(all => ({ ...all, [mode]: value }));
+  const setPicked = (pick: Picked | null) =>
+    setPicks(all => ({ ...all, [mode]: pick }));
   const allowed = new Set(
     allowedFilters(scope, mode).map(({ param }) => param),
   );
@@ -518,8 +541,8 @@ export function App() {
       ...(result.grant !== undefined ? { firstGrant: result.grant } : {}),
     });
     // A pick's token belongs to the organization whose session received it:
-    // after another key, the search for it would be refused.
-    setPicked(null);
+    // after another key, the search for any of them would be refused.
+    setPicks(NO_PICKS);
     setCheck(null);
     setAnnounced(result.message);
     setConnectOpen(false);
@@ -827,7 +850,7 @@ export function App() {
                     value={person}
                     onChange={e => {
                       setPerson(e.target.value);
-                      setPicked(null);
+                      setPicks(NO_PICKS);
                     }}
                     placeholder="dana"
                     autoComplete="off"
@@ -846,7 +869,7 @@ export function App() {
                     value={states}
                     onChange={e => {
                       setStates(e.target.value);
-                      setPicked(null);
+                      setPicks(NO_PICKS);
                     }}
                     placeholder="PA, OH"
                     autoComplete="off"
@@ -859,7 +882,7 @@ export function App() {
                     value={address}
                     onChange={e => {
                       setAddress(e.target.value);
-                      setPicked(null);
+                      setPicks(NO_PICKS);
                     }}
                     placeholder="1200 Tallowmere Rd"
                     autoComplete="off"
