@@ -277,9 +277,10 @@ own line's fields:
 | `addressRole`  | an address, a person | the person's role at it (`bl-ac-role`)                                                   |
 | `personRole`   | a person, an address | the person's role at the address (`bl-ac-role`)                                          |
 
-A line the host enabled (`enabledLines`) is an option: `data-enabled`, and
-`data-highlighted` on the one the keys or the pointer are on. Any other line
-is disabled. A list ends, fainter, in how many it leaves out (`bl-ac-more`:
+Every listed line is an option. One the host enabled (`enabledLines`) has
+`data-enabled`, and `data-highlighted` while the keys or the pointer are on
+it; any other is disabled, `aria-disabled="true"`, and the keys pass over it.
+A list ends, fainter, in how many it leaves out (`bl-ac-more`:
 `messages.moreNotShown`). Groups after the first have a rule above them in
 `--bl-ac-border`. `look` colours them as it does a business's row: the names
 in `titleColor`, addresses, counts and roles in `subtitleColor`, the

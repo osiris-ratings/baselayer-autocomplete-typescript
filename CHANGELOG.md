@@ -65,6 +65,10 @@ release.
   carries `data-entity`, `data-role` and `data-glyph`. `IconSet`, `IconKey`,
   `DEFAULT_ICON_SEGMENTS`, `IconSegmentByRoute` and each kind's segments
   (`BUSINESS_ICON_SEGMENTS`, …).
+- A disabled line is an option marked `aria-disabled`, which a screen reader
+  calls unavailable, the keys pass over and a click does not pick.
+  `isItemDisabled` on `useSuggestionCombobox` does the same for a host's own
+  rows.
 - The line under the field after a pick from a line under a row
   (`bl-ac-selection`, a `GroupedSelection` on the views), the field described
   by it. It names the picked line while the field holds the name the pick put

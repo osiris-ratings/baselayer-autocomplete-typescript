@@ -16,7 +16,6 @@ import {
   drawnLayout,
   formatFound,
   groupedLines,
-  groupedOptions,
   partsFor,
   queryTokens,
   requestFor,
@@ -78,9 +77,12 @@ interface LayoutInputByRoute {
 
 export type { GroupedSelection } from "./selection";
 
-/** An enabled line as the combobox holds it: what it hands, and its name. */
+/**
+ * A line as the combobox holds it: what picking it hands, or null for a
+ * disabled one, which is an option the keys pass over; and its name.
+ */
 interface OptionItem {
-  option: GroupedOption;
+  option: GroupedOption | null;
   label: string;
 }
 
@@ -523,19 +525,28 @@ function GroupedView<R extends GroupedRoute>({
     row,
     lines: groupedLines(row, listed, enabledLines),
   }));
-  const items: OptionItem[] = drawn.flatMap(({ lines }) =>
-    groupedOptions(lines).map(option => ({
-      option,
-      label: optionLabel(option),
-    })),
-  );
+  // Every line is an option, in the order drawn: the head when it is a pick,
+  // and each listed line, enabled or not.
+  const items: OptionItem[] = drawn.flatMap(({ lines }) => [
+    ...(lines.head.option !== null
+      ? [{ option: lines.head.option, label: optionLabel(lines.head.option) }]
+      : []),
+    ...lines.lists.flatMap(list =>
+      list.lines.map(({ item, option }) => ({ option, label: item.label })),
+    ),
+  ]);
   const hasFooter = isSearching || error !== null || roundTripMs !== null;
   const combobox = useSuggestionCombobox({
     id,
     items,
     inputValue: value,
     onInputChange,
-    onPick: item => onSelect(item.option),
+    onPick: item => {
+      if (item.option !== null) {
+        onSelect(item.option);
+      }
+    },
+    isItemDisabled: item => item.option === null,
     hasFooter,
     open,
     rowCount: rows.length,
@@ -707,20 +718,28 @@ function GroupedView<R extends GroupedRoute>({
     name: ReactNode,
     headId: string,
   ) {
-    const index = option === null ? null : optionIndex++;
+    // The head is the group's label, and an option only when it is a pick;
+    // every listed line is an option, a disabled one passed over by the keys.
+    const index = of.line === "head" && option === null ? null : optionIndex++;
     const highlighted = index !== null && combobox.highlightedIndex === index;
     const at = (place: string) =>
       field(layout[place] ?? null, place, of, headId);
     const badge = at(`${of.line}Badge`);
     const trailingBadge = at(`${of.line}TrailingBadge`);
     const trailing = at(`${of.line}Trailing`);
-    // Not a pick: no role in the listbox, which allows only options, and an
-    // id the group's description reads it by.
     const props =
-      option === null || index === null
+      index === null
         ? { role: "presentation", id: `${headId}-${key}` }
         : combobox.getItemProps({
-            item: { option, label: optionLabel(option) },
+            item: {
+              option,
+              label:
+                option !== null
+                  ? optionLabel(option)
+                  : of.line === "head"
+                    ? of.row.label
+                    : of.item.label,
+            },
             index,
           });
     return (
@@ -812,22 +831,14 @@ function GroupedView<R extends GroupedRoute>({
                 drawsField("firstAddress") &&
                 row.related.addresses.items.length > 0;
               const counted = drawsField("counts") && countsText(row) !== null;
-              // What the options do not say, as the lines are drawn: the
-              // head's first address and counts, each line that is not a
-              // pick, and what each list leaves out.
+              // What no option says, as the lines are drawn: the head's first
+              // address and counts, and what each list leaves out.
               const describedBy = [
                 ...(firstAddressShown ? [`${headId}-first-address`] : []),
                 ...(counted ? [`${headId}-count`] : []),
-                ...lines.lists.flatMap(list => [
-                  ...list.lines.flatMap(({ option }, itemIndex) =>
-                    option === null
-                      ? [`${headId}-${list.line}-${itemIndex}`]
-                      : [],
-                  ),
-                  ...(list.notShown > 0
-                    ? [`${headId}-more-${list.relation}`]
-                    : []),
-                ]),
+                ...lines.lists.flatMap(list =>
+                  list.notShown > 0 ? [`${headId}-more-${list.relation}`] : [],
+                ),
               ];
               return (
                 <div

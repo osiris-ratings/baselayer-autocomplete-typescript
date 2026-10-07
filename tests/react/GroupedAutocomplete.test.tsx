@@ -353,6 +353,13 @@ function AddressHost({
   );
 }
 
+/** The options in `element` a pick can land on: those not disabled. */
+function enabledOptions(element: HTMLElement): HTMLElement[] {
+  return within(element)
+    .queryAllByRole("option")
+    .filter(option => option.getAttribute("aria-disabled") !== "true");
+}
+
 /** The lines of a group, by kind, each as its text. */
 function linesOf(group: HTMLElement, line: string): string[] {
   return within(group)
@@ -426,11 +433,7 @@ describe("PersonAutocomplete", () => {
       expect.stringContaining("Unsealed Holdings LLC"),
       expect.stringContaining("Cobalt Tile Supply LLC"),
     ]);
-    expect(
-      within(dana)
-        .getAllByRole("option")
-        .map(option => option.textContent),
-    ).toEqual([
+    expect(enabledOptions(dana).map(option => option.textContent)).toEqual([
       expect.stringContaining("Harbor Concrete Pumping Co., Inc."),
       expect.stringContaining("Cobalt Tile Supply LLC"),
     ]);
@@ -439,60 +442,72 @@ describe("PersonAutocomplete", () => {
     expect(linesOf(dana, "address")).toEqual([]);
   });
 
-  it("describes each group by what only its disabled lines say, for a screen reader", async () => {
+  it("describes each group by its head's first address, its counts and what each list leaves out", async () => {
     const { client } = setup();
     const { dana } = await typeDana(client, {
       list: ["businesses", "addresses"],
     });
 
-    // The options speak for themselves; a screen reader in a listbox moves
-    // from option to option, so the rest is the group's description: the
-    // head's first address and counts, each line that is not a pick, and
-    // what each list leaves out.
-    const description = [
-      "12 Fernhallow Ln, Dover, DE 19901 +2",
-      "9 businesses · 3 addresses",
-      "Unsealed Holdings LLC",
-      "+6 more not shown",
-      "12 Fernhallow Ln, Dover, DE 19901",
-      "9 Ashcombe Ct, Dover, DE 19904",
-      "+1 more not shown",
-    ];
+    // Every line is an option, enabled or not, and speaks for itself; the
+    // group's description is what no option says.
     const described = (dana.getAttribute("aria-describedby") ?? "")
       .split(" ")
       .map(id => document.getElementById(id)?.textContent ?? "");
     expect(described).toEqual([
-      description[0],
-      description[1],
-      expect.stringMatching(/^Unsealed Holdings LLC.*officer$/),
-      description[3],
-      expect.stringMatching(/^12 Fernhallow Ln, Dover, DE 19901.*officer$/),
-      expect.stringMatching(/^9 Ashcombe Ct, Dover, DE 19904.*agent$/),
-      description[6],
+      "12 Fernhallow Ln, Dover, DE 19901 +2",
+      "9 businesses · 3 addresses",
+      "+6 more not shown",
+      "+1 more not shown",
     ]);
     expect(
       screen.getByRole("group", { name: "Danae Ortega" }),
     ).toHaveAccessibleDescription("1 business · 0 addresses");
   });
 
-  it("gives a line that is not a pick no role in the listbox", async () => {
+  it("makes a line that is not a pick a disabled option, and keeps the head the group's label", async () => {
     const { client } = setup();
     const { dana } = await typeDana(client, {
       list: ["businesses", "addresses"],
     });
 
+    expect(within(dana).getByTestId("group-head")).toHaveAttribute(
+      "role",
+      "presentation",
+    );
     const disabled = [
-      within(dana).getByTestId("group-head"),
       within(dana).getAllByTestId("business-line")[1]!,
       ...within(dana).getAllByTestId("address-line"),
     ];
     for (const line of disabled) {
-      expect(line).toHaveAttribute("role", "presentation");
+      expect(line).toHaveAttribute("role", "option");
+      expect(line).toHaveAttribute("aria-disabled", "true");
     }
-    expect(within(dana).getAllByTestId("business-line")[0]).toHaveAttribute(
-      "role",
-      "option",
-    );
+    const [harbor] = within(dana).getAllByTestId("business-line");
+    expect(harbor).toHaveAttribute("role", "option");
+    expect(harbor).not.toHaveAttribute("aria-disabled", "true");
+    // Named by its text, so a screen reader says what it is, and unavailable.
+    expect(
+      within(dana).getByRole("option", { name: /Unsealed Holdings LLC/ }),
+    ).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("picks nothing, and leaves the field as it was, when a disabled line is clicked", async () => {
+    const { client } = setup();
+    const onPick = vi.fn<(pick: BusinessPick) => void>();
+    const onPickEntity = vi.fn<(pick: EntityPick) => void>();
+    const { user, dana } = await typeDana(client, {
+      list: ["businesses", "addresses"],
+      onPick,
+      onPickEntity,
+    });
+
+    await user.click(within(dana).getAllByTestId("address-line")[0]!);
+    await user.click(within(dana).getAllByTestId("business-line")[1]!);
+
+    expect(onPick).not.toHaveBeenCalled();
+    expect(onPickEntity).not.toHaveBeenCalled();
+    expect(screen.getByRole<HTMLInputElement>("combobox").value).toBe("dana");
+    expect(screen.queryByTestId("grouped-selection")).toBeNull();
   });
 
   it("lists a person's addresses when the host includes them, each with the person's role there", async () => {
@@ -506,10 +521,10 @@ describe("PersonAutocomplete", () => {
       "9 Ashcombe Ct, Dover, DE 19904agent",
     ]);
     expect(within(dana).getByText("+1 more not shown")).toBeInTheDocument();
-    // Listed, not enabled: no address is an option.
+    // Listed, not enabled: an address is a disabled option.
     expect(
-      within(dana).queryByRole("option", { name: /12 Fernhallow Ln/ }),
-    ).toBeNull();
+      within(dana).getByRole("option", { name: /12 Fernhallow Ln/ }),
+    ).toHaveAttribute("aria-disabled", "true");
   });
 
   it("moves through the enabled lines only, and picks a business with the person it came through", async () => {
@@ -580,7 +595,7 @@ describe("PersonAutocomplete", () => {
     const { dana } = await typeDana(client, { enabledLines: [] });
 
     expect(within(dana).getAllByTestId("business-line")).toHaveLength(3);
-    expect(screen.queryAllByRole("option")).toHaveLength(0);
+    expect(enabledOptions(document.body)).toHaveLength(0);
   });
 
   it("highlights an enabled line under the pointer, and leaves a disabled one be", async () => {
@@ -609,11 +624,10 @@ describe("PersonAutocomplete", () => {
     });
 
     // The head, then the one address with a token; businesses are disabled.
-    expect(
-      within(dana)
-        .getAllByRole("option")
-        .map(option => option.dataset.testid),
-    ).toEqual(["group-head", "address-line"]);
+    expect(enabledOptions(dana).map(option => option.dataset.testid)).toEqual([
+      "group-head",
+      "address-line",
+    ]);
 
     await user.keyboard("{ArrowDown}{Enter}");
     await user.click(screen.getByRole("combobox"));
@@ -670,7 +684,7 @@ describe("PersonAutocomplete", () => {
     );
     expect(within(dana).queryByTestId("grouped-firstAddress")).toBeNull();
     expect(linesOf(dana, "address")).toEqual([]);
-    expect(within(dana).getAllByRole("option")).toHaveLength(2);
+    expect(enabledOptions(dana)).toHaveLength(2);
   });
 
   it("says the search is out of reach when the session's scope leaves people out", async () => {

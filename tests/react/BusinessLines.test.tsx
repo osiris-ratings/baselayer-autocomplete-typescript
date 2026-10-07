@@ -187,19 +187,37 @@ describe("a business row that lists its officers and addresses", () => {
     expect(within(harbor).getByText("+2 more not shown")).toBeInTheDocument();
   });
 
-  it("keeps the business itself the one option, its head drawn as a row always is", async () => {
-    await typeHarbor({ list: ["people", "addresses"] });
+  it("keeps the business itself the one enabled option, its head drawn as a row always is, its lines disabled options", async () => {
+    const onPick = vi.fn();
+    const onPickEntity = vi.fn<(pick: EntityPick) => void>();
+    const { user } = await typeHarbor({
+      list: ["people", "addresses"],
+      onPick,
+      onPickEntity,
+    });
 
     const harbor = screen.getByRole("group", {
       name: "HARBOR CONCRETE PUMPING CO., INC.",
     });
-    const [head] = within(harbor).getAllByRole("option");
-    expect(within(harbor).getAllByRole("option")).toHaveLength(1);
-    expect(head).toHaveAttribute("data-testid", "business-suggestion");
-    expect(head!.querySelector(".bl-ac-line-title")).not.toBeNull();
-    for (const line of within(harbor).getAllByTestId("person-line")) {
-      expect(line).toHaveAttribute("role", "presentation");
+    const enabled = within(harbor)
+      .getAllByRole("option")
+      .filter(option => option.getAttribute("aria-disabled") !== "true");
+    expect(enabled).toHaveLength(1);
+    expect(enabled[0]).toHaveAttribute("data-testid", "business-suggestion");
+    expect(enabled[0]!.querySelector(".bl-ac-line-title")).not.toBeNull();
+    for (const line of [
+      ...within(harbor).getAllByTestId("person-line"),
+      ...within(harbor).getAllByTestId("address-line"),
+    ]) {
+      expect(line).toHaveAttribute("role", "option");
+      expect(line).toHaveAttribute("aria-disabled", "true");
     }
+
+    // A disabled line clicked picks nothing.
+    await user.click(within(harbor).getAllByTestId("person-line")[0]!);
+    expect(onPick).not.toHaveBeenCalled();
+    expect(onPickEntity).not.toHaveBeenCalled();
+    expect(input().value).toBe("harbor");
   });
 
   it("draws its lines in the list's order, after the business, and the keys follow", async () => {

@@ -224,7 +224,9 @@ theirs. Every name starts with its icon.
 can pick: `business`, and `person` or `address`, whether the line is the row
 itself or one it lists. A line is enabled only when its entity is named and the
 autocomplete service sealed it a token; any other line is disabled: drawn,
-faded, and passed over by the keys. What a pick hands depends on what it is:
+faded, and an option a screen reader calls unavailable (`aria-disabled`),
+which the keys pass over and a click does not pick. What a pick hands depends
+on what it is:
 
 | Picked                                  | Hands                                 |
 | --------------------------------------- | ------------------------------------- |

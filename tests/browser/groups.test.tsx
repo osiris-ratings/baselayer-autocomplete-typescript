@@ -301,10 +301,19 @@ describe("person, address and business groups, to assistive technology", () => {
     it(`break no ARIA rule on ${route}, with disabled lines among the options`, async () => {
       draw(route, 560);
       // Each group lists a disabled line: the businesses are the picks, the
-      // addresses or people listed beside them are not.
+      // addresses or people listed beside them are not. Each is an option a
+      // screen reader names and calls unavailable.
       expect(host.querySelectorAll('[role="option"]').length).toBeGreaterThan(
         0,
       );
+      const disabled = host.querySelectorAll<HTMLElement>(
+        '[role="option"][aria-disabled="true"]',
+      );
+      expect(disabled.length).toBeGreaterThan(0);
+      for (const option of disabled) {
+        expect(option.textContent?.trim()).not.toBe("");
+        expect(option.id).not.toBe("");
+      }
 
       const { violations } = await axe.run(host, {
         // The look's colours are the host's; the structure is the SDK's.

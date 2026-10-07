@@ -301,11 +301,14 @@ const combobox = useSuggestionCombobox({
 ```
 
 Draw each row as a `role="group"` labelled by its name, its lines inside, so
-the arrow keys move from pick to pick and a screen reader hears whose they
-are. A line that is not enabled is plain text, not an option. The hook
-leaves out any relation the session's scope does not grant, and its
-`expanded` says what the shown rows were asked to expand: list only those, as
-above, and a grant that changes while they are on screen draws no empty list.
+the arrow keys move from pick to pick and a screen reader hears whose they are.
+A line that is not enabled is best an option too, disabled, as the styled
+components draw it: give `useSuggestionCombobox` every line as an item and
+`isItemDisabled` for those `groupedLines` hands no option, and a screen reader
+calls it unavailable while the keys pass over it. The hook leaves out any
+relation the session's scope does not grant, and its `expanded` says what the
+shown rows were asked to expand: list only those, as above, and a grant that
+changes while they are on screen draws no empty list.
 
 `useBusinessCombobox` is downshift's combobox with three decisions made: the
 caret never jumps on a mid-word insert, a blur never commits the highlighted

@@ -9,7 +9,6 @@ import {
   drawnLayout,
   drawnRowLayout,
   groupedLines,
-  groupedOptions,
   resolveLayout,
   resolveLook,
   resolveRowLayout,
@@ -56,9 +55,12 @@ import {
 export { STATE_SQUARES } from "./viewParts";
 export type { SlotName } from "./viewParts";
 
-/** A line a row under a group offers: what picking it hands, and its name. */
+/**
+ * A line of a group as the combobox holds it: what picking it hands, or null
+ * for a disabled one, which is an option the keys pass over; and its name.
+ */
 interface OptionItem {
-  option: GroupedOption;
+  option: GroupedOption | null;
   label: string;
 }
 
@@ -472,14 +474,17 @@ export function BusinessAutocompleteView({
   const rowLines = grouped
     ? suggestions.map(row => groupedLines(row, listed, enabledLines))
     : [];
+  // Every line of a group is an option, in the order drawn: the business when
+  // it is a pick, and each listed line, enabled or not.
   const items: (BusinessSuggestion | OptionItem)[] = grouped
-    ? rowLines.flatMap(lines =>
-        groupedOptions(lines).map(option => ({
-          option,
-          label:
-            option.kind === "entity" ? option.pick.label : option.row.label,
-        })),
-      )
+    ? rowLines.flatMap(lines => [
+        ...(lines.head.option !== null
+          ? [{ option: lines.head.option, label: lines.head.option.row.label }]
+          : []),
+        ...lines.lists.flatMap(list =>
+          list.lines.map(({ item, option }) => ({ option, label: item.label })),
+        ),
+      ])
     : suggestions;
   const combobox = useSuggestionCombobox<BusinessSuggestion | OptionItem>({
     id,
@@ -492,12 +497,16 @@ export function BusinessAutocompleteView({
         return;
       }
       const { option } = item;
+      if (option === null) {
+        return;
+      }
       if (option.kind === "row") {
         onSelect(option.row);
       } else if (option.kind === "entity" && option.row.type === "business") {
         onSelectEntity?.(option.pick, option.row);
       }
     },
+    isItemDisabled: item => "option" in item && item.option === null,
     hasFooter,
     open,
     rowCount: suggestions.length,
@@ -565,28 +574,21 @@ export function BusinessAutocompleteView({
   };
   /**
    * An officer's or an address's line under a business: its name, with its
-   * icon where the host asks, and the role at the right. An enabled one is an option; any other is
-   * disabled, read through the group's description.
+   * icon where the host asks, and the role at the right. Every line is an
+   * option; one that is not a pick is disabled, and the keys pass over it.
    */
   const listedLine = (
     line: EntityType,
     related: RelatedItem,
     option: GroupedOption | null,
     key: string,
-    headId: string,
   ) => {
-    const index = option === null ? null : optionIndex++;
-    const props =
-      option === null || index === null
-        ? { role: "presentation", id: `${headId}-${key}` }
-        : combobox.getItemProps({
-            item: {
-              option,
-              label:
-                option.kind === "entity" ? option.pick.label : related.label,
-            },
-            index,
-          });
+    // An option either way: a disabled one is marked so and passed over.
+    const index = optionIndex++;
+    const props = combobox.getItemProps({
+      item: { option, label: related.label },
+      index,
+    });
     const trailingBadge = lineField(`${line}TrailingBadge`, related);
     const trailing = lineField(`${line}Trailing`, related);
     return (
@@ -597,9 +599,7 @@ export function BusinessAutocompleteView({
         data-line={line}
         data-testid={`${line}-line`}
         data-enabled={option !== null ? "true" : undefined}
-        data-highlighted={
-          index !== null && highlightedIndex === index ? "true" : undefined
-        }
+        data-highlighted={highlightedIndex === index ? "true" : undefined}
         data-matched={related.matched ? "true" : undefined}
       >
         <span className={cx("corner", "bl-ac-group-lead")} data-corner="lead">
@@ -700,18 +700,11 @@ export function BusinessAutocompleteView({
                   iconOf={iconOf}
                 />
               );
-              // What the lines that are not picks say, and what each list
-              // leaves out: read as the group's description.
-              const describedBy = lines.lists.flatMap(list => [
-                ...list.lines.flatMap(({ option }, itemIndex) =>
-                  option === null
-                    ? [`${headId}-${list.line}-${itemIndex}`]
-                    : [],
-                ),
-                ...(list.notShown > 0
-                  ? [`${headId}-more-${list.relation}`]
-                  : []),
-              ]);
+              // What each list leaves out, which no option says: read as the
+              // group's description.
+              const describedBy = lines.lists.flatMap(list =>
+                list.notShown > 0 ? [`${headId}-more-${list.relation}`] : [],
+              );
               return (
                 <div
                   key={item.token}
@@ -750,7 +743,6 @@ export function BusinessAutocompleteView({
                           related,
                           option,
                           `${list.line}-${itemIndex}`,
-                          headId,
                         ),
                       )}
                       {list.notShown > 0 && (

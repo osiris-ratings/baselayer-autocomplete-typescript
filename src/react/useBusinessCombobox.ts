@@ -24,6 +24,11 @@ export interface UseSuggestionComboboxOptions<T extends ComboboxItem> {
    */
   rowCount?: number | undefined;
   /**
+   * An item drawn as an option that cannot be picked: the keys pass over it,
+   * the pointer does not highlight it, and a click on it picks nothing.
+   */
+  isItemDisabled?: ((item: T) => boolean) | undefined;
+  /**
    * Hold the menu open whatever focus and Escape do, for a preview. Read
    * alongside downshift's own state rather than controlling it, so letting go
    * leaves downshift where it was.
@@ -84,11 +89,15 @@ export function useSuggestionCombobox<T extends ComboboxItem>({
   hasFooter,
   open = false,
   rowCount,
+  isItemDisabled,
 }: UseSuggestionComboboxOptions<T>): SuggestionCombobox<T> {
   const combobox = useCombobox<T>({
     id,
     items,
     inputValue,
+    ...(isItemDisabled !== undefined
+      ? { isItemDisabled: (item: T) => isItemDisabled(item) }
+      : {}),
     itemToString: item => item?.label ?? "",
     onSelectedItemChange: ({ selectedItem }) => {
       if (selectedItem) {
