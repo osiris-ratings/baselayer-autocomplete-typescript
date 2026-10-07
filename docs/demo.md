@@ -115,6 +115,10 @@ pick goes to the business name, the switch goes back to Business, and
 `via Dana Whitfield` (or the address) shows under the field until you edit
 the name.
 
+![Searching by person: each person with their businesses](images/demo-person.png)
+
+![Searching by address: how many businesses are filed there](images/demo-address.png)
+
 The filters each search can carry, where the session's scope allows them (on
 Business an officer or agent's name, the states the business is registered
 in and an address; on Person the states their businesses are in; on Address
