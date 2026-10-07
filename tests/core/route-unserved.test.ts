@@ -20,8 +20,8 @@ function reply(status: number, body: unknown): ResponseLike {
   };
 }
 
-function clientAnswering(body: unknown) {
-  const fetch = vi.fn<FetchLike>(async () => reply(503, body));
+function clientAnswering(body: unknown, status = 503) {
+  const fetch = vi.fn<FetchLike>(async () => reply(status, body));
   const mint = vi.fn<MintFunction>(async () => ({
     kind: "granted",
     grant: {
@@ -109,5 +109,36 @@ describe("a route the deployment cannot answer yet", () => {
 
     expect(error.kind).toBe("request_failed");
     expect(error.unserved).toBeNull();
+  });
+
+  it.each([500, 403])(
+    "reads only a 503 that way: a %s with the same reason is the failure it is",
+    async status => {
+      const { client } = clientAnswering(
+        {
+          code: status,
+          message: "Not this.",
+          metadata: { reason: "index_too_old", current: 3, required: 4 },
+        },
+        status,
+      );
+
+      const error = await refusal(client.search("people", { q: "dana" }));
+
+      expect(error.kind).toBe("request_failed");
+      expect(error.unserved).toBeNull();
+    },
+  );
+
+  it("reads what it has and needs only as whole numbers", async () => {
+    const { client } = clientAnswering({
+      code: 503,
+      message: "Not yet.",
+      metadata: { reason: "index_too_old", current: 3.5, required: "4" },
+    });
+
+    expect(
+      (await refusal(client.search("people", { q: "dana" }))).unserved,
+    ).toEqual({ reason: "index_too_old", current: null, required: null });
   });
 });
