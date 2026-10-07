@@ -47,21 +47,24 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 /**
  * A scope as the mint answers it (snake_case or camelCase), or null when it is
  * malformed. A route or a relation this build does not know, or one its route's
- * rows never carry, is dropped: dropping one can only narrow the scope.
+ * rows never carry, is dropped, and most rows past `MAX_LIMIT` reads as
+ * `MAX_LIMIT`: either can only narrow the scope.
  */
 export function parseSessionScope(value: unknown): SessionScope | null {
   if (!isRecord(value) || !isRecord(value.routes)) {
     return null;
   }
-  const maxLimit = value.max_limit ?? value.maxLimit;
+  const answeredLimit = value.max_limit ?? value.maxLimit;
   if (
-    typeof maxLimit !== "number" ||
-    !Number.isInteger(maxLimit) ||
-    maxLimit < 1 ||
-    maxLimit > MAX_LIMIT
+    typeof answeredLimit !== "number" ||
+    !Number.isInteger(answeredLimit) ||
+    answeredLimit < 1
   ) {
     return null;
   }
+  // Past what this build knows, it reads as its own most: an API that raised
+  // its cap must narrow an older SDK, never take its typeahead down.
+  const maxLimit = Math.min(answeredLimit, MAX_LIMIT);
   const answered = value.routes;
   const routes: Record<string, readonly Relation[]> = {};
   for (const route of ROUTE_NAMES) {

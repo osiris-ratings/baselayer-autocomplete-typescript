@@ -63,6 +63,17 @@ describe("parseSessionScope", () => {
     });
   });
 
+  it("reads most rows past the SDK's 20 as 20, which can only narrow", () => {
+    // An API that raised its cap must not take down an older SDK's typeahead.
+    expect(
+      parseSessionScope({ routes: { businesses: [] }, max_limit: 50 }),
+    ).toEqual({ routes: { businesses: [] }, maxLimit: 20 });
+    expect(
+      parseSessionScope({ routes: { businesses: [] }, max_limit: 21 })
+        ?.maxLimit,
+    ).toBe(20);
+  });
+
   it.each([
     ["not an object", "everything"],
     ["routes not an object", { routes: ["businesses"], max_limit: 5 }],
@@ -73,7 +84,7 @@ describe("parseSessionScope", () => {
     ["a relation not a string", { routes: { businesses: [3] }, max_limit: 5 }],
     ["no most rows", { routes: { businesses: [] } }],
     ["most rows of 0", { routes: { businesses: [] }, max_limit: 0 }],
-    ["most rows past 20", { routes: { businesses: [] }, max_limit: 21 }],
+    ["a negative most rows", { routes: { businesses: [] }, max_limit: -3 }],
     ["most rows not whole", { routes: { businesses: [] }, max_limit: 2.5 }],
     ["most rows as text", { routes: { businesses: [] }, max_limit: "5" }],
   ])("refuses a scope with %s", (_name, value) => {
@@ -109,9 +120,21 @@ describe("the scope on a grant", () => {
     expect(
       parseMintResponse(201, null, {
         ...GRANT,
-        scope: { routes: {}, max_limit: 99 },
+        scope: { routes: {}, max_limit: 0 },
       }),
     ).toMatchObject({ kind: "refused", status: 201 });
+  });
+
+  it("grants a session whose most rows is past the SDK's, at the SDK's", () => {
+    expect(
+      parseMintResponse(201, null, {
+        ...GRANT,
+        scope: { routes: { businesses: [] }, max_limit: 99 },
+      }),
+    ).toMatchObject({
+      kind: "granted",
+      grant: { scope: { maxLimit: 20 } },
+    });
   });
 
   it("reads a grant without a scope as businesses with people and addresses, and 20", async () => {
