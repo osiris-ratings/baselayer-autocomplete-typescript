@@ -156,9 +156,9 @@ The first `mint` or `mintUrl` is kept for the component's life; a new
 - `onUnavailable({ unavailable })`: called when the deployment stops being
   able to mint (503 code 481), and again when it can; render your plain
   input meanwhile.
-- `list`: what each row lists under it, a line per item: the business's
-  officers and agents (`people`) and its `addresses`. None by default, and
-  each row is the one option it has always been
+- `list`: what each row lists under it, a line per item, in the order given:
+  the business's officers and agents (`people`) and its `addresses`. None by
+  default, and each row is the one option it has always been
   ([A business row's lines](docs/entities.md#a-business-rows-lines)).
 - `enabledLines` (`["business"]`) and `onPickEntity`: which lines can be picked.
   Name `person` or `address` too, and an officer or an address picked goes to

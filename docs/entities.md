@@ -197,7 +197,9 @@ still runs.
 
 Each item of a listed relation is a line under its row, the five the
 autocomplete service sends, and the list ends in how many it leaves out
-(`+2 more not shown`):
+(`+2 more not shown`). The lines are drawn in `list`'s order, after the row's
+own: `list={["addresses", "businesses"]}` on a person draws their addresses
+before their businesses, and the keys move through them in that order.
 
 | Search                 | It can list                                     | Listed by default (`DEFAULT_LIST`) |
 | ---------------------- | ----------------------------------------------- | ---------------------------------- |

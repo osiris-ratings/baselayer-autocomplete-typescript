@@ -198,6 +198,35 @@ describe("a business row that lists its officers and addresses", () => {
     }
   });
 
+  it("draws its lines in the list's order, after the business, and the keys follow", async () => {
+    const { user } = await typeHarbor({
+      list: ["addresses", "people"],
+      enabledLines: ["business", "person", "address"],
+    });
+
+    const harbor = screen.getByRole("group");
+    expect(
+      [...harbor.querySelectorAll<HTMLElement>("[data-line]")].map(
+        line => line.dataset.line,
+      ),
+    ).toEqual(["address", "person", "person"]);
+    const input = screen.getByRole("combobox");
+    const visited: (string | null)[] = [];
+    for (let step = 0; step < 3; step++) {
+      await user.keyboard("{ArrowDown}");
+      const active = document.getElementById(
+        input.getAttribute("aria-activedescendant")!,
+      )!;
+      visited.push(active.getAttribute("data-testid"));
+    }
+    // The business, its address, then the officer with a token.
+    expect(visited).toEqual([
+      "business-suggestion",
+      "address-line",
+      "person-line",
+    ]);
+  });
+
   it("asks for what it lists, though the layout draws none of it", async () => {
     const { fetch } = await typeHarbor({
       list: ["people"],

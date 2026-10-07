@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   ADDRESS_ROW,
+  BUSINESS_ROW,
   PERSON_ROW,
   drawnLayout,
   requestFor,
@@ -118,15 +119,25 @@ describe("requestFor", () => {
     ).toEqual({ list: ["businesses"], include: ["businesses"] });
   });
 
-  it("lists what the host asks for, in the route's order", () => {
+  it("lists what the host asks for, in the host's order and once each, and asks for it as a set", () => {
     expect(
       requestFor("people", resolveLayout(PERSON_ROW), [
         "addresses",
         "businesses",
+        "addresses",
       ]),
     ).toEqual({
-      list: ["businesses", "addresses"],
+      list: ["addresses", "businesses"],
       include: ["businesses", "addresses"],
+    });
+    expect(
+      requestFor("businesses", resolveLayout(BUSINESS_ROW), [
+        "addresses",
+        "people",
+      ]),
+    ).toEqual({
+      list: ["addresses", "people"],
+      include: ["people", "addresses"],
     });
     expect(
       requestFor("addresses", resolveLayout(ADDRESS_ROW), ["people"]),
@@ -162,6 +173,21 @@ describe("requestFor", () => {
           businessesOnly,
         ),
       ).toEqual({ list: ["businesses"], include: ["businesses"] });
+    });
+
+    it("keeps the host's order of what it grants", () => {
+      const both: SessionScope = {
+        routes: { people: ["businesses", "addresses"] },
+        maxLimit: 20,
+      };
+      expect(
+        requestFor(
+          "people",
+          resolveLayout(PERSON_ROW),
+          ["addresses", "businesses"],
+          both,
+        ).list,
+      ).toEqual(["addresses", "businesses"]);
     });
 
     it("drops a listed relation the scope does not grant, rather than failing", () => {

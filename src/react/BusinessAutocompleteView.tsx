@@ -463,8 +463,9 @@ export function BusinessAutocompleteView({
   const hasFooter = isSearching || error !== null || roundTripMs !== null;
   // A row that lists lines under it, or whose business is not itself a pick,
   // is a group of lines; any other is the one option a row has always been.
-  const listed = ROUTES.businesses.includes.filter(relation =>
-    (list ?? []).includes(relation),
+  // In the host's order, each once: the lines are drawn in it.
+  const listed = [...new Set(list ?? [])].filter(relation =>
+    ROUTES.businesses.includes.includes(relation),
   );
   const grouped = listed.length > 0 || !enabledLines.includes("business");
   const rowLines = grouped

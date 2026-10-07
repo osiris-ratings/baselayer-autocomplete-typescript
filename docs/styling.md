@@ -472,13 +472,13 @@ requestFor("people", layout, ["businesses"]);
 ```
 
 `requestFor(route, layout, list, scope)` is what a search's rows need: the
-relations to list (the route's `DEFAULT_LIST` when left out) and what to
-ask the autocomplete service to expand for them and for what the layout
-draws. With a scope, a relation it does not grant is dropped from both. Each
-kind's layout is typed by its own places and fields (`BusinessRowLayoutInput`,
-`PersonRowLayoutInput`, `AddressRowLayoutInput`, and the resolved
-`…RowLayout`); `LayoutOf` and `LayoutInputOf` build them for any kind.
-`ROW_PLACES`, `ROW_FIELDS` and `RowLayout` stay a business row's head.
+relations to list, in the host's order (the route's `DEFAULT_LIST` when left
+out), and what to ask the autocomplete service to expand for them and for what
+the layout draws. With a scope, a relation it does not grant is dropped from
+both. Each kind's layout is typed by its own places and fields
+(`BusinessRowLayoutInput`, `PersonRowLayoutInput`, `AddressRowLayoutInput`, and
+the resolved `…RowLayout`); `LayoutOf` and `LayoutInputOf` build them for any
+kind. `ROW_PLACES`, `ROW_FIELDS` and `RowLayout` stay a business row's head.
 
 ### What matched
 

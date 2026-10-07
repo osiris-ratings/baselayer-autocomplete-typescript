@@ -91,6 +91,11 @@ describe("groupedLines", () => {
     expect(
       groupedLines(jane, ["businesses"]).lists.map(list => list.line),
     ).toEqual(["business"]);
+    expect(
+      groupedLines(jane, ["addresses", "businesses"]).lists.map(
+        list => list.line,
+      ),
+    ).toEqual(["address", "business"]);
   });
 
   it("says how many each list leaves out: its full count past the items shown", () => {

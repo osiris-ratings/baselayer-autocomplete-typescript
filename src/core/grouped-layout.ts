@@ -357,7 +357,8 @@ export interface GroupedRequest<R extends Route> {
  * first address needs their addresses; the head's counts need every relation
  * they count. With a `scope`, a relation it does not grant on the route is
  * dropped from both, and what needs it draws nothing, rather than the search
- * failing. In the route's own order.
+ * failing. `list` keeps the host's order, each relation once, since the
+ * rows draw their lines in it; `include` is a set, in the route's order.
  */
 export function requestFor(
   route: "businesses",
@@ -405,7 +406,9 @@ export function requestFor(
     scope === undefined ? order : (scope.routes[route] ?? []);
   const asked = (relation: Relation) => granted.includes(relation);
   return {
-    list: order.filter(relation => list.includes(relation) && asked(relation)),
+    list: [...new Set(list)].filter(
+      relation => order.includes(relation) && asked(relation),
+    ),
     include: order.filter(relation => needed.has(relation) && asked(relation)),
   } as GroupedRequest<Route>;
 }

@@ -236,12 +236,13 @@ Its state, besides `suggestions`, `isSearching` and `unavailable`:
 
 `useEntityAutocomplete({ relation, query, ... })` is the same hook for any
 route, typed by it. `requestFor(route, layout, list)` says what to ask for: the
-relations listed under each row (`DEFAULT_LIST` when left out), and whatever the
-layout draws besides. `groupedLines(row, list, enabledLines)` turns a row of any
-route into its head and a line per listed item, each with what picking it hands,
-or null where it is disabled; `enabledLines` is `DEFAULT_ENABLED_LINES`,
-businesses, when left out. `groupedOptions(lines)` lists the enabled ones in the
-order they are drawn. Each is a `GroupedOption`:
+relations listed under each row, in the order given (`DEFAULT_LIST` when left
+out), and whatever the layout draws besides. `groupedLines(row, list,
+enabledLines)` turns a row of any route into its head and a line per listed
+item, each with what picking it hands, or null where it is disabled;
+`enabledLines` is `DEFAULT_ENABLED_LINES`, businesses, when left out.
+`groupedOptions(lines)` lists the enabled ones in the order they are drawn.
+Each is a `GroupedOption`:
 
 | `kind`     | What was picked                         | What to do with it                                 |
 | ---------- | --------------------------------------- | -------------------------------------------------- |

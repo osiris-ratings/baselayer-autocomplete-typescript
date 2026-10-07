@@ -1013,6 +1013,72 @@ describe("the selection line", () => {
   });
 });
 
+describe("the order of a row's lines", () => {
+  /** Each line of `group`, top to bottom, by what it draws. */
+  const drawnOrder = (group: HTMLElement) =>
+    [...group.querySelectorAll<HTMLElement>("[data-line]")].map(
+      line => line.dataset.line,
+    );
+  /** What the keys move to, one ArrowDown at a time: each option's line. */
+  async function keyOrder(user: ReturnType<typeof userEvent.setup>, n: number) {
+    const input = screen.getByRole("combobox");
+    const visited: (string | undefined)[] = [];
+    for (let step = 0; step < n; step++) {
+      await user.keyboard("{ArrowDown}");
+      const active = input.getAttribute("aria-activedescendant")!;
+      visited.push(document.getElementById(active)!.dataset.line);
+    }
+    return visited;
+  }
+
+  it("draws a person's lines in the list's order, the head first", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client, {
+      list: ["addresses", "businesses"],
+    });
+
+    expect(drawnOrder(dana)).toEqual([
+      "head",
+      "address",
+      "address",
+      "business",
+      "business",
+      "business",
+    ]);
+  });
+
+  it("moves the keys through a person's lines in the order they are drawn", async () => {
+    const { client } = setup();
+    const { user } = await typeDana(client, {
+      list: ["addresses", "businesses"],
+      enabledLines: ["business", "address"],
+    });
+
+    // The address with a token, then the two businesses with one.
+    expect(await keyOrder(user, 3)).toEqual([
+      "address",
+      "business",
+      "business",
+    ]);
+  });
+
+  it("draws an address's lines in the list's order, the head first", async () => {
+    const { client } = setup();
+    const user = userEvent.setup();
+    render(<AddressHost client={client} list={["people", "businesses"]} />);
+    await user.type(screen.getByRole("combobox"), "45 corvel");
+    const corvel = await screen.findByRole("group", { name: /45 Corvel/ });
+
+    expect(drawnOrder(corvel)).toEqual([
+      "head",
+      "person",
+      "person",
+      "business",
+      "business",
+    ]);
+  });
+});
+
 describe("the icons", () => {
   /** Each icon in `element`: the SDK's glyph, or "host" for a host's own. */
   const glyphsOf = (element: Element) =>

@@ -35,15 +35,16 @@ release.
   the menu: its name with its counts, a person's first address, and a line for
   each business under it with the business's address, states and role, an icon
   before every name. `list` lists a person's addresses or an address's people
-  too, `enabledLines` enables the row itself or the lines it lists, `layout`
-  places each line's fields, as on a business row, and `iconSegments` and
-  `icons` choose the icons. `onPick` hands a `BusinessPick`: `businessToken`,
-  `businessName`, `pickedAt`, `expiresAt`, and `through`, the person or address
-  it was reached by with the business's role there; `onPickEntity` hands an
-  `EntityPick` for a person or an address. A pick puts the row's own name in the
-  field, and a pick from a line under the row draws a line under the field
-  naming it until the next edit (`showSelection`). `PersonAutocompleteView` and
-  `AddressAutocompleteView` draw the same rows from state a host supplies.
+  too, drawn in its order, `enabledLines` enables the row itself or the lines it
+  lists, `layout` places each line's fields, as on a business row, and
+  `iconSegments` and `icons` choose the icons. `onPick` hands a `BusinessPick`:
+  `businessToken`, `businessName`, `pickedAt`, `expiresAt`, and `through`, the
+  person or address it was reached by with the business's role there;
+  `onPickEntity` hands an `EntityPick` for a person or an address. A pick puts
+  the row's own name in the field, and a pick from a line under the row draws a
+  line under the field naming it until the next edit (`showSelection`).
+  `PersonAutocompleteView` and `AddressAutocompleteView` draw the same rows from
+  state a host supplies.
 - `list`, `enabledLines`, `onPickEntity`, `icons`, `iconSegments` and
   `showSelection` on `BusinessAutocomplete`: a business row can list its
   officers and agents and its addresses, a line each with the role. Such a row
@@ -83,7 +84,7 @@ release.
   `ROW_PLACES`, `ROW_FIELDS` and `RowLayout` are a business row's head, as they
   always were.
 - `DEFAULT_LIST` and `requestFor(route, layout, list, scope)`: what any
-  search's rows list, and what to ask for them.
+  search's rows list, in the host's order, and what to ask for them.
 - `groupedLines(row, list, enabledLines)` and `groupedOptions(lines)`: any row's
   lines, and what each enabled one hands, a `GroupedOption` of kind `row` (a
   business row's own head), `business` (a business under a person or an address)
