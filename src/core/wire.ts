@@ -160,7 +160,7 @@ export interface BusinessSuggestion extends SuggestionBase<
   structure: BusinessStructure | null;
 }
 
-/** Not served yet: the working specification's row. A person has no jurisdiction of its own. */
+/** A person, with the businesses they hold a role on. A person has no jurisdiction of its own. */
 export type PersonSuggestion = SuggestionBase<"person", "people">;
 
 export interface AddressComponents {
@@ -171,7 +171,7 @@ export interface AddressComponents {
   postal_code: string;
 }
 
-/** Not served yet: the working specification's row. */
+/** An address, with the businesses filed at it. */
 export interface AddressSuggestion extends SuggestionBase<
   "address",
   "addresses"

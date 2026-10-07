@@ -160,8 +160,9 @@ export interface AutocompleteClient {
   ): Promise<SuggestResult>;
   /**
    * Suggestions for one keystroke on any route, recovering at most once. One
-   * session serves every route; its budget is counted per route by the
-   * autocomplete service. Only `businesses` is served today.
+   * session serves every route its scope allows; its budget is counted per
+   * route by the autocomplete service. A route, an `include` member or a
+   * filter the scope leaves out is refused before anything is sent.
    */
   search<R extends Relation>(
     relation: R,

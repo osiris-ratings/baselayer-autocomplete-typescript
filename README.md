@@ -6,8 +6,8 @@ canonical entity already linked to the entities around it: a business
 arrives with its registered states, officers, agents and addresses, and a
 `business_token` that pins your Baselayer search to exactly that business.
 
-It searches businesses today; people and addresses are coming, each linked to
-the rest.
+It finds a business three ways: by its name, by a person who holds a role on
+it, or by an address it is filed at. Whichever way, the pick is a business.
 
 > **Pre-release.** Until 1.0, a breaking change bumps the minor version.
 > 1.0 freezes the API.
@@ -16,8 +16,9 @@ the rest.
 
 - **Framework-free core** (`@baselayer-sdk/autocomplete`): sessions, refresh,
   backoff, and every refusal the API can answer, handled for you.
-- **React** (`@baselayer-sdk/autocomplete/react`): headless hooks, and a styled
-  component that is ready out of the box and can be restyled end to end.
+- **React** (`@baselayer-sdk/autocomplete/react`): headless hooks, and styled
+  components, `BusinessAutocomplete`, `PersonAutocomplete` and
+  `AddressAutocomplete`, ready out of the box and restyled end to end.
 - **Server helper** (`@baselayer-sdk/autocomplete/server`): the one endpoint
   your backend adds, so your API key never reaches a browser.
 
@@ -191,13 +192,25 @@ when the visitor narrowed by an officer, an address or a state (see
 [What matched](docs/styling.md#what-matched)); `[]` for a pick the name alone
 reached.
 
+`PersonAutocomplete` and `AddressAutocomplete` find the business through a
+person or an address. Each person or address in the menu comes with how many
+businesses it leads to and the first of them, and a pick is one of those
+businesses: `onPick` hands you a `BusinessPick` with the same
+`businessToken`, the `businessName` for your name field, and `through`, the
+person or address it was reached by. See
+[Businesses, people and addresses](docs/entities.md).
+
+A session searches what its scope allows, which your mint endpoint can narrow
+(see [Narrowing a session](docs/mint-endpoint.md#narrowing-a-session)), and
+the SDK never asks for anything outside it.
+
 ## Documentation
 
 - [Mint endpoint contract](docs/mint-endpoint.md): the three rules, and
   examples for Next.js, Express and curl
 - [Headless use](docs/headless.md): the hooks, and the core without React
-- [Entities beyond businesses](docs/entities.md): people and addresses, the
-  routes to come, and `search`
+- [Businesses, people and addresses](docs/entities.md): the three routes,
+  what a session may search, and `search`
 - [Styling](docs/styling.md): CSS variables, class names, render props,
   `unstyled`
 - [Error states](docs/error-states.md): what the SDK does with every answer
@@ -217,6 +230,7 @@ pnpm lint
 pnpm build         # dist/ with ESM, CJS and type declarations
 pnpm site          # the site on http://localhost:3000
 pnpm demo          # the same, opened on the demo, forwarding to production
+DEMO_API=sample pnpm demo   # the demo on made-up data, with no network
 ```
 
 Releases are tags; see [CONTRIBUTING.md](CONTRIBUTING.md).

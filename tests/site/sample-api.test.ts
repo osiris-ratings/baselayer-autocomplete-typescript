@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -244,5 +247,19 @@ describe("what the made-up API does not answer", () => {
         { routes: ALL },
       ),
     ).toBeNull();
+  });
+});
+
+describe("the made-up API in the dev server", () => {
+  it("is served only by `pnpm demo`, never in a build, and only under DEMO_API=sample", () => {
+    const config = readFileSync(
+      join(__dirname, "../../site/vite.config.ts"),
+      "utf8",
+    );
+    const plugin = config.slice(config.indexOf("function sampleApi(): Plugin"));
+
+    expect(plugin).toContain('apply: "serve"');
+    expect(plugin).toContain("if (!sampleMode) return;");
+    expect(config).toContain('const sampleMode = demoApi === "sample";');
   });
 });

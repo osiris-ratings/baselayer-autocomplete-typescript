@@ -1,8 +1,8 @@
 # Live demo
 
-The demo is the styled component against your own Baselayer account. You
-connect, type a business name with any filters, run the search a pick leads
-to, and restyle the component. Beside it, folded away until you want it, is
+The demo is the styled components against your own Baselayer account. You
+connect, find a business by its name, through a person or through an
+address, run the search a pick leads to, and restyle the component. Beside it, folded away until you want it, is
 what the SDK did about it: the session, every request on a network timeline
 with its timing and size, and the SDK's own log.
 
@@ -52,8 +52,9 @@ backs off (`retry in m:ss`) or once it is `unavailable`. It reads `idle` until
 the component takes its first session (on the first keystroke, by default).
 When a session lapses the connection stays, since the next search mints a new
 one, and until then the line reads `renews on the next search`. Open Connect
-again to change anything. Run locally, the page starts on **Production,
-through this dev server**.
+again to change anything. Run locally, the page starts on the dev server,
+named by what it stands in front of: **Production, through this dev server**,
+the host `DEMO_API` names, or **Made-up data, from this dev server**.
 
 The page mints for itself, the way your backend would. The key stays in the
 tab's memory, is sent only to the API host you picked (or to the local dev
@@ -65,9 +66,8 @@ it to the component as its first: the test costs nothing the component's own
 first mint (on the first keystroke, by default) would not have. On the
 published page this needs the API to accept the demo's origin.
 
-Every session is a real session on your organization's pool, and the key must
-belong to a production application: sessions are not minted for a sandbox
-application.
+Every session is a real session on your organization's pool. The session's
+scope, which the mint answers, decides which searches the form offers.
 
 ## Running it locally
 
@@ -89,16 +89,36 @@ The session stays bound to the page. The mint's POST carries the page's
 origin without one, is given the origin it came to. Point the forwarding at
 another API with `DEMO_API=https://… pnpm demo`.
 
+`DEMO_API=sample pnpm demo` needs no network and no key: the dev server
+answers every call itself, from the made-up businesses, people and addresses
+in `site/demo/sample.ts`. Any key applies, and its sessions may search every
+route; `DEMO_SCOPE=businesses,people` (a comma list of routes) narrows them,
+and a route outside it is refused as the autocomplete service refuses it. A
+pick runs a made-up search of that business, with the person or address it
+was found through on it, as the API records them. Nothing of it reaches a
+build.
+
 **Production (api.baselayer.com)** makes the calls from the browser, as the
 published page does, which the API admits only from the published page's
 origin. For another environment, pick **Custom URL** and give its API host.
 
 ## The test form
 
-**02 Try autocomplete here** is the component on a form of its own. The
-business name is always there; its suggestions open beneath it. The filters it
-can carry (an officer or agent's name, the states the business is registered
-in, an address) fold away behind **Add filters**, beside the title, which
+**02 Try autocomplete here** is the component on a form of its own. Above
+the field, **Business · Person · Address** says what it searches for,
+offering only the searches the session's scope allows; before you connect it
+offers all three, so Styling can show each. Business is the business name and
+its suggestions. Person and Address find the business another way: each
+person or address that fits comes with how many businesses it leads to
+(`412 businesses here`) and the first of them, and each business is a pick. A
+pick goes to the business name, the switch goes back to Business, and
+`via Dana Whitfield` (or the address) shows under the field until you edit
+the name.
+
+The filters each search can carry, where the session's scope allows them (on
+Business an officer or agent's name, the states the business is registered
+in and an address; on Person the states their businesses are in; on Address
+the address's own state), fold away behind **Add filters**, beside the title, which
 counts the ones set; they sit side by side, and stack on a narrow pane. The SDK
 holds them back until the business name (not the officer's) has as many
 characters as the session's `filter_min_stem` asks for, which the hint above the
@@ -114,7 +134,8 @@ flag. Pick a row and the next step appears under the form.
 
 **03 Run a business search** is the search the pick belongs in, and the page
 has no such step until you pick a row. Then the card names the business, says
-where it is domiciled and registered, and counts down the token's 15 minutes.
+where it is domiciled and registered (or the person or address it was found
+through), and counts down the token's 15 minutes.
 **See the request body** folds out the `POST /searches` the pick belongs in,
 with the token cut short; **Run business search** sends it with the token alone
 (the API takes the name and address from it, and refuses it beside either), and
@@ -148,7 +169,10 @@ watchlists it was screened against. **How it matched** sets what your pick
 matched against what the search found, a row for the name (the name it goes by,
 when you matched one), the officer, the address and the states: the address is
 the one on file that matched, not the business's primary, and the states are
-those you filtered by against those the business is in. What you typed is
+those you filtered by against those the business is in. A business picked
+through a person has that person as its officer, and one picked through an
+address that address, as the API records them from the token, and a line
+under the table says whose businesses it was picked from. What you typed is
 underlined in green where it matched, as the typeahead's rows underline it, but
 the whole of the name, officer or address it reached rather than the letters
 typed (`baselaye` underlines all of `Baselayer`, and `353 mission street` all of
@@ -194,7 +218,8 @@ for (five by default, eight at most), that carry every field of a row
 overflow, a spread of structures, one on a name with no suffix and one not
 known, an address, officers with a +N, a registered agent, the count), so
 every knob can be judged before a keystroke; type a name and the real rows
-take their place. The rows pretend "harbor concr" was typed, one word in full
+take their place. On Person and Address the made-up rows are people and
+addresses, each with its businesses, as many as Rows asks for. The rows pretend "harbor concr" was typed, one word in full
 and the next only begun, so the region shows its difference: whole word
 highlights CONCRETE, typed characters only its CONCR.
 
@@ -269,8 +294,8 @@ dot; and **SDK log**, counting its entries. What a tab holds scrolls inside
 the card.
 
 Network is the timeline of every request the page made: when it started,
-whether it was a mint (`mint`), a query (`autocomplete`, with the query and any
-filters), a call of the search step (`search`: its `POST /searches` and the
+whether it was a mint (`mint`), a query (named by its route, `businesses`,
+`people` or `addresses`, with the query and any filters), a call of the search step (`search`: its `POST /searches` and the
 questions after it) or another call (`http`), its status, the size of the
 body, and how long it took. It draws the last 60, under a line that counts
 the requests, the mints, the aborted ones and the bytes, beside a **Clear**.
@@ -287,5 +312,5 @@ the index that answered. Under those, what the session's token says beyond
 them: the origin it is bound to, how many characters of the name the officer,
 state and address filters wait for, and how often the name can be replaced by
 another before the autocomplete service wants a new session. SDK log is the
-SDK's own account of every mint, request, recovery and change of phase, newest
-first and the last 80 kept, with a **Clear** of its own.
+SDK's own account of every mint, request (led by its route), recovery and
+change of phase, newest first and the last 80 kept, with a **Clear** of its own.

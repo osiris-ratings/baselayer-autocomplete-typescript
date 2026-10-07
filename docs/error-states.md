@@ -33,7 +33,10 @@ silent until the floor has passed and the next mint is refused. The
 component prewarms on the first character by default
 (`mintOn: "keystroke"`), or on focus with `"focus"`; with `"request"` the
 first request's mint is the one refused, and it is shown. A 403 with code 37
-means autocomplete is not enabled for your organization.
+means autocomplete is not enabled for your organization. A 403 with code 501
+or 502 means the `scope` your backend asked for names a route, or a relation
+on one, your organization may not reach, and a 422 that it is malformed (see
+[narrowing a session](mint-endpoint.md#narrowing-a-session)).
 
 ## Asking the autocomplete service
 
@@ -44,6 +47,8 @@ means autocomplete is not enabled for your organization.
 | 429, code 480 (budget spent)         | re-mint once, replay                     | nothing                             |
 | 429, code 482 (too many pivots)      | re-mint once, replay                     | nothing                             |
 | 429, `rate_limited`                  | wait `Retry-After` (at most 2 s), replay | nothing                             |
+| 403, code 501 (route out of scope)   | none                                     | `outOfScope`                        |
+| 403, code 502 (relation out of it)   | none                                     | `outOfScope`                        |
 | 422                                  | none                                     | the validation message              |
 | 503                                  | none                                     | the autocomplete service's message  |
 | 500, 504                             | none                                     | "Autocomplete unavailable (HTTP n)" |
@@ -51,7 +56,17 @@ means autocomplete is not enabled for your organization.
 | a 2xx whose body is not the contract | none                                     | "Autocomplete unavailable"          |
 
 Every answer with no recovery rejects with `kind: "request_failed"`, except
-a 2xx whose body is not the contract, which rejects with `kind: "contract"`.
+a 403 with code 501 or 502, which rejects with `kind: "out_of_scope"`, and a
+2xx whose body is not the contract, which rejects with `kind: "contract"`.
+`out_of_scope` is never retried and never re-minted: a new session has the
+same scope. The client refuses what it can tell is out of scope before it
+sends anything (below), so the 403 means the session and the request
+disagree with the autocomplete service.
+
+A 503 on the people or the addresses route whose `metadata.reason` is
+`index_too_old` or `token_version_too_old` means the deployment does not
+serve that route yet: the index it serves, or the tokens it seals, predate
+it. Searching businesses still works.
 A `request_failed` carries the answer's `status` (0 for the network),
 `code`, `reason`, `userMessage` and `retryAfterMs`. The footer shows
 `userMessage` when the answer had one, else `httpFallback(status)`, and
@@ -76,6 +91,9 @@ means your backend did not forward the page's `Origin` (see
 | `q` under 2 characters once trimmed and stripped of `% _ * ?` | `query_invalid`, nothing sent or shown |
 | `q` over 256 characters once trimmed                          | `query_invalid`, nothing sent or shown |
 | `limit` not an integer from 1 to 20                           | `query_invalid`, nothing sent or shown |
+| `limit` past the session's `scope.maxLimit`                   | `query_invalid`, nothing sent or shown |
+| a route the session's scope leaves out                        | `out_of_scope`, nothing sent           |
+| an `include` member or a filter on a relation it leaves out   | `out_of_scope`, nothing sent           |
 | filters on a name shorter than the session's stem             | filters held back                      |
 | a newer keystroke                                             | the older request is aborted           |
 
@@ -111,6 +129,9 @@ second bundled copy of the core. Beside `kind` and `message` it carries:
 | `scope`        | on a mint's 429, the pool that refused: `"window"` or `"day"` (`MintScope`)                                            |
 | `retryAfterMs` | ms until the next mint may be tried (`mint_backoff`, `mint_refused`), or the answer's `Retry-After` (`request_failed`) |
 | `userMessage`  | the answer's own message, or its validation message                                                                    |
+| `route`        | on `out_of_scope`, the route asked                                                                                     |
+| `relation`     | on `out_of_scope`, the relation the scope leaves out; null when it leaves out the route                                |
+| `param`        | on `out_of_scope`, the parameter that touched it: `include` or a filter's name                                         |
 
 A field that does not apply is `null`.
 
@@ -118,19 +139,27 @@ A field that does not apply is `null`.
 
 All of them are overridable through `messages`:
 
-| Key                    | Default                                                                                  |
-| ---------------------- | ---------------------------------------------------------------------------------------- |
-| `searching`            | Searching…                                                                               |
-| `truncatedNoRows`      | Still searching — add a word to narrow it down                                           |
-| `truncatedRows`        | Showing partial results — add a word to narrow it down                                   |
-| `match`, `matches`     | match, matches                                                                           |
-| `noAddress`            | No address on file                                                                       |
-| `agentSuffix`          | a space, then `· agent`                                                                  |
-| `officerAddressSuffix` | a space, then `· officer's address`, after an address an address filter matched          |
-| `agentAddressSuffix`   | a space, then `· agent's address`                                                        |
-| `more(n)`              | `+n`                                                                                     |
-| `structures`           | each structure's flag, one value at a time ([the flags](styling.md#the-structures-flag)) |
-| `dayLimit`             | Your plan's daily autocomplete limit is reached; suggestions return tomorrow.            |
-| `unavailable`          | Autocomplete unavailable                                                                 |
-| `authUnavailable`      | Autocomplete unavailable: the session could not be verified                              |
-| `httpFallback(status)` | Autocomplete unavailable (HTTP status)                                                   |
+| Key                      | Default                                                                                                         |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `searching`              | Searching…                                                                                                      |
+| `truncatedNoRows`        | Still searching — add a word to narrow it down                                                                  |
+| `truncatedRows`          | Showing partial results — add a word to narrow it down                                                          |
+| `match`, `matches`       | match, matches                                                                                                  |
+| `noAddress`              | No address on file                                                                                              |
+| `agentSuffix`            | a space, then `· agent`                                                                                         |
+| `officerAddressSuffix`   | a space, then `· officer's address`, after an address an address filter matched                                 |
+| `agentAddressSuffix`     | a space, then `· agent's address`                                                                               |
+| `more(n)`                | `+n`                                                                                                            |
+| `structures`             | each structure's flag, one value at a time ([the flags](styling.md#the-structures-flag))                        |
+| `dayLimit`               | Your plan's daily autocomplete limit is reached; suggestions return tomorrow.                                   |
+| `unavailable`            | Autocomplete unavailable                                                                                        |
+| `authUnavailable`        | Autocomplete unavailable: the session could not be verified                                                     |
+| `httpFallback(status)`   | Autocomplete unavailable (HTTP status)                                                                          |
+| `outOfScope`             | This search is not available here                                                                               |
+| `person`, `people`       | person, people: the people search's footer                                                                      |
+| `address`, `addresses`   | address, addresses: the address search's footer                                                                 |
+| `businessesOfPerson(n)`  | `n businesses` beside a person (`1 business`)                                                                   |
+| `businessesAtAddress(n)` | `n businesses here` beside an address (`1 business here`)                                                       |
+| `moreBusinesses(n)`      | `+n more not shown`, under a person's or an address's businesses                                                |
+| `personBusinessRoles`    | a business's role under a person: `officer`, `agent`                                                            |
+| `addressBusinessRoles`   | how a business holds an address: `principal office`, `mailing address`, `registered agent`, `officer's address` |

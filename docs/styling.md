@@ -6,8 +6,12 @@ Import the stylesheet once:
 import "@baselayer-sdk/autocomplete/react/styles.css";
 ```
 
-The stylesheet gives the component a complete look out of the box. Four
-levers change it, from the lightest to the heaviest.
+The stylesheet gives the components a complete look out of the box. Four
+levers change it, from the lightest to the heaviest, and each works the same
+on `BusinessAutocomplete`, `PersonAutocomplete` and `AddressAutocomplete`.
+The row's places and fields (section 5) are the business row's; a person's or
+an address's row has the fixed shape under
+[Person and address rows](#person-and-address-rows).
 
 ## 1. `look`
 
@@ -140,8 +144,10 @@ Every element has a `bl-ac-*` class, and `classNames` adds yours per slot:
 `root`, `label`, `input`, `menu`, `list`, `row`, `titleLine`, `title`,
 `nameGroup`, `name`, `also`, `mark`, `structure`, `states`, `state`,
 `moreStates`, `subtitleLine`, `corner`, `address`, `people`, `footer`,
-`count`, `debug`. The title holds the name group (the name and the badge
-pinned to its end) and `also …`; each line's other corners are `corner`.
+`count`, `debug`, and on a person's or an address's row `group`,
+`groupHead`, `groupCount`, `option`, `optionName`, `role`, `more`. The title
+holds the name group (the name and the badge pinned to its end) and
+`also …`; each line's other corners are `corner`.
 
 Each slot's class is `bl-ac-` and the slot's name in kebab case (`moreStates`
 is `bl-ac-more-states`), except `root`, which is `bl-ac`, and the two lines:
@@ -202,6 +208,24 @@ element with `data-testid="autocomplete-menu"`.
 
 Past that, drop the component and build on the hooks: see
 [Headless use](headless.md).
+
+### Person and address rows
+
+A person or an address is a group in the menu (`bl-ac-group`,
+`role="group"`, labelled by its name). Its head (`bl-ac-group-head`) is the
+name, drawn as a business's is, with the same marks under the same
+emphasis (`bl-ac-name`), and at the right how many businesses it leads to
+(`bl-ac-group-count`: `messages.businessesOfPerson`,
+`messages.businessesAtAddress`). Below it, indented, are its businesses, the
+options (`bl-ac-option`, `data-highlighted` on the one the keys are on,
+`data-matched` on one a filter matched): each one's name
+(`bl-ac-option-name`) and at the right its role there (`bl-ac-role`:
+`messages.personBusinessRoles`, `messages.addressBusinessRoles`). Last,
+fainter, how many the row leaves out (`bl-ac-more`:
+`messages.moreBusinesses`). Groups after the first have a rule above them in
+`--bl-ac-border`. `look` colours them as it does a business's row: the name
+in `titleColor`, the counts, roles and the line below in `subtitleColor`,
+the highlighted option on `--bl-ac-highlight-bg`.
 
 ## 5. A row's places and fields
 

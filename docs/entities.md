@@ -1,20 +1,59 @@
-# Entities beyond businesses
+# Businesses, people and addresses
 
-Autocomplete grows by entity. Each entity type has its own route, its own
-row, and its own set of related entities; every route answers the same
-envelope and the same base row. Businesses is served today. People and
-addresses are the ones to come, and the SDK already carries their shapes, so
-a route going live does not change the shape of your code.
+Autocomplete finds a company three ways: by its name, by a person who holds
+a role on it, or by an address it is filed at. Each is its own route, with
+its own row and its own related entities, and every route answers the same
+envelope and the same base row. Whichever route a row comes from, a pick is a
+business: the token a search redeems.
 
-| Route                      | Row type             | Relations it expands  | Default `include` | Served  |
-| -------------------------- | -------------------- | --------------------- | ----------------- | ------- |
-| `/autocomplete/businesses` | `BusinessSuggestion` | people, addresses     | people, addresses | yes     |
-| `/autocomplete/people`     | `PersonSuggestion`   | businesses, addresses | businesses        | not yet |
-| `/autocomplete/addresses`  | `AddressSuggestion`  | businesses, people    | businesses        | not yet |
+| Route                      | Row type             | Relations it expands  | Default `include` |
+| -------------------------- | -------------------- | --------------------- | ----------------- |
+| `/autocomplete/businesses` | `BusinessSuggestion` | people, addresses     | people, addresses |
+| `/autocomplete/people`     | `PersonSuggestion`   | businesses, addresses | businesses        |
+| `/autocomplete/addresses`  | `AddressSuggestion`  | businesses, people    | businesses        |
 
-The table is `ROUTES` in the core, with each route's default `include`. The
-shapes of the routes not served yet are Baselayer's working specification
-and may still move; businesses is the shipped contract.
+The table is `ROUTES` in the core. `ROUTE_NAMES`, `RELATIONS` and
+`LEGAL_RELATIONS` (which relations each route's rows carry) are the session
+scope's names, and the SDK's tests pin them to the API's own.
+
+## What a session may search
+
+Every session has a scope: the routes it may query, the relations a request
+on each may include or filter by, and the most rows a request may ask for.
+The mint answers it with the grant (`grant.scope`), and the autocomplete
+service refuses anything outside it, so the SDK never sends what the scope
+leaves out. Your backend can narrow it when it mints, so that a session
+leaked from the page can do no more than you need
+([the mint endpoint](mint-endpoint.md#narrowing-a-session)).
+
+```ts
+const { scope } = await client.getSession();
+// { routes: { businesses: ["addresses", "people"], people: [...] }, maxLimit: 20 }
+
+offeredRoutes(scope); // ["businesses", "people"]: the searches to offer
+allowedFilters(scope, "businesses"); // the filter parameters a request may send
+```
+
+`offeredRoutes` lists businesses, and people or addresses only where the
+scope grants their businesses, since a pick from either row is one of them.
+Offer a search only where it is listed. A grant from an API that answers no
+scope reads as `DEFAULT_SESSION_SCOPE`: businesses with people and
+addresses, and 20 rows.
+
+What the client does with a request the scope leaves out:
+
+| The request asks for            | What happens                                                 |
+| ------------------------------- | ------------------------------------------------------------ |
+| A route outside the scope       | `out_of_scope` before it is sent; nothing is counted         |
+| An `include` member outside it  | `out_of_scope` before it is sent                             |
+| A filter on a relation outside  | `out_of_scope` before it is sent                             |
+| A `limit` past `scope.maxLimit` | `query_invalid` before it is sent                            |
+| No `limit`                      | Left to the autocomplete service: 10, or the most if fewer   |
+| Anything the service still 403s | `out_of_scope` (code 501 or 502), never retried or re-minted |
+
+The hooks and components stay inside the scope on their own: they leave out
+an `include` member it does not grant, and ask for 5 rows or the most if
+fewer.
 
 ## Asking any route
 
@@ -37,15 +76,15 @@ const businesses = await client.search("businesses", { q: "harbor concrete" });
 // Typed by route: the filters it takes, the relations it expands, its rows.
 const people = await client.search("people", {
   q: "dana whitfield",
-  include: ["businesses"],
-  filters: { business: { state: ["PA"] }, address: { city: "Pittsburgh" } },
+  filters: { business: { state: ["PA"] } },
 });
 people.response.suggestions[0]?.related.businesses.count;
 ```
 
-One session serves every route; the autocomplete service counts its budget per
-route. Every recovery, cooldown and event works the same on each, and each
-`RequestEvent` names its `relation`.
+One session serves every route; the autocomplete service counts its budget
+per route, and so does the client (`usage.requestsByRoute`). Every recovery,
+cooldown and event works the same on each, and each `RequestEvent` names its
+`relation`.
 
 ## Rows
 
@@ -60,7 +99,9 @@ and `highlight`. Each type adds its own fields:
 
 `related` and `sources` carry one key per relation the route expands. Read
 `sources` before an empty `related` entry: an empty list under a source that
-is not `ok` means "not looked", never "none".
+is not `ok` means "not looked", never "none". `count` is every one there is,
+before the head of five: a person's `related.businesses.count` is how many
+businesses they hold a role on, an address's how many are filed at it.
 
 Each related entity says whether it is why the row is here (`matched`), and
 the set says how many were (`matched`, null when no filter applied): the
@@ -68,29 +109,68 @@ officers and addresses a person or an address filter matched lead the lists.
 `matchedOn` reads those flags, with `matched_name` and the state filter, into
 what a row matched on (see [Styling](styling.md#what-matched)).
 
-A business's `structure` is its legal structure, one of
+A related item's `role` is how it stands to the row. A business's people and
+a person's businesses: `officer` or `agent`. An address and a business: the
+role the business filed it under (`principal`, `mailing`, `agent`,
+`officer`). A business's `structure` is its legal structure, one of
 `BUSINESS_STRUCTURES` (`LLC`, `C_CORPORATION`, …), or null when it is not
-known or the API does not send it. The styled component draws it as a flag
-beside the name (see [Styling](styling.md#the-structures-flag)).
+known.
 
-Unknown fields are dropped and unknown enum values (`match`, `status`,
-`role`, `structure`, a source's status) are kept as the strings they are, so
-an autocomplete service that learns a new value never turns a keystroke into a
-contract error. A row of the wrong type on a route is one.
+The person's and the address's own `token` is redeemed nowhere: pick one of
+their businesses instead. Each of those carries a business token, sealed with
+the person or address it was reached through, which `POST /searches` redeems
+as any other.
+
+Every closed value (`match`, `type`, `role`, `structure`, a source's
+`status`) is a typed union pinned to the API's contract, and the parser
+refuses a value it does not know as a `contract` error. The SDK learns a new
+value before the API sends it, so update the SDK when its release notes say
+so. A related item must be the entity its relation holds, a business under
+`businesses`, and unknown fields are dropped.
 
 ## Filters
 
-Each route takes its own filters, typed by `FiltersByRelation`. A filter on
-a related entity is written as that relation, singular, with its field:
-`{ person: { name: "tim" } }` sends `person.name=tim`. Comma lists are
-arrays. The businesses route takes exactly what the autocomplete service serves
-today: `state`, `domicileState`, `person.name`, `person.role`, and
-`address.text`, `city`, `postalCode`, `state`.
+Each route takes its own filters, typed by `FiltersByRelation`, and exactly
+the ones the autocomplete service serves. A filter on a related entity is
+written as that relation, singular, with its field: `{ person: { name:
+"tim" } }` sends `person.name=tim`. Comma lists are arrays.
+
+| Route        | Filters                                                                                               |
+| ------------ | ----------------------------------------------------------------------------------------------------- |
+| `businesses` | `state`, `domicileState`, `person.name`, `person.role`, `address.text`, `city`, `postalCode`, `state` |
+| `people`     | `business.state`: people who hold a role on a business in any of these states                         |
+| `addresses`  | `state`: the address's own state                                                                      |
+
+`FILTER_PARAMS` lists them per route, each with the relation it narrows by,
+which the session's scope must grant (null for a direct filter such as the
+businesses route's `state`).
 
 ## React
 
-`useEntityAutocomplete({ relation, query, ... })` is the hook for any route;
-`useBusinessAutocomplete` is its businesses form. `useSuggestionCombobox`
-wires any route's rows to an input. The styled `BusinessAutocomplete` draws
-business rows; until a styled component exists for another route, draw its
-rows yourself with the hooks (see [Headless use](headless.md)).
+`BusinessAutocomplete`, `PersonAutocomplete` and `AddressAutocomplete` are
+the styled components, one per route. A person or an address shows in the
+menu as a group: its name, how many businesses it leads to, and the first of
+them as the options, each with its role there.
+
+```tsx
+<PersonAutocomplete
+  mintUrl="/api/ac-session"
+  baseUrl="https://api.baselayer.com"
+  id="person"
+  label="Person's name"
+  value={typed}
+  onChange={setTyped}
+  onPick={pick => {
+    // A business, the same token a business row's pick spends.
+    setBusinessName(pick.businessName);
+    setBusinessToken(pick.businessToken);
+    // How it was reached: pick.through.person, or pick.through.address.
+  }}
+/>
+```
+
+A pick leaves the field as it was typed; put `pick.businessName` in your
+business name field. `PersonAutocompleteView` and `AddressAutocompleteView`
+draw the same rows from state you supply, and `useEntityAutocomplete({
+relation, query, ... })` is the hook for any route (see
+[Headless use](headless.md)).

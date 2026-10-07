@@ -6,6 +6,68 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+Find a business through a person or through an address. The people and
+addresses routes are served: a person's row lists the businesses they hold a
+role on, an address's how many businesses are filed at it and the first of
+them, and a pick from either is a business, with the same token a business
+row's pick spends. A session is held to a scope, the searches it may make,
+which the mint answers and your backend can narrow, and the SDK never sends
+a request outside it.
+
+Every closed value on the wire is now a typed union, and a value the SDK does
+not know is refused rather than kept: the SDK learns a value before the API
+sends it. With the changed filters of the two routes and the new error kind,
+this ships as a minor release.
+
+### Added
+
+- `PersonAutocomplete` and `AddressAutocomplete`: styled typeaheads that find
+  a business through a person or an address. Each person or address is a
+  group in the menu with how many businesses it leads to and the first of
+  them; those businesses are the options. `onPick` hands a `BusinessPick`:
+  `businessToken`, `businessName`, `pickedAt`, `expiresAt`, and `through`,
+  the person or address it was reached by with the business's role there.
+  `PersonAutocompleteView` and `AddressAutocompleteView` draw the same rows
+  from state a host supplies.
+- `pickableBusinesses(row)` and `businessPickFrom(row, business, at)`: the
+  businesses a person's or an address's row offers, and the pick of one.
+- The session's scope: `Grant.scope` (`{ routes, maxLimit }`), read from the
+  mint's answer, `DEFAULT_SESSION_SCOPE` for a grant without one,
+  `parseSessionScope`, `offeredRoutes(scope)`, `allowedFilters(scope, route)`
+  and `scopeViolation(scope, route, request)`.
+- `scope` on `mintForOrigin` and `createMintHandler` (one scope, or a
+  function of the request): it narrows what each session may search.
+- `out_of_scope`, an error kind with `route`, `relation` and `param`: a
+  request its session's scope leaves out, refused before it is sent, or the
+  autocomplete service's 403 code 501 or 502, which is never retried.
+- `ROUTE_NAMES`, `RELATIONS`, `LEGAL_RELATIONS`, `Route`, `FILTER_PARAMS`,
+  `setFilters`, and the unions `MatchGrade`, `SourceStatus`, `RelatedRole`
+  and `EntityType` with their value lists (`MATCH_GRADES`, …).
+- `usage.requestsByRoute` on the snapshot and `requestsOnRoute` on each
+  request event: the requests on the current session, per route, as the
+  autocomplete service budgets them.
+- Messages for the new rows: `person`, `people`, `address`, `addresses`,
+  `businessesOfPerson`, `businessesAtAddress`, `moreBusinesses`,
+  `personBusinessRoles`, `addressBusinessRoles`, and `outOfScope`. Slots:
+  `group`, `groupHead`, `groupCount`, `option`, `optionName`, `role`, `more`.
+- The demo searches by business, person or address, offering what the
+  session's scope allows, and `DEMO_API=sample pnpm demo` runs it on made-up
+  data with no network.
+
+### Changed
+
+- `ROUTES.people` and `ROUTES.addresses` are served, and their filters are
+  exactly what each serves: `{ business: { state } }` on people,
+  `{ state }` on addresses. `filterParams`, `hasFilters` and
+  `buildSuggestUrl` take the route and send only its own parameters.
+- `match`, `type`, `role`, `structure` and a source's `status` are typed
+  unions pinned to the API's contract, and an unknown value is a `contract`
+  error. A related item must be the entity its relation holds.
+- The hooks and components ask for 5 rows or the session's most, whichever
+  is fewer, and leave out an `include` member the scope does not grant.
+- `PersonRole` is `RelatedRole`'s `officer` and `agent`; `AddressRole` is
+  gone (use `RelatedRole`).
+
 ## [0.3.0] - 2026-10-06
 
 A row says what a filter matched it on. A person, an address or a state filter
