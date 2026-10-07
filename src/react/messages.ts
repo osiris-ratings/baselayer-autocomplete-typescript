@@ -38,6 +38,8 @@ export interface AutocompleteMessages {
   unavailable: string;
   /** Two fresh sessions were refused in a row; minting is paused. */
   authUnavailable: string;
+  /** The session's scope does not reach this search, or one of its filters. */
+  outOfScope: string;
   /** An autocomplete service refusal with no message of its own. */
   httpFallback: (status: number) => string;
 }
@@ -59,6 +61,7 @@ export const DEFAULT_MESSAGES: Readonly<AutocompleteMessages> = Object.freeze({
   unavailable: "Autocomplete unavailable",
   authUnavailable:
     "Autocomplete unavailable: the session could not be verified",
+  outOfScope: "This search is not available here",
   httpFallback: (status: number) => `Autocomplete unavailable (HTTP ${status})`,
 });
 
