@@ -267,6 +267,11 @@ is inert. A list ends, fainter, in how many it leaves out (`bl-ac-more`:
 in `titleColor`, addresses, counts and roles in `subtitleColor`, the
 highlighted line on `--bl-ac-highlight-bg`.
 
+On the lines under a row, a name is a step smaller than the row's own, and the
+states and the role are columns: the states as wide as three squares and a `+N`,
+the role as wide as the menu's longest (`--bl-ac-role-chars`) and a step
+quieter, so the squares start at one edge down the group.
+
 A line under a row that is not a pick fades, its icon, squares and text
 together: mostly its colour, a little its ink, so it stays readable
 (`look.inertDim`, 0 for none; `--bl-ac-inert-saturation` and `--bl-ac-inert-

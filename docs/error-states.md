@@ -150,27 +150,27 @@ A field that does not apply is `null`.
 
 All of them are overridable through `messages`:
 
-| Key                    | Default                                                                                                         |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `searching`            | Searching…                                                                                                      |
-| `truncatedNoRows`      | Still searching — add a word to narrow it down                                                                  |
-| `truncatedRows`        | Showing partial results — add a word to narrow it down                                                          |
-| `match`, `matches`     | match, matches                                                                                                  |
-| `noAddress`            | No address on file                                                                                              |
-| `agentSuffix`          | a space, then `· agent`                                                                                         |
-| `officerAddressSuffix` | a space, then `· officer's address`, after an address an address filter matched                                 |
-| `agentAddressSuffix`   | a space, then `· agent's address`                                                                               |
-| `more(n)`              | `+n`                                                                                                            |
-| `structures`           | each structure's flag, one value at a time ([the flags](styling.md#the-structures-flag))                        |
-| `dayLimit`             | Your plan's daily autocomplete limit is reached; suggestions return tomorrow.                                   |
-| `unavailable`          | Autocomplete unavailable                                                                                        |
-| `authUnavailable`      | Autocomplete unavailable: the session could not be verified                                                     |
-| `httpFallback(status)` | Autocomplete unavailable (HTTP status)                                                                          |
-| `outOfScope`           | This search is not available here                                                                               |
-| `routeUnserved`        | This search is not available here yet                                                                           |
-| `person`, `people`     | person, people: the people search's footer                                                                      |
-| `address`, `addresses` | address, addresses: the address search's footer                                                                 |
-| `relationCounts`       | per relation, a count in a person's or an address's head: `3 businesses`, `1 address`, `2 people`               |
-| `moreNotShown(n)`      | `+n more not shown`, under a list in a person's or an address's row                                             |
-| `personRoles`          | a person's role, on a business or at an address: `officer`, `agent`                                             |
-| `addressRoles`         | how a business holds an address: `principal office`, `mailing address`, `registered agent`, `officer's address` |
+| Key                    | Default                                                                                              |
+| ---------------------- | ---------------------------------------------------------------------------------------------------- |
+| `searching`            | Searching…                                                                                           |
+| `truncatedNoRows`      | Still searching — add a word to narrow it down                                                       |
+| `truncatedRows`        | Showing partial results — add a word to narrow it down                                               |
+| `match`, `matches`     | match, matches                                                                                       |
+| `noAddress`            | No address on file                                                                                   |
+| `agentSuffix`          | a space, then `· agent`                                                                              |
+| `officerAddressSuffix` | a space, then `· officer's address`, after an address an address filter matched                      |
+| `agentAddressSuffix`   | a space, then `· agent's address`                                                                    |
+| `more(n)`              | `+n`                                                                                                 |
+| `structures`           | each structure's flag, one value at a time ([the flags](styling.md#the-structures-flag))             |
+| `dayLimit`             | Your plan's daily autocomplete limit is reached; suggestions return tomorrow.                        |
+| `unavailable`          | Autocomplete unavailable                                                                             |
+| `authUnavailable`      | Autocomplete unavailable: the session could not be verified                                          |
+| `httpFallback(status)` | Autocomplete unavailable (HTTP status)                                                               |
+| `outOfScope`           | This search is not available here                                                                    |
+| `routeUnserved`        | This search is not available here yet                                                                |
+| `person`, `people`     | person, people: the people search's footer                                                           |
+| `address`, `addresses` | address, addresses: the address search's footer                                                      |
+| `relationCounts`       | per relation, a count in a person's or an address's head: `3 businesses`, `1 address`, `2 people`    |
+| `moreNotShown(n)`      | `+n more not shown`, under a list in a person's or an address's row                                  |
+| `personRoles`          | a person's role, on a business or at an address: `officer`, `agent`                                  |
+| `addressRoles`         | how a business holds an address: `principal office`, `mailing address`, `agent`, `officer's address` |

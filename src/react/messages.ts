@@ -103,7 +103,7 @@ export const DEFAULT_MESSAGES: Readonly<AutocompleteMessages> = Object.freeze({
   addressRoles: Object.freeze({
     principal: "principal office",
     mailing: "mailing address",
-    agent: "registered agent",
+    agent: "agent",
     officer: "officer's address",
   }),
   noAddress: "No address on file",

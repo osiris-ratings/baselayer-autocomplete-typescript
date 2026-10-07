@@ -56,6 +56,7 @@ import { useSuggestionCombobox } from "./useBusinessCombobox";
 import {
   StateSquares,
   classes,
+  roleColumn,
   lookVariables,
   marked,
   type SlotName,
@@ -767,7 +768,19 @@ function GroupedView<R extends GroupedRoute>({
         data-width={menuFollowsInputWidth ? undefined : "fixed"}
         hidden={!combobox.menuVisible}
       >
-        <div className={cx("list", "bl-ac-list")} {...combobox.getMenuProps()}>
+        <div
+          className={cx("list", "bl-ac-list")}
+          style={roleColumn(
+            drawn.flatMap(({ lines }) =>
+              lines.lists.flatMap(list =>
+                list.lines.map(({ item }) =>
+                  roleText({ line: list.line, item }),
+                ),
+              ),
+            ),
+          )}
+          {...combobox.getMenuProps()}
+        >
           {hasRows &&
             drawn.map(({ row, lines }, rowIndex) => {
               const headId = `${id}-group-${rowIndex}`;

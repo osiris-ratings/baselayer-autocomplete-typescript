@@ -190,3 +190,16 @@ export function StateSquares({
     </span>
   );
 }
+
+/**
+ * The role column's width for a menu's lines under rows: its longest role, so
+ * the roles line up and the squares before them start at one edge.
+ */
+export function roleColumn(
+  roles: readonly (string | null)[],
+): CSSProperties | undefined {
+  const longest = Math.max(0, ...roles.map(role => role?.length ?? 0));
+  return longest === 0
+    ? undefined
+    : ({ "--bl-ac-role-chars": String(longest) } as CSSProperties);
+}

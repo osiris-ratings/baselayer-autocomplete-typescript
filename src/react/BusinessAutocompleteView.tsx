@@ -43,6 +43,7 @@ import { useSuggestionCombobox } from "./useBusinessCombobox";
 import {
   StateSquares,
   classes,
+  roleColumn,
   lookVariables,
   marked,
   type ClassFor,
@@ -637,7 +638,27 @@ export function BusinessAutocompleteView({
       >
         {/* The listbox holds the options and nothing else; the count row sits
             below it. Always mounted, as downshift requires of its menu. */}
-        <div className={cx("list", "bl-ac-list")} {...combobox.getMenuProps()}>
+        <div
+          className={cx("list", "bl-ac-list")}
+          style={
+            grouped
+              ? roleColumn(
+                  rowLines.flatMap(lines =>
+                    lines.lists.flatMap(list =>
+                      list.lines.map(({ item: related }) =>
+                        related.role === null
+                          ? null
+                          : list.relation === "addresses"
+                            ? text.addressRoles[related.role]
+                            : text.personRoles[related.role],
+                      ),
+                    ),
+                  ),
+                )
+              : undefined
+          }
+          {...combobox.getMenuProps()}
+        >
           {hasRows &&
             grouped &&
             suggestions.map((item, rowIndex) => {

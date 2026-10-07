@@ -415,8 +415,24 @@
 }
 
 .bl-ac-line-name {
+  font-size: 0.9375em;
   font-weight: var(--bl-ac-weight-base);
   color: var(--bl-ac-title);
+}
+
+/* On a line under a row the states and the role are columns: the states as
+   wide as three squares and a +N, the role as wide as the menu's longest, so
+   the squares start at one edge down the group. The role is a step quieter
+   than the name. */
+.bl-ac-group-trailing > .bl-ac-states {
+  box-sizing: border-box;
+  min-width: 7.25rem;
+}
+
+.bl-ac-group-line .bl-ac-role {
+  min-width: calc(var(--bl-ac-role-chars, 0) * 1ch);
+  font-size: 13px;
+  text-align: right;
 }
 
 .bl-ac-group-count,

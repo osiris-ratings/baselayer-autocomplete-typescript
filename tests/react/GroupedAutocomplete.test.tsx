@@ -719,7 +719,7 @@ describe("AddressAutocomplete", () => {
     const options = within(corvel).getAllByRole("option");
     expect(options[0]).toHaveTextContent("Ridgeline Freight LLC");
     expect(options[0]).toHaveTextContent("principal office");
-    expect(options[1]).toHaveTextContent("registered agent");
+    expect(options[1]).toHaveTextContent(/agent$/);
     expect(within(corvel).getByText("+410 more not shown")).toBeInTheDocument();
     expect(linesOf(corvel, "person")).toEqual([]);
     expect(screen.getByText("1 address")).toBeInTheDocument();
