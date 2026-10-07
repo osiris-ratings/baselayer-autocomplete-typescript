@@ -6,6 +6,7 @@ import {
   drawnLayout,
   requestFor,
   resolveLayout,
+  type SessionScope,
 } from "@baselayer-sdk/autocomplete";
 
 describe("a person's row", () => {
@@ -78,16 +79,34 @@ describe("an address's row", () => {
 });
 
 describe("requestFor", () => {
-  it("lists a person's businesses, and asks for their addresses too for the head's first address", () => {
+  it("lists a person's businesses, and asks for their addresses too, for the head's first address and count", () => {
     expect(requestFor("people", resolveLayout(PERSON_ROW))).toEqual({
       listed: ["businesses"],
       include: ["businesses", "addresses"],
     });
   });
 
-  it("asks for only what it lists when the layout draws nothing more", () => {
+  it("asks for every relation the head counts, though only businesses are listed", () => {
+    // 3 businesses · 3 addresses: no first address in the head, but its count.
     expect(
       requestFor("people", resolveLayout(PERSON_ROW, { headBadge: null })),
+    ).toEqual({
+      listed: ["businesses"],
+      include: ["businesses", "addresses"],
+    });
+    // 412 businesses · 2 people.
+    expect(requestFor("addresses", resolveLayout(ADDRESS_ROW))).toEqual({
+      listed: ["businesses"],
+      include: ["businesses", "people"],
+    });
+  });
+
+  it("asks for only what it lists when the head draws nothing that needs more", () => {
+    expect(
+      requestFor(
+        "people",
+        resolveLayout(PERSON_ROW, { headBadge: null, headTrailing: null }),
+      ),
     ).toEqual({ listed: ["businesses"], include: ["businesses"] });
   });
 
@@ -103,13 +122,75 @@ describe("requestFor", () => {
     });
     expect(
       requestFor("addresses", resolveLayout(ADDRESS_ROW), ["people"]),
-    ).toEqual({ listed: ["people"], include: ["people"] });
+    ).toEqual({ listed: ["people"], include: ["businesses", "people"] });
   });
 
-  it("lists an address's businesses by default, and asks for nothing more", () => {
-    expect(requestFor("addresses", resolveLayout(ADDRESS_ROW))).toEqual({
-      listed: ["businesses"],
-      include: ["businesses"],
+  describe("under a session's scope", () => {
+    const businessesOnly: SessionScope = {
+      routes: {
+        businesses: ["people", "addresses"],
+        people: ["businesses"],
+        addresses: ["businesses"],
+      },
+      maxLimit: 20,
+    };
+
+    it("drops what the scope does not grant rather than asking for it", () => {
+      // The head's first address and its count need addresses, which the
+      // scope leaves out: they draw nothing, and the search still runs.
+      expect(
+        requestFor(
+          "people",
+          resolveLayout(PERSON_ROW),
+          undefined,
+          businessesOnly,
+        ),
+      ).toEqual({ listed: ["businesses"], include: ["businesses"] });
+      expect(
+        requestFor(
+          "addresses",
+          resolveLayout(ADDRESS_ROW),
+          undefined,
+          businessesOnly,
+        ),
+      ).toEqual({ listed: ["businesses"], include: ["businesses"] });
+    });
+
+    it("drops a listed relation the scope does not grant, rather than failing", () => {
+      expect(
+        requestFor(
+          "people",
+          resolveLayout(PERSON_ROW),
+          ["addresses"],
+          businessesOnly,
+        ),
+      ).toEqual({ listed: [], include: ["businesses"] });
+    });
+
+    it("asks for nothing on a route the scope leaves out", () => {
+      expect(
+        requestFor("people", resolveLayout(PERSON_ROW), undefined, {
+          routes: { businesses: ["people"] },
+          maxLimit: 20,
+        }),
+      ).toEqual({ listed: [], include: [] });
+    });
+
+    it("asks for all it would without one when the scope grants it all", () => {
+      expect(
+        requestFor(
+          "addresses",
+          resolveLayout(ADDRESS_ROW),
+          ["businesses", "people"],
+          {
+            routes: { addresses: ["people", "businesses"] },
+            maxLimit: 20,
+          },
+        ),
+      ).toEqual({
+        listed: ["businesses", "people"],
+        include: ["businesses", "people"],
+      });
     });
   });
 });

@@ -16,6 +16,7 @@ import {
 } from "./entities";
 import type { LayoutInputOf, LayoutOf, RowKind, RowLine } from "./layout";
 import type { GroupedOption, PickableBusiness } from "./pick";
+import type { SessionScope } from "./scope";
 import type {
   AddressSuggestion,
   PersonSuggestion,
@@ -162,37 +163,50 @@ export interface GroupedRequest<R extends "people" | "addresses"> {
 }
 
 /**
- * What a person's or an address's rows list, and what to ask the service to
- * expand for them: the relations `listed` (businesses when left out), and
- * whatever the layout draws besides, such as a person's first address in the
- * head, which needs their addresses even when no address line is listed. In
- * the route's own order.
+ * What a person's or an address's rows list, and what to ask the autocomplete
+ * service to expand for them: the relations `listed` (businesses when left
+ * out), and whatever the layout draws besides. A person's first address in
+ * the head needs their addresses, and the head's counts need every relation
+ * they count, even where no line lists it. With a `scope`, a relation it does
+ * not grant on the route is dropped from both, and what needs it draws
+ * nothing, rather than the search failing. In the route's own order.
  */
 export function requestFor(
   route: "people",
   layout: PersonRowLayout,
   listed?: readonly IncludeOf<"people">[],
+  scope?: SessionScope,
 ): GroupedRequest<"people">;
 export function requestFor(
   route: "addresses",
   layout: AddressRowLayout,
   listed?: readonly IncludeOf<"addresses">[],
+  scope?: SessionScope,
 ): GroupedRequest<"addresses">;
 export function requestFor(
   route: "people" | "addresses",
   layout: PersonRowLayout | AddressRowLayout,
   listed: readonly Relation[] = DEFAULT_LISTED,
+  scope?: SessionScope,
 ): GroupedRequest<"people" | "addresses"> {
   const fields: readonly (string | null)[] = Object.values(layout);
   const drawn = new Set(fields);
+  const order: readonly Relation[] = ROUTES[route].includes;
   const needed = new Set<Relation>(listed);
   if (route === "people" && drawn.has("firstAddress")) {
     needed.add("addresses");
   }
-  const order: readonly Relation[] = ROUTES[route].includes;
+  if (drawn.has("counts")) {
+    order.forEach(relation => needed.add(relation));
+  }
+  const granted: readonly Relation[] =
+    scope === undefined ? order : (scope.routes[route] ?? []);
+  const asked = (relation: Relation) => granted.includes(relation);
   return {
-    listed: order.filter(relation => listed.includes(relation)),
-    include: order.filter(relation => needed.has(relation)),
+    listed: order.filter(
+      relation => listed.includes(relation) && asked(relation),
+    ),
+    include: order.filter(relation => needed.has(relation) && asked(relation)),
   } as GroupedRequest<"people" | "addresses">;
 }
 
