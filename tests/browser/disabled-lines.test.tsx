@@ -174,7 +174,7 @@ describe("a disabled line", () => {
   });
 
   for (const preset of PRESETS) {
-    it(`reads as inactive on ${preset.name}: its name at 3:1 or more and well below an enabled one's, its secondary text 40% or more below`, async () => {
+    it(`reads as inactive on ${preset.name}: its name at 3:1 or more and well below an enabled one's, its secondary text 40% or more below and still there`, async () => {
       const { enabled, disabled, done } = draw(preset.look);
       try {
         const drawn = async (selector: string) => ({
@@ -189,6 +189,8 @@ describe("a disabled line", () => {
           expect(secondary.disabled, selector).toBeLessThanOrEqual(
             0.6 * secondary.enabled,
           );
+          // Faded, but still there to be read.
+          expect(secondary.disabled, selector).toBeGreaterThanOrEqual(1.5);
         }
       } finally {
         done();
