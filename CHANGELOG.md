@@ -23,12 +23,21 @@ this ships as a minor release.
 
 - `PersonAutocomplete` and `AddressAutocomplete`: styled typeaheads that find
   a business through a person or an address. Each person or address is a
-  group in the menu with how many businesses it leads to and the first of
-  them; those businesses are the options. `onPick` hands a `BusinessPick`:
-  `businessToken`, `businessName`, `pickedAt`, `expiresAt`, and `through`,
-  the person or address it was reached by with the business's role there.
-  `PersonAutocompleteView` and `AddressAutocompleteView` draw the same rows
-  from state a host supplies.
+  group in the menu: its name with its counts, a person's first address, and
+  a line for each business under it with the business's address, states and
+  role. `include` lists a person's addresses or an address's people too,
+  `pickable` makes the row itself or what it lists pickable, and `layout`
+  places each line's fields, as on a business row. `onPick` hands a
+  `BusinessPick`: `businessToken`, `businessName`, `pickedAt`, `expiresAt`,
+  and `through`, the person or address it was reached by with the business's
+  role there; `onPickEntity` hands an `EntityPick` for a person or an
+  address. `PersonAutocompleteView` and `AddressAutocompleteView` draw the
+  same rows from state a host supplies.
+- `PERSON_ROW` and `ADDRESS_ROW`, the places and fields of those rows, and
+  `requestFor(route, layout, listed, scope)`, what to ask for them;
+  `groupedLines(row, listed, pickable)` and `groupedOptions(lines)`, their
+  lines and what each pickable one hands. `RowKind`, `resolveLayout` and
+  `drawnLayout` resolve any kind of row's layout.
 - `pickableBusinesses(row)` and `businessPickFrom(row, business, at)`: the
   businesses a person's or an address's row offers, and the pick of one.
 - The session's scope: `Grant.scope` (`{ routes, maxLimit }`), read from the
@@ -52,9 +61,9 @@ this ships as a minor release.
   request event: the requests on the current session, per route, as the
   autocomplete service budgets them.
 - Messages for the new rows: `person`, `people`, `address`, `addresses`,
-  `businessesOfPerson`, `businessesAtAddress`, `moreBusinesses`,
-  `personBusinessRoles`, `addressBusinessRoles`, and `outOfScope`. Slots:
-  `group`, `groupHead`, `groupCount`, `option`, `optionName`, `role`, `more`.
+  `relationCounts`, `moreNotShown`, `personRoles`, `addressRoles`, and
+  `outOfScope`. Slots: `group`, `groupHead`, `groupLine`, `lineName`,
+  `counts`, `role`, `more`.
 - The demo searches by business, person or address, offering what the
   session's scope allows, and `DEMO_API=sample pnpm demo` runs it on made-up
   data with no network.

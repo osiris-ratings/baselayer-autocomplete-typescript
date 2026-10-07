@@ -24,10 +24,30 @@ const business = (label: string, role: RelatedItem["role"]): RelatedItem => ({
   label,
   role,
   matched: false,
+  address:
+    "4120 Orchard Lane Northwest Building C Suite 1400, Springfield, MO 65806",
+  states: ["CA", "DE", "FL", "IL", "MO", "NY", "TX"],
+  domicile_state: "MO",
+});
+
+const entity = (
+  type: "person" | "address",
+  label: string,
+  role: RelatedItem["role"],
+): RelatedItem => ({
+  type,
+  token: `tok-${label}`,
+  label,
+  role,
+  matched: false,
   address: null,
   states: null,
   domicile_state: null,
 });
+
+const LONG_ADDRESS =
+  "4120 Orchard Lane Northwest Building C Suite 1400, Springfield, MO 65806";
+const LONG_NAME = "Margarethe Alexandrina Featherstonehaugh-Whitfield";
 
 const LONG_BUSINESS =
   "CINDER RIGGING AND HEAVY EQUIPMENT HAULING COMPANY OF THE GREATER LAKES, INC.";
@@ -36,7 +56,7 @@ const PEOPLE: PersonSuggestion[] = [
   {
     type: "person",
     token: "tok-p-1",
-    label: "Margarethe Alexandrina Featherstonehaugh-Whitfield",
+    label: LONG_NAME,
     matched_name: null,
     match: "strong",
     highlight: [
@@ -53,7 +73,12 @@ const PEOPLE: PersonSuggestion[] = [
           business("Ortega Masonry LLC", "agent"),
         ],
       },
-      addresses: { count: null, matched: null, truncated: false, items: [] },
+      addresses: {
+        count: 3_210,
+        matched: null,
+        truncated: true,
+        items: [entity("address", LONG_ADDRESS, "officer")],
+      },
     },
   },
 ];
@@ -62,8 +87,7 @@ const ADDRESSES: AddressSuggestion[] = [
   {
     type: "address",
     token: "tok-a-1",
-    label:
-      "4120 Orchard Lane Northwest Building C Suite 1400, Springfield, MO 65806",
+    label: LONG_ADDRESS,
     matched_name: null,
     match: "strong",
     highlight: [{ text: "4120 Orchard", matched: true }],
@@ -84,7 +108,12 @@ const ADDRESSES: AddressSuggestion[] = [
           business("Ridgeline Freight LLC", "mailing"),
         ],
       },
-      people: { count: null, matched: null, truncated: false, items: [] },
+      people: {
+        count: 2_345,
+        matched: null,
+        truncated: true,
+        items: [entity("person", LONG_NAME, "agent")],
+      },
     },
   },
 ];
@@ -126,6 +155,7 @@ function draw(route: "people" | "addresses", width: number) {
           value="margarethe"
           onInputChange={() => {}}
           onSelect={() => {}}
+          include={["businesses", "addresses"]}
           suggestions={PEOPLE}
           {...state}
         />
@@ -135,6 +165,7 @@ function draw(route: "people" | "addresses", width: number) {
           value="4120 orchard"
           onInputChange={() => {}}
           onSelect={() => {}}
+          include={["businesses", "people"]}
           suggestions={ADDRESSES}
           {...state}
         />
@@ -160,7 +191,7 @@ function faults(): string[] {
     );
   }
   host
-    .querySelectorAll<HTMLElement>(".bl-ac-group-head, .bl-ac-option")
+    .querySelectorAll<HTMLElement>(".bl-ac-group-head, .bl-ac-group-line")
     .forEach((line, index) => {
       if (line.scrollWidth > line.clientWidth) {
         found.push(
@@ -168,14 +199,16 @@ function faults(): string[] {
         );
       }
       line
-        .querySelectorAll<HTMLElement>(".bl-ac-group-count, .bl-ac-role")
+        .querySelectorAll<HTMLElement>(
+          ".bl-ac-group-count, .bl-ac-role, .bl-ac-state, .bl-ac-more-states",
+        )
         .forEach(tag => {
           if (!inside(tag, line) || tag.scrollWidth > tag.clientWidth) {
             found.push(`line ${index}: "${tag.textContent}" is cut`);
           }
         });
       const name = line.querySelector<HTMLElement>(
-        ".bl-ac-name, .bl-ac-option-name",
+        ".bl-ac-name, .bl-ac-line-name",
       );
       if (name !== null && name.getBoundingClientRect().width < 24) {
         found.push(`line ${index}: the name is squeezed to nothing`);

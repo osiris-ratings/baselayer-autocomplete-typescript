@@ -1,7 +1,13 @@
 import type {
   BusinessStructure,
   RelatedRole,
+  Relation,
 } from "@baselayer-sdk/autocomplete";
+
+/** `1 business`, `1,204 businesses`. */
+function counted(count: number, one: string, many: string): string {
+  return count === 1 ? `1 ${one}` : `${count.toLocaleString("en-US")} ${many}`;
+}
 
 /** Every string the typeahead draws, overridable one at a time. */
 export interface AutocompleteMessages {
@@ -27,16 +33,20 @@ export interface AutocompleteMessages {
   address: string;
   /** The address search's footer noun for any other count. */
   addresses: string;
-  /** How many businesses a person holds a role on, beside their name. */
-  businessesOfPerson: (count: number) => string;
-  /** How many businesses are filed at an address, beside it. */
-  businessesAtAddress: (count: number) => string;
-  /** Under a person's or an address's businesses: how many the row leaves out. */
-  moreBusinesses: (count: number) => string;
-  /** A business's role, beside it under a person: `officer` or `agent`. */
-  personBusinessRoles: Record<RelatedRole, string>;
+  /**
+   * How many of a relation a person or an address has, in a row's head: `3
+   * businesses`, `1 address`, `2 people`.
+   */
+  relationCounts: Record<Relation, (count: number) => string>;
+  /** Under a list in a person's or an address's row: how many it leaves out. */
+  moreNotShown: (count: number) => string;
+  /**
+   * A person's role: on a business listed under them, at an address listed
+   * under them, or at the address they are listed under. `officer`, `agent`.
+   */
+  personRoles: Record<RelatedRole, string>;
   /** How a business holds an address, beside it under the address. */
-  addressBusinessRoles: Record<RelatedRole, string>;
+  addressRoles: Record<RelatedRole, string>;
   /** The address field when the index holds no address for the family. */
   noAddress: string;
   /** Appended to a registered agent's name in the people field. */
@@ -77,21 +87,20 @@ export const DEFAULT_MESSAGES: Readonly<AutocompleteMessages> = Object.freeze({
   people: "people",
   address: "address",
   addresses: "addresses",
-  businessesOfPerson: (count: number) =>
-    count === 1 ? "1 business" : `${count.toLocaleString("en-US")} businesses`,
-  businessesAtAddress: (count: number) =>
-    count === 1
-      ? "1 business here"
-      : `${count.toLocaleString("en-US")} businesses here`,
-  moreBusinesses: (count: number) =>
+  relationCounts: Object.freeze({
+    businesses: (count: number) => counted(count, "business", "businesses"),
+    addresses: (count: number) => counted(count, "address", "addresses"),
+    people: (count: number) => counted(count, "person", "people"),
+  }),
+  moreNotShown: (count: number) =>
     `+${count.toLocaleString("en-US")} more not shown`,
-  personBusinessRoles: Object.freeze({
+  personRoles: Object.freeze({
     officer: "officer",
     agent: "agent",
     principal: "principal",
     mailing: "mailing",
   }),
-  addressBusinessRoles: Object.freeze({
+  addressRoles: Object.freeze({
     principal: "principal office",
     mailing: "mailing address",
     agent: "registered agent",

@@ -302,11 +302,11 @@
 }
 
 /*
- * A person or an address, and the businesses under it. The head is the row's
- * name, marked as a business's is, with how many businesses it leads to at
- * the right; the businesses below it are the options, indented, each with
- * its role at the right. A group is not an option: the arrow keys move from
- * business to business.
+ * A person or an address, as a group of lines: its head, the row's name
+ * marked as a business's is, then a line for each business, address or
+ * person listed under it, indented. Each line is its lead (the name, then its
+ * badge) and its trailing corner. A line the host made pickable is an option
+ * the keys and the pointer move to; any other line is inert.
  */
 .bl-ac-group {
   margin: 0;
@@ -322,7 +322,7 @@
 }
 
 .bl-ac-group-head,
-.bl-ac-option {
+.bl-ac-group-line {
   display: flex;
   gap: 0.75rem;
   align-items: baseline;
@@ -333,8 +333,67 @@
   padding: 0.25rem 0.875rem;
 }
 
-.bl-ac-group-head > .bl-ac-name {
-  flex: 1 1 auto;
+.bl-ac-group-line {
+  padding: 0.375rem 0.875rem 0.375rem 1.75rem;
+}
+
+.bl-ac-group-head[data-pickable],
+.bl-ac-group-line[data-pickable] {
+  cursor: pointer;
+}
+
+.bl-ac-group-head[data-highlighted],
+.bl-ac-group-line[data-highlighted] {
+  background: var(--bl-ac-highlight-bg);
+}
+
+/* The lead takes the room the trailing corner leaves it. Out of room, its
+   badge gives way first, then the name, which keeps a few letters. */
+.bl-ac-group-lead {
+  display: flex;
+  flex: 1 1 0;
+  gap: 0.5rem;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.bl-ac-group-lead > * {
+  flex: 0 1000 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bl-ac-group-lead > .bl-ac-name,
+.bl-ac-group-lead > .bl-ac-line-name {
+  flex: 0 1 auto;
+  min-width: 3rem;
+}
+
+/* The trailing corner keeps its width at the right, so its column lines up
+   down the group. */
+.bl-ac-group-trailing {
+  display: flex;
+  flex: none;
+  gap: 0.5rem;
+  align-items: baseline;
+  margin-left: auto;
+}
+
+.bl-ac-group-lead > .bl-ac-states {
+  flex: none;
+  overflow: visible;
+}
+
+.bl-ac-group-lead > .bl-ac-states,
+.bl-ac-group-trailing .bl-ac-states {
+  align-self: center;
+}
+
+.bl-ac-line-name {
+  font-weight: var(--bl-ac-weight-base);
+  color: var(--bl-ac-title);
 }
 
 .bl-ac-group-count,
@@ -342,30 +401,6 @@
 .bl-ac-more {
   font-size: 14px;
   color: var(--bl-ac-subtitle);
-  white-space: nowrap;
-}
-
-.bl-ac-group-count,
-.bl-ac-role {
-  flex: none;
-}
-
-.bl-ac-option {
-  padding: 0.375rem 0.875rem 0.375rem 1.75rem;
-  cursor: pointer;
-}
-
-.bl-ac-option[data-highlighted] {
-  background: var(--bl-ac-highlight-bg);
-}
-
-.bl-ac-option-name {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  font-weight: var(--bl-ac-weight-base);
-  color: var(--bl-ac-title);
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

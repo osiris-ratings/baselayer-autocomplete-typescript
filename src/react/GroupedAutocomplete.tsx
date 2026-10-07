@@ -7,20 +7,39 @@ import {
 } from "react";
 
 import {
+  ADDRESS_ROW,
+  PERSON_ROW,
+  ROUTES,
   businessPickFrom,
   defaultMint,
+  drawnLayout,
   formatFound,
+  groupedLines,
+  groupedOptions,
   partsFor,
-  pickableBusinesses,
   queryTokens,
+  requestFor,
+  resolveLayout,
   resolveLook,
+  type AddressRowLayout,
+  type AddressRowLayoutInput,
+  type AddressSuggestion,
   type AutocompleteClient,
   type BusinessPick,
+  type EntityPick,
+  type EntityType,
   type FiltersByRelation,
+  type GroupedOption,
+  type GroupedRequest,
   type IncludeOf,
   type LookInput,
   type MintFunction,
-  type PickableBusiness,
+  type PersonRowLayout,
+  type PersonRowLayoutInput,
+  type PersonSuggestion,
+  type RelatedItem,
+  type RelatedSet,
+  type Relation,
   type SuggestionByRelation,
 } from "@baselayer-sdk/autocomplete";
 
@@ -30,23 +49,46 @@ import { resolveMessages, type AutocompleteMessages } from "./messages";
 import { useEntityAutocomplete } from "./useBusinessAutocomplete";
 import { useSuggestionCombobox } from "./useBusinessCombobox";
 import {
+  StateSquares,
   classes,
   lookVariables,
   marked,
-  type ClassFor,
   type SlotName,
 } from "./viewParts";
 
 /** The routes whose rows lead to businesses: a person, an address. */
 type GroupedRoute = "people" | "addresses";
 
-/** One business to pick, under the row it is reached through. */
-interface BusinessOption<R extends GroupedRoute> {
-  row: SuggestionByRelation[R];
-  business: PickableBusiness;
-  /** The business's name: what the combobox reads. */
+type GroupedRow = PersonSuggestion | AddressSuggestion;
+
+/** How a host lays out each route's rows: `PERSON_ROW`'s places, or `ADDRESS_ROW`'s. */
+interface LayoutInputByRoute {
+  people: PersonRowLayoutInput;
+  addresses: AddressRowLayoutInput;
+}
+
+/** A pickable line as the combobox holds it: what it hands, and its name. */
+interface OptionItem {
+  option: GroupedOption;
   label: string;
 }
+
+/**
+ * Where a pick goes. A business always goes to `onPick`; a person or an
+ * address can be picked only where `pickable` names it, and goes to
+ * `onPickEntity`, which is then required.
+ */
+type PickTargets =
+  | {
+      /** Which lines can be picked, by type. Default: businesses. */
+      pickable?: readonly "business"[] | undefined;
+      onPickEntity?: ((pick: EntityPick) => void) | undefined;
+    }
+  | {
+      pickable: readonly EntityType[];
+      /** A person or an address picked: the row itself, or one it lists. */
+      onPickEntity(pick: EntityPick): void;
+    };
 
 interface GroupedCommonProps<R extends GroupedRoute> {
   id: string;
@@ -58,6 +100,17 @@ interface GroupedCommonProps<R extends GroupedRoute> {
    * was typed: put `pick.businessName` in your business name field.
    */
   onPick(pick: BusinessPick): void;
+  /**
+   * The relations listed under each row, a line per item: businesses by
+   * default; a person's addresses, an address's people. A relation the
+   * session's scope does not grant is left out.
+   */
+  include?: readonly IncludeOf<R>[];
+  /**
+   * The field each place of a row's lines shows (`PERSON_ROW`, `ADDRESS_ROW`).
+   * The request asks for whatever it draws.
+   */
+  layout?: LayoutInputByRoute[R];
   onFocus?: () => void;
   onBlur?: () => void;
   name?: string;
@@ -99,8 +152,12 @@ type Source =
   | { mint: MintFunction; baseUrl: string; client?: never; mintUrl?: never }
   | { mintUrl: string; baseUrl: string; client?: never; mint?: never };
 
-export type PersonAutocompleteProps = GroupedCommonProps<"people"> & Source;
-export type AddressAutocompleteProps = GroupedCommonProps<"addresses"> & Source;
+export type PersonAutocompleteProps = GroupedCommonProps<"people"> &
+  PickTargets &
+  Source;
+export type AddressAutocompleteProps = GroupedCommonProps<"addresses"> &
+  PickTargets &
+  Source;
 
 /**
  * Find a business through a person: type a name, and each person who fits
@@ -112,16 +169,16 @@ export function PersonAutocomplete(props: PersonAutocompleteProps) {
 
 /**
  * Find a business through an address: type an address, and each one that fits
- * comes with how many businesses are filed there and the first of them, each
- * one a pick.
+ * comes with the businesses filed there, each one a pick.
  */
 export function AddressAutocomplete(props: AddressAutocompleteProps) {
   return <Grouped route="addresses" {...props} />;
 }
 
-function Grouped<R extends GroupedRoute>(
-  props: GroupedCommonProps<R> & Source & { route: R },
-) {
+type ConnectedProps<R extends GroupedRoute> = GroupedCommonProps<R> &
+  PickTargets & { route: R };
+
+function Grouped<R extends GroupedRoute>(props: ConnectedProps<R> & Source) {
   const { client, mint, mintUrl, baseUrl, ...common } = props;
   if (client !== undefined) {
     return <Connected {...common} client={client} />;
@@ -139,12 +196,47 @@ function OwnClient<R extends GroupedRoute>({
   baseUrl,
   mint,
   ...common
-}: GroupedCommonProps<R> & { route: R; baseUrl: string; mint: MintFunction }) {
+}: ConnectedProps<R> & { baseUrl: string; mint: MintFunction }) {
   // The first mint function is kept for the component's life, so an inline
   // `mint` or a re-rendered `mintUrl` does not re-create the client.
   const mintRef = useRef(mint);
   const client = useAutocompleteClient({ baseUrl, mint: mintRef.current });
   return <Connected {...common} client={client} />;
+}
+
+/** The layout as a route's rows draw it. */
+function drawnFor(
+  route: GroupedRoute,
+  input: PersonRowLayoutInput | AddressRowLayoutInput | undefined,
+): PersonRowLayout | AddressRowLayout {
+  return route === "people"
+    ? drawnLayout(
+        PERSON_ROW,
+        resolveLayout(PERSON_ROW, input as PersonRowLayoutInput | undefined),
+      )
+    : drawnLayout(
+        ADDRESS_ROW,
+        resolveLayout(ADDRESS_ROW, input as AddressRowLayoutInput),
+      );
+}
+
+/** `requestFor` on either route. */
+function requestOf(
+  route: GroupedRoute,
+  layout: PersonRowLayout | AddressRowLayout,
+  include: readonly Relation[] | undefined,
+): GroupedRequest<GroupedRoute> {
+  return route === "people"
+    ? requestFor(
+        "people",
+        layout as PersonRowLayout,
+        include as IncludeOf<"people">[] | undefined,
+      )
+    : requestFor(
+        "addresses",
+        layout as AddressRowLayout,
+        include as IncludeOf<"addresses">[] | undefined,
+      );
 }
 
 function Connected<R extends GroupedRoute>({
@@ -153,6 +245,9 @@ function Connected<R extends GroupedRoute>({
   value,
   onChange,
   onPick,
+  onPickEntity,
+  include,
+  layout,
   onFocus,
   onBlur,
   name,
@@ -165,15 +260,17 @@ function Connected<R extends GroupedRoute>({
   messages,
   onUnavailable,
   ...view
-}: GroupedCommonProps<R> & { route: R; client: AutocompleteClient }) {
+}: ConnectedProps<R> & { client: AutocompleteClient }) {
   const client = useResolvedClient(given);
+  // What the rows draw decides what is asked for; the hook drops whatever the
+  // session's scope does not grant.
+  const request = requestOf(route, drawnFor(route, layout), include);
   const { unavailable, ...state } = useEntityAutocomplete<R>({
     relation: route,
     client,
     query: value,
     enabled,
-    // The businesses are what a pick spends; nothing else is drawn.
-    include: ["businesses"] as IncludeOf<R>[],
+    include: request.include as IncludeOf<R>[],
     ...(filters !== undefined ? { filters } : {}),
     ...(limit !== undefined ? { limit } : {}),
     ...(minChars !== undefined ? { minChars } : {}),
@@ -195,6 +292,8 @@ function Connected<R extends GroupedRoute>({
       value={value}
       inputName={name}
       messages={messages}
+      include={request.listed as IncludeOf<R>[]}
+      layout={layout}
       suggestions={state.suggestions}
       found={state.found}
       foundCapped={state.foundCapped}
@@ -209,8 +308,10 @@ function Connected<R extends GroupedRoute>({
         }
         onChange(next);
       }}
-      onSelect={(row, business) =>
-        onPick(businessPickFrom(row, business, Date.now()))
+      onSelect={option =>
+        option.kind === "business"
+          ? onPick(businessPickFrom(option.row, option.business, Date.now()))
+          : onPickEntity?.(option.pick)
       }
       onInputFocus={() => {
         if (mintOn === "focus" && enabled) {
@@ -229,8 +330,11 @@ interface GroupedViewCommonProps<R extends GroupedRoute> {
   value: string;
   /** Typing only; a pick reports through `onSelect`. */
   onInputChange(value: string): void;
-  /** A business picked from under `row`; `businessPickFrom` makes the pick. */
-  onSelect(row: SuggestionByRelation[R], business: PickableBusiness): void;
+  /**
+   * A pickable line picked: a business, with the row it was reached through
+   * (`businessPickFrom` makes the `BusinessPick`), or a person or an address.
+   */
+  onSelect(option: GroupedOption): void;
   onInputFocus?: (() => void) | undefined;
   onInputBlur?: (() => void) | undefined;
   inputName?: string | undefined;
@@ -244,6 +348,12 @@ interface GroupedViewCommonProps<R extends GroupedRoute> {
   roundTripMs: number | null;
   isSearching: boolean;
   error: string | null;
+  /** The relations listed under each row, a line per item. Default: businesses. */
+  include?: readonly IncludeOf<R>[] | undefined;
+  /** Which lines can be picked, by type. Default: businesses. */
+  pickable?: readonly EntityType[] | undefined;
+  /** The field each place of a row's lines shows. */
+  layout?: LayoutInputByRoute[R] | undefined;
   /** Hold the menu open whatever focus does: a style preview. */
   open?: boolean | undefined;
   /**
@@ -267,7 +377,8 @@ export type AddressAutocompleteViewProps = GroupedViewCommonProps<"addresses">;
 
 /**
  * The styled people typeahead, with the state supplied by the host
- * (`useEntityAutocomplete` on the people route).
+ * (`useEntityAutocomplete` on the people route, asking for what
+ * `requestFor` says).
  */
 export function PersonAutocompleteView(props: PersonAutocompleteViewProps) {
   return <GroupedView {...props} route="people" />;
@@ -275,10 +386,19 @@ export function PersonAutocompleteView(props: PersonAutocompleteViewProps) {
 
 /**
  * The styled address typeahead, with the state supplied by the host
- * (`useEntityAutocomplete` on the addresses route).
+ * (`useEntityAutocomplete` on the addresses route, asking for what
+ * `requestFor` says).
  */
 export function AddressAutocompleteView(props: AddressAutocompleteViewProps) {
   return <GroupedView {...props} route="addresses" />;
+}
+
+/** A line of a row: its head, or one item of a listed relation. */
+type LineOf =
+  { line: "head"; row: GroupedRow } | { line: EntityType; item: RelatedItem };
+
+function optionLabel(option: GroupedOption): string {
+  return option.kind === "business" ? option.business.label : option.pick.label;
 }
 
 function GroupedView<R extends GroupedRoute>({
@@ -299,6 +419,9 @@ function GroupedView<R extends GroupedRoute>({
   roundTripMs,
   isSearching,
   error,
+  include,
+  pickable,
+  layout: layoutInput,
   open = false,
   menuFollowsInputWidth = true,
   look: lookInput,
@@ -312,22 +435,27 @@ function GroupedView<R extends GroupedRoute>({
   const text = resolveMessages(messages);
   const look = resolveLook(lookInput ?? {});
   const cx = classes(unstyled, classNames);
-  const rows: SuggestionByRelation[GroupedRoute][] = suggestions;
-  const options: BusinessOption<GroupedRoute>[] = rows.flatMap(row =>
-    pickableBusinesses(row).map(business => ({
-      row,
-      business,
-      label: business.label,
+  const drawnLayout = drawnFor(route, layoutInput);
+  const layout: Readonly<Record<string, string | null>> = drawnLayout;
+  const { listed } = requestOf(route, drawnLayout, include);
+  const rows: GroupedRow[] = suggestions;
+  const drawn = rows.map(row => ({
+    row,
+    lines: groupedLines(row, listed, pickable),
+  }));
+  const items: OptionItem[] = drawn.flatMap(({ lines }) =>
+    groupedOptions(lines).map(option => ({
+      option,
+      label: optionLabel(option),
     })),
   );
   const hasFooter = isSearching || error !== null || roundTripMs !== null;
   const combobox = useSuggestionCombobox({
     id,
-    items: options,
+    items,
     inputValue: value,
     onInputChange,
-    onPick: ({ row, business }) =>
-      onSelect(row as SuggestionByRelation[R], business),
+    onPick: item => onSelect(item.option),
     hasFooter,
     open,
   });
@@ -357,6 +485,121 @@ function GroupedView<R extends GroupedRoute>({
     return `${formatFound(found, foundCapped)} ${noun}`;
   }
 
+  /** The role an item's line draws, read the way its line reads it. */
+  function roleText(of: LineOf): string | null {
+    if (of.line === "head" || of.item.role === null) {
+      return null;
+    }
+    // Under an address, a business holds it in some role; everywhere else
+    // the role is a person's.
+    return route === "addresses" && of.line === "business"
+      ? text.addressRoles[of.item.role]
+      : text.personRoles[of.item.role];
+  }
+
+  /** The head's counts: every relation the row answers a count for. */
+  function countsText(row: GroupedRow): string | null {
+    const related: Partial<Record<Relation, RelatedSet>> = row.related;
+    const counts = ROUTES[route].includes.flatMap(relation => {
+      const count = related[relation]?.count;
+      return count === undefined || count === null
+        ? []
+        : [text.relationCounts[relation](count)];
+    });
+    return counts.length > 0 ? counts.join(" · ") : null;
+  }
+
+  /** A field as drawn in `place` on a line, or nothing where the line has no value for it. */
+  function field(
+    name: string | null,
+    place: string,
+    of: LineOf,
+    countId: string,
+  ): ReactNode {
+    switch (name) {
+      case "firstAddress": {
+        if (of.line !== "head" || of.row.type !== "person") {
+          return null;
+        }
+        const { items, count } = of.row.related.addresses;
+        const first = items[0];
+        if (first === undefined) {
+          return null;
+        }
+        const more = (count ?? items.length) - 1;
+        return (
+          <span
+            className={cx("address", "bl-ac-address")}
+            data-place={place}
+            data-testid="grouped-firstAddress"
+          >
+            {first.label}
+            {more > 0 ? ` ${text.more(more)}` : ""}
+          </span>
+        );
+      }
+      case "counts": {
+        const counts = of.line === "head" ? countsText(of.row) : null;
+        return (
+          counts !== null && (
+            <span
+              id={countId}
+              className={cx("counts", "bl-ac-group-count")}
+              data-place={place}
+              data-testid="grouped-counts"
+            >
+              {counts}
+            </span>
+          )
+        );
+      }
+      case "address":
+        return (
+          of.line !== "head" &&
+          of.item.address !== null && (
+            <span
+              className={cx("address", "bl-ac-address")}
+              data-place={place}
+              data-testid="grouped-address"
+            >
+              {of.item.address}
+            </span>
+          )
+        );
+      case "states":
+        return (
+          of.line !== "head" &&
+          (of.item.states?.length ?? 0) > 0 && (
+            <StateSquares
+              business={of.item}
+              matched={[]}
+              cx={cx}
+              more={text.more}
+              place={place}
+            />
+          )
+        );
+      case "role":
+      case "addressRole":
+      case "personRole": {
+        const role = roleText(of);
+        return (
+          role !== null && (
+            <span
+              className={cx("role", "bl-ac-role")}
+              data-place={place}
+              data-testid={`grouped-${name}`}
+            >
+              {role}
+            </span>
+          )
+        );
+      }
+      default:
+        return null;
+    }
+  }
+
   const labelProps = combobox.getLabelProps() as Record<string, unknown>;
   const inputProps = combobox.getInputProps({
     ref: inputRef,
@@ -367,6 +610,66 @@ function GroupedView<R extends GroupedRoute>({
   });
 
   let optionIndex = 0;
+  /**
+   * One line: its name and badge, then its trailing corner. A pickable line
+   * is an option the keys and the pointer move to; any other line is inert.
+   */
+  function line(
+    key: string,
+    of: LineOf,
+    option: GroupedOption | null,
+    name: ReactNode,
+    headId: string,
+  ) {
+    const index = option === null ? null : optionIndex++;
+    const highlighted = index !== null && combobox.highlightedIndex === index;
+    const countId = `${headId}-count`;
+    const at = (place: string) =>
+      field(layout[place] ?? null, place, of, countId);
+    const badge = at(`${of.line}Badge`);
+    const trailingBadge = at(`${of.line}TrailingBadge`);
+    const trailing = at(`${of.line}Trailing`);
+    const props =
+      option === null || index === null
+        ? {}
+        : combobox.getItemProps({
+            item: { option, label: optionLabel(option) },
+            index,
+          });
+    return (
+      <div
+        {...props}
+        key={key}
+        className={
+          of.line === "head"
+            ? cx("groupHead", "bl-ac-group-head")
+            : cx("groupLine", "bl-ac-group-line")
+        }
+        data-line={of.line}
+        data-testid={of.line === "head" ? "group-head" : `${of.line}-line`}
+        data-pickable={option !== null ? "true" : undefined}
+        data-highlighted={highlighted ? "true" : undefined}
+        data-matched={
+          of.line !== "head" && of.item.matched ? "true" : undefined
+        }
+      >
+        <span className={cx("corner", "bl-ac-group-lead")} data-corner="lead">
+          {name}
+          {badge}
+        </span>
+        {(trailingBadge || trailing) && (
+          <span
+            className={cx("corner", "bl-ac-group-trailing")}
+            data-corner="trailing"
+          >
+            {trailingBadge}
+            {trailing}
+          </span>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div
       className={cx("root", "bl-ac")}
@@ -396,33 +699,34 @@ function GroupedView<R extends GroupedRoute>({
       >
         <div className={cx("list", "bl-ac-list")} {...combobox.getMenuProps()}>
           {hasRows &&
-            rows.map((row, rowIndex) => {
+            drawn.map(({ row, lines }, rowIndex) => {
               const headId = `${id}-group-${rowIndex}`;
-              const countId = `${headId}-count`;
-              const moreId = `${headId}-more`;
-              const pickable = pickableBusinesses(row);
-              const { count } = row.related.businesses;
-              const notShown = (count ?? pickable.length) - pickable.length;
               const parts = look.matchEmphasis !== "plain" ? row.highlight : [];
+              const counted =
+                Object.values(layout).includes("counts") &&
+                countsText(row) !== null;
+              const moreIds = lines.lists
+                .filter(list => list.notShown > 0)
+                .map(list => `${headId}-more-${list.relation}`);
               return (
                 <div
                   key={row.token}
                   role="group"
                   aria-labelledby={headId}
-                  // How many it leads to, and how many the row leaves out:
-                  // what the options alone do not say.
+                  // The counts, and how many each list leaves out: what the
+                  // lines alone do not say.
                   aria-describedby={
-                    [
-                      count !== null ? countId : null,
-                      notShown > 0 ? moreId : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" ") || undefined
+                    [...(counted ? [`${headId}-count`] : []), ...moreIds].join(
+                      " ",
+                    ) || undefined
                   }
                   className={cx("group", "bl-ac-group")}
                   data-testid={`${entity}-suggestion`}
                 >
-                  <div className={cx("groupHead", "bl-ac-group-head")}>
+                  {line(
+                    "head",
+                    { line: "head", row },
+                    lines.head.option,
                     <span
                       id={headId}
                       className={cx("name", "bl-ac-name")}
@@ -435,46 +739,32 @@ function GroupedView<R extends GroupedRoute>({
                         markClass,
                         `${entity}-suggestion-match`,
                       )}
-                    </span>
-                    {count !== null && (
-                      <span
-                        id={countId}
-                        className={cx("groupCount", "bl-ac-group-count")}
-                      >
-                        {route === "people"
-                          ? text.businessesOfPerson(count)
-                          : text.businessesAtAddress(count)}
-                      </span>
-                    )}
-                  </div>
-                  {pickable.map(business => {
-                    const index = optionIndex++;
-                    const highlighted = combobox.highlightedIndex === index;
-                    return (
-                      <BusinessRow
-                        key={business.token}
-                        business={business}
-                        role={
-                          business.role === null
-                            ? null
-                            : route === "people"
-                              ? text.personBusinessRoles[business.role]
-                              : text.addressBusinessRoles[business.role]
-                        }
-                        highlighted={highlighted}
-                        cx={cx}
-                        itemProps={combobox.getItemProps({
-                          item: { row, business, label: business.label },
-                          index,
-                        })}
-                      />
-                    );
-                  })}
-                  {notShown > 0 && (
-                    <div id={moreId} className={cx("more", "bl-ac-more")}>
-                      {text.moreBusinesses(notShown)}
-                    </div>
+                    </span>,
+                    headId,
                   )}
+                  {lines.lists.map(list => (
+                    <div key={list.relation} data-list={list.relation}>
+                      {list.lines.map(({ item, option }, itemIndex) =>
+                        line(
+                          String(itemIndex),
+                          { line: list.line, item },
+                          option,
+                          <span className={cx("lineName", "bl-ac-line-name")}>
+                            {item.label}
+                          </span>,
+                          headId,
+                        ),
+                      )}
+                      {list.notShown > 0 && (
+                        <div
+                          id={`${headId}-more-${list.relation}`}
+                          className={cx("more", "bl-ac-more")}
+                        >
+                          {text.moreNotShown(list.notShown)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               );
             })}
@@ -497,37 +787,6 @@ function GroupedView<R extends GroupedRoute>({
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function BusinessRow({
-  business,
-  role,
-  highlighted,
-  cx,
-  itemProps,
-}: {
-  business: PickableBusiness;
-  role: string | null;
-  highlighted: boolean;
-  cx: ClassFor;
-  itemProps: Record<string, unknown>;
-}) {
-  return (
-    <div
-      {...itemProps}
-      className={cx("option", "bl-ac-option")}
-      data-highlighted={highlighted ? "true" : undefined}
-      data-matched={business.matched ? "true" : undefined}
-      data-testid="business-option"
-    >
-      <span className={cx("optionName", "bl-ac-option-name")}>
-        {business.label}
-      </span>
-      {role !== null && (
-        <span className={cx("role", "bl-ac-role")}>{role}</span>
-      )}
     </div>
   );
 }

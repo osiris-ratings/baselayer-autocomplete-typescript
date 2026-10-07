@@ -235,39 +235,47 @@ Its state, besides `suggestions`, `isSearching` and `unavailable`:
 `EMPTY_AUTOCOMPLETE_STATE` is the state before anything is asked.
 
 `useEntityAutocomplete({ relation, query, ... })` is the same hook for any
-route, typed by it. A person or address field offers the businesses under
-each row, not the row: `pickableBusinesses(row)` lists them (those with a
-token), and `businessPickFrom(row, business, Date.now())` is the pick, with
-`through`, the person or address it came through.
+route, typed by it. On a person or an address field, `requestFor(route,
+layout, listed)` says what to ask for: the relations listed under each row,
+and whatever the layout draws besides. `groupedLines(row, listed, pickable)`
+turns each row into its head and a line per listed item, and says what a
+pickable line hands: a business, which `businessPickFrom(row, business,
+Date.now())` makes the pick of, with `through`, the person or address it came
+through; or an `EntityPick`, a person or an address. `groupedOptions(lines)`
+lists the pickable lines in the order they are drawn.
 
 ```tsx
+const layout = drawnLayout(PERSON_ROW, resolveLayout(PERSON_ROW));
+const request = requestFor("people", layout, ["businesses"]);
 const state = useEntityAutocomplete({
   relation: "people",
   query: value,
   enabled: true,
-  include: ["businesses"],
+  include: request.include,
 });
-const options = state.suggestions.flatMap(row =>
-  pickableBusinesses(row).map(business => ({
-    row,
-    business,
-    label: business.label,
-  })),
-);
+const rows = state.suggestions.map(row => groupedLines(row, request.listed));
+const options = rows.flatMap(groupedOptions).map(option => ({
+  option,
+  label: option.kind === "business" ? option.business.label : option.pick.label,
+}));
 const combobox = useSuggestionCombobox({
   id: "person",
   items: options,
   inputValue: value,
   onInputChange: setValue,
-  onPick: ({ row, business }) =>
-    onPick(businessPickFrom(row, business, Date.now())),
+  onPick: ({ option }) =>
+    option.kind === "business"
+      ? onPick(businessPickFrom(option.row, option.business, Date.now()))
+      : onPickEntity(option.pick),
   hasFooter: state.isSearching || state.error !== null,
 });
 ```
 
-Draw each row as a `role="group"` labelled by its name, with its options
-inside, so the arrow keys move from business to business and a screen
-reader hears whose they are.
+Draw each row as a `role="group"` labelled by its name, its lines inside, so
+the arrow keys move from pick to pick and a screen reader hears whose they
+are. A line that is not pickable is plain text, not an option. The hook
+leaves out any relation the session's scope does not grant; pass the scope
+to `requestFor` too, and it leaves it out of `listed`.
 
 `useBusinessCombobox` is downshift's combobox with three decisions made: the
 caret never jumps on a mid-word insert, a blur never commits the highlighted
@@ -297,8 +305,8 @@ agents, addresses, states and the alias; see
 `structureLabel` (a structure's flag, `C-Corp` for `C_CORPORATION`),
 `formatFound`, `queryTokens` and `partsFor` (the highlight parts to draw for
 a name, whole-word or cut at the typed prefix), and for a person's or an
-address's row `pickableBusinesses` and `businessPickFrom`. To lay your rows out in the
-styled component's places, `drawnRowLayout(resolveRowLayout(layout))` is the
+address's row `groupedLines`, `groupedOptions`, `businessPickFrom` and
+`pickableBusinesses`. To lay your rows out in the styled component's places, `drawnRowLayout(resolveRowLayout(layout))` is the
 field each place draws, as the component has it, `ROW_LINES` groups the
 places into each line's lead and trailing corner, and
 `includeForLayout(layout)` says what to ask the autocomplete service to expand

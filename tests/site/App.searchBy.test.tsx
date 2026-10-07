@@ -81,7 +81,9 @@ describe("searching by person or address", () => {
     await user.click(screen.getByRole("radio", { name: "Person" }));
     await user.type(field("demo-person"), "dana");
     const dana = await screen.findByRole("group", { name: "Dana Whitfield" });
-    expect(within(dana).getByText("7 businesses")).toBeTruthy();
+    expect(within(dana).getByTestId("grouped-counts").textContent).toMatch(
+      /^7 businesses/,
+    );
     await user.click(
       within(dana).getByRole("option", {
         name: /HARBOR CONCRETE SUPPLY, INC\./,
@@ -121,7 +123,9 @@ describe("searching by person or address", () => {
     const office = await screen.findByRole("group", {
       name: /Ln Ste 300, Dover, DE 19904$/,
     });
-    expect(within(office).getByText("412 businesses here")).toBeTruthy();
+    expect(within(office).getByTestId("grouped-counts").textContent).toMatch(
+      /^412 businesses/,
+    );
     await user.click(
       within(office).getByRole("option", { name: /NORTHSHORE PUMPING, LLC/ }),
     );
@@ -173,7 +177,7 @@ describe("Styling's sample rows", () => {
     const sample = screen.getAllByTestId("person-suggestion");
     expect(sample.length).toBeGreaterThan(1);
     expect(
-      within(sample[0]!).getAllByTestId("business-option").length,
+      within(sample[0]!).getAllByTestId("business-line").length,
     ).toBeGreaterThan(0);
     expect(screen.getByText(/Sample rows for/).textContent).toContain("dana");
 
@@ -181,6 +185,6 @@ describe("Styling's sample rows", () => {
     expect(screen.getAllByTestId("address-suggestion").length).toBeGreaterThan(
       1,
     );
-    expect(screen.getByText(/412 businesses here/)).toBeTruthy();
+    expect(screen.getByText(/^412 businesses/)).toBeTruthy();
   });
 });

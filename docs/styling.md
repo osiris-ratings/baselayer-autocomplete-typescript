@@ -145,7 +145,7 @@ Every element has a `bl-ac-*` class, and `classNames` adds yours per slot:
 `nameGroup`, `name`, `also`, `mark`, `structure`, `states`, `state`,
 `moreStates`, `subtitleLine`, `corner`, `address`, `people`, `footer`,
 `count`, `debug`, and on a person's or an address's row `group`,
-`groupHead`, `groupCount`, `option`, `optionName`, `role`, `more`. The title
+`groupHead`, `groupLine`, `lineName`, `counts`, `role`, `more`. The title
 holds the name group (the name and the badge pinned to its end) and
 `also …`; each line's other corners are `corner`.
 
@@ -212,21 +212,44 @@ Past that, drop the component and build on the hooks: see
 ### Person and address rows
 
 A person or an address is a group in the menu (`bl-ac-group`,
-`role="group"`, labelled by its name and described by its count and what it
-leaves out). Its head (`bl-ac-group-head`) is the
-name, drawn as a business's is, with the same marks under the same
-emphasis (`bl-ac-name`), and at the right how many businesses it leads to
-(`bl-ac-group-count`: `messages.businessesOfPerson`,
-`messages.businessesAtAddress`). Below it, indented, are its businesses, the
-options (`bl-ac-option`, `data-highlighted` on the one the keys are on,
-`data-matched` on one a filter matched): each one's name
-(`bl-ac-option-name`) and at the right its role there (`bl-ac-role`:
-`messages.personBusinessRoles`, `messages.addressBusinessRoles`). Last,
-fainter, how many the row leaves out (`bl-ac-more`:
-`messages.moreBusinesses`). Groups after the first have a rule above them in
-`--bl-ac-border`. `look` colours them as it does a business's row: the name
-in `titleColor`, the counts, roles and the line below in `subtitleColor`,
-the highlighted option on `--bl-ac-highlight-bg`.
+`role="group"`, labelled by its name and described by its counts and what
+its lists leave out). Its head (`bl-ac-group-head`) is the name, marked as a
+business's is (`bl-ac-name`). Below it, indented, is a line
+(`bl-ac-group-line`, `data-line` its type) for each business, address or
+person listed under it (`include`), its name in `bl-ac-line-name`. Every
+line, the head too, is its lead (the name, then its badge:
+`bl-ac-group-lead`) and its trailing corner (`bl-ac-group-trailing`). By
+default:
+
+```text
+Jane Q Doe   12 Oak Ln, Dover, DE 19901 +2 ........ 3 businesses · 3 addresses
+  ACME HOLDINGS LLC   1200 River Rd, Wilm… ............ [DE][FL] +1   officer
+  12 Oak Ln, Dover, DE 19901 .................................... officer
+```
+
+The last line is there when `include` lists addresses. Each line's places
+are `<line>Badge`, `<line>TrailingBadge` and `<line>Trailing` (`headBadge`,
+`businessTrailing`, …), listed in `PERSON_ROW` and `ADDRESS_ROW`, and
+`layout` fills them as it does a business row's, each place taking only its
+own line's fields:
+
+| Field          | Line                 | Draws                                                                                    |
+| -------------- | -------------------- | ---------------------------------------------------------------------------------------- |
+| `firstAddress` | a person's head      | their first address, then `+N` for the rest (`bl-ac-address`)                            |
+| `counts`       | the head             | each relation's full count, `·` between (`bl-ac-group-count`: `messages.relationCounts`) |
+| `address`      | a business           | the business's lead address (`bl-ac-address`)                                            |
+| `states`       | a business           | its states as squares, the domicile first (`bl-ac-states`)                               |
+| `role`         | a business           | the person's role on it, or how it holds the address (`bl-ac-role`)                      |
+| `addressRole`  | an address, a person | the person's role at it (`bl-ac-role`)                                                   |
+| `personRole`   | a person, an address | the person's role at the address (`bl-ac-role`)                                          |
+
+A line the host made pickable (`pickable`) is an option: `data-pickable`, and
+`data-highlighted` on the one the keys or the pointer are on. Any other line
+is inert. A list ends, fainter, in how many it leaves out (`bl-ac-more`:
+`messages.moreNotShown`). Groups after the first have a rule above them in
+`--bl-ac-border`. `look` colours them as it does a business's row: the names
+in `titleColor`, addresses, counts and roles in `subtitleColor`, the
+highlighted line on `--bl-ac-highlight-bg`.
 
 ## 5. A row's places and fields
 

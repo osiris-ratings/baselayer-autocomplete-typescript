@@ -155,8 +155,8 @@ businesses route's `state`).
 
 `BusinessAutocomplete`, `PersonAutocomplete` and `AddressAutocomplete` are
 the styled components, one per route. A person or an address shows in the
-menu as a group: its name, how many businesses it leads to, and the first of
-them as the options, each with its role there.
+menu as a group: its name with its counts, and a line for each business
+under it, with the business's address, its states and the role there.
 
 ```tsx
 <PersonAutocomplete
@@ -174,6 +174,21 @@ them as the options, each with its role there.
   }}
 />
 ```
+
+Three props shape the rows:
+
+| Prop       | Default          | What it does                                                                                                      |
+| ---------- | ---------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `include`  | `["businesses"]` | The relations listed under each row: a person's `addresses`, an address's `people`, a line per item               |
+| `pickable` | `["business"]`   | Which lines can be picked: `business`, and `person` or `address`, the row itself or one it lists                  |
+| `layout`   | `PERSON_ROW`'s   | What each line draws where ([Person and address rows](styling.md#person-and-address-rows)), asked for as it draws |
+
+A business picked hands `onPick` a `BusinessPick`. A person or an address
+picked hands `onPickEntity` an `EntityPick` (`type`, `token`, `label`), which
+the component requires once `pickable` names one; nothing redeems its token
+yet. Any other line is drawn but not pickable. A relation the session's
+scope does not grant is neither asked for nor drawn, and the search still
+runs.
 
 A pick leaves the field as it was typed; put `pick.businessName` in your
 business name field. `PersonAutocompleteView` and `AddressAutocompleteView`

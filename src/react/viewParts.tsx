@@ -5,6 +5,8 @@ import { Fragment, type CSSProperties, type ReactNode } from "react";
 
 import {
   DEFAULT_LOOK,
+  orderedStates,
+  type BusinessStates,
   type HighlightPart,
   type Look,
 } from "@baselayer-sdk/autocomplete";
@@ -36,9 +38,9 @@ export type SlotName =
   | "debug"
   | "group"
   | "groupHead"
-  | "groupCount"
-  | "option"
-  | "optionName"
+  | "groupLine"
+  | "lineName"
+  | "counts"
   | "role"
   | "more";
 
@@ -124,5 +126,56 @@ export function marked(
     ) : (
       <Fragment key={index}>{part.text}</Fragment>
     ),
+  );
+}
+
+/** Squares shown before the `+N` overflow: the domicile and two more. */
+export const STATE_SQUARES = 3;
+
+/**
+ * A business's states as squares, the domicile first and marked, then the
+ * states a filter matched, then `+N` past the third.
+ */
+export function StateSquares({
+  business,
+  matched,
+  cx,
+  more,
+  place,
+}: {
+  /** A business row, or a business listed under a person or an address. */
+  business: BusinessStates;
+  /** The states a state filter matched: moved forward and marked. */
+  matched: readonly string[];
+  cx: ClassFor;
+  more: (count: number) => string;
+  /** The layout place it is drawn in. */
+  place: string;
+}) {
+  const states = orderedStates(business, matched);
+  const shown = states.slice(0, STATE_SQUARES);
+  const hidden = states.length - shown.length;
+  return (
+    <span className={cx("states", "bl-ac-states")} data-place={place}>
+      {shown.map(state => (
+        <span
+          key={state}
+          className={cx("state", "bl-ac-state")}
+          data-testid="business-suggestion-state"
+          data-domicile={state === business.domicile_state ? "true" : undefined}
+          data-matched={matched.includes(state) ? "true" : undefined}
+        >
+          {state}
+        </span>
+      ))}
+      {hidden > 0 && (
+        <span
+          className={cx("moreStates", "bl-ac-more-states")}
+          data-testid="business-suggestion-more-states"
+        >
+          {more(hidden)}
+        </span>
+      )}
+    </span>
   );
 }

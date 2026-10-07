@@ -16,7 +16,6 @@ import {
   addressLineOf,
   formatFound,
   matchedOn,
-  orderedStates,
   partsFor,
   peopleLineOf,
   queryTokens,
@@ -27,6 +26,7 @@ import type { BusinessSuggestion, Filters } from "@baselayer-sdk/autocomplete";
 import { resolveMessages, type AutocompleteMessages } from "./messages";
 import { useBusinessCombobox } from "./useBusinessCombobox";
 import {
+  StateSquares,
   classes,
   lookVariables,
   marked,
@@ -34,10 +34,8 @@ import {
   type SlotName,
 } from "./viewParts";
 
+export { STATE_SQUARES } from "./viewParts";
 export type { SlotName } from "./viewParts";
-
-/** Squares shown before the `+N` overflow: the domicile and two more. */
-export const STATE_SQUARES = 3;
 
 export interface RowRenderProps {
   item: BusinessSuggestion;
@@ -115,48 +113,6 @@ export interface BusinessAutocompleteViewProps {
   unstyled?: boolean | undefined;
 }
 
-function StateSquares({
-  suggestion,
-  matched,
-  cx,
-  more,
-  place,
-}: {
-  suggestion: BusinessSuggestion;
-  /** The states a state filter matched: moved forward and marked. */
-  matched: readonly string[];
-  cx: ClassFor;
-  more: (count: number) => string;
-  place: RowPlace;
-}) {
-  const states = orderedStates(suggestion, matched);
-  const shown = states.slice(0, STATE_SQUARES);
-  const hidden = states.length - shown.length;
-  return (
-    <span className={cx("states", "bl-ac-states")} data-place={place}>
-      {shown.map((state, index) => (
-        <span
-          key={state}
-          className={cx("state", "bl-ac-state")}
-          data-testid="business-suggestion-state"
-          data-domicile={index === 0 ? "true" : undefined}
-          data-matched={matched.includes(state) ? "true" : undefined}
-        >
-          {state}
-        </span>
-      ))}
-      {hidden > 0 && (
-        <span
-          className={cx("moreStates", "bl-ac-more-states")}
-          data-testid="business-suggestion-more-states"
-        >
-          {more(hidden)}
-        </span>
-      )}
-    </span>
-  );
-}
-
 /** Each line's slot and classes. */
 const LINE_CLASSES: Record<
   (typeof ROW_LINES)[number]["line"],
@@ -227,7 +183,7 @@ function DefaultRow({
   const fieldNode: Record<RowField, (place: RowPlace) => ReactNode> = {
     states: place => (
       <StateSquares
-        suggestion={item}
+        business={item}
         matched={matchedStates}
         cx={cx}
         more={text.more}
