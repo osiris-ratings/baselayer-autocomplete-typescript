@@ -2,7 +2,7 @@ import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
 
-import { mapInks } from "../../site/demo/map-ink";
+import { contrast, mapInks } from "../../site/demo/map-ink";
 import { RowMap } from "../../site/demo/RowMap";
 import { DEFAULT_STYLE } from "../../site/demo/style-state";
 
@@ -31,16 +31,31 @@ describe("a segment's icon toggle in the row map", () => {
         host.querySelector<HTMLElement>(
           `.row-map-icon[data-segment="${segment}"]`,
         )!;
-      // On: the segment's ink, on a ground of its own. Off: the soft ink,
-      // still there to be seen and pressed.
+      // On: the solid glyph, in the segment's ink, in a filled tile. Off: an
+      // empty, dashed slot, its glyph in the soft ink and struck through.
       const inks = mapInks(DEFAULT_STYLE);
       const on = getComputedStyle(toggle("businessName"));
       const off = getComputedStyle(toggle("firstAddress"));
       expect(on.color).toBe(rgb(inks.ink));
       expect(on.backgroundColor).not.toBe("rgba(0, 0, 0, 0)");
+      expect(on.borderTopStyle).toBe("solid");
+      expect(getComputedStyle(toggle("businessName"), "::after").content).toBe(
+        "none",
+      );
       expect(off.color).toBe(rgb(inks.soft));
       expect(off.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+      expect(off.borderTopStyle).toBe("dashed");
+      const slash = getComputedStyle(toggle("firstAddress"), "::after");
+      expect(slash.content).not.toBe("none");
+      expect(slash.transform).not.toBe("none");
+      expect(contrast(inks.ink, "#ffffff")).toBeGreaterThan(
+        contrast(inks.soft, "#ffffff"),
+      );
       expect([on.opacity, off.opacity]).toEqual(["1", "1"]);
+      // Each says which it is, and is pressed with a pointer.
+      expect(toggle("businessName").title).toBe("Icon: on");
+      expect(toggle("firstAddress").title).toBe("Icon: off");
+      expect(on.cursor).toBe("pointer");
 
       // The glyph sits before the name, which it does not cover.
       for (const segment of ["businessName", "firstAddress"]) {
@@ -57,6 +72,38 @@ describe("a segment's icon toggle in the row map", () => {
           range.getBoundingClientRect().left,
         );
       }
+    } finally {
+      root.unmount();
+      host.remove();
+    }
+  });
+
+  it("draws a frozen toggle dimmed and inert, on a hidden line", () => {
+    const host = document.createElement("div");
+    host.style.width = "560px";
+    document.body.append(host);
+    const root = createRoot(host);
+    flushSync(() =>
+      root.render(
+        <RowMap state={DEFAULT_STYLE} onChange={() => {}} route="people" />,
+      ),
+    );
+    try {
+      const frozen = host.querySelector<HTMLButtonElement>(
+        '.row-map-icon[data-segment="addressName"]',
+      )!;
+      const live = host.querySelector<HTMLButtonElement>(
+        '.row-map-icon[data-segment="businessName"]',
+      )!;
+      expect(frozen.disabled).toBe(true);
+      // No slot and no tile: nothing to press, though the glyph still reads
+      // (the presets' contrast test holds it to its floor).
+      const style = getComputedStyle(frozen);
+      expect(style.cursor).toBe("not-allowed");
+      expect(style.borderTopStyle).toBe("none");
+      expect(style.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+      expect(getComputedStyle(live).borderTopStyle).toBe("solid");
+      expect(frozen.title).toBe("Icon: on, on a hidden line");
     } finally {
       root.unmount();
       host.remove();

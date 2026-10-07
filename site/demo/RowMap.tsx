@@ -514,7 +514,7 @@ function IconToggle({
       data-segment={segment}
       aria-pressed={on}
       aria-label={`Icon on ${label}`}
-      title={`${label}: ${on ? "drawn with its icon" : "drawn with no icon"} (iconSegments)`}
+      title={`Icon: ${on ? "on" : "off"}${frozen ? ", on a hidden line" : ""}`}
       disabled={frozen}
       // A press here is the toggle's, not the start of the field's drag.
       onPointerDown={event => event.stopPropagation()}

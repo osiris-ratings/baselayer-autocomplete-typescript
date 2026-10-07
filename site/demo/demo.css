@@ -936,50 +936,69 @@
   flex: none;
 }
 
-/* A segment's icon, as a toggle at the start of its chip, in the chip's own
-   ink: solid when the segment carries it, faint when not. It sits over the
-   place's drag handle, and a press on it is its own. */
+/* A segment's icon, as a toggle at the start of its chip. On, the solid
+   glyph in the segment's ink, in a filled tile; off, an empty dashed slot,
+   its glyph in the soft ink and struck through. On a hidden line it is
+   frozen: no slot and no tile, nothing to press. It sits over the place's
+   drag handle, and a press on it is its own. */
 .row-map-icon {
   position: absolute;
   z-index: 2;
   top: 50%;
-  left: 5px;
+  left: 4px;
   display: inline-flex;
+  box-sizing: border-box;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   padding: 0;
   background: transparent;
-  border: 0;
-  border-radius: 3px;
+  border: 1px solid transparent;
+  border-radius: 4px;
   color: inherit;
   font-size: 12px;
   cursor: pointer;
   transform: translateY(-50%);
 }
 
-/* On, the segment's ink on a ground of its own; off, the soft ink, still
-   there to be seen and pressed. */
 .row-map-icon[aria-pressed="true"] {
-  background: color-mix(in srgb, var(--map-ink) 14%, transparent);
+  background: color-mix(in srgb, var(--map-ink) 16%, transparent);
+  border-color: color-mix(in srgb, var(--map-ink) 45%, transparent);
+  color: var(--map-ink);
 }
 
 .row-map-icon[aria-pressed="false"] {
+  border-style: dashed;
+  border-color: var(--map-soft);
   color: var(--map-soft);
 }
 
+.row-map-icon[aria-pressed="false"]::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 19px;
+  height: 1.5px;
+  background: currentColor;
+  border-radius: 1px;
+  content: "";
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
 .row-map-icon:hover:not(:disabled) {
-  background: color-mix(in srgb, currentColor 14%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blue) 45%, transparent);
 }
 
 .row-map-icon:disabled {
+  background: transparent;
+  border-style: none;
   cursor: not-allowed;
 }
 
 .row-map-icon:focus-visible {
   outline: 2px solid var(--blue);
-  outline-offset: 0;
+  outline-offset: 1px;
 }
 
 .row-map-icon-glyph {
@@ -993,7 +1012,7 @@
 
 .row-map-place[data-icon] .row-map-face,
 .row-map-slot[data-icon] .row-map-name {
-  padding-left: 24px;
+  padding-left: 27px;
 }
 
 .row-map-name {
