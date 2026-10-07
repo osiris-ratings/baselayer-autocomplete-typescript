@@ -178,3 +178,31 @@ describe("the row map's drawers", () => {
     }
   });
 });
+
+describe("the Hidden drawer's ground", () => {
+  it("is faintly striped, clear of its border, and the Shown drawer is not", () => {
+    const { host, done } = mount();
+    try {
+      const card = (drawer: string) =>
+        host.querySelector<HTMLElement>(`[data-drawer="${drawer}"] .row-map`)!;
+      const stripes = getComputedStyle(card("hidden"), "::before");
+      expect(stripes.backgroundImage).toContain("repeating-linear-gradient");
+      expect(stripes.backgroundImage).toContain("45deg");
+      for (const side of ["top", "right", "bottom", "left"] as const) {
+        expect(parseFloat(stripes[side])).toBeGreaterThanOrEqual(6);
+        expect(parseFloat(stripes[side])).toBeLessThanOrEqual(8);
+      }
+      expect(stripes.pointerEvents).toBe("none");
+      expect(getComputedStyle(card("shown"), "::before").content).toBe("none");
+      // What the drawer holds lies over the stripes, not under them.
+      const lines = host.querySelector<HTMLElement>(
+        '[data-drawer="hidden"] .row-map-scroll-frame',
+      )!;
+      expect(Number(getComputedStyle(lines).zIndex)).toBeGreaterThan(
+        Number(stripes.zIndex),
+      );
+    } finally {
+      done();
+    }
+  });
+});

@@ -636,6 +636,32 @@
   scroll-padding-inline: var(--map-grip-cell) var(--map-check-cell);
 }
 
+/* Hidden is faintly striped, a margin clear of its border, so it reads as
+   set aside without drowning what is in it, which lies over the stripes. */
+.row-map-hidden {
+  position: relative;
+}
+
+.row-map-hidden::before {
+  position: absolute;
+  z-index: 0;
+  inset: 7px;
+  border-radius: 4px;
+  background: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--map-soft) 16%, transparent) 0 1px,
+    transparent 1px 7px
+  );
+  content: "";
+  pointer-events: none;
+}
+
+.row-map-hidden > .row-map-scroll-frame,
+.row-map-hidden > .row-map-tray {
+  position: relative;
+  z-index: 1;
+}
+
 /* Hidden holds listed lines only: its title starts where theirs do. */
 .row-map-hidden .row-map-drawer-label {
   padding-left: calc(var(--map-indent) + var(--map-box-pad));
