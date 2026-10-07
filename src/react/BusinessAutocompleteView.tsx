@@ -10,7 +10,6 @@ import {
   type RowField,
   type RowLayout,
   type RowLayoutInput,
-  type RowLine,
   type RowPlace,
 } from "@baselayer-sdk/autocomplete";
 import {
@@ -160,7 +159,7 @@ function StateSquares({
 
 /** Each line's slot and classes. */
 const LINE_CLASSES: Record<
-  RowLine["line"],
+  (typeof ROW_LINES)[number]["line"],
   { slot: SlotName; className: string }
 > = {
   title: { slot: "titleLine", className: "bl-ac-line bl-ac-line-title" },
