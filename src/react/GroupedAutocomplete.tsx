@@ -46,6 +46,7 @@ import {
 
 import type { MintTiming } from "./BusinessAutocomplete";
 import { useAutocompleteClient, useResolvedClient } from "./context";
+import { iconFor, type IconSet } from "./icons";
 import { resolveMessages, type AutocompleteMessages } from "./messages";
 import { useEntityAutocomplete } from "./useBusinessAutocomplete";
 import { useSuggestionCombobox } from "./useBusinessCombobox";
@@ -112,7 +113,17 @@ interface GroupedCommonProps<R extends GroupedRoute> {
    * default; a person's addresses, an address's people. A relation the
    * session's scope does not grant is left out.
    */
+  list?: readonly IncludeOf<R>[];
+  /**
+   * What the autocomplete service expands for each row: by default what the
+   * rows list and the layout draws (`requestFor`).
+   */
   include?: readonly IncludeOf<R>[];
+  /**
+   * The icon before each name, per entity: the SDK's building, person and map
+   * pin by default; `false` draws none.
+   */
+  icons?: IconSet;
   /**
    * The field each place of a row's lines shows (`PERSON_ROW`, `ADDRESS_ROW`).
    * The request asks for whatever it draws.
@@ -237,18 +248,18 @@ function drawnFor(
 function requestOf(
   route: GroupedRoute,
   layout: PersonRowLayout | AddressRowLayout,
-  include: readonly Relation[] | undefined,
+  list: readonly Relation[] | undefined,
 ): GroupedRequest<GroupedRoute> {
   return route === "people"
     ? requestFor(
         "people",
         layout as PersonRowLayout,
-        include as IncludeOf<"people">[] | undefined,
+        list as IncludeOf<"people">[] | undefined,
       )
     : requestFor(
         "addresses",
         layout as AddressRowLayout,
-        include as IncludeOf<"addresses">[] | undefined,
+        list as IncludeOf<"addresses">[] | undefined,
       );
 }
 
@@ -259,6 +270,7 @@ function Connected<R extends GroupedRoute>({
   onChange,
   onPick,
   onPickEntity,
+  list,
   include,
   layout,
   onFocus,
@@ -282,7 +294,7 @@ function Connected<R extends GroupedRoute>({
     field: string;
     before: string;
     held: boolean;
-    selection: GroupedSelection;
+    selection: GroupedSelection | null;
   } | null>(null);
   // A host may take the name a render or more later: until then the field
   // still holds what was typed, and the pick waits. Anything else, before the
@@ -301,13 +313,13 @@ function Connected<R extends GroupedRoute>({
       : null;
   // What the rows draw decides what is asked for; the hook drops whatever the
   // session's scope does not grant.
-  const request = requestOf(route, drawnFor(route, layout), include);
+  const request = requestOf(route, drawnFor(route, layout), list);
   const { unavailable, ...state } = useEntityAutocomplete<R>({
     relation: route,
     client,
     query: value,
     enabled,
-    include: request.include as IncludeOf<R>[],
+    include: (include ?? request.include) as IncludeOf<R>[],
     ...(filters !== undefined ? { filters } : {}),
     ...(limit !== undefined ? { limit } : {}),
     ...(minChars !== undefined ? { minChars } : {}),
@@ -329,7 +341,7 @@ function Connected<R extends GroupedRoute>({
       value={value}
       inputName={name}
       messages={messages}
-      include={request.list as IncludeOf<R>[]}
+      list={request.list as IncludeOf<R>[]}
       layout={layout}
       suggestions={state.suggestions}
       found={state.found}
@@ -354,10 +366,13 @@ function Connected<R extends GroupedRoute>({
           field,
           before: value,
           held: field === value,
+          // The row itself picked, the field names it: no line under it.
           selection:
             option.kind === "business"
               ? { type: "business", label: option.business.label }
-              : { type: option.pick.type, label: option.pick.label },
+              : option.pick.type === option.row.type
+                ? null
+                : { type: option.pick.type, label: option.pick.label },
         });
         onChange(field);
         if (option.kind === "business") {
@@ -402,7 +417,9 @@ interface GroupedViewCommonProps<R extends GroupedRoute> {
   isSearching: boolean;
   error: string | null;
   /** The relations listed under each row, a line per item. Default: businesses. */
-  include?: readonly IncludeOf<R>[] | undefined;
+  list?: readonly IncludeOf<R>[] | undefined;
+  /** The icon before each name, per entity; `false` draws none. */
+  icons?: IconSet | undefined;
   /** Which lines can be picked, by type. Default: businesses. */
   pickable?: readonly EntityType[] | undefined;
   /** The field each place of a row's lines shows. */
@@ -474,7 +491,8 @@ function GroupedView<R extends GroupedRoute>({
   roundTripMs,
   isSearching,
   error,
-  include,
+  list,
+  icons,
   pickable,
   layout: layoutInput,
   selection = null,
@@ -493,7 +511,7 @@ function GroupedView<R extends GroupedRoute>({
   const cx = classes(unstyled, classNames);
   const drawnLayout = drawnFor(route, layoutInput);
   const layout: Readonly<Record<string, string | null>> = drawnLayout;
-  const { list: listed } = requestOf(route, drawnLayout, include);
+  const { list: listed } = requestOf(route, drawnLayout, list);
   const rows: GroupedRow[] = suggestions;
   const drawn = rows.map(row => ({
     row,
@@ -572,6 +590,24 @@ function GroupedView<R extends GroupedRoute>({
     of: LineOf,
     headId: string,
   ): ReactNode {
+    if (name !== null && name.endsWith("Icon")) {
+      const icon = iconFor(
+        icons,
+        of.line === "head" ? of.row.type : of.item.type,
+      );
+      return (
+        icon !== null && (
+          <span
+            className={cx("icon", "bl-ac-icon")}
+            data-place={place}
+            data-entity={of.line === "head" ? of.row.type : of.item.type}
+            aria-hidden="true"
+          >
+            {icon}
+          </span>
+        )
+      );
+    }
     switch (name) {
       case "firstAddress": {
         if (of.line !== "head" || of.row.type !== "person") {
@@ -714,6 +750,7 @@ function GroupedView<R extends GroupedRoute>({
         }
       >
         <span className={cx("corner", "bl-ac-group-lead")} data-corner="lead">
+          {at(`${of.line}Lead`)}
           {name}
           {badge}
         </span>

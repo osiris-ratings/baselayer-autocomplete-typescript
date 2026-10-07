@@ -953,7 +953,7 @@ export function App() {
                       // token, so there is no business for step 03 to search.
                       onPickEntity={() => setPicked(null)}
                       layout={style.personLayout}
-                      include={style.personInclude}
+                      list={style.personInclude}
                       pickable={style.personPickable}
                       look={{ ...changedLook(style) }}
                       limit={style.limit}
@@ -982,7 +982,7 @@ export function App() {
                       onPick={pickedThrough}
                       onPickEntity={() => setPicked(null)}
                       layout={style.addressLayout}
-                      include={style.addressInclude}
+                      list={style.addressInclude}
                       pickable={style.addressPickable}
                       look={{ ...changedLook(style) }}
                       limit={style.limit}
@@ -1051,7 +1051,7 @@ export function App() {
                         )}
                         suggestions={SAMPLE_PEOPLE.slice(0, style.limit)}
                         layout={style.personLayout}
-                        include={style.personInclude}
+                        list={style.personInclude}
                         pickable={style.personPickable}
                         found={SAMPLE_PEOPLE.length}
                         foundCapped={false}
@@ -1077,7 +1077,7 @@ export function App() {
                         )}
                         suggestions={SAMPLE_ADDRESSES.slice(0, style.limit)}
                         layout={style.addressLayout}
-                        include={style.addressInclude}
+                        list={style.addressInclude}
                         pickable={style.addressPickable}
                         found={SAMPLE_ADDRESSES.length}
                         foundCapped={false}

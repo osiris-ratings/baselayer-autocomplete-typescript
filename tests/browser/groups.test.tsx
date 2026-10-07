@@ -157,7 +157,7 @@ function draw(route: "people" | "addresses", width: number) {
           value="margarethe"
           onInputChange={() => {}}
           onSelect={() => {}}
-          include={["businesses", "addresses"]}
+          list={["businesses", "addresses"]}
           suggestions={PEOPLE}
           {...state}
         />
@@ -168,7 +168,7 @@ function draw(route: "people" | "addresses", width: number) {
           value="4120 orchard"
           onInputChange={() => {}}
           onSelect={() => {}}
-          include={["businesses", "people"]}
+          list={["businesses", "people"]}
           suggestions={ADDRESSES}
           {...state}
         />

@@ -27,18 +27,19 @@ release.
 - `PersonAutocomplete` and `AddressAutocomplete`: styled typeaheads that find a
   business through a person or an address. Each person or address is a group in
   the menu: its name with its counts, a person's first address, and a line for
-  each business under it with the business's address, states and role. `include`
-  lists a person's addresses or an address's people too, `pickable` makes the
-  row itself or what it lists pickable, and `layout` places each line's fields,
-  as on a business row. `onPick` hands a `BusinessPick`: `businessToken`,
-  `businessName`, `pickedAt`, `expiresAt`, and `through`, the person or address
-  it was reached by with the business's role there; `onPickEntity` hands an
-  `EntityPick` for a person or an address. A pick puts the row's own name in the
-  field, and a line under it names what was picked until the next edit
-  (`showSelection`). `PersonAutocompleteView` and `AddressAutocompleteView` draw
-  the same rows from state a host supplies.
+  each business under it with the business's address, states and role, an icon
+  before every name. `list` lists a person's addresses or an address's people
+  too, `pickable` makes the row itself or what it lists pickable, `layout`
+  places each line's fields, as on a business row, and `icons` sets or turns off
+  the icons. `onPick` hands a `BusinessPick`: `businessToken`, `businessName`,
+  `pickedAt`, `expiresAt`, and `through`, the person or address it was reached
+  by with the business's role there; `onPickEntity` hands an `EntityPick` for a
+  person or an address. A pick puts the row's own name in the field, and a pick
+  from a line under the row draws a line under the field naming it until the
+  next edit (`showSelection`). `PersonAutocompleteView` and
+  `AddressAutocompleteView` draw the same rows from state a host supplies.
 - `PERSON_ROW` and `ADDRESS_ROW`, the places and fields of those rows, and
-  `requestFor(route, layout, listed, scope)`, what to ask for them;
+  `requestFor(route, layout, list, scope)`, what to ask for them;
   `groupedLines(row, listed, pickable)` and `groupedOptions(lines)`, their
   lines and what each pickable one hands. `RowKind`, `resolveLayout` and
   `drawnLayout` resolve any kind of row's layout.

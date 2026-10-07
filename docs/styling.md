@@ -217,8 +217,8 @@ A person or an address is a group in the menu (`bl-ac-group`,
 its lists leave out). Its head (`bl-ac-group-head`) is the name, marked as a
 business's is (`bl-ac-name`). Below it, indented, is a line
 (`bl-ac-group-line`, `data-line` its type) for each business, address or
-person listed under it (`include`), its name in `bl-ac-line-name`. Every
-line, the head too, is its lead (the name, then its badge:
+person listed under it (`list`), its name in `bl-ac-line-name`. Every
+line, the head too, is its lead (its icon, the name, then its badge:
 `bl-ac-group-lead`) and its trailing corner (`bl-ac-group-trailing`). By
 default:
 
@@ -228,9 +228,11 @@ Jane Q Doe   12 Fernhallow Ln, Dover, DE 19901 +2 ........ 3 businesses · 3 add
   12 Fernhallow Ln, Dover, DE 19901 .................................... officer
 ```
 
-The last line is there when `include` lists addresses. Each line's places
-are `<line>Badge`, `<line>TrailingBadge` and `<line>Trailing` (`headBadge`,
-`businessTrailing`, …), listed in `PERSON_ROW` and `ADDRESS_ROW`, and
+The last line is there when `list` names addresses. Each line's places are
+`<line>Lead`, before the name, which takes only the line's icon
+(`<line>Icon`), then `<line>Badge`, `<line>TrailingBadge` and
+`<line>Trailing` (`headBadge`, `businessTrailing`, …), listed in
+`PERSON_ROW` and `ADDRESS_ROW`, and
 `layout` fills them as it does a business row's, each place taking only its
 own line's fields:
 
@@ -252,8 +254,15 @@ is inert. A list ends, fainter, in how many it leaves out (`bl-ac-more`:
 in `titleColor`, addresses, counts and roles in `subtitleColor`, the
 highlighted line on `--bl-ac-highlight-bg`.
 
-After a pick, the line under the field (`bl-ac-selection`, `data-type` the
-picked line's type) names what was picked, in `subtitleColor`.
+After a pick from a line under a row, the line under the field
+(`bl-ac-selection`, `data-type` the picked line's type) names what was
+picked, in `subtitleColor`.
+
+Each line's icon (`bl-ac-icon`, `data-entity` its entity, hidden from
+screen readers) is an office building for a business, a person for a
+person and a map pin for an address, drawn in `subtitleColor` at the size
+of its text. `icons` gives an entity an icon of your own, any React node,
+or turns them all off with `false`.
 
 ## 5. A row's places and fields
 

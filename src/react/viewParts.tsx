@@ -42,6 +42,7 @@ export type SlotName =
   | "lineName"
   | "counts"
   | "selection"
+  | "icon"
   | "role"
   | "more";
 

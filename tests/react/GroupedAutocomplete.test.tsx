@@ -1,6 +1,6 @@
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -265,18 +265,20 @@ function PersonHost({
   client,
   onPick = () => {},
   onPickEntity = () => {},
-  include,
+  list,
   pickable,
   layout,
   showSelection,
+  icons,
 }: {
   client: Client;
   onPick?: (pick: BusinessPick) => void;
   onPickEntity?: (pick: EntityPick) => void;
-  include?: ("businesses" | "addresses")[];
+  list?: ("businesses" | "addresses")[];
   pickable?: EntityType[];
   layout?: PersonRowLayoutInput;
   showSelection?: boolean;
+  icons?: Partial<Record<EntityType, ReactNode>> | false;
 }) {
   const [value, setValue] = useState("");
   return (
@@ -299,10 +301,11 @@ function PersonHost({
         onChange={setValue}
         onPick={onPick}
         onPickEntity={onPickEntity}
-        {...(include !== undefined ? { include } : {})}
+        {...(list !== undefined ? { list } : {})}
         pickable={pickable ?? DEFAULT_PICKABLE}
         {...(layout !== undefined ? { layout } : {})}
         {...(showSelection !== undefined ? { showSelection } : {})}
+        {...(icons !== undefined ? { icons } : {})}
       />
     </>
   );
@@ -312,13 +315,13 @@ function AddressHost({
   client,
   onPick = () => {},
   onPickEntity = () => {},
-  include,
+  list,
   pickable,
 }: {
   client: Client;
   onPick?: (pick: BusinessPick) => void;
   onPickEntity?: (pick: EntityPick) => void;
-  include?: ("businesses" | "people")[];
+  list?: ("businesses" | "people")[];
   pickable?: EntityType[];
 }) {
   const [value, setValue] = useState("");
@@ -332,7 +335,7 @@ function AddressHost({
       onChange={setValue}
       onPick={onPick}
       onPickEntity={onPickEntity}
-      {...(include !== undefined ? { include } : {})}
+      {...(list !== undefined ? { list } : {})}
       pickable={pickable ?? DEFAULT_PICKABLE}
     />
   );
@@ -427,7 +430,7 @@ describe("PersonAutocomplete", () => {
   it("describes each group by what only its inert lines say, for a screen reader", async () => {
     const { client } = setup();
     const { dana } = await typeDana(client, {
-      include: ["businesses", "addresses"],
+      list: ["businesses", "addresses"],
     });
 
     // The options speak for themselves; a screen reader in a listbox moves
@@ -463,7 +466,7 @@ describe("PersonAutocomplete", () => {
   it("gives a line that is not a pick no role in the listbox", async () => {
     const { client } = setup();
     const { dana } = await typeDana(client, {
-      include: ["businesses", "addresses"],
+      list: ["businesses", "addresses"],
     });
 
     const inert = [
@@ -483,7 +486,7 @@ describe("PersonAutocomplete", () => {
   it("lists a person's addresses when the host includes them, each with the person's role there", async () => {
     const { client } = setup();
     const { dana } = await typeDana(client, {
-      include: ["businesses", "addresses"],
+      list: ["businesses", "addresses"],
     });
 
     expect(linesOf(dana, "address")).toEqual([
@@ -555,7 +558,7 @@ describe("PersonAutocomplete", () => {
     const { user, dana } = await typeDana(client, {
       onPick,
       onPickEntity,
-      include: ["businesses", "addresses"],
+      list: ["businesses", "addresses"],
       pickable: ["person", "address"],
     });
 
@@ -610,7 +613,7 @@ describe("PersonAutocomplete", () => {
       maxLimit: 20,
     });
     const { dana } = await typeDana(client, {
-      include: ["businesses", "addresses"],
+      list: ["businesses", "addresses"],
     });
 
     expect(
@@ -690,7 +693,7 @@ describe("AddressAutocomplete", () => {
   it("lists the people at an address when the host includes them, each with their role", async () => {
     const { client } = setup();
     const user = userEvent.setup();
-    render(<AddressHost client={client} include={["businesses", "people"]} />);
+    render(<AddressHost client={client} list={["businesses", "people"]} />);
 
     await user.type(screen.getByRole("combobox"), "45 corvel");
     const corvel = await screen.findByRole("group", { name: /45 Corvel/ });
@@ -730,7 +733,7 @@ describe("AddressAutocomplete", () => {
       <AddressHost
         client={client}
         onPickEntity={onPickEntity}
-        include={["businesses", "people"]}
+        list={["businesses", "people"]}
         pickable={["address", "person", "business"]}
       />,
     );
@@ -763,10 +766,10 @@ describe("the selection line", () => {
     expect(input()).toHaveAccessibleDescription("Cobalt Tile Supply LLC");
   });
 
-  it("names the address picked, or the person, when they are what was picked", async () => {
+  it("names the address picked under a person, and leaves the person picked to the field", async () => {
     const { client } = setup();
     const { user } = await typeDana(client, {
-      include: ["businesses", "addresses"],
+      list: ["businesses", "addresses"],
       pickable: ["person", "address"],
     });
 
@@ -781,9 +784,9 @@ describe("the selection line", () => {
     await user.click(
       await screen.findByRole("option", { name: /^Danae Ortega/ }),
     );
+    // The row itself picked: the field says it, and no line is drawn.
     expect(input().value).toBe("Danae Ortega");
-    expect(selection()).toHaveTextContent("Danae Ortega");
-    expect(selection()).toHaveAttribute("data-type", "person");
+    expect(selection()).toBeNull();
   });
 
   it("goes with any edit, and stays gone when the edit is undone", async () => {
@@ -950,7 +953,7 @@ describe("the selection line", () => {
     render(
       <AddressHost
         client={client}
-        include={["businesses", "people"]}
+        list={["businesses", "people"]}
         pickable={["business", "person"]}
       />,
     );
@@ -967,5 +970,62 @@ describe("the selection line", () => {
     await user.click(await screen.findByRole("option", { name: /Ada Fox/ }));
     expect(selection()).toHaveTextContent("Ada Fox");
     expect(selection()).toHaveAttribute("data-type", "person");
+  });
+});
+
+describe("the icons", () => {
+  const iconsOf = (element: HTMLElement) =>
+    [...element.querySelectorAll<HTMLElement>(".bl-ac-icon")].map(
+      icon => icon.dataset.entity,
+    );
+
+  it("draws one before every name: a person, a building, a map pin", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client, {
+      list: ["businesses", "addresses"],
+    });
+
+    const head = within(dana).getByTestId("group-head");
+    expect(iconsOf(head)).toEqual(["person"]);
+    for (const line of within(dana).getAllByTestId("business-line")) {
+      expect(iconsOf(line)).toEqual(["business"]);
+    }
+    for (const line of within(dana).getAllByTestId("address-line")) {
+      expect(iconsOf(line)).toEqual(["address"]);
+    }
+    // Before the name, and nothing a screen reader reads.
+    const icon = head.querySelector(".bl-ac-icon")!;
+    expect(icon.parentElement!.firstElementChild).toBe(icon);
+    expect(icon).toHaveAttribute("aria-hidden", "true");
+    expect(dana).toHaveAccessibleName("Dana Whitfield");
+  });
+
+  it("draws the host's own icon for an entity, the others as they were", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client, {
+      icons: { business: <b data-testid="own-icon">B</b> },
+    });
+
+    expect(within(dana).getAllByTestId("own-icon")).toHaveLength(3);
+    expect(iconsOf(within(dana).getByTestId("group-head"))).toEqual(["person"]);
+  });
+
+  it("draws none with icons off", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client, { icons: false });
+
+    expect(dana.querySelectorAll(".bl-ac-icon")).toHaveLength(0);
+  });
+
+  it("leaves a line's icon out where the layout does", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client, {
+      layout: { businessLead: null },
+    });
+
+    expect(iconsOf(within(dana).getByTestId("group-head"))).toEqual(["person"]);
+    expect(
+      within(dana).getAllByTestId("business-line").flatMap(iconsOf),
+    ).toEqual([]);
   });
 });

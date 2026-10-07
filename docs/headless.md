@@ -253,7 +253,7 @@ const state = useEntityAutocomplete({
   enabled: true,
   include: request.include,
 });
-const rows = state.suggestions.map(row => groupedLines(row, request.listed));
+const rows = state.suggestions.map(row => groupedLines(row, request.list));
 const options = rows.flatMap(groupedOptions).map(option => ({
   option,
   label: option.kind === "business" ? option.business.label : option.pick.label,

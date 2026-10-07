@@ -382,6 +382,20 @@
   margin-left: auto;
 }
 
+/* The icon before a name: the size of its text, in the subtitle's colour,
+   centred on its line, and never given up for room. */
+.bl-ac-icon {
+  display: inline-flex;
+  flex: none;
+  align-self: center;
+  color: var(--bl-ac-subtitle);
+}
+
+.bl-ac-group-lead > .bl-ac-icon {
+  flex: none;
+  overflow: visible;
+}
+
 .bl-ac-group-lead > .bl-ac-states {
   flex: none;
   overflow: visible;
