@@ -9,6 +9,7 @@ import { RowMap } from "../../site/demo/RowMap";
 import {
   DEFAULT_STYLE,
   withListed,
+  withPickable,
   type StyleState,
 } from "../../site/demo/style-state";
 
@@ -523,5 +524,149 @@ describe("the Components fold's row on People and Addresses", () => {
     const next = onChange.mock.calls[0]![0];
     expect(next.rows.addresses.layout.headTrailing).toBeNull();
     expect(next.rows.people).toBe(DEFAULT_STYLE.rows.people);
+  });
+});
+
+describe("the row map as the row's configuration", () => {
+  function mountOn(
+    route: "businesses" | "people" | "addresses",
+    state: StyleState = DEFAULT_STYLE,
+  ) {
+    const onChange = vi.fn<(state: StyleState) => void>();
+    const view = render(
+      <RowMap state={state} onChange={onChange} route={route} />,
+    );
+    const spot = (name: string) =>
+      view.container.querySelector<HTMLElement>(`[data-drop="${name}"]`)!;
+    const card = (relation: string) =>
+      view.container.querySelector<HTMLElement>(
+        `.row-map-tray [data-relation="${relation}"]`,
+      );
+    const shown = (relation: string) =>
+      view.container.querySelector<HTMLElement>(
+        `.row-map [data-relation="${relation}"]`,
+      );
+    const toggles = () =>
+      [
+        ...view.container.querySelectorAll<HTMLButtonElement>(".row-map-pick"),
+      ].map(button => [
+        button.getAttribute("aria-label"),
+        button.getAttribute("aria-pressed"),
+      ]);
+    return { view, onChange, spot, card, shown, toggles };
+  }
+
+  it("keeps each line kind the row does not list in Not shown, and a pick toggle on each one it draws", () => {
+    const { card, shown, toggles } = mountOn("businesses");
+    expect(card("people")?.textContent).toContain("Officers and agents");
+    expect(card("addresses")?.textContent).toContain("Addresses");
+    expect(shown("people")).toBeNull();
+    expect(toggles()).toEqual([["Pick the business", "true"]]);
+
+    const person = mountOn("people").toggles();
+    expect(person.slice(-2)).toEqual([
+      ["Pick the person", "false"],
+      ["Pick businesses", "true"],
+    ]);
+  });
+
+  it("lists a line kind dropped on the row, and takes one off that is dropped on Not shown", () => {
+    const { onChange, spot, card, view } = mountOn("businesses");
+    drag(card("addresses")!, spot("row"));
+    const listed = onChange.mock.calls[0]![0];
+    expect(listed.rows.businesses.list).toEqual(["addresses"]);
+
+    view.unmount();
+    const again = mountOn("businesses", listed);
+    drag(
+      again.shown("addresses")!.querySelector(".row-map-line-handle")!,
+      again.spot("tray"),
+    );
+    expect(again.onChange.mock.calls[0]![0].rows.businesses.list).toEqual([]);
+  });
+
+  it("takes a hidden line's pick with it", () => {
+    const picked = withPickable(
+      withListed(DEFAULT_STYLE, "people", "addresses", true),
+      "people",
+      "address",
+      true,
+    );
+    const { onChange, shown, spot } = mountOn("people", picked);
+    drag(
+      shown("addresses")!.querySelector(".row-map-line-handle")!,
+      spot("tray"),
+    );
+
+    const next = onChange.mock.calls[0]![0];
+    expect(next.rows.people.list).toEqual(["businesses"]);
+    expect(next.rows.people.pickable).toEqual(["business"]);
+  });
+
+  it("moves a line kind from the keyboard, or with a click, through its handle", () => {
+    const { onChange, card } = mountOn("addresses");
+    const show = card("people")!.querySelector<HTMLButtonElement>(
+      ".row-map-line-handle",
+    )!;
+    expect(show.getAttribute("aria-label")).toBe("Show people there");
+    fireEvent.click(show);
+    expect(onChange.mock.calls[0]![0].rows.addresses.list).toEqual([
+      "businesses",
+      "people",
+    ]);
+  });
+
+  it("toggles a drawn line's pick, the head's included", () => {
+    const { onChange, view } = mountOn("people");
+    const pick = (label: string) =>
+      view.container.querySelector<HTMLButtonElement>(
+        `.row-map-pick[aria-label="${label}"]`,
+      )!;
+    fireEvent.click(pick("Pick the person"));
+    expect(onChange.mock.calls[0]![0].rows.people.pickable).toEqual([
+      "person",
+      "business",
+    ]);
+    fireEvent.click(pick("Pick businesses"));
+    expect(onChange.mock.calls[1]![0].rows.people.pickable).toEqual([]);
+  });
+
+  it("does not move a line kind a drag only nudged, nor once a drag has dropped it", () => {
+    const { onChange, card, spot } = mountOn("businesses");
+    // A drag that dropped it is not a click as well: the browser's click after
+    // the pointer's release does not take it back off.
+    const handle = card("people")!.querySelector(".row-map-line-handle")!;
+    drag(handle, spot("row"));
+    fireEvent.click(handle);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0]![0].rows.businesses.list).toEqual(["people"]);
+  });
+
+  it("lights the row as a whole while a line kind is carried onto it, and Not shown while one leaves", () => {
+    const { view, card, spot } = mountOn("businesses");
+    const lit = () =>
+      [...view.container.querySelectorAll<HTMLElement>("[data-accepts]")].map(
+        each => each.dataset.drop,
+      );
+    vi.spyOn(document, "elementFromPoint").mockReturnValue(spot("row"));
+    const addresses = card("addresses")!;
+    fireEvent.pointerDown(addresses, { button: 0, clientX: 0, clientY: 0 });
+    fireEvent.pointerMove(addresses, { buttons: 1, clientX: 40, clientY: 30 });
+
+    expect(lit()).toEqual(["row"]);
+    expect(document.querySelector(".row-map-ghost")?.textContent).toBe(
+      "Addresses",
+    );
+    fireEvent.pointerUp(addresses, { clientX: 40, clientY: 30 });
+    expect(lit()).toEqual([]);
+  });
+
+  it("takes a field on no gap of the row, only on a place", () => {
+    const { onChange, spot } = mountOn("businesses");
+    drag(
+      spot("subtitleTrailing").querySelector(".row-map-handle")!,
+      spot("row"),
+    );
+    expect(onChange).not.toHaveBeenCalled();
   });
 });

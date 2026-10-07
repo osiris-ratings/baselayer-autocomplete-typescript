@@ -190,16 +190,12 @@ describe("a person's or an address's row, as Styling sets it", () => {
     const user = await connect(["businesses", "people", "addresses"]);
     await user.click(screen.getByRole("tab", { name: "a person" }));
     await user.click(screen.getByTestId("demo-styling-open"));
+    // The row map lists the person's addresses, and lets one be picked.
     await user.click(
-      within(
-        screen.getByRole("group", { name: "Listed under each person" }),
-      ).getByRole("checkbox", { name: "Their addresses" }),
+      screen.getByRole("button", { name: "Show their addresses" }),
     );
     await user.click(
-      within(screen.getByRole("group", { name: "Can be picked" })).getByRole(
-        "checkbox",
-        { name: "Their addresses" },
-      ),
+      screen.getByRole("button", { name: "Pick their addresses" }),
     );
 
     await user.type(field("demo-person"), "dana");

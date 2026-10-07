@@ -434,6 +434,11 @@ export interface RowEditor<P extends string, F extends string> {
   fieldWire: Record<F, readonly string[]>;
   /** Each line's name, which no place holds: long, and for a narrow panel. */
   lineNames: Record<string, { long: string; short: string }>;
+  /**
+   * Each line kind's name, by the relation it lists or `head`, as a sentence
+   * names it: its handle shows or hides it, its toggle picks it.
+   */
+  kindNames: Record<string, string>;
 }
 
 /**
@@ -622,6 +627,11 @@ export const BUSINESS_EDITOR: RowEditor<BusinessRowPlace, BusinessRowField> = {
     person: { long: "Officer or agent", short: "Person" },
     address: { long: "Address", short: "Address" },
   },
+  kindNames: {
+    head: "the business",
+    people: "officers and agents",
+    addresses: "addresses",
+  },
 };
 
 /** What a business line reads, under a person or an address. */
@@ -679,6 +689,11 @@ export const PERSON_EDITOR: RowEditor<PersonRowPlace, PersonRowField> = {
     business: { long: "Business name", short: "Business" },
     address: { long: "Their address", short: "Address" },
   },
+  kindNames: {
+    head: "the person",
+    businesses: "businesses",
+    addresses: "their addresses",
+  },
 };
 
 /** An address's row. */
@@ -720,6 +735,11 @@ export const ADDRESS_EDITOR: RowEditor<AddressRowPlace, AddressRowField> = {
     head: { long: "Address", short: "Address" },
     business: { long: "Business name", short: "Business" },
     person: { long: "Person's name", short: "Person" },
+  },
+  kindNames: {
+    head: "the address",
+    businesses: "businesses",
+    people: "people there",
   },
 };
 

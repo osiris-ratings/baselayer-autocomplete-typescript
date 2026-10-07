@@ -614,6 +614,102 @@
   min-width: 0;
 }
 
+/* A kind of line: its handle and its pick toggle at the left, its lines (a
+   business's head is two) beside them. */
+.row-map-kind {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.row-map-kind-controls {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+  height: 28px;
+}
+
+.row-map-kind-lines {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+/* A line kind's grip: dragged by a pointer, pressed from the keyboard. */
+.row-map-line-handle {
+  flex: none;
+  width: 12px;
+  height: 20px;
+  padding: 0;
+  background: radial-gradient(currentColor 1px, transparent 1.5px) 1px 1px / 5px
+    5px;
+  border: 0;
+  border-radius: 3px;
+  color: var(--faded);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.row-map-line-handle:hover {
+  color: var(--blue);
+}
+
+/* The head is always drawn: no grip, but its room, so every line's places
+   line up. */
+.row-map-line-handle[data-spacer] {
+  display: inline-block;
+  visibility: hidden;
+}
+
+/* Whether a pick can be made on the line: filled when it can. */
+.row-map-pick {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.row-map-pick[aria-pressed="true"] {
+  color: var(--blue);
+}
+
+.row-map-line-handle:focus-visible,
+.row-map-pick:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
+}
+
+/* A line kind the row leaves out, to drag back onto it. */
+.row-map-line-card {
+  display: inline-flex;
+  box-sizing: border-box;
+  gap: 6px;
+  align-items: center;
+  height: 26px;
+  padding: 0 9px 0 5px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--map-pill-radius, 3px);
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 /* Every place is as wide as what it holds usually is: a name and an address
    long, the people middling, a flag short. The name is fixed, so it is drawn
    as a place that cannot be picked. */
@@ -661,9 +757,15 @@
 /* A place is as wide as where it sits, whatever it holds, so its chevron
    stays put as its field changes; the two lines' columns line up. */
 .row-map-wrap {
+  --map-icon: 4.5rem;
   --map-lead: 11rem;
   --map-badge: 6rem;
   --map-trailing: 7rem;
+}
+
+/* The place before a name holds an icon, nothing longer. */
+.row-map-place[data-drop$="Lead"] {
+  flex-basis: var(--map-icon);
 }
 
 .row-map-place[data-drop="subtitle"] {
@@ -750,12 +852,15 @@
 
 /* An empty badge slot shows only a `+`. */
 /* Its menu's text is hidden, not its ink: the dashed border is drawn in it. */
-.row-map-place[data-badge][data-field="empty"] :is(select, .row-map-face) {
+.row-map-place[data-badge][data-field="empty"] :is(select, .row-map-face),
+.row-map-place[data-drop$="Lead"][data-field="empty"]
+  :is(select, .row-map-face) {
   padding: 0;
   font-size: 0;
 }
 
-.row-map-place[data-badge][data-field="empty"]::after {
+.row-map-place[data-badge][data-field="empty"]::after,
+.row-map-place[data-drop$="Lead"][data-field="empty"]::after {
   top: 50%;
   right: 50%;
   width: auto;
@@ -801,7 +906,8 @@
   transition: opacity 120ms ease;
 }
 
-.row-map-place[data-badge][data-field="empty"]::before {
+.row-map-place[data-badge][data-field="empty"]::before,
+.row-map-place[data-drop$="Lead"][data-field="empty"]::before {
   inset: 4px;
   width: auto;
 }
@@ -833,8 +939,20 @@
 }
 
 .row-map[data-dragging] .row-map-place:not([data-accepts]),
-.row-map-chip[data-dragged] {
+.row-map-chip[data-dragged],
+.row-map-kind[data-dragged],
+.row-map-line-card[data-dragged] {
   opacity: 0.4;
+}
+
+/* The row takes a line kind dragged from Not shown anywhere on it. */
+.row-map[data-accepts] {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 14%, transparent);
+}
+
+.row-map[data-over] {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 32%, transparent);
 }
 
 /* A place nothing can go in until the one beside it is filled is not drawn,
@@ -982,6 +1100,7 @@
   /* Four places to a line: the name is short here, so the lead gives the
      others its room. */
   .row-map {
+    --map-icon: 3.75rem;
     --map-lead: 5.5rem;
     --map-badge: 5rem;
     --map-trailing: 5.5rem;

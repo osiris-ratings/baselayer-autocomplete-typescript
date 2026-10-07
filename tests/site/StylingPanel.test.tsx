@@ -120,22 +120,20 @@ describe("the Components fold's searches", () => {
     expect(screen.getByTestId("route").textContent).toBe("addresses");
   });
 
-  it("lists a person's addresses, and makes the person pickable", () => {
+  /** A line kind's handle, in the map or on Not shown, by its name. */
+  const handle = (name: string) =>
+    screen.getByRole("button", { name: new RegExp(`^(Show|Hide) ${name}$`) });
+  const pick = (name: string) =>
+    screen.getByRole("button", { name: `Pick ${name}` });
+  const exported = () =>
+    document.querySelector(".styling-export")!.textContent ?? "";
+
+  it("lists a person's addresses, and makes the person pickable, from the row map", () => {
     render(<RoutedPanel start="people" />);
 
-    fireEvent.click(
-      within(
-        screen.getByRole("group", { name: "Listed under each person" }),
-      ).getByRole("checkbox", { name: "Their addresses" }),
-    );
-    fireEvent.click(
-      within(screen.getByRole("group", { name: "Can be picked" })).getByRole(
-        "checkbox",
-        { name: "The person" },
-      ),
-    );
+    fireEvent.click(handle("their addresses"));
+    fireEvent.click(pick("the person"));
 
-    // What can be picked is in the order the row draws its lines: the head first.
     expect(lists()).toEqual([
       ["businesses", "addresses"],
       ["person", "business"],
@@ -146,27 +144,38 @@ describe("the Components fold's searches", () => {
 
   it("lists the people at an address, and makes them pickable instead of its businesses", () => {
     render(<RoutedPanel start="addresses" />);
-    const picked = screen.getByRole("group", { name: "Can be picked" });
 
-    fireEvent.click(
-      within(
-        screen.getByRole("group", { name: "Listed under each address" }),
-      ).getByRole("checkbox", { name: "People there" }),
-    );
-    fireEvent.click(
-      within(picked).getByRole("checkbox", { name: "People there" }),
-    );
-    fireEvent.click(
-      within(picked).getByRole("checkbox", { name: "Businesses" }),
-    );
+    fireEvent.click(handle("people there"));
+    fireEvent.click(pick("people there"));
+    fireEvent.click(pick("businesses"));
 
     expect(lists().slice(2)).toEqual([["businesses", "people"], ["person"]]);
   });
 
-  it("has no lists or picks for a business's row", () => {
-    render(<RoutedPanel start="businesses" />);
+  it("offers no checkboxes for what a row lists or what can be picked: the map is the configuration", () => {
+    for (const start of ["businesses", "people", "addresses"] as const) {
+      const view = render(<RoutedPanel start={start} />);
+      expect(screen.queryByRole("group", { name: /Listed under/ })).toBeNull();
+      expect(screen.queryByRole("group", { name: "Can be picked" })).toBeNull();
+      view.unmount();
+    }
+  });
 
-    expect(screen.queryByRole("group", { name: "Can be picked" })).toBeNull();
-    expect(document.querySelector('[data-drop="titleBadge"]')).not.toBeNull();
+  it("takes a line's pick, and its export, with the line when it leaves the row", () => {
+    render(<RoutedPanel start="people" />);
+    fireEvent.click(handle("their addresses"));
+    fireEvent.click(pick("their addresses"));
+    expect(exported()).toContain('pickable={["business", "address"]}');
+    expect(exported()).toContain("onPickEntity");
+
+    fireEvent.click(handle("their addresses"));
+
+    expect(lists()[1]).toEqual(["business"]);
+    expect(exported()).not.toContain('"address"');
+    expect(exported()).not.toContain("onPickEntity");
+    // A line the row does not draw has no pick to toggle.
+    expect(
+      screen.queryByRole("button", { name: "Pick their addresses" }),
+    ).toBeNull();
   });
 });

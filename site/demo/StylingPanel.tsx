@@ -6,8 +6,6 @@ import { useState } from "react";
 import {
   BUSINESS_STRUCTURES,
   ROUTE_NAMES,
-  type EntityType,
-  type Relation,
   type Route,
 } from "@baselayer-sdk/autocomplete";
 import {
@@ -46,8 +44,6 @@ import {
   changedStructures,
   componentChanges,
   exportCode,
-  withListed,
-  withPickable,
   type CssVariable,
   type StyleState,
   type TextMessage,
@@ -86,94 +82,6 @@ const ROW_TAB_LABELS: Record<Route, string> = {
   people: "Person",
   addresses: "Address",
 };
-
-/** What a person's or an address's row can list and pick, in its own words. */
-const GROUPED_LISTS = {
-  people: {
-    listedLegend: "Listed under each person",
-    listed: [
-      ["businesses", "Businesses"],
-      ["addresses", "Their addresses"],
-    ],
-    pickable: [
-      ["business", "Businesses"],
-      ["person", "The person"],
-      ["address", "Their addresses"],
-    ],
-  },
-  addresses: {
-    listedLegend: "Listed under each address",
-    listed: [
-      ["businesses", "Businesses"],
-      ["people", "People there"],
-    ],
-    pickable: [
-      ["business", "Businesses"],
-      ["address", "The address"],
-      ["person", "People there"],
-    ],
-  },
-} as const satisfies Record<
-  "people" | "addresses",
-  {
-    listedLegend: string;
-    listed: readonly (readonly [Relation, string])[];
-    pickable: readonly (readonly [EntityType, string])[];
-  }
->;
-
-/** What a person's or an address's row lists under it, and what can be picked. */
-function GroupedLists({
-  state,
-  onChange,
-  route,
-}: {
-  state: StyleState;
-  onChange(state: StyleState): void;
-  route: "people" | "addresses";
-}) {
-  const { listedLegend, listed, pickable } = GROUPED_LISTS[route];
-  const row = state.rows[route];
-  const include: readonly Relation[] = row.list;
-  const picks: readonly EntityType[] = row.pickable;
-  return (
-    <div className="field-grid grouped-lists">
-      <fieldset className="field-row">
-        <legend className="field-label">{listedLegend}</legend>
-        {listed.map(([value, label]) => (
-          <Toggle
-            key={value}
-            checked={include.includes(value)}
-            onChange={on =>
-              onChange(
-                withListed(
-                  state,
-                  route,
-                  value as (typeof row.list)[number],
-                  on,
-                ),
-              )
-            }
-          >
-            {label}
-          </Toggle>
-        ))}
-      </fieldset>
-      <fieldset className="field-row">
-        <legend className="field-label">Can be picked</legend>
-        {pickable.map(([value, label]) => (
-          <Toggle
-            key={value}
-            checked={picks.includes(value)}
-            onChange={on => onChange(withPickable(state, route, value, on))}
-          >
-            {label}
-          </Toggle>
-        ))}
-      </fieldset>
-    </div>
-  );
-}
 
 export function StylingPanel({
   state,
@@ -284,9 +192,12 @@ export function StylingPanel({
 
       <Fold title="Components" summary={count(componentChanges(state))}>
         <p className="hint fold-note">
-          A row, drawn as its places (<code>layout</code>). Drag a field onto
-          another place, or pick one from a place&rsquo;s chevron; a field that
-          lands on a taken place swaps with it.
+          A row, drawn as its lines and their places, and all of its
+          configuration. Drag a kind of line onto the row to list it (
+          <code>list</code>), or onto Not shown to leave it out; ◉ lets a pick
+          be made on it (<code>pickable</code>). Drag a field onto another place
+          of its line (<code>layout</code>), or pick one from a place&rsquo;s
+          chevron; a field that lands on a taken place swaps with it.
         </p>
         {routes.length > 1 && (
           <div
@@ -306,10 +217,6 @@ export function StylingPanel({
               </button>
             ))}
           </div>
-        )}
-        {/* What the row lists comes first: it decides which lines there are. */}
-        {route !== "businesses" && (
-          <GroupedLists state={state} onChange={onChange} route={route} />
         )}
         <RowMap state={state} onChange={onChange} route={route} />
       </Fold>
