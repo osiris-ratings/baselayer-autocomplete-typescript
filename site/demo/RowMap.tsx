@@ -3,12 +3,7 @@
 // the tray of fields the row leaves out; each place's chevron is a dropdown of
 // what it can show. Pointer events, so a mouse and a finger drag the same way.
 
-import {
-  ROW_FIELDS,
-  ROW_LINES,
-  type RowField,
-  type RowPlace,
-} from "@baselayer-sdk/autocomplete";
+import type { LayoutOf, Route } from "@baselayer-sdk/autocomplete";
 import {
   useEffect,
   useLayoutEffect,
@@ -21,20 +16,18 @@ import {
 import { createPortal } from "react-dom";
 
 import {
-  CHOICE_LABELS,
+  ADDRESS_EDITOR,
+  BUSINESS_EDITOR,
   EMPTY_PLACE,
-  FIELD_WIRE,
-  PLACE_LABELS,
+  PERSON_EDITOR,
   TRAY,
-  canDrop,
-  moveField,
-  placeOptions,
-  unplacedFields,
-  withPlaced,
-  type DropSpot,
-  type PlaceChoice,
+  editorOps,
+  type RowEditor,
   type StyleState,
 } from "./style-state";
+
+/** A place, or the tray: where a dragged field can land. */
+type DropSpot = string;
 
 /** How far a pointer travels before a press on a place is a drag. */
 const DRAG_SLOP = 4;
@@ -71,7 +64,7 @@ interface Lifted {
 }
 
 interface Drag {
-  field: RowField;
+  field: string;
   lifted: Lifted;
   /** The pointer that carries it, or null when mouse events do (below). */
   pointerId: number | null;
@@ -115,8 +108,8 @@ function measure(handle: HTMLElement, x: number, y: number): Lifted {
 }
 
 function useFieldDrag(
-  accepts: (field: RowField, to: DropSpot) => boolean,
-  onDrop: (field: RowField, to: DropSpot) => void,
+  accepts: (field: string, to: DropSpot) => boolean,
+  onDrop: (field: string, to: DropSpot) => void,
 ) {
   const [drag, setDrag] = useState<Drag | null>(null);
   // Read in the listeners, which a render may not have caught up with.
@@ -217,7 +210,7 @@ function useFieldDrag(
   /** Lift a field from where a press landed, unless it landed on the chevron. */
   const lift = (
     event: ReactMouseEvent<HTMLElement>,
-    field: RowField,
+    field: string,
     pointerId: number | null,
   ): boolean => {
     if (event.button !== 0) return false;
@@ -252,7 +245,7 @@ function useFieldDrag(
    * press to the menu under the handle. Safari sends that press without a
    * pointerdown at all, so a mousedown no pointerdown began lifts it too.
    */
-  const handle = (field: RowField) => ({
+  const handle = (field: string) => ({
     onPointerDown(event: ReactPointerEvent<HTMLElement>) {
       if (!lift(event, field, event.pointerId)) return;
       try {
@@ -273,9 +266,16 @@ function useFieldDrag(
  * The field in flight: the cell it was lifted from, drawn again at its size
  * where the pointer holds it, and tilted.
  */
-function Ghost({ drag, colors }: { drag: Drag; colors: CSSProperties }) {
+function Ghost({
+  drag,
+  colors,
+  label,
+}: {
+  drag: Drag;
+  colors: CSSProperties;
+  label: string;
+}) {
   const { lifted } = drag;
-  const label = CHOICE_LABELS[drag.field];
   const style: CSSProperties = {
     ...colors,
     left: drag.x - lifted.grabX,
@@ -306,35 +306,85 @@ function Ghost({ drag, colors }: { drag: Drag; colors: CSSProperties }) {
   );
 }
 
+/**
+ * The Components fold's row for one search: a business's, a person's or an
+ * address's, each editing its own layout in the style state.
+ */
 export function RowMap({
   state,
   onChange,
+  route = "businesses",
 }: {
   state: StyleState;
   onChange(state: StyleState): void;
+  route?: Route;
 }) {
+  const colors = rowMapColors(state);
+  switch (route) {
+    case "people":
+      return (
+        <KindRowMap
+          editor={PERSON_EDITOR}
+          layout={state.personLayout}
+          onLayout={personLayout => onChange({ ...state, personLayout })}
+          colors={colors}
+        />
+      );
+    case "addresses":
+      return (
+        <KindRowMap
+          editor={ADDRESS_EDITOR}
+          layout={state.addressLayout}
+          onLayout={addressLayout => onChange({ ...state, addressLayout })}
+          colors={colors}
+        />
+      );
+    case "businesses":
+      return (
+        <KindRowMap
+          editor={BUSINESS_EDITOR}
+          layout={state.layout}
+          onLayout={layout => onChange({ ...state, layout })}
+          colors={colors}
+        />
+      );
+  }
+}
+
+function KindRowMap<P extends string, F extends string>({
+  editor,
+  layout,
+  onLayout,
+  colors,
+}: {
+  editor: RowEditor<P, F>;
+  layout: LayoutOf<P, F>;
+  onLayout(layout: LayoutOf<P, F>): void;
+  colors: CSSProperties;
+}) {
+  const { canDrop, moveField, placeOptions, unplacedFields, withPlaced } =
+    editorOps(editor);
   const { drag, handle } = useFieldDrag(
-    (field, to) => canDrop(state.layout, field, to),
-    (field, to) =>
-      onChange({ ...state, layout: moveField(state.layout, field, to) }),
+    (field, to) => canDrop(layout, field as F, to as P),
+    (field, to) => onLayout(moveField(layout, field as F, to as P)),
   );
   const moving = drag?.moving === true ? drag : null;
   const over = moving?.over ?? null;
   /** While a field is dragged, every spot that takes it says so. */
   const accepts = (spot: DropSpot) =>
-    moving !== null && canDrop(state.layout, moving.field, spot)
+    moving !== null && canDrop(layout, moving.field as F, spot as P)
       ? true
       : undefined;
-  const colors = rowMapColors(state);
+  const fieldLabel = (field: string) => editor.fieldLabels[field as F];
 
   /**
    * One place: its dropdown, and over all of it but the chevron, when it
    * holds a field, the handle that drags the field.
    */
-  const place = (spot: RowPlace, { trailing = false, badge = false } = {}) => {
-    const field = state.layout[spot];
-    const choice: PlaceChoice = field ?? EMPTY_PLACE;
-    const options = placeOptions(state.layout, spot);
+  const place = (spot: P, { trailing = false, badge = false } = {}) => {
+    const field = layout[spot];
+    const choice: F | typeof EMPTY_PLACE = field ?? EMPTY_PLACE;
+    const options = placeOptions(layout, spot);
     // Nothing the row would draw here: a badge beside an empty field, or the
     // second line's right with no lead.
     const closed = options.length === 1;
@@ -352,7 +402,7 @@ export function RowMap({
           moving !== null && moving.field === field ? true : undefined
         }
         {...(field === null ? {} : handle(field))}
-        title={`${PLACE_LABELS[spot]} · layout.${spot}${field === null ? "" : ` · reads ${FIELD_WIRE[field].join(", ")}`}`}
+        title={`${editor.placeLabels[spot]} · layout.${spot}${field === null ? "" : ` · reads ${editor.fieldWire[field].join(", ")}`}`}
       >
         {field !== null && (
           <span
@@ -363,18 +413,17 @@ export function RowMap({
           />
         )}
         <select
-          aria-label={PLACE_LABELS[spot]}
+          aria-label={editor.placeLabels[spot]}
           value={choice}
           disabled={closed}
           onChange={event =>
-            onChange({
-              ...state,
-              layout: withPlaced(
-                state.layout,
+            onLayout(
+              withPlaced(
+                layout,
                 spot,
-                event.target.value as PlaceChoice,
+                event.target.value as F | typeof EMPTY_PLACE,
               ),
-            })
+            )
           }
         >
           {options.map(option => (
@@ -387,7 +436,7 @@ export function RowMap({
     );
   };
 
-  const unplaced = unplacedFields(state.layout);
+  const unplaced = unplacedFields(layout);
   return (
     <div className="row-map-wrap" style={colors}>
       <div
@@ -396,10 +445,10 @@ export function RowMap({
         aria-label="A row's places"
         data-dragging={moving !== null || undefined}
       >
-        {ROW_LINES.map(({ line, lead, trailing }) => (
+        {editor.kind.lines.map(({ line, lead, trailing }) => (
           <div key={line} className="row-map-line">
             {lead.field === null ? (
-              // A row is the entity it names, so its title always shows.
+              // A line is the entity it names, so its name always shows.
               <span className="row-map-slot">
                 <button
                   type="button"
@@ -407,8 +456,12 @@ export function RowMap({
                   disabled
                   title="The name, always shown"
                 >
-                  <span className="row-map-name-long">Business name</span>
-                  <span className="row-map-name-short">Name</span>
+                  <span className="row-map-name-long">
+                    {editor.lineNames[line]?.long}
+                  </span>
+                  <span className="row-map-name-short">
+                    {editor.lineNames[line]?.short}
+                  </span>
                 </button>
               </span>
             ) : (
@@ -437,11 +490,11 @@ export function RowMap({
               key={field}
               className="row-map-chip"
               data-field={field}
-              title={`Drag ${CHOICE_LABELS[field]} onto a place · reads ${FIELD_WIRE[field].join(", ")}`}
+              title={`Drag ${editor.fieldLabels[field]} onto a place · reads ${editor.fieldWire[field].join(", ")}`}
               {...handle(field)}
               data-dragged={moving?.field === field || undefined}
             >
-              {CHOICE_LABELS[field]}
+              {editor.fieldLabels[field]}
             </span>
           ))
         )}
@@ -455,11 +508,11 @@ export function RowMap({
           </tr>
         </thead>
         <tbody>
-          {ROW_FIELDS.map(field => (
+          {editor.kind.fields.map(field => (
             <tr key={field} data-field={field}>
-              <th scope="row">{CHOICE_LABELS[field]}</th>
+              <th scope="row">{editor.fieldLabels[field]}</th>
               <td>
-                {FIELD_WIRE[field].map(source => (
+                {editor.fieldWire[field].map(source => (
                   <code key={source}>{source}</code>
                 ))}
               </td>
@@ -468,7 +521,14 @@ export function RowMap({
         </tbody>
       </table>
       {moving !== null &&
-        createPortal(<Ghost drag={moving} colors={colors} />, document.body)}
+        createPortal(
+          <Ghost
+            drag={moving}
+            colors={colors}
+            label={fieldLabel(moving.field)}
+          />,
+          document.body,
+        )}
     </div>
   );
 }

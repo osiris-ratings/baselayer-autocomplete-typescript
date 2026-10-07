@@ -373,3 +373,77 @@ describe("the Components fold's row", () => {
     expect(spot("subtitleBadge").querySelector("select")).not.toBeNull();
   });
 });
+
+describe("the Components fold's row on People and Addresses", () => {
+  function mountRoute(route: "people" | "addresses") {
+    const onChange = vi.fn<(state: StyleState) => void>();
+    const view = render(
+      <RowMap state={DEFAULT_STYLE} onChange={onChange} route={route} />,
+    );
+    const spot = (name: string) =>
+      view.container.querySelector<HTMLElement>(`[data-drop="${name}"]`)!;
+    return { view, onChange, spot };
+  }
+
+  it("draws a person's row as its lines, each named and with its own places", () => {
+    const { view } = mountRoute("people");
+    const lines = [...view.container.querySelectorAll(".row-map-line")].map(
+      line => ({
+        name: line.querySelector(".row-map-name-long")?.textContent,
+        places: [...line.querySelectorAll<HTMLElement>("[data-drop]")].map(
+          place => place.dataset.drop,
+        ),
+      }),
+    );
+
+    expect(lines).toEqual([
+      {
+        name: "Person's name",
+        places: ["headBadge", "headTrailingBadge", "headTrailing"],
+      },
+      {
+        name: "Business name",
+        places: ["businessBadge", "businessTrailingBadge", "businessTrailing"],
+      },
+      {
+        name: "Their address",
+        places: ["addressBadge", "addressTrailingBadge", "addressTrailing"],
+      },
+    ]);
+  });
+
+  it("moves a person's field within its line, into the person's layout only", () => {
+    const { onChange, spot } = mountRoute("people");
+    drag(
+      spot("businessTrailing").querySelector(".row-map-handle")!,
+      spot("businessBadge"),
+    );
+
+    const next = onChange.mock.calls[0]![0];
+    expect(next.personLayout.businessBadge).toBe("role");
+    expect(next.personLayout.businessTrailing).toBe("address");
+    expect(next.layout).toBe(DEFAULT_STYLE.layout);
+    expect(next.addressLayout).toBe(DEFAULT_STYLE.addressLayout);
+  });
+
+  it("takes a field on no other line's place", () => {
+    const { onChange, spot } = mountRoute("people");
+    drag(
+      spot("headTrailing").querySelector(".row-map-handle")!,
+      spot("businessTrailing"),
+    );
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it("edits an address's row into the address's layout", () => {
+    const { onChange, spot } = mountRoute("addresses");
+    fireEvent.change(spot("headTrailing").querySelector("select")!, {
+      target: { value: "empty" },
+    });
+
+    const next = onChange.mock.calls[0]![0];
+    expect(next.addressLayout.headTrailing).toBeNull();
+    expect(next.personLayout).toBe(DEFAULT_STYLE.personLayout);
+  });
+});
