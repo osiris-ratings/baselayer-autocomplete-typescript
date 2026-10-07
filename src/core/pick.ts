@@ -1,3 +1,10 @@
+import type {
+  AddressSuggestion,
+  PersonSuggestion,
+  RelatedItem,
+  RelatedRole,
+} from "./wire";
+
 /**
  * How long a `business_token` stays redeemable on `POST /searches`, from the
  * moment the autocomplete service sealed it. Advisory: the API is the one that
@@ -32,4 +39,61 @@ export function refusedThePin(status: number, code: number | null): boolean {
     return true;
   }
   return code === TOKENS_NOT_CONFIGURED_CODE;
+}
+
+/** A business on a person or address row that a pick can spend. */
+export type PickableBusiness = RelatedItem & { token: string };
+
+/** The person or address a pick came through, and the business's role there. */
+export type PickedThrough =
+  | { route: "people"; person: PersonSuggestion; role: RelatedRole | null }
+  | {
+      route: "addresses";
+      address: AddressSuggestion;
+      role: RelatedRole | null;
+    };
+
+/**
+ * A business picked from a person or address row: the same token a business
+ * row's pick spends, and how it was reached.
+ */
+export interface BusinessPick {
+  /** The sealed token to send as `business_token` on `POST /searches`. */
+  businessToken: string;
+  /** The business's name as the row showed it, for the name field. */
+  businessName: string;
+  pickedAt: number;
+  /** Advisory: `pickedAt + BUSINESS_TOKEN_TTL_SECONDS`. */
+  expiresAt: number;
+  through: PickedThrough;
+}
+
+/**
+ * The businesses a person or address row offers to pick, in its order: those
+ * the autocomplete service sealed a token for.
+ */
+export function pickableBusinesses(
+  row: PersonSuggestion | AddressSuggestion,
+): PickableBusiness[] {
+  return row.related.businesses.items.filter(
+    (item): item is PickableBusiness => item.token !== null,
+  );
+}
+
+/** The pick of `business` from `row`, made at `pickedAt` (epoch ms). */
+export function businessPickFrom(
+  row: PersonSuggestion | AddressSuggestion,
+  business: PickableBusiness,
+  pickedAt: number,
+): BusinessPick {
+  return {
+    businessToken: business.token,
+    businessName: business.label,
+    pickedAt,
+    expiresAt: pickedAt + BUSINESS_TOKEN_TTL_SECONDS * 1000,
+    through:
+      row.type === "person"
+        ? { route: "people", person: row, role: business.role }
+        : { route: "addresses", address: row, role: business.role },
+  };
 }

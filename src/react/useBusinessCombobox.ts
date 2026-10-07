@@ -1,12 +1,14 @@
 import { useCombobox, type UseComboboxReturnValue } from "downshift";
 import type { ChangeEvent, FocusEventHandler, Ref } from "react";
 
-import type {
-  BusinessSuggestion,
-  Suggestion,
-} from "@baselayer-sdk/autocomplete";
+import type { BusinessSuggestion } from "@baselayer-sdk/autocomplete";
 
-export interface UseSuggestionComboboxOptions<T extends Suggestion> {
+/** Anything the combobox can offer: it reads only the label. */
+export interface ComboboxItem {
+  label: string;
+}
+
+export interface UseSuggestionComboboxOptions<T extends ComboboxItem> {
   id: string;
   items: T[];
   /** The input's value; the host owns it. */
@@ -24,7 +26,7 @@ export interface UseSuggestionComboboxOptions<T extends Suggestion> {
   open?: boolean | undefined;
 }
 
-export interface SuggestionCombobox<T extends Suggestion> extends Pick<
+export interface SuggestionCombobox<T extends ComboboxItem> extends Pick<
   UseComboboxReturnValue<T>,
   | "getLabelProps"
   | "getMenuProps"
@@ -68,7 +70,7 @@ export function useBusinessCombobox(
  * - `aria-expanded` follows what is drawn, and the footer lives outside the
  *   listbox, so a screen reader hears a list of rows and then a note.
  */
-export function useSuggestionCombobox<T extends Suggestion>({
+export function useSuggestionCombobox<T extends ComboboxItem>({
   id,
   items,
   inputValue,

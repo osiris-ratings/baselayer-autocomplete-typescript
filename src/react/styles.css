@@ -301,6 +301,79 @@
   border: 1px solid transparent;
 }
 
+/*
+ * A person or an address, and the businesses under it. The head is the row's
+ * name, marked as a business's is, with how many businesses it leads to at
+ * the right; the businesses below it are the options, indented, each with
+ * its role at the right. A group is not an option: the arrow keys move from
+ * business to business.
+ */
+.bl-ac-group {
+  margin: 0;
+  padding: 0.25rem 0;
+}
+
+.bl-ac-group:first-child {
+  padding-top: 0.5rem;
+}
+
+.bl-ac-group + .bl-ac-group {
+  border-top: 1px solid var(--bl-ac-border);
+}
+
+.bl-ac-group-head,
+.bl-ac-option {
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+  margin: 0;
+}
+
+.bl-ac-group-head {
+  padding: 0.25rem 0.875rem;
+}
+
+.bl-ac-group-head > .bl-ac-name {
+  flex: 1 1 auto;
+}
+
+.bl-ac-group-count,
+.bl-ac-role,
+.bl-ac-more {
+  font-size: 14px;
+  color: var(--bl-ac-subtitle);
+  white-space: nowrap;
+}
+
+.bl-ac-group-count,
+.bl-ac-role {
+  flex: none;
+}
+
+.bl-ac-option {
+  padding: 0.375rem 0.875rem 0.375rem 1.75rem;
+  cursor: pointer;
+}
+
+.bl-ac-option[data-highlighted] {
+  background: var(--bl-ac-highlight-bg);
+}
+
+.bl-ac-option-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: var(--bl-ac-weight-base);
+  color: var(--bl-ac-title);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bl-ac-more {
+  margin: 0;
+  padding: 0.125rem 0.875rem 0.25rem 1.75rem;
+}
+
 .bl-ac-footer {
   display: flex;
   gap: 0.5rem;

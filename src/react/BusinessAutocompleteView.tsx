@@ -1,13 +1,6 @@
-import {
-  Fragment,
-  type CSSProperties,
-  type ReactElement,
-  type ReactNode,
-  type Ref,
-} from "react";
+import { type ReactElement, type ReactNode, type Ref } from "react";
 
 import {
-  DEFAULT_LOOK,
   ROW_LINES,
   drawnRowLayout,
   resolveLook,
@@ -30,42 +23,22 @@ import {
   queryTokens,
   structureLabel,
 } from "@baselayer-sdk/autocomplete";
-import type {
-  BusinessSuggestion,
-  Filters,
-  HighlightPart,
-} from "@baselayer-sdk/autocomplete";
+import type { BusinessSuggestion, Filters } from "@baselayer-sdk/autocomplete";
 
 import { resolveMessages, type AutocompleteMessages } from "./messages";
 import { useBusinessCombobox } from "./useBusinessCombobox";
+import {
+  classes,
+  lookVariables,
+  marked,
+  type ClassFor,
+  type SlotName,
+} from "./viewParts";
+
+export type { SlotName } from "./viewParts";
 
 /** Squares shown before the `+N` overflow: the domicile and two more. */
 export const STATE_SQUARES = 3;
-
-export type SlotName =
-  | "root"
-  | "label"
-  | "input"
-  | "menu"
-  | "list"
-  | "row"
-  | "titleLine"
-  | "title"
-  | "nameGroup"
-  | "name"
-  | "also"
-  | "mark"
-  | "structure"
-  | "states"
-  | "state"
-  | "moreStates"
-  | "subtitleLine"
-  | "corner"
-  | "address"
-  | "people"
-  | "footer"
-  | "count"
-  | "debug";
 
 export interface RowRenderProps {
   item: BusinessSuggestion;
@@ -141,94 +114,6 @@ export interface BusinessAutocompleteViewProps {
   classNames?: Partial<Record<SlotName, string>> | undefined;
   /** Emit no `bl-ac-*` classes: the host styles every slot itself. */
   unstyled?: boolean | undefined;
-}
-
-type ClassFor = (slot: SlotName, base: string) => string | undefined;
-
-function classes(
-  unstyled: boolean,
-  classNames: Partial<Record<SlotName, string>> | undefined,
-): ClassFor {
-  return (slot, base) => {
-    const own = classNames?.[slot];
-    const parts = [unstyled ? undefined : base, own].filter(Boolean);
-    return parts.length > 0 ? parts.join(" ") : undefined;
-  };
-}
-
-/** The look's colors as CSS variables, only where they differ from the stylesheet's. */
-function lookVariables(look: Look): CSSProperties {
-  const vars: Record<string, string> = {};
-  const set = (name: string, value: string, fallback: string) => {
-    if (value !== fallback) {
-      vars[name] = value;
-    }
-  };
-  set("--bl-ac-bg", look.backgroundColor, DEFAULT_LOOK.backgroundColor);
-  set("--bl-ac-title", look.titleColor, DEFAULT_LOOK.titleColor);
-  set("--bl-ac-subtitle", look.subtitleColor, DEFAULT_LOOK.subtitleColor);
-  set(
-    "--bl-ac-pill-bg",
-    look.pillBackgroundColor,
-    DEFAULT_LOOK.pillBackgroundColor,
-  );
-  set(
-    "--bl-ac-pill-fg",
-    look.pillForegroundColor,
-    DEFAULT_LOOK.pillForegroundColor,
-  );
-  set(
-    "--bl-ac-pill-primary-border",
-    look.primaryPillBorderColor,
-    DEFAULT_LOOK.primaryPillBorderColor,
-  );
-  set(
-    "--bl-ac-pill-secondary-bg",
-    look.secondaryPillBackgroundColor,
-    DEFAULT_LOOK.secondaryPillBackgroundColor,
-  );
-  set(
-    "--bl-ac-structure-bg",
-    look.structurePillBackgroundColor,
-    DEFAULT_LOOK.structurePillBackgroundColor,
-  );
-  set(
-    "--bl-ac-structure-fg",
-    look.structurePillForegroundColor,
-    DEFAULT_LOOK.structurePillForegroundColor,
-  );
-  if (look.matchEmphasisColor !== null) {
-    vars["--bl-ac-mark"] = look.matchEmphasisColor;
-  }
-  return vars as CSSProperties;
-}
-
-/**
- * `text` with the marks on it: the parts `partsFor` gives this line, the
- * matched ones as spans; the text as it is when the parts belong to the row's
- * other name, or there are none.
- */
-function marked(
-  text: string,
-  parts: HighlightPart[] | null,
-  markClass: string | undefined,
-): ReactNode {
-  if (parts === null) {
-    return text;
-  }
-  return parts.map((part, index) =>
-    part.matched ? (
-      <span
-        key={index}
-        className={markClass}
-        data-testid="business-suggestion-match"
-      >
-        {part.text}
-      </span>
-    ) : (
-      <Fragment key={index}>{part.text}</Fragment>
-    ),
-  );
 }
 
 function StateSquares({

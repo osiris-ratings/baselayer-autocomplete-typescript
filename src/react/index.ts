@@ -31,6 +31,12 @@ export {
   type SlotName,
 } from "./BusinessAutocompleteView";
 export {
+  AddressAutocomplete,
+  PersonAutocomplete,
+  type AddressAutocompleteProps,
+  type PersonAutocompleteProps,
+} from "./GroupedAutocomplete";
+export {
   BusinessAutocomplete,
   MINT_TIMINGS,
   type BusinessAutocompleteProps,
