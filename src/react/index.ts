@@ -32,9 +32,13 @@ export {
 } from "./BusinessAutocompleteView";
 export {
   AddressAutocomplete,
+  AddressAutocompleteView,
   PersonAutocomplete,
+  PersonAutocompleteView,
   type AddressAutocompleteProps,
+  type AddressAutocompleteViewProps,
   type PersonAutocompleteProps,
+  type PersonAutocompleteViewProps,
 } from "./GroupedAutocomplete";
 export {
   BusinessAutocomplete,

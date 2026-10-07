@@ -150,43 +150,24 @@ function OwnClient<R extends GroupedRoute>({
 function Connected<R extends GroupedRoute>({
   route,
   client: given,
-  id,
   value,
   onChange,
   onPick,
   onFocus,
   onBlur,
   name,
-  inputRef,
   enabled = true,
   mintOn = "keystroke",
   filters,
   limit,
   minChars,
   debounceMs,
-  look: lookInput,
   messages,
-  label,
-  renderLabel,
-  renderInput,
-  classNames,
-  unstyled = false,
-  open = false,
-  menuFollowsInputWidth = true,
   onUnavailable,
+  ...view
 }: GroupedCommonProps<R> & { route: R; client: AutocompleteClient }) {
   const client = useResolvedClient(given);
-  const {
-    suggestions,
-    found,
-    foundCapped,
-    truncated,
-    indexTag,
-    roundTripMs,
-    isSearching,
-    error,
-    unavailable,
-  } = useEntityAutocomplete<R>({
+  const { unavailable, ...state } = useEntityAutocomplete<R>({
     relation: route,
     client,
     query: value,
@@ -207,10 +188,131 @@ function Connected<R extends GroupedRoute>({
     }
   }, [unavailable, onUnavailable]);
 
+  return (
+    <GroupedView
+      {...view}
+      route={route}
+      value={value}
+      inputName={name}
+      messages={messages}
+      suggestions={state.suggestions}
+      found={state.found}
+      foundCapped={state.foundCapped}
+      truncated={state.truncated}
+      indexTag={state.indexTag}
+      roundTripMs={state.roundTripMs}
+      isSearching={state.isSearching}
+      error={state.error}
+      onInputChange={next => {
+        if (mintOn === "keystroke" && enabled && next !== "") {
+          client.prewarm();
+        }
+        onChange(next);
+      }}
+      onSelect={(row, business) =>
+        onPick(businessPickFrom(row, business, Date.now()))
+      }
+      onInputFocus={() => {
+        if (mintOn === "focus" && enabled) {
+          client.prewarm();
+        }
+        onFocus?.();
+      }}
+      onInputBlur={onBlur}
+    />
+  );
+}
+
+interface GroupedViewCommonProps<R extends GroupedRoute> {
+  id: string;
+  /** The input's value; the host owns it. */
+  value: string;
+  /** Typing only; a pick reports through `onSelect`. */
+  onInputChange(value: string): void;
+  /** A business picked from under `row`; `businessPickFrom` makes the pick. */
+  onSelect(row: SuggestionByRelation[R], business: PickableBusiness): void;
+  onInputFocus?: (() => void) | undefined;
+  onInputBlur?: (() => void) | undefined;
+  inputName?: string | undefined;
+  inputRef?: Ref<HTMLInputElement> | undefined;
+
+  suggestions: SuggestionByRelation[R][];
+  found: number;
+  foundCapped: boolean;
+  truncated: boolean;
+  indexTag: string | null;
+  roundTripMs: number | null;
+  isSearching: boolean;
+  error: string | null;
+  /** Hold the menu open whatever focus does: a style preview. */
+  open?: boolean | undefined;
+  /**
+   * The menu as wide as the input (the default), or, `false`, as wide as
+   * `--bl-ac-menu-width` from 48em up.
+   */
+  menuFollowsInputWidth?: boolean | undefined;
+  look?: LookInput | undefined;
+  messages?: Partial<AutocompleteMessages> | undefined;
+  label?: ReactNode;
+  renderLabel?:
+    ((labelProps: Record<string, unknown>) => ReactElement) | undefined;
+  renderInput?:
+    ((inputProps: Record<string, unknown>) => ReactElement) | undefined;
+  classNames?: Partial<Record<SlotName, string>> | undefined;
+  unstyled?: boolean | undefined;
+}
+
+export type PersonAutocompleteViewProps = GroupedViewCommonProps<"people">;
+export type AddressAutocompleteViewProps = GroupedViewCommonProps<"addresses">;
+
+/**
+ * The styled people typeahead, with the state supplied by the host
+ * (`useEntityAutocomplete` on the people route).
+ */
+export function PersonAutocompleteView(props: PersonAutocompleteViewProps) {
+  return <GroupedView {...props} route="people" />;
+}
+
+/**
+ * The styled address typeahead, with the state supplied by the host
+ * (`useEntityAutocomplete` on the addresses route).
+ */
+export function AddressAutocompleteView(props: AddressAutocompleteViewProps) {
+  return <GroupedView {...props} route="addresses" />;
+}
+
+function GroupedView<R extends GroupedRoute>({
+  route,
+  id,
+  value,
+  onInputChange,
+  onSelect,
+  onInputFocus,
+  onInputBlur,
+  inputName,
+  inputRef,
+  suggestions,
+  found,
+  foundCapped,
+  truncated,
+  indexTag,
+  roundTripMs,
+  isSearching,
+  error,
+  open = false,
+  menuFollowsInputWidth = true,
+  look: lookInput,
+  messages,
+  label,
+  renderLabel,
+  renderInput,
+  classNames,
+  unstyled = false,
+}: GroupedViewCommonProps<R> & { route: R }) {
   const text = resolveMessages(messages);
   const look = resolveLook(lookInput ?? {});
   const cx = classes(unstyled, classNames);
-  const rows = suggestions as SuggestionByRelation[GroupedRoute][];
+  const rows: SuggestionByRelation[GroupedRoute][] = suggestions;
   const options: BusinessOption<GroupedRoute>[] = rows.flatMap(row =>
     pickableBusinesses(row).map(business => ({
       row,
@@ -223,14 +325,9 @@ function Connected<R extends GroupedRoute>({
     id,
     items: options,
     inputValue: value,
-    onInputChange: next => {
-      if (mintOn === "keystroke" && enabled && next !== "") {
-        client.prewarm();
-      }
-      onChange(next);
-    },
+    onInputChange,
     onPick: ({ row, business }) =>
-      onPick(businessPickFrom(row, business, Date.now())),
+      onSelect(row as SuggestionByRelation[R], business),
     hasFooter,
     open,
   });
@@ -263,14 +360,9 @@ function Connected<R extends GroupedRoute>({
   const labelProps = combobox.getLabelProps() as Record<string, unknown>;
   const inputProps = combobox.getInputProps({
     ref: inputRef,
-    name,
-    onFocus: () => {
-      if (mintOn === "focus" && enabled) {
-        client.prewarm();
-      }
-      onFocus?.();
-    },
-    onBlur,
+    name: inputName,
+    onFocus: onInputFocus,
+    onBlur: onInputBlur,
     autoComplete: "off",
   });
 
