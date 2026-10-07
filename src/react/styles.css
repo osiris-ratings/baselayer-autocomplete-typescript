@@ -347,8 +347,9 @@
   background: var(--bl-ac-highlight-bg);
 }
 
-/* The lead takes the room the trailing corner leaves it. Out of room, its
-   badge gives way first, then the name, which keeps a few letters. */
+/* The lead takes the room the trailing corner leaves it. The name keeps its
+   width and its badge takes what is left, so out of room the badge gives way
+   first, down to nothing, and only then the name, which keeps a few letters. */
 .bl-ac-group-lead {
   display: flex;
   flex: 1 1 0;
@@ -358,7 +359,7 @@
 }
 
 .bl-ac-group-lead > * {
-  flex: 0 1000 auto;
+  flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;

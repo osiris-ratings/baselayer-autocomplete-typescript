@@ -213,6 +213,17 @@ function faults(): string[] {
       if (name !== null && name.getBoundingClientRect().width < 24) {
         found.push(`line ${index}: the name is squeezed to nothing`);
       }
+      // The badge after a name gives way first: a name is cut only once its
+      // badge has given all its room.
+      const badge = name?.nextElementSibling;
+      if (
+        name != null &&
+        badge != null &&
+        name.scrollWidth > name.clientWidth &&
+        badge.getBoundingClientRect().width > 1
+      ) {
+        found.push(`line ${index}: the name is cut while its badge has room`);
+      }
     });
   return found;
 }
