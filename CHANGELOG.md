@@ -6,13 +6,14 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
-Find a business through a person or through an address. The people and
-addresses routes are served: a person's row lists the businesses they hold a
-role on, an address's how many businesses are filed at it and the first of
-them, and a pick from either is a business, with the same token a business
-row's pick spends. A session is held to a scope, the searches it may make,
-which the mint answers and your backend can narrow, and the SDK never sends
-a request outside it.
+Find a business through a person or through an address. The people and addresses
+routes are served, each with a component of its own: a person's row shows their
+first address, their counts and a line for each business with its address,
+states and role, and an address's row its counts and each business there. A
+business picked from either spends the same token a business row's pick does,
+and a host can let the person, an address or a listed person be picked as well.
+A session is held to a scope, the searches it may make, which the mint answers
+and your backend can narrow, and the SDK never sends a request outside it.
 
 Every closed value on the wire is now a typed union, and a value the SDK does
 not know is refused rather than kept: the SDK learns a value before the API
@@ -21,19 +22,19 @@ this ships as a minor release.
 
 ### Added
 
-- `PersonAutocomplete` and `AddressAutocomplete`: styled typeaheads that find
-  a business through a person or an address. Each person or address is a
-  group in the menu: its name with its counts, a person's first address, and
-  a line for each business under it with the business's address, states and
-  role. `include` lists a person's addresses or an address's people too,
-  `pickable` makes the row itself or what it lists pickable, and `layout`
-  places each line's fields, as on a business row. `onPick` hands a
-  `BusinessPick`: `businessToken`, `businessName`, `pickedAt`, `expiresAt`,
-  and `through`, the person or address it was reached by with the business's
-  role there; `onPickEntity` hands an `EntityPick` for a person or an
-  address. A pick puts the row's own name in the field, and a line under it
-  names what was picked until the next edit (`showSelection`). `PersonAutocompleteView` and `AddressAutocompleteView` draw the
-  same rows from state a host supplies.
+- `PersonAutocomplete` and `AddressAutocomplete`: styled typeaheads that find a
+  business through a person or an address. Each person or address is a group in
+  the menu: its name with its counts, a person's first address, and a line for
+  each business under it with the business's address, states and role. `include`
+  lists a person's addresses or an address's people too, `pickable` makes the
+  row itself or what it lists pickable, and `layout` places each line's fields,
+  as on a business row. `onPick` hands a `BusinessPick`: `businessToken`,
+  `businessName`, `pickedAt`, `expiresAt`, and `through`, the person or address
+  it was reached by with the business's role there; `onPickEntity` hands an
+  `EntityPick` for a person or an address. A pick puts the row's own name in the
+  field, and a line under it names what was picked until the next edit
+  (`showSelection`). `PersonAutocompleteView` and `AddressAutocompleteView` draw
+  the same rows from state a host supplies.
 - `PERSON_ROW` and `ADDRESS_ROW`, the places and fields of those rows, and
   `requestFor(route, layout, listed, scope)`, what to ask for them;
   `groupedLines(row, listed, pickable)` and `groupedOptions(lines)`, their
@@ -41,6 +42,10 @@ this ships as a minor release.
   `drawnLayout` resolve any kind of row's layout.
 - `pickableBusinesses(row)` and `businessPickFrom(row, business, at)`: the
   businesses a person's or an address's row offers, and the pick of one.
+- `address`, `states` and `domicile_state` on a related item: a business
+  under a person or an address carries the lead address, states and domicile
+  its own row has. All three are null on a person or an address.
+  `orderedStates` takes either and puts the domicile first.
 - The session's scope: `Grant.scope` (`{ routes, maxLimit }`), read from the
   mint's answer, `DEFAULT_SESSION_SCOPE` for a grant without one,
   `parseSessionScope`, `offeredRoutes(scope)`, `allowedFilters(scope, route)`
@@ -68,10 +73,6 @@ this ships as a minor release.
 - The demo searches by business, person or address, offering what the
   session's scope allows, and `DEMO_API=sample pnpm demo` runs it on made-up
   data with no network.
-- `address`, `states` and `domicile_state` on a related item: a business
-  under a person or an address carries the lead address, states and domicile
-  its own row has. All three are null on a person or an address.
-  `orderedStates` takes either and puts the domicile first.
 
 ### Changed
 
