@@ -450,13 +450,8 @@ export function App() {
     /** What the pick wrote into the field: editing it lets the pick go. */
     fill: string;
   } | null>(null);
-  // Which search the field runs, and what a pick through a person or an
-  // address handed to the business name: shown under it until it is edited.
+  // Which search the field runs.
   const [searchBy, setSearchBy] = useState<Route>("businesses");
-  const [reached, setReached] = useState<{
-    fill: string;
-    through: string;
-  } | null>(null);
   const [person, setPerson] = useState("");
   const [states, setStates] = useState("");
   const [address, setAddress] = useState("");
@@ -571,31 +566,25 @@ export function App() {
     showAddress ? address.trim() : "",
   ].filter(Boolean).length;
 
-  // A business picked through a person or an address: its name goes to the
-  // business name field, the field goes back to searching businesses, and step
-  // 03 searches for it with the person or address it came through.
+  // A business picked through a person or an address: the field keeps to the
+  // search it was made in, with the person's or the address's name, the
+  // component names the business under it, and step 03 searches for it with
+  // the person or address it came through.
   const pickedThrough = (pick: BusinessPick) => {
     setPicked({
       toSearch: pickThrough(pick, {
         typed: name,
         asked: mode === "people" ? codes : [],
       }),
-      fill: pick.businessName,
-    });
-    setReached({
-      fill: pick.businessName,
-      through:
+      fill:
         pick.through.route === "people"
           ? pick.through.person.label
           : pick.through.address.label,
     });
-    setName(pick.businessName);
-    setSearchBy("businesses");
   };
   const editName = (value: string) => {
     setName(value);
     if (picked !== null && value !== picked.fill) setPicked(null);
-    if (reached !== null && value !== reached.fill) setReached(null);
   };
 
   // The third step is for the pick it was made from: when the name or a filter
@@ -937,9 +926,6 @@ export function App() {
                       label={label}
                       value={name}
                       onChange={editName}
-                      // The name a person or address pick handed over is not
-                      // searched until it is edited: it is already picked.
-                      enabled={reached === null || name !== reached.fill}
                       onPick={(suggestion, pick) =>
                         setPicked({
                           toSearch: pickFromRow(
@@ -1018,11 +1004,6 @@ export function App() {
                         ? { filters: addressFilters }
                         : {})}
                     />
-                  )}
-                  {reached !== null && name === reached.fill && (
-                    <p className="hint demo-through" data-testid="demo-through">
-                      via {reached.through}
-                    </p>
                   )}
                 </>
               )}

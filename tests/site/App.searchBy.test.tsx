@@ -75,14 +75,17 @@ describe("searching by person or address", () => {
     expect(checked("Business")).toBe("true");
   });
 
-  it("finds a business through a person, hands it to the business name, and names the officer in How it matched", async () => {
+  it("finds a business through a person, stays on Person with their name and the business under it, and names the officer in How it matched", async () => {
     const user = await connect(["businesses", "people", "addresses"]);
 
     await user.click(screen.getByRole("radio", { name: "Person" }));
     await user.type(field("demo-person"), "dana");
     const dana = await screen.findByRole("group", { name: "Dana Whitfield" });
-    expect(within(dana).getByTestId("grouped-counts").textContent).toMatch(
-      /^7 businesses/,
+    expect(within(dana).getByTestId("grouped-counts").textContent).toBe(
+      "7 businesses · 3 addresses",
+    );
+    expect(within(dana).getByTestId("grouped-firstAddress").textContent).toBe(
+      "1200 River Rd, Pittsburgh, PA 15212 +2",
     );
     await user.click(
       within(dana).getByRole("option", {
@@ -90,12 +93,14 @@ describe("searching by person or address", () => {
       }),
     );
 
-    // The pick is a business: the switch is back on Business, holding it.
-    expect(checked("Business")).toBe("true");
-    expect(field("demo-business").value).toBe("HARBOR CONCRETE SUPPLY, INC.");
-    expect(screen.getByTestId("demo-through").textContent).toBe(
-      "via Dana Whitfield",
+    // The pick stays where it was made: the person's name in the field, and
+    // the business under it.
+    expect(checked("Person")).toBe("true");
+    expect(field("demo-person").value).toBe("Dana Whitfield");
+    expect(screen.getByTestId("grouped-selection").textContent).toBe(
+      "HARBOR CONCRETE SUPPLY, INC.",
     );
+    expect(screen.queryByTestId("demo-through")).toBeNull();
     await waitFor(() => expect(step()).not.toBeNull());
     expect(step()!.textContent).toContain(
       "Found through Dana Whitfield, an officer.",
@@ -113,7 +118,7 @@ describe("searching by person or address", () => {
     );
   });
 
-  it("finds a business through an address, and names the address in How it matched", async () => {
+  it("finds a business through an address, stays on Address with the address, and names it in How it matched", async () => {
     const user = await connect(["businesses", "people", "addresses"]);
 
     await user.click(screen.getByRole("radio", { name: "Address" }));
@@ -123,14 +128,20 @@ describe("searching by person or address", () => {
     const office = await screen.findByRole("group", {
       name: /Ln Ste 300, Dover, DE 19904$/,
     });
-    expect(within(office).getByTestId("grouped-counts").textContent).toMatch(
-      /^412 businesses/,
+    expect(within(office).getByTestId("grouped-counts").textContent).toBe(
+      "412 businesses · 1 person",
     );
     await user.click(
       within(office).getByRole("option", { name: /NORTHSHORE PUMPING, LLC/ }),
     );
 
-    expect(field("demo-business").value).toBe("NORTHSHORE PUMPING, LLC");
+    expect(checked("Address")).toBe("true");
+    expect(field("demo-address").value).toBe(
+      "77 Quillfeather Ln Ste 300, Dover, DE 19904",
+    );
+    expect(screen.getByTestId("grouped-selection").textContent).toBe(
+      "NORTHSHORE PUMPING, LLC",
+    );
     await waitFor(() => expect(step()).not.toBeNull());
     expect(step()!.textContent).toContain(
       "Found at 77 Quillfeather Ln Ste 300, Dover, DE 19904, its registered agent's office.",
@@ -148,17 +159,18 @@ describe("searching by person or address", () => {
     );
   });
 
-  it("lets the handed-over name go once it is edited", async () => {
+  it("lets the pick go once the field is edited", async () => {
     const user = await connect(["businesses", "people", "addresses"]);
     await user.click(screen.getByRole("radio", { name: "Person" }));
     await user.type(field("demo-person"), "dana");
     await user.click(
       await screen.findByRole("option", { name: /BAYSIDE HARBOR CONCRETE/ }),
     );
+    await waitFor(() => expect(step()).not.toBeNull());
 
-    await user.type(field("demo-business"), "{Backspace}");
+    await user.type(field("demo-person"), "{Backspace}");
 
-    expect(screen.queryByTestId("demo-through")).toBeNull();
+    expect(screen.queryByTestId("grouped-selection")).toBeNull();
     await waitFor(() => expect(step()).toBeNull(), { timeout: 1500 });
   });
 });
@@ -185,6 +197,6 @@ describe("Styling's sample rows", () => {
     expect(screen.getAllByTestId("address-suggestion").length).toBeGreaterThan(
       1,
     );
-    expect(screen.getByText(/^412 businesses/)).toBeTruthy();
+    expect(screen.getByText("412 businesses · 1 person")).toBeTruthy();
   });
 });

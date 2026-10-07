@@ -1800,11 +1800,6 @@
   color: var(--ink);
 }
 
-/* Under the business name a person or address pick handed over. */
-.demo-through {
-  margin: 6px 0 0;
-}
-
 .fold-chevron[data-open="true"] {
   margin-bottom: -2px;
   transform: rotate(-135deg);

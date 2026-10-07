@@ -109,11 +109,12 @@ the field, **Business · Person · Address** says what it searches for,
 offering only the searches the session's scope allows; before you connect it
 offers all three, so Styling can show each. Business is the business name and
 its suggestions. Person and Address find the business another way: each
-person or address that fits comes with how many businesses it leads to
-(`412 businesses here`) and the first of them, and each business is a pick. A
-pick goes to the business name, the switch goes back to Business, and
-`via Dana Whitfield` (or the address) shows under the field until you edit
-the name.
+person or address that fits comes with its counts (`7 businesses · 3
+addresses`), a person's first address, and a line for each of its first
+businesses, with the business's address, its states and the role there. Each
+business is a pick. A pick stays where it was made: the field takes the
+person's name or the address, and a line under it names the business picked,
+until you edit the field.
 
 ![Searching by person: each person with their businesses](images/demo-person.png)
 

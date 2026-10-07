@@ -286,10 +286,21 @@ function pinned(set: RelatedSet, pin: (item: RelatedItem) => string | null) {
   };
 }
 
+/** A person or an address listed under a row, with the token its own row has. */
+function listed(set: RelatedSet, prefix: string): RelatedSet {
+  return {
+    ...set,
+    items: set.items.map(item => ({
+      ...item,
+      token: `${prefix}-${slug(item.label)}`,
+    })),
+  };
+}
+
 function personRow(
   label: string,
   businesses: RelatedSet,
-  addresses: RelatedSet = NOT_REQUESTED,
+  addresses: RelatedSet,
 ): PersonSuggestion {
   return {
     type: "person",
@@ -302,7 +313,7 @@ function personRow(
       businesses: pinned(businesses, item =>
         item.role === "officer" ? `~officer~${slug(label)}` : null,
       ),
-      addresses,
+      addresses: listed(addresses, "sample-address"),
     },
   };
 }
@@ -318,7 +329,13 @@ export const SAMPLE_PEOPLE: PersonSuggestion[] = [
       ],
       7,
     ),
-    set([address("1200 River Rd, Pittsburgh, PA 15212", "officer")]),
+    set(
+      [
+        address("1200 River Rd, Pittsburgh, PA 15212", "officer"),
+        address("48 Linden St, Pittsburgh, PA 15206", "officer"),
+      ],
+      3,
+    ),
   ),
   personRow(
     "Dana Okafor",
@@ -329,22 +346,27 @@ export const SAMPLE_PEOPLE: PersonSuggestion[] = [
       ],
       2,
     ),
+    set([address("2210 Key Hwy, Baltimore, MD 21230", "officer")]),
   ),
   personRow(
     "Dana Kessler",
     set([business("NORTHSHORE PUMPING, LLC", "officer")]),
+    set([address("915 Shoreline Blvd, Erie, PA 16507", "officer")]),
   ),
   personRow(
     "Luis Ortega",
     set([business("HARBOR CONCRETE PUMPING CO., INC.", "officer")]),
+    set([address("1200 River Rd, Pittsburgh, PA 15212", "officer")]),
   ),
   personRow(
     "Priya Raman",
     set([business("HARBOR VIEW CONCRETE, INC.", "officer")], 3),
+    set([address("400 Bayfront Ave, Tampa, FL 33602", "officer")], 2),
   ),
   personRow(
     "Grace Oduya",
     set([business("HARBOR CONCRETE & MASONRY", "officer")]),
+    set([address("2210 Key Hwy, Baltimore, MD 21230", "officer")]),
   ),
   personRow(
     "Meridian Registered Agents, LLC",
@@ -355,6 +377,7 @@ export const SAMPLE_PEOPLE: PersonSuggestion[] = [
       ],
       38,
     ),
+    set([address("77 Quillfeather Ln Ste 300, Dover, DE 19904", "agent")]),
   ),
 ];
 
@@ -365,6 +388,7 @@ function addressRow(
   state: string,
   postalCode: string,
   businesses: RelatedSet,
+  people: RelatedSet,
 ): AddressSuggestion {
   const first = line2 === null ? line1 : `${line1} ${line2}`;
   const label = `${first}, ${city}, ${state} ${postalCode}`;
@@ -378,7 +402,7 @@ function addressRow(
     components: { line1, line2, city, state, postal_code: postalCode },
     related: {
       businesses: pinned(businesses, () => `~address~${slug(label)}`),
-      people: NOT_REQUESTED,
+      people: listed(people, "sample-person"),
     },
   };
 }
@@ -397,6 +421,10 @@ export const SAMPLE_ADDRESSES: AddressSuggestion[] = [
       ],
       2,
     ),
+    set([
+      person("Dana Whitfield", "officer"),
+      person("Luis Ortega", "officer"),
+    ]),
   ),
   // A registered agent's office: the one address most businesses share.
   addressRow(
@@ -413,6 +441,7 @@ export const SAMPLE_ADDRESSES: AddressSuggestion[] = [
       ],
       412,
     ),
+    set([person("Meridian Registered Agents, LLC", "agent")]),
   ),
   addressRow(
     "700 Harborside Dr",
@@ -421,6 +450,7 @@ export const SAMPLE_ADDRESSES: AddressSuggestion[] = [
     "TX",
     "77550",
     set([business("CONCRETE HARBOR PARTNERS, LP", "principal")]),
+    set([]),
   ),
   addressRow(
     "2210 Key Hwy",
@@ -429,6 +459,7 @@ export const SAMPLE_ADDRESSES: AddressSuggestion[] = [
     "MD",
     "21230",
     set([business("HARBOR CONCRETE & MASONRY", "officer")]),
+    set([person("Dana Okafor", "officer"), person("Grace Oduya", "officer")]),
   ),
   addressRow(
     "400 Bayfront Ave",
@@ -437,5 +468,6 @@ export const SAMPLE_ADDRESSES: AddressSuggestion[] = [
     "FL",
     "33602",
     set([business("HARBOR VIEW CONCRETE, INC.", "principal")]),
+    set([person("Priya Raman", "officer")]),
   ),
 ];

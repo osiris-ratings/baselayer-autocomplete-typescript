@@ -11,6 +11,8 @@ import { DEFAULT_LIMIT } from "@baselayer-sdk/autocomplete/react";
 import { describe, expect, it } from "vitest";
 
 import {
+  SAMPLE_ADDRESSES,
+  SAMPLE_PEOPLE,
   SAMPLE_QUERY,
   SAMPLE_SUGGESTIONS,
   sampleRows,
@@ -155,5 +157,51 @@ describe("the sample rows' fields", () => {
 
     expect(bare?.structure).toBe("TRADE_NAME");
     expect(structureLabel(bare!.structure)).toBe("DBA");
+  });
+});
+
+describe("the sample people and addresses", () => {
+  it("never show an address no business is filed at, which the addresses route leaves out", () => {
+    for (const row of SAMPLE_ADDRESSES) {
+      expect(row.related.businesses.items.length, row.label).toBeGreaterThan(0);
+    }
+  });
+
+  it("give each person their addresses, each with a token to pick, counted in full", () => {
+    for (const row of SAMPLE_PEOPLE) {
+      const { items, count } = row.related.addresses;
+      expect(items.length, row.label).toBeGreaterThan(0);
+      expect(count, row.label).toBeGreaterThanOrEqual(items.length);
+      expect(items.every(item => item.token !== null)).toBe(true);
+    }
+  });
+
+  it("list at each address the people who list it, and only them", () => {
+    const at = (address: string) =>
+      SAMPLE_PEOPLE.filter(person =>
+        person.related.addresses.items.some(item => item.label === address),
+      )
+        .map(person => person.label)
+        .sort();
+    for (const row of SAMPLE_ADDRESSES) {
+      expect(
+        row.related.people.items.map(item => item.label).sort(),
+        row.label,
+      ).toEqual(at(row.label));
+      expect(row.related.people.items.every(item => item.token !== null)).toBe(
+        true,
+      );
+    }
+  });
+
+  it("carry, on each business under them, what its own row leads with", () => {
+    for (const row of [...SAMPLE_PEOPLE, ...SAMPLE_ADDRESSES]) {
+      for (const item of row.related.businesses.items) {
+        const own = SAMPLE_SUGGESTIONS.find(b => b.label === item.label)!;
+        expect(item.address).toBe(leadAddressOf(own));
+        expect(item.states).toEqual(own.states);
+        expect(item.domicile_state).toBe(own.domicile_state);
+      }
+    }
   });
 });
