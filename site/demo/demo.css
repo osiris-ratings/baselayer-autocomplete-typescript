@@ -722,6 +722,29 @@
   --map-check-cell: calc(var(--map-check) + var(--map-col-gap));
 }
 
+/* A carried line's neighbours slide aside to make its way. */
+.row-map-kind {
+  transition: transform 150ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-map-kind {
+    transition: none;
+  }
+}
+
+/* What a screen reader is told when a line moves: not drawn. */
+.row-map-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .row-map-head {
   align-items: end;
   margin-bottom: -2px;

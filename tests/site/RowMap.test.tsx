@@ -10,6 +10,7 @@ import { RowMap } from "../../site/demo/RowMap";
 import {
   DEFAULT_STYLE,
   componentProps,
+  withListOrder,
   withListed,
   type StyleState,
 } from "../../site/demo/style-state";
@@ -584,8 +585,9 @@ describe("the row map as the row's configuration", () => {
     expect(hidden.rows.people.enabled).toEqual(["business"]);
   });
 
-  it("takes a line only in the drawer it is not in, over a place there too", () => {
+  it("keeps a line where it is when it is let go where it was, and takes one over a place of the other drawer", () => {
     const { onChange, grip, drawer, view } = mountOn("people");
+    // The only line shown, let go in Shown: nowhere else to go.
     drag(grip("businesses")!, drawer("shown"));
     expect(onChange).not.toHaveBeenCalled();
     // Let go over a place of the other drawer: the drawer takes it.
@@ -666,6 +668,78 @@ describe("the row map as the row's configuration", () => {
     expect(check("businesses").checked).toBe(false);
     expect(check("businesses").title).toBe(
       "Businesses: enabled, a choice in the menu (enabledLines)",
+    );
+  });
+
+  it("draws the shown lines in the row's list's order", () => {
+    const both = withListed(DEFAULT_STYLE, "people", "addresses", true);
+    expect(mountOn("people", both).kinds("shown")).toEqual([
+      "head",
+      "businesses",
+      "addresses",
+    ]);
+    cleanup();
+    expect(
+      mountOn("people", withListOrder(both, "people", "addresses", 0)).kinds(
+        "shown",
+      ),
+    ).toEqual(["head", "addresses", "businesses"]);
+  });
+
+  it("moves a shown line up or down with Alt and an arrow, keeping its focus, and says where it went", () => {
+    function Kept() {
+      const [state, setState] = useState(
+        withListed(DEFAULT_STYLE, "people", "addresses", true),
+      );
+      return <RowMap state={state} onChange={setState} route="people" />;
+    }
+    const view = render(<Kept />);
+    const order = () =>
+      [
+        ...view.container.querySelectorAll<HTMLElement>(
+          '[data-drawer="shown"] .row-map-kind',
+        ),
+      ].map(kind => kind.dataset.relation);
+    const said = () =>
+      view.container.querySelector('[role="status"]')!.textContent;
+    const grip = () => screen.getByRole("button", { name: "Hide businesses" });
+
+    grip().focus();
+    fireEvent.keyDown(grip(), { key: "ArrowDown", altKey: true });
+    expect(order()).toEqual(["head", "addresses", "businesses"]);
+    expect(document.activeElement).toBe(grip());
+    expect(said()).toBe("Businesses moved to position 2 of 2");
+
+    // At the end already: it stays.
+    fireEvent.keyDown(grip(), { key: "ArrowDown", altKey: true });
+    expect(order()).toEqual(["head", "addresses", "businesses"]);
+
+    fireEvent.keyDown(grip(), { key: "ArrowUp", altKey: true });
+    expect(order()).toEqual(["head", "businesses", "addresses"]);
+    expect(said()).toBe("Businesses moved to position 1 of 2");
+
+    // An arrow alone moves nothing.
+    fireEvent.keyDown(grip(), { key: "ArrowDown" });
+    expect(order()).toEqual(["head", "businesses", "addresses"]);
+  });
+
+  it("says when a line is shown or hidden", () => {
+    function Kept() {
+      const [state, setState] = useState(DEFAULT_STYLE);
+      return <RowMap state={state} onChange={setState} route="people" />;
+    }
+    const view = render(<Kept />);
+    fireEvent.click(
+      screen.getByRole("button", { name: "Show their addresses" }),
+    );
+    expect(view.container.querySelector('[role="status"]')!.textContent).toBe(
+      "Their addresses shown",
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Hide their addresses" }),
+    );
+    expect(view.container.querySelector('[role="status"]')!.textContent).toBe(
+      "Their addresses hidden",
     );
   });
 

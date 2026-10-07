@@ -8,6 +8,7 @@ import {
   lineKinds,
   shownEntities,
   withEnabled,
+  withListOrder,
   withListed,
 } from "../../site/demo/style-state";
 
@@ -39,12 +40,31 @@ describe("a row's line kinds", () => {
 });
 
 describe("listing a line kind", () => {
-  it("adds it to the row's list, in the row's own order", () => {
-    const people = withListed(DEFAULT_STYLE, "businesses", "addresses", true);
-    expect(people.rows.businesses.list).toEqual(["addresses"]);
-    const both = withListed(people, "businesses", "people", true);
-    expect(both.rows.businesses.list).toEqual(["people", "addresses"]);
+  it("adds it at the end of the row's list, or where it is put", () => {
+    const addresses = withListed(
+      DEFAULT_STYLE,
+      "businesses",
+      "addresses",
+      true,
+    );
+    expect(addresses.rows.businesses.list).toEqual(["addresses"]);
+    const both = withListed(addresses, "businesses", "people", true);
+    expect(both.rows.businesses.list).toEqual(["addresses", "people"]);
     expect(both.rows.people).toBe(DEFAULT_STYLE.rows.people);
+    const first = withListed(addresses, "businesses", "people", true, 0);
+    expect(first.rows.businesses.list).toEqual(["people", "addresses"]);
+  });
+
+  it("takes it out of the list wherever it is", () => {
+    const both = withListed(
+      withListed(DEFAULT_STYLE, "businesses", "addresses", true),
+      "businesses",
+      "people",
+      true,
+    );
+    expect(
+      withListed(both, "businesses", "addresses", false).rows.businesses.list,
+    ).toEqual(["people"]);
   });
 
   it("hands the components no hidden line as enabled: a line not drawn cannot be chosen", () => {
@@ -142,5 +162,43 @@ describe("the entities a row shows", () => {
       "business",
       "person",
     ]);
+  });
+});
+
+describe("ordering a row's lines", () => {
+  const both = withListed(DEFAULT_STYLE, "people", "addresses", true);
+
+  it("moves a shown line to a place in the list, the others keeping their order", () => {
+    expect(both.rows.people.list).toEqual(["businesses", "addresses"]);
+    const moved = withListOrder(both, "people", "addresses", 0);
+    expect(moved.rows.people.list).toEqual(["addresses", "businesses"]);
+    expect(
+      withListOrder(moved, "people", "addresses", 1).rows.people.list,
+    ).toEqual(["businesses", "addresses"]);
+    // Past either end: as far as it goes.
+    expect(
+      withListOrder(both, "people", "businesses", 9).rows.people.list,
+    ).toEqual(["addresses", "businesses"]);
+    expect(
+      withListOrder(both, "people", "addresses", -3).rows.people.list,
+    ).toEqual(["addresses", "businesses"]);
+  });
+
+  it("changes nothing for a line already there, or one the row does not show", () => {
+    expect(withListOrder(both, "people", "businesses", 0)).toBe(both);
+    expect(withListOrder(DEFAULT_STYLE, "people", "addresses", 0)).toBe(
+      DEFAULT_STYLE,
+    );
+  });
+
+  it("is what the components are handed, and what the export writes", () => {
+    const moved = withListOrder(both, "people", "addresses", 0);
+    expect(componentProps(moved, "people").list).toEqual([
+      "addresses",
+      "businesses",
+    ]);
+    expect(exportCode(moved, "people").tsx).toContain(
+      'list={["addresses", "businesses"]}',
+    );
   });
 });

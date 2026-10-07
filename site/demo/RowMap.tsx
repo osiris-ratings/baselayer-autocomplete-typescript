@@ -45,6 +45,7 @@ import {
   segmentEntity,
   withIconSegment,
   withEnabled,
+  withListOrder,
   withListed,
   type RowEditor,
   type StyleState,
@@ -422,8 +423,12 @@ export function RowMap({
     route,
     list: row.list as readonly Relation[],
     enabled: row.enabled,
-    onList: (relation: Relation, listed: boolean) =>
-      onChange(withListed(state, route, relation as IncludeOf<Route>, listed)),
+    onList: (relation: Relation, listed: boolean, at?: number) =>
+      onChange(
+        withListed(state, route, relation as IncludeOf<Route>, listed, at),
+      ),
+    onOrder: (relation: Relation, at: number) =>
+      onChange(withListOrder(state, route, relation as IncludeOf<Route>, at)),
     onEnable: (entity: EntityType, on: boolean) =>
       onChange(withEnabled(state, route, entity, on)),
     iconSegments: state.rows[route].iconSegments as readonly string[],
@@ -537,6 +542,7 @@ function KindRowMap<P extends string, F extends string>({
   list,
   enabled,
   onList,
+  onOrder,
   onEnable,
   iconSegments,
   onIcon,
@@ -550,7 +556,10 @@ function KindRowMap<P extends string, F extends string>({
   list: readonly Relation[];
   /** The entities whose lines are enabled. */
   enabled: readonly EntityType[];
-  onList(relation: Relation, listed: boolean): void;
+  /** Shows a line at `at` in the list (its end when left out), or hides it. */
+  onList(relation: Relation, listed: boolean, at?: number): void;
+  /** Moves a shown line to `at` in the list. */
+  onOrder(relation: Relation, at: number): void;
   onEnable(entity: EntityType, on: boolean): void;
   /** The segments drawn with their icon. */
   iconSegments: readonly string[];
@@ -578,17 +587,22 @@ function KindRowMap<P extends string, F extends string>({
       )
       .filter(spot => spot !== null && spot !== undefined),
   );
+  // What the live region last said: a line shown, hidden or moved.
+  const [said, say] = useState("");
+  /** Where a line carried over Shown would land in the list. */
+  const dropAt = useRef<number | null>(null);
   /**
-   * A line goes to the drawer it is not in. A field goes on a place of its
-   * own line that would draw it, or anywhere in the Hidden drawer, to be left
-   * out: a gap of the row is no place, so it takes none. A hidden line gives
-   * up no field to carry, and the Hidden drawer holds none of its own.
+   * A line goes to Shown, where it lands where it is let go, or, shown, to
+   * Hidden. A field goes on a place of its own line that would draw it, or
+   * anywhere in the Hidden drawer, to be left out: a gap of the row is no
+   * place, so it takes none. A hidden line gives up no field to carry, and
+   * the Hidden drawer holds none of its own.
    */
   const fieldSpot = (to: DropSpot) => (to === HIDDEN ? TRAY : to);
   const takes = (item: string, to: DropSpot) => {
     const relation = relationOf(item);
     if (relation !== null) {
-      return to === (list.includes(relation) ? HIDDEN : SHOWN);
+      return to === SHOWN || (to === HIDDEN && list.includes(relation));
     }
     return to !== TRAY && canDrop(layout, item as F, fieldSpot(to) as P);
   };
@@ -596,8 +610,22 @@ function KindRowMap<P extends string, F extends string>({
     const relation = relationOf(item);
     if (relation === null) {
       onLayout(moveField(layout, item as F, fieldSpot(to) as P));
-    } else {
-      onList(relation, to === SHOWN);
+      return;
+    }
+    const name = capitalized(kindName(relation));
+    if (to === HIDDEN) {
+      onList(relation, false);
+      say(`${name} hidden`);
+      return;
+    }
+    const at = dropAt.current ?? list.length;
+    const from = list.indexOf(relation);
+    if (from === -1) {
+      onList(relation, true, at);
+      say(`${name} shown`);
+    } else if (at !== from) {
+      onOrder(relation, at);
+      say(`${name} moved to position ${at + 1} of ${list.length}`);
     }
   });
   // A line moved from the keyboard lands in the other drawer: its grip keeps
@@ -696,7 +724,13 @@ function KindRowMap<P extends string, F extends string>({
     );
   };
 
-  const shown = kinds.filter(listed);
+  // Shown in the list's order, the head first; hidden in the row's own.
+  const shown = [
+    kinds[0]!,
+    ...list.flatMap(relation =>
+      kinds.filter(kind => kind.relation === relation),
+    ),
+  ];
   const hidden = kinds.filter(kind => !listed(kind));
   /** The fields a drawn line can show: only those go on the tray and in the table. */
   const shownFields = new Set(
@@ -724,6 +758,54 @@ function KindRowMap<P extends string, F extends string>({
     }
     return () => observer.disconnect();
   }, []);
+  // A line carried over Shown makes its way: the lines it would land among
+  // slide aside to open its gap there, and the row it was lifted from goes
+  // to the gap, so the drawer shows the order a drop would make.
+  const carried = moving === null ? null : relationOf(moving.field);
+  const pointerY = moving?.y ?? null;
+  useLayoutEffect(() => {
+    const scroller = shownScroller.current;
+    if (scroller === null) return;
+    const rows = [
+      ...scroller.querySelectorAll<HTMLElement>(
+        '.row-map-kind:not([data-relation="head"])',
+      ),
+    ];
+    for (const row of rows) row.style.transform = "";
+    scroller.style.paddingBottom = "";
+    dropAt.current = null;
+    if (carried === null || over !== SHOWN || pointerY === null) return;
+    // Measured untransformed: an offset ignores the slides above.
+    const frame = scroller.parentElement!;
+    const y = pointerY - frame.getBoundingClientRect().top + scroller.scrollTop;
+    const others = rows.filter(row => row.dataset.relation !== carried);
+    const at = others.filter(
+      row => row.offsetTop + row.offsetHeight / 2 < y,
+    ).length;
+    dropAt.current = at;
+    const lifted =
+      rows.find(row => row.dataset.relation === carried) ??
+      wrap.current?.querySelector<HTMLElement>(
+        `[data-drawer="hidden"] .row-map-kind[data-relation="${carried}"]`,
+      ) ??
+      null;
+    const step =
+      (lifted?.offsetHeight ?? 0) +
+      parseFloat(getComputedStyle(scroller).rowGap || "0");
+    const from = others.length === rows.length ? null : rows.indexOf(lifted!);
+    others.forEach((row, index) => {
+      const was = from !== null && index >= from ? index + 1 : index;
+      const now = index >= at ? index + 1 : index;
+      if (now !== was)
+        row.style.transform = `translateY(${(now - was) * step}px)`;
+    });
+    if (from === null) {
+      // From Hidden: the drawer grows by the line it is to take.
+      scroller.style.paddingBottom = `${step}px`;
+    } else if (lifted !== null && at !== from) {
+      lifted.style.transform = `translateY(${(at - from) * step}px)`;
+    }
+  }, [carried, over, pointerY]);
   const edges = (scroller: RefObject<HTMLDivElement | null>) => ({
     ref: scroller,
     onScroll: (event: ReactUIEvent<HTMLDivElement>) =>
@@ -774,6 +856,26 @@ function KindRowMap<P extends string, F extends string>({
                 if (!clicked()) return;
                 refocus.current = relation;
                 onList(relation, !isListed);
+                say(`${capitalized(name)} ${isListed ? "hidden" : "shown"}`);
+              }}
+              // Alt and an arrow move a shown line up or down the list.
+              onKeyDown={event => {
+                const step =
+                  event.key === "ArrowUp"
+                    ? -1
+                    : event.key === "ArrowDown"
+                      ? 1
+                      : 0;
+                if (!event.altKey || step === 0 || !isListed) return;
+                event.preventDefault();
+                const from = list.indexOf(relation);
+                const to = from + step;
+                if (to < 0 || to >= list.length) return;
+                refocus.current = relation;
+                onOrder(relation, to);
+                say(
+                  `${capitalized(name)} moved to position ${to + 1} of ${list.length}`,
+                );
               }}
             />
           )}
@@ -848,6 +950,9 @@ function KindRowMap<P extends string, F extends string>({
 
   return (
     <div className="row-map-wrap" style={colors} ref={wrap}>
+      <p className="row-map-live" role="status" aria-live="polite">
+        {said}
+      </p>
       <div
         className="row-map-drawer"
         data-drawer={SHOWN}

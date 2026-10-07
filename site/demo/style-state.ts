@@ -798,25 +798,56 @@ function withRow<R extends Route>(
 }
 
 /**
- * The state with a line kind listed under a search's rows, or not, in the
- * row's own order. A line keeps whether it is enabled while it is hidden, so
- * it comes back as it was; `componentProps` hands over only the shown ones.
+ * The state with a line kind listed under a search's rows, at `at` in the
+ * list (its end when left out), or not listed. A line keeps whether it is
+ * enabled while it is hidden, so it comes back as it was; `componentProps`
+ * hands over only the shown ones.
  */
 export function withListed<R extends Route>(
   state: StyleState,
   route: R,
   relation: IncludeOf<R>,
   listed: boolean,
+  at?: number,
 ): StyleState {
   const row: RowStates[R] = state.rows[route];
-  const list: readonly Relation[] = row.list;
+  const list: readonly IncludeOf<R>[] = row.list;
   if (list.includes(relation) === listed) return state;
-  return withRow(state, route, {
-    ...row,
-    list: ROUTES[route].includes.filter(each =>
-      each === relation ? listed : list.includes(each),
-    ) as IncludeOf<R>[],
-  });
+  if (!listed) {
+    return withRow(state, route, {
+      ...row,
+      list: list.filter(each => each !== relation),
+    });
+  }
+  const next = [...list];
+  next.splice(clamp(at ?? next.length, next.length), 0, relation);
+  return withRow(state, route, { ...row, list: next });
+}
+
+/** `at` within 0 and `most`. */
+function clamp(at: number, most: number): number {
+  return Math.min(Math.max(at, 0), most);
+}
+
+/**
+ * The state with a listed line kind moved to `at` in its row's list, the
+ * others keeping their order: the order the row draws its lines in.
+ */
+export function withListOrder<R extends Route>(
+  state: StyleState,
+  route: R,
+  relation: IncludeOf<R>,
+  at: number,
+): StyleState {
+  const row: RowStates[R] = state.rows[route];
+  const list: readonly IncludeOf<R>[] = row.list;
+  const from = list.indexOf(relation);
+  if (from === -1) return state;
+  const rest = list.filter(each => each !== relation);
+  const to = clamp(at, rest.length);
+  if (to === from) return state;
+  rest.splice(to, 0, relation);
+  return withRow(state, route, { ...row, list: rest });
 }
 
 /**
