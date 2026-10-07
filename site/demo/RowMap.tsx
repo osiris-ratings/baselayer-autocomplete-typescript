@@ -654,9 +654,8 @@ function KindRowMap<P extends string, F extends string>({
                 />
               </span>
               <div className="row-map-kind-lines">
-                {kind.lines.map(({ line, leading, lead, trailing }) => (
+                {kind.lines.map(({ line, lead, trailing }) => (
                   <div key={line} className="row-map-line">
-                    {leading !== undefined && place(leading as P)}
                     {lead.field === null ? (
                       // A line is the entity it names, so its name always shows.
                       <span className="row-map-slot">

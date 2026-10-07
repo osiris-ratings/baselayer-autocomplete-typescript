@@ -64,24 +64,18 @@ describe("the Components fold's row", () => {
     // drawn here too.
     const head = BUSINESS_ROW.lines.filter(line => line.relation === null);
     expect(drawnLines(view.container)).toEqual(
-      head.map(({ leading, lead, trailing }) =>
-        [
-          leading,
-          lead.field,
-          lead.badge,
-          trailing.badge,
-          trailing.field,
-        ].filter(place => place !== null && place !== undefined),
+      head.map(({ lead, trailing }) =>
+        [lead.field, lead.badge, trailing.badge, trailing.field].filter(
+          place => place !== null && place !== undefined,
+        ),
       ),
     );
-    expect(drawnLines(view.container)[0]![0]).toBe("titleLead");
   });
 
   it("draws a line kind's places once the row lists it", () => {
     const listed = withListed(DEFAULT_STYLE, "businesses", "addresses", true);
     const { view } = mount(listed);
     expect(drawnLines(view.container).at(-1)).toEqual([
-      "addressLead",
       "addressBadge",
       "addressTrailingBadge",
       "addressTrailing",
@@ -96,9 +90,9 @@ describe("the Components fold's row", () => {
           ".row-map-tray .row-map-chip",
         ),
       ].map(chip => chip.dataset.field);
-    // The business's icon is left out by default; the officers' and the
-    // addresses' fields are on lines the row does not draw.
-    expect(tray()).toEqual(["titleIcon"]);
+    // The officers' and the addresses' fields are on lines the row does not
+    // draw.
+    expect(tray()).toEqual([]);
 
     // The officers' line listed, their role taken off it: on the tray.
     const listed = withListed(DEFAULT_STYLE, "businesses", "people", true);
@@ -113,7 +107,7 @@ describe("the Components fold's row", () => {
       },
     };
     view.rerender(<RowMap state={roleOut} onChange={() => {}} />);
-    expect(tray()).toEqual(["titleIcon", "personRole"]);
+    expect(tray()).toEqual(["personRole"]);
 
     // The line taken off the row again: its fields go with it.
     view.rerender(
@@ -122,7 +116,7 @@ describe("the Components fold's row", () => {
         onChange={() => {}}
       />,
     );
-    expect(tray()).toEqual(["titleIcon"]);
+    expect(tray()).toEqual([]);
   });
 
   it("swaps a field picked from a place's dropdown with the place's own", () => {
@@ -465,16 +459,11 @@ describe("the Components fold's row on People and Addresses", () => {
     expect(lines).toEqual([
       {
         name: "Person's name",
-        places: ["headLead", "headBadge", "headTrailingBadge", "headTrailing"],
+        places: ["headBadge", "headTrailingBadge", "headTrailing"],
       },
       {
         name: "Business name",
-        places: [
-          "businessLead",
-          "businessBadge",
-          "businessTrailingBadge",
-          "businessTrailing",
-        ],
+        places: ["businessBadge", "businessTrailingBadge", "businessTrailing"],
       },
     ]);
   });

@@ -64,8 +64,6 @@ export interface RowLine<
   L extends string = "title" | "subtitle",
 > {
   line: L;
-  /** The place before the name, for its icon, on a line that draws a name. */
-  leading?: P;
   /** When the lead's field is the row's name, which no place holds: null. */
   lead: RowCorner<P | null, P>;
   trailing: RowCorner<P, P>;
@@ -79,14 +77,20 @@ export interface RowLine<
  * A kind of row a host lays out: its places in reading order, the fields a
  * place can show, its lines, and the field each place shows by default.
  * `accepts` says which fields a place may hold; left out, any field may go in
- * any place.
+ * any place. `iconSegments` are the segments, names and fields, an icon can
+ * ride on.
  */
-export interface RowKind<P extends string, F extends string> {
+export interface RowKind<
+  P extends string,
+  F extends string,
+  S extends string = string,
+> {
   places: readonly P[];
   fields: readonly F[];
   lines: readonly RowLine<P, string>[];
   defaults: Readonly<Record<P, F | null>>;
   accepts?: (place: P, field: F) => boolean;
+  iconSegments: readonly S[];
 }
 
 /** The field each place of a kind shows, or null for an empty place. */
@@ -216,6 +220,7 @@ const BUSINESS_HEAD: RowKind<RowPlace, RowField> = {
   fields: ROW_FIELDS,
   lines: ROW_LINES,
   defaults: DEFAULT_ROW_LAYOUT,
+  iconSegments: [],
 };
 
 /** The layout as a business row draws it (`drawnLayout` for a business row). */

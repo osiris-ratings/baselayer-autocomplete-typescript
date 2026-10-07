@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 
 import { DEFAULT_LOOK, type Look } from "@baselayer-sdk/autocomplete";
 
+import { disabledFade } from "../../src/react/viewParts";
+
 const css = readFileSync(join(__dirname, "../../src/react/styles.css"), "utf8");
 
 /** Every rule, as its selectors and its declarations, comments left out. */
@@ -230,5 +232,20 @@ describe("the stylesheet's colors", () => {
 
     expect(flag).toContain("color: var(--bl-ac-structure-fg);");
     expect(flag).toContain("background: var(--bl-ac-structure-bg);");
+  });
+});
+
+describe("a disabled line's fade", () => {
+  it("is the stylesheet's fallbacks at the look's default, and nothing at 0", () => {
+    const d = DEFAULT_LOOK.disabledDim;
+    const fade = disabledFade(d);
+    expect(rule(".bl-ac-group-line:not([data-enabled])")).toContain(
+      `filter: var(--bl-ac-disabled-filter, ${fade.filter});`,
+    );
+    expect(css).toContain(
+      `opacity: var(--bl-ac-disabled-opacity, ${fade.opacity});`,
+    );
+    expect(disabledFade(0)).toEqual({ filter: "none", opacity: "1" });
+    expect(disabledFade(1)).toEqual({ filter: "saturate(0)", opacity: "0.85" });
   });
 });

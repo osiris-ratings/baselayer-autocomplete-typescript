@@ -199,35 +199,19 @@ describe("the exported configuration follows the row map", () => {
     expect(tsx).toContain('list={["businesses", "addresses"]}');
   });
 
-  it("writes the business's icon and the lines it lists, with somewhere for a person to go", () => {
-    const row = DEFAULT_STYLE.rows.businesses;
+  it("writes the lines a business lists, with somewhere for a person to go", () => {
     const state = withPickable(
-      withListed(
-        {
-          ...DEFAULT_STYLE,
-          rows: {
-            ...DEFAULT_STYLE.rows,
-            businesses: {
-              ...row,
-              layout: { ...row.layout, titleLead: "titleIcon" },
-            },
-          },
-        },
-        "businesses",
-        "people",
-        true,
-      ),
+      withListed(DEFAULT_STYLE, "businesses", "people", true),
       "businesses",
       "person",
       true,
     );
 
     const { tsx } = exportCode(state, "businesses");
-    expect(tsx).toContain('layout={{\n    titleLead: "titleIcon",\n  }}');
     expect(tsx).toContain('list={["people"]}');
     expect(tsx).toContain('enabledLines={["business", "person"]}');
     expect(tsx).toContain("onPickEntity={pick => …}");
-    expect(componentChanges(state)).toBe(3);
+    expect(componentChanges(state)).toBe(2);
   });
 
   it("writes what the component is handed: one reading of the row", () => {

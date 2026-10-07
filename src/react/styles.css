@@ -407,7 +407,7 @@
   }
 }
 
-/* The icon before a name: the size of its text, in the subtitle's colour,
+/* A segment's icon: the size of its text, in the subtitle's colour,
    centred on its line, and never given up for room. */
 .bl-ac-icon {
   display: inline-flex;
@@ -419,6 +419,13 @@
 .bl-ac-group-lead > .bl-ac-icon {
   flex: none;
   overflow: visible;
+}
+
+/* The icon on a field's text: inline, first, kept apart from the text and
+   sat on it as a glyph would be; the text gives way after it. */
+:is(.bl-ac-address, .bl-ac-people) > .bl-ac-icon {
+  margin-inline-end: 0.4em;
+  vertical-align: -0.125em;
 }
 
 .bl-ac-group-lead > .bl-ac-states {

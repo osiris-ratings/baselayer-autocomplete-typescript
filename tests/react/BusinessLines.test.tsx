@@ -90,8 +90,8 @@ const BODY = {
   ],
 };
 
-function setup() {
-  const fetch = vi.fn<FetchLike>(async () => reply(BODY));
+function setup(body: unknown = BODY) {
+  const fetch = vi.fn<FetchLike>(async () => reply(body));
   const mint: MintFunction = async () => ({
     kind: "granted",
     grant: {
@@ -109,7 +109,7 @@ function setup() {
 }
 
 type HostProps = Partial<
-  Pick<BusinessAutocompleteProps, "list" | "layout" | "icons">
+  Pick<BusinessAutocompleteProps, "list" | "layout" | "icons" | "iconSegments">
 > & {
   enabledLines?: EntityType[];
   onPick?: () => void;
@@ -140,8 +140,8 @@ function Host({
   );
 }
 
-async function typeHarbor(props: HostProps = {}) {
-  const { client, fetch } = setup();
+async function typeHarbor(props: HostProps = {}, body: unknown = BODY) {
+  const { client, fetch } = setup(body);
   const user = userEvent.setup();
   render(<Host client={client} {...props} />);
   await user.type(screen.getByRole("combobox"), "harbor");
@@ -164,7 +164,7 @@ describe("a business row with nothing listed", () => {
 });
 
 describe("a business row that lists its officers and addresses", () => {
-  it("is a group: the business, then a line for each officer and address, each with its icon and role", async () => {
+  it("is a group: the business, then a line for each officer and address, each with its role and no icon", async () => {
     await typeHarbor({ list: ["people", "addresses"] });
 
     const harbor = screen.getByRole("group", {
@@ -179,13 +179,7 @@ describe("a business row that lists its officers and addresses", () => {
     expect(address).toHaveTextContent(
       "1200 Tallowmere Rd, Pittsburgh, PA 15212principal office",
     );
-    expect(
-      [
-        ...harbor.querySelectorAll<HTMLElement>(
-          ".bl-ac-group-line .bl-ac-icon",
-        ),
-      ].map(icon => icon.dataset.entity),
-    ).toEqual(["person", "person", "address"]);
+    expect(harbor.querySelectorAll(".bl-ac-icon")).toHaveLength(0);
     expect(within(harbor).getByText("+2 more not shown")).toBeInTheDocument();
   });
 
@@ -250,22 +244,12 @@ describe("a business row that lists its officers and addresses", () => {
     expect(input()).toHaveAccessibleDescription("Dana Whitfield");
   });
 
-  it("draws an icon before the business's name where the layout puts one, and none with icons off", async () => {
-    await typeHarbor({
-      list: ["people"],
-      layout: { titleLead: "titleIcon" },
-    });
-    const harbor = screen.getByRole("group");
-    const title = harbor.querySelector(".bl-ac-line-title")!;
-    expect(
-      [...title.querySelectorAll<HTMLElement>(".bl-ac-icon")].map(
-        icon => icon.dataset.entity,
-      ),
-    ).toEqual(["business"]);
-  });
-
   it("draws no icons with icons off", async () => {
-    await typeHarbor({ list: ["people", "addresses"], icons: false });
+    await typeHarbor({
+      list: ["people", "addresses"],
+      iconSegments: ["name", "address", "people", "personName", "addressName"],
+      icons: false,
+    });
 
     expect(
       screen.getByRole("group").querySelectorAll(".bl-ac-icon"),
@@ -304,5 +288,114 @@ describe("a business row that lists its officers and addresses", () => {
     );
 
     expect([bare, businessesOnly]).toHaveLength(2);
+  });
+});
+
+describe("the icons on a business row", () => {
+  /** Each icon in `element`: the SDK's glyph, or "host" for a host's own. */
+  const glyphsOf = (element: Element) =>
+    [...element.querySelectorAll<HTMLElement>(".bl-ac-icon")].map(
+      icon => icon.dataset.glyph ?? "host",
+    );
+  const ALL = [
+    "name",
+    "address",
+    "people",
+    "personName",
+    "addressName",
+  ] as const;
+
+  it("rides on each segment named: the name, the address by its role, the officer, each listed name", async () => {
+    await typeHarbor({ list: ["people", "addresses"], iconSegments: [...ALL] });
+    const harbor = screen.getByRole("group");
+
+    const name = within(harbor).getByTestId("business-suggestion-name");
+    expect(name.previousElementSibling).toHaveClass("bl-ac-icon");
+    expect(glyphsOf(name.parentElement!)).toEqual(["building"]);
+    const address = within(harbor).getByTestId("business-suggestion-address");
+    expect(address.firstElementChild).toHaveClass("bl-ac-icon");
+    expect(glyphsOf(address)).toEqual(["pin"]);
+    const officer = within(harbor).getByTestId("business-suggestion-officers");
+    expect(officer.firstElementChild).toHaveClass("bl-ac-icon");
+    expect(glyphsOf(officer)).toEqual(["person"]);
+    expect(
+      within(harbor).getAllByTestId("person-line").flatMap(glyphsOf),
+    ).toEqual(["person", "briefcase"]);
+    expect(
+      within(harbor).getAllByTestId("address-line").flatMap(glyphsOf),
+    ).toEqual(["pin"]);
+  });
+
+  it("draws one on a row that lists nothing, which stays the one option", async () => {
+    await typeHarbor({ iconSegments: ["name"] });
+
+    const [row] = screen.getAllByRole("option");
+    expect(screen.queryByRole("group")).toBeNull();
+    expect(glyphsOf(row!)).toEqual(["building"]);
+  });
+
+  it("draws an agent the same in the subtitle and on its own line", async () => {
+    const agentOnly = {
+      ...BODY,
+      suggestions: [
+        {
+          ...BODY.suggestions[0]!,
+          related: {
+            ...BODY.suggestions[0]!.related,
+            people: {
+              count: 1,
+              matched: null,
+              truncated: false,
+              items: [
+                item(
+                  "person",
+                  "Meridian Registered Agents, LLC",
+                  "tok-meridian",
+                  "agent",
+                ),
+              ],
+            },
+          },
+        },
+      ],
+    };
+    await typeHarbor(
+      { list: ["people"], iconSegments: ["people", "personName"] },
+      agentOnly,
+    );
+    const harbor = screen.getByRole("group");
+
+    const subtitle = glyphsOf(
+      within(harbor).getByTestId("business-suggestion-officers"),
+    );
+    const line = within(harbor).getAllByTestId("person-line").flatMap(glyphsOf);
+    expect(subtitle).toEqual(["briefcase"]);
+    expect(line).toEqual(subtitle);
+  });
+
+  it("draws none on an address it does not have", async () => {
+    const noAddress = {
+      ...BODY,
+      suggestions: [
+        {
+          ...BODY.suggestions[0]!,
+          related: {
+            ...BODY.suggestions[0]!.related,
+            addresses: { count: 0, matched: null, truncated: false, items: [] },
+          },
+        },
+      ],
+    };
+    await typeHarbor({ iconSegments: ["address"] }, noAddress);
+
+    const address = screen.getByTestId("business-suggestion-address");
+    expect(address).toHaveTextContent("No address on file");
+    expect(address.querySelector(".bl-ac-icon")).toBeNull();
+  });
+
+  it("draws none by default, so the row is as it always was", async () => {
+    await typeHarbor({ list: ["people", "addresses"] });
+
+    expect(document.querySelectorAll(".bl-ac-icon")).toHaveLength(0);
   });
 });

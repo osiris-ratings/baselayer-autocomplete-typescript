@@ -15,15 +15,12 @@ describe("a person's row", () => {
     //   ACME HOLDINGS LLC   1200 Tallowmere Rd, Wilm… ..... [DE][FL] +1   officer
     //   12 Fernhallow Ln, Dover, DE 19901 ................................. officer
     expect(resolveLayout(PERSON_ROW)).toEqual({
-      headLead: "headIcon",
       headBadge: "firstAddress",
       headTrailingBadge: null,
       headTrailing: "counts",
-      businessLead: "businessIcon",
       businessBadge: "address",
       businessTrailingBadge: "states",
       businessTrailing: "role",
-      addressLead: "addressIcon",
       addressBadge: null,
       addressTrailingBadge: null,
       addressTrailing: "addressRole",
@@ -60,15 +57,12 @@ describe("a person's row", () => {
 describe("an address's row", () => {
   it("draws, by default, the head with its counts, the business lines and the people lines", () => {
     expect(resolveLayout(ADDRESS_ROW)).toEqual({
-      headLead: "headIcon",
       headBadge: null,
       headTrailingBadge: null,
       headTrailing: "counts",
-      businessLead: "businessIcon",
       businessBadge: "address",
       businessTrailingBadge: "states",
       businessTrailing: "role",
-      personLead: "personIcon",
       personBadge: null,
       personTrailingBadge: null,
       personTrailing: "personRole",

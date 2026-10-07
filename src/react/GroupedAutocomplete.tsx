@@ -7,6 +7,7 @@ import {
 } from "react";
 
 import {
+  DEFAULT_ICON_SEGMENTS,
   ADDRESS_ROW,
   PERSON_ROW,
   ROUTES,
@@ -30,6 +31,7 @@ import {
   type FiltersByRelation,
   type GroupedOption,
   type GroupedRequest,
+  type IconSegmentByRoute,
   type IncludeOf,
   type LookInput,
   type MintFunction,
@@ -37,6 +39,7 @@ import {
   type PersonRowLayoutInput,
   type PersonSuggestion,
   type RelatedItem,
+  type RelatedRole,
   type RelatedSet,
   type Relation,
   type SuggestionByRelation,
@@ -44,7 +47,7 @@ import {
 
 import type { MintTiming } from "./BusinessAutocomplete";
 import { useAutocompleteClient, useResolvedClient } from "./context";
-import { iconFor, type IconSet } from "./icons";
+import { SegmentIcon, type IconSet } from "./icons";
 import {
   usePickedSelection,
   type GroupedSelection,
@@ -103,10 +106,16 @@ interface GroupedCommonProps<R extends GroupedRoute> {
    */
   include?: readonly IncludeOf<R>[];
   /**
-   * The icon before each name, per entity: the SDK's building, person and map
-   * pin by default; `false` draws none.
+   * A host's own icons, by entity (`address`) or by entity and role
+   * (`address:mailing`), the role's winning; `false` hides that one, and
+   * `false` for all draws none.
    */
   icons?: IconSet;
+  /**
+   * The segments that carry an icon before their text, wherever they are
+   * placed: every name by default (`DEFAULT_ICON_SEGMENTS`).
+   */
+  iconSegments?: readonly IconSegmentByRoute[R][];
   /**
    * The field each place of a row's lines shows (`PERSON_ROW`, `ADDRESS_ROW`).
    * The request asks for whatever it draws.
@@ -384,8 +393,10 @@ interface GroupedViewCommonProps<R extends GroupedRoute> {
   error: string | null;
   /** The relations listed under each row, a line per item. Default: businesses. */
   list?: readonly IncludeOf<R>[] | undefined;
-  /** The icon before each name, per entity; `false` draws none. */
+  /** A host's own icons, by entity or by entity and role; `false` draws none. */
   icons?: IconSet | undefined;
+  /** The segments that carry an icon: every name by default. */
+  iconSegments?: readonly IconSegmentByRoute[R][] | undefined;
   /** Which lines can be picked, by type. Default: businesses. */
   enabledLines?: readonly EntityType[] | undefined;
   /** The field each place of a row's lines shows. */
@@ -466,6 +477,7 @@ function GroupedView<R extends GroupedRoute>({
   error,
   list,
   icons,
+  iconSegments,
   enabledLines,
   layout: layoutInput,
   selection = null,
@@ -482,6 +494,23 @@ function GroupedView<R extends GroupedRoute>({
   const text = resolveMessages(messages);
   const look = resolveLook(lookInput ?? {});
   const cx = classes(unstyled, classNames);
+  const withIcon: ReadonlySet<string> = new Set(
+    iconSegments ?? DEFAULT_ICON_SEGMENTS[route],
+  );
+  /** The icon `segment` carries, for an entity in a role; none where it carries none. */
+  const iconOf = (
+    segment: string,
+    entity: EntityType,
+    role: RelatedRole | null,
+  ) =>
+    withIcon.has(segment) && (
+      <SegmentIcon
+        icons={icons}
+        entity={entity}
+        role={role}
+        className={cx("icon", "bl-ac-icon")}
+      />
+    );
   const drawnLayout = drawnFor(route, layoutInput);
   const layout: Readonly<Record<string, string | null>> = drawnLayout;
   const { list: listed } = requestOf(route, drawnLayout, list);
@@ -564,24 +593,6 @@ function GroupedView<R extends GroupedRoute>({
     of: LineOf,
     headId: string,
   ): ReactNode {
-    if (name !== null && name.endsWith("Icon")) {
-      const icon = iconFor(
-        icons,
-        of.line === "head" ? of.row.type : of.item.type,
-      );
-      return (
-        icon !== null && (
-          <span
-            className={cx("icon", "bl-ac-icon")}
-            data-place={place}
-            data-entity={of.line === "head" ? of.row.type : of.item.type}
-            aria-hidden="true"
-          >
-            {icon}
-          </span>
-        )
-      );
-    }
     switch (name) {
       case "firstAddress": {
         if (of.line !== "head" || of.row.type !== "person") {
@@ -600,6 +611,7 @@ function GroupedView<R extends GroupedRoute>({
             data-place={place}
             data-testid="grouped-firstAddress"
           >
+            {iconOf("firstAddress", "address", first.role)}
             {first.label}
             {more > 0 ? ` ${text.more(more)}` : ""}
           </span>
@@ -629,6 +641,7 @@ function GroupedView<R extends GroupedRoute>({
               data-place={place}
               data-testid="grouped-address"
             >
+              {iconOf("address", "address", null)}
               {of.item.address}
             </span>
           )
@@ -724,7 +737,9 @@ function GroupedView<R extends GroupedRoute>({
         }
       >
         <span className={cx("corner", "bl-ac-group-lead")} data-corner="lead">
-          {at(`${of.line}Lead`)}
+          {of.line === "head"
+            ? iconOf("name", of.row.type, null)
+            : iconOf(`${of.line}Name`, of.item.type, of.item.role)}
           {name}
           {badge}
         </span>

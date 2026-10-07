@@ -1,6 +1,6 @@
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -12,6 +12,7 @@ import {
   type EntityType,
   type FetchLike,
   type MintFunction,
+  type PersonIconSegment,
   type PersonRowLayoutInput,
   type ResponseLike,
   type SessionScope,
@@ -22,6 +23,7 @@ import {
   DEFAULT_MESSAGES,
   PersonAutocomplete,
   PersonAutocompleteView,
+  type IconSet,
 } from "../../src/react";
 
 // Made-up people, addresses and businesses.
@@ -271,6 +273,7 @@ function PersonHost({
   layout,
   showSelection,
   icons,
+  iconSegments,
 }: {
   client: Client;
   onPick?: (pick: BusinessPick) => void;
@@ -279,7 +282,8 @@ function PersonHost({
   enabledLines?: EntityType[];
   layout?: PersonRowLayoutInput;
   showSelection?: boolean;
-  icons?: Partial<Record<EntityType, ReactNode>> | false;
+  icons?: IconSet;
+  iconSegments?: PersonIconSegment[];
 }) {
   const [value, setValue] = useState("");
   return (
@@ -307,6 +311,7 @@ function PersonHost({
         {...(layout !== undefined ? { layout } : {})}
         {...(showSelection !== undefined ? { showSelection } : {})}
         {...(icons !== undefined ? { icons } : {})}
+        {...(iconSegments !== undefined ? { iconSegments } : {})}
       />
     </>
   );
@@ -1009,58 +1014,118 @@ describe("the selection line", () => {
 });
 
 describe("the icons", () => {
-  const iconsOf = (element: HTMLElement) =>
+  /** Each icon in `element`: the SDK's glyph, or "host" for a host's own. */
+  const glyphsOf = (element: Element) =>
     [...element.querySelectorAll<HTMLElement>(".bl-ac-icon")].map(
-      icon => icon.dataset.entity,
+      icon => icon.dataset.glyph ?? "host",
     );
 
-  it("draws one before every name: a person, a building, a map pin", async () => {
+  it("draws one before every name by default: the person, each business, each address by the person's role there", async () => {
     const { client } = setup();
     const { dana } = await typeDana(client, {
       list: ["businesses", "addresses"],
     });
 
     const head = within(dana).getByTestId("group-head");
-    expect(iconsOf(head)).toEqual(["person"]);
-    for (const line of within(dana).getAllByTestId("business-line")) {
-      expect(iconsOf(line)).toEqual(["business"]);
-    }
-    for (const line of within(dana).getAllByTestId("address-line")) {
-      expect(iconsOf(line)).toEqual(["address"]);
-    }
-    // Before the name, and nothing a screen reader reads.
-    const icon = head.querySelector(".bl-ac-icon")!;
-    expect(icon.parentElement!.firstElementChild).toBe(icon);
+    expect(glyphsOf(head)).toEqual(["person"]);
+    expect(
+      within(dana).getAllByTestId("business-line").flatMap(glyphsOf),
+    ).toEqual(["building", "building", "building"]);
+    // Their home as an officer is a house; where they are an agent, a briefcase.
+    expect(
+      within(dana).getAllByTestId("address-line").flatMap(glyphsOf),
+    ).toEqual(["house", "briefcase"]);
+    // Right before the name, and nothing a screen reader reads.
+    const icon = head.querySelector<HTMLElement>(".bl-ac-icon")!;
+    expect(icon.nextElementSibling).toHaveClass("bl-ac-name");
     expect(icon).toHaveAttribute("aria-hidden", "true");
+    expect(icon.dataset).toMatchObject({ entity: "person" });
+    expect(icon).not.toHaveAttribute("data-role");
     expect(dana).toHaveAccessibleName("Dana Whitfield");
+    const [agentAddress] = within(dana)
+      .getAllByTestId("address-line")
+      .slice(1)
+      .map(line => line.querySelector<HTMLElement>(".bl-ac-icon")!);
+    expect(agentAddress!.dataset).toMatchObject({
+      entity: "address",
+      role: "agent",
+      glyph: "briefcase",
+    });
   });
 
-  it("draws the host's own icon for an entity, the others as they were", async () => {
+  it("rides on the segments named, first in each, wherever the segment is placed", async () => {
     const { client } = setup();
     const { dana } = await typeDana(client, {
-      icons: { business: <b data-testid="own-icon">B</b> },
+      iconSegments: ["firstAddress", "address"],
+      layout: { businessBadge: null, businessTrailing: "address" },
     });
 
-    expect(within(dana).getAllByTestId("own-icon")).toHaveLength(3);
-    expect(iconsOf(within(dana).getByTestId("group-head"))).toEqual(["person"]);
+    const head = within(dana).getByTestId("group-head");
+    const first = within(head).getByTestId("grouped-firstAddress");
+    expect(first.firstElementChild).toHaveClass("bl-ac-icon");
+    expect(glyphsOf(head)).toEqual(["house"]);
+    const [harbor] = within(dana).getAllByTestId("business-line");
+    const address = within(harbor!).getByTestId("grouped-address");
+    expect(address).toHaveAttribute("data-place", "businessTrailing");
+    expect(address.firstElementChild).toHaveClass("bl-ac-icon");
+    expect(address).toHaveTextContent("1200 Tallowmere Rd, Wilmington, DE");
+    // A business's own address under a person: no role there, a map pin.
+    expect(glyphsOf(harbor!)).toEqual(["pin"]);
+  });
+
+  it("draws a host's icon for an entity, and a role's over it", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client, {
+      list: ["businesses", "addresses"],
+      icons: {
+        address: <b data-testid="any-address">A</b>,
+        "address:agent": <b data-testid="agent-address">G</b>,
+      },
+    });
+
+    const [home, office] = within(dana).getAllByTestId("address-line");
+    expect(within(home!).getByTestId("any-address")).toBeInTheDocument();
+    expect(within(office!).getByTestId("agent-address")).toBeInTheDocument();
+    expect(glyphsOf(office!)).toEqual(["host"]);
+    expect(glyphsOf(within(dana).getByTestId("group-head"))).toEqual([
+      "person",
+    ]);
+  });
+
+  it("hides the one a host sets to false, and leaves the rest", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client, {
+      list: ["businesses", "addresses"],
+      icons: { "address:agent": false },
+    });
+
+    expect(
+      within(dana).getAllByTestId("address-line").flatMap(glyphsOf),
+    ).toEqual(["house"]);
   });
 
   it("draws none with icons off", async () => {
     const { client } = setup();
     const { dana } = await typeDana(client, { icons: false });
-
     expect(dana.querySelectorAll(".bl-ac-icon")).toHaveLength(0);
   });
 
-  it("leaves a line's icon out where the layout does", async () => {
+  it("draws none where no segment is named", async () => {
     const { client } = setup();
-    const { dana } = await typeDana(client, {
-      layout: { businessLead: null },
-    });
+    const { dana } = await typeDana(client, { iconSegments: [] });
+    expect(dana.querySelectorAll(".bl-ac-icon")).toHaveLength(0);
+  });
 
-    expect(iconsOf(within(dana).getByTestId("group-head"))).toEqual(["person"]);
+  it("draws an address's head as a pin, and its people by their role", async () => {
+    const { client } = setup();
+    const user = userEvent.setup();
+    render(<AddressHost client={client} list={["businesses", "people"]} />);
+    await user.type(screen.getByRole("combobox"), "45 corvel");
+    const corvel = await screen.findByRole("group", { name: /45 Corvel/ });
+
+    expect(glyphsOf(within(corvel).getByTestId("group-head"))).toEqual(["pin"]);
     expect(
-      within(dana).getAllByTestId("business-line").flatMap(iconsOf),
-    ).toEqual([]);
+      within(corvel).getAllByTestId("person-line").flatMap(glyphsOf),
+    ).toEqual(["person", "briefcase"]);
   });
 });

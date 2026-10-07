@@ -3,9 +3,9 @@
  * address's, as one model. A row is its head, then a line for each item of a
  * relation it lists: a business's officers and addresses, a person's
  * businesses and addresses, an address's businesses and people. Every line
- * draws a name, with a place before it for its icon and three after it, each
- * showing one of its own line's fields. See docs/styling.md, "A row's places
- * and fields".
+ * draws a name, then three places, each showing one of its own line's fields.
+ * An icon rides on a segment, a name or a field, wherever it is drawn. See
+ * docs/styling.md, "A row's places and fields".
  */
 
 import {
@@ -39,14 +39,9 @@ import type {
   RelatedSet,
 } from "./wire";
 
-/** A line's places: the icon's before the name, its badge, its trailing corner. */
+/** A line's places after its name: its badge, then its trailing corner. */
 function linePlaces<L extends string>(line: L) {
-  return [
-    `${line}Lead`,
-    `${line}Badge`,
-    `${line}TrailingBadge`,
-    `${line}Trailing`,
-  ] as const;
+  return [`${line}Badge`, `${line}TrailingBadge`, `${line}Trailing`] as const;
 }
 
 type PlacesOf<L extends string> = ReturnType<typeof linePlaces<L>>[number];
@@ -58,7 +53,6 @@ function lineOf<L extends string>(
 ): RowLine<PlacesOf<L>, L> {
   return {
     line,
-    leading: `${line}Lead`,
     lead: { field: null, badge: `${line}Badge` },
     trailing: { badge: `${line}TrailingBadge`, field: `${line}Trailing` },
     entity,
@@ -67,61 +61,86 @@ function lineOf<L extends string>(
 }
 
 /**
- * Which line a place is on, by its name: what is left of it once `Lead`,
- * `Badge`, `TrailingBadge` or `Trailing` is taken off.
+ * Which line a place is on, by its name: what is left of it once `Badge`,
+ * `TrailingBadge` or `Trailing` is taken off.
  */
 function lineOfPlace(place: string): string {
-  return place.replace(/(Lead|TrailingBadge|Trailing|Badge)$/, "");
+  return place.replace(/(TrailingBadge|Trailing|Badge)$/, "");
 }
 
-/**
- * A place takes its own line's fields, and its line's icon goes only before
- * the name: the place before the name takes nothing else.
- */
+/** A place takes its own line's fields. */
 function acceptsOwnLine<F extends string>(
   fields: Readonly<Record<string, readonly F[]>>,
 ) {
-  return (place: string, field: F): boolean => {
-    const line = lineOfPlace(place);
-    const icon = `${line}Icon`;
-    if (place.endsWith("Lead")) {
-      return field === icon;
-    }
-    return field !== icon && (fields[line]?.includes(field) ?? false);
-  };
+  return (place: string, field: F): boolean =>
+    fields[lineOfPlace(place)]?.includes(field) ?? false;
 }
 
 /** The fields each line of a person's row can show, by line. */
 export const PERSON_LINE_FIELDS = {
-  /** Their icon, their first address with `+N`, and how many of each. */
-  head: ["headIcon", "firstAddress", "counts"],
-  /** The business's icon, its address, its states, and the person's role on it. */
-  business: ["businessIcon", "address", "states", "role"],
-  /** The address's icon, and the person's role at it. */
-  address: ["addressIcon", "addressRole"],
+  /** Their first address with `+N`, and how many of each. */
+  head: ["firstAddress", "counts"],
+  /** The business's address, its states, and the person's role on it. */
+  business: ["address", "states", "role"],
+  /** The person's role at the address. */
+  address: ["addressRole"],
 } as const;
 
 /** The fields each line of an address's row can show, by line. */
 export const ADDRESS_LINE_FIELDS = {
-  /** Its icon, and how many businesses, and people, are there. */
-  head: ["headIcon", "counts"],
-  /** The business's icon, its address, its states, and how it holds this address. */
-  business: ["businessIcon", "address", "states", "role"],
-  /** The person's icon, and their role. */
-  person: ["personIcon", "personRole"],
+  /** How many businesses, and people, are there. */
+  head: ["counts"],
+  /** The business's address, its states, and how it holds this address. */
+  business: ["address", "states", "role"],
+  /** The person's role. */
+  person: ["personRole"],
 } as const;
 
 /**
  * The fields each line a business's row lists can show, by line; its head
- * shows `ROW_FIELDS`, and its icon before its name.
+ * shows `ROW_FIELDS`.
  */
 export const BUSINESS_LINE_FIELDS = {
-  title: ["titleIcon"],
-  /** The officer's or agent's icon, and their role on the business. */
-  person: ["personIcon", "personRole"],
-  /** The address's icon, and how the business holds it. */
-  address: ["addressIcon", "addressRole"],
+  /** The officer's or agent's role on the business. */
+  person: ["personRole"],
+  /** How the business holds the address. */
+  address: ["addressRole"],
 } as const;
+
+/**
+ * The segments of a person's row an icon can ride on: its names, and the
+ * fields with a glyph of their own, the addresses.
+ */
+export const PERSON_ICON_SEGMENTS = [
+  "name",
+  "firstAddress",
+  "businessName",
+  "address",
+  "addressName",
+] as const;
+export type PersonIconSegment = (typeof PERSON_ICON_SEGMENTS)[number];
+
+/** The segments of an address's row an icon can ride on. */
+export const ADDRESS_ICON_SEGMENTS = [
+  "name",
+  "businessName",
+  "address",
+  "personName",
+] as const;
+export type AddressIconSegment = (typeof ADDRESS_ICON_SEGMENTS)[number];
+
+/**
+ * The segments of a business's row an icon can ride on: its name, its
+ * address and its people, and the names of the lines it lists.
+ */
+export const BUSINESS_ICON_SEGMENTS = [
+  "name",
+  "address",
+  "people",
+  "personName",
+  "addressName",
+] as const;
+export type BusinessIconSegment = (typeof BUSINESS_ICON_SEGMENTS)[number];
 
 export const PERSON_ROW_PLACES = [
   ...linePlaces("head"),
@@ -142,13 +161,11 @@ export type AddressRowField =
   (typeof ADDRESS_LINE_FIELDS)[keyof typeof ADDRESS_LINE_FIELDS][number];
 
 /**
- * A business row's places in reading order: the head's (`ROW_PLACES`) with
- * the icon's before the name, then each line it can list.
+ * A business row's places in reading order: the head's (`ROW_PLACES`), then
+ * each line it can list.
  */
 export const BUSINESS_ROW_PLACES = [
-  "titleLead",
-  ...ROW_PLACES.slice(0, 3),
-  ...ROW_PLACES.slice(3),
+  ...ROW_PLACES,
   ...linePlaces("person"),
   ...linePlaces("address"),
 ] as const;
@@ -156,6 +173,13 @@ export type BusinessRowPlace = (typeof BUSINESS_ROW_PLACES)[number];
 export type BusinessRowField =
   | RowField
   | (typeof BUSINESS_LINE_FIELDS)[keyof typeof BUSINESS_LINE_FIELDS][number];
+
+/** The segments an icon can ride on, by search. */
+export interface IconSegmentByRoute {
+  businesses: BusinessIconSegment;
+  people: PersonIconSegment;
+  addresses: AddressIconSegment;
+}
 
 export type PersonRowLayout = LayoutOf<PersonRowPlace, PersonRowField>;
 export type PersonRowLayoutInput = LayoutInputOf<
@@ -176,9 +200,13 @@ export type BusinessRowLayoutInput = LayoutInputOf<
 /**
  * A person's row: `Jane Q Doe  12 Oak Ln, Dover, DE +2 … 3 businesses · 3
  * addresses`, then each business with its address, its states and the
- * person's role, then each address with the role; an icon before every name.
+ * person's role, then each address with the role.
  */
-export const PERSON_ROW: RowKind<PersonRowPlace, PersonRowField> = {
+export const PERSON_ROW: RowKind<
+  PersonRowPlace,
+  PersonRowField,
+  PersonIconSegment
+> = {
   places: PERSON_ROW_PLACES,
   fields: [
     ...PERSON_LINE_FIELDS.head,
@@ -191,28 +219,30 @@ export const PERSON_ROW: RowKind<PersonRowPlace, PersonRowField> = {
     lineOf("address", "address", "addresses"),
   ],
   defaults: Object.freeze({
-    headLead: "headIcon",
     headBadge: "firstAddress",
     headTrailingBadge: null,
     headTrailing: "counts",
-    businessLead: "businessIcon",
     businessBadge: "address",
     businessTrailingBadge: "states",
     businessTrailing: "role",
-    addressLead: "addressIcon",
     addressBadge: null,
     addressTrailingBadge: null,
     addressTrailing: "addressRole",
   }),
   accepts: acceptsOwnLine(PERSON_LINE_FIELDS),
+  iconSegments: PERSON_ICON_SEGMENTS,
 };
 
 /**
  * An address's row: the address with how many businesses and people are
  * there, then each business as on a person's row, then each person with
- * their role; an icon before every name.
+ * their role.
  */
-export const ADDRESS_ROW: RowKind<AddressRowPlace, AddressRowField> = {
+export const ADDRESS_ROW: RowKind<
+  AddressRowPlace,
+  AddressRowField,
+  AddressIconSegment
+> = {
   places: ADDRESS_ROW_PLACES,
   fields: [
     ...ADDRESS_LINE_FIELDS.head,
@@ -225,20 +255,18 @@ export const ADDRESS_ROW: RowKind<AddressRowPlace, AddressRowField> = {
     lineOf("person", "person", "people"),
   ],
   defaults: Object.freeze({
-    headLead: "headIcon",
     headBadge: null,
     headTrailingBadge: null,
     headTrailing: "counts",
-    businessLead: "businessIcon",
     businessBadge: "address",
     businessTrailingBadge: "states",
     businessTrailing: "role",
-    personLead: "personIcon",
     personBadge: null,
     personTrailingBadge: null,
     personTrailing: "personRole",
   }),
   accepts: acceptsOwnLine(ADDRESS_LINE_FIELDS),
+  iconSegments: ADDRESS_ICON_SEGMENTS,
 };
 
 const HEAD_PLACES: readonly string[] = ROW_PLACES;
@@ -248,48 +276,43 @@ const acceptsBusinessLine =
 
 /**
  * A business's row: its head as a business row has always drawn it, the
- * title and the subtitle, with a place before the name for its icon; then,
- * where the host lists them, a line for each officer or agent and each
- * address, an icon before every name and the role at the right. By default
- * the head is today's and nothing is listed.
+ * title and the subtitle; then, where the host lists them, a line for each
+ * officer or agent and each address, the role at the right. By default the
+ * head is today's, nothing is listed and no icon is drawn.
  */
-export const BUSINESS_ROW: RowKind<BusinessRowPlace, BusinessRowField> = {
+export const BUSINESS_ROW: RowKind<
+  BusinessRowPlace,
+  BusinessRowField,
+  BusinessIconSegment
+> = {
   places: BUSINESS_ROW_PLACES,
   fields: [
     ...ROW_FIELDS,
-    ...BUSINESS_LINE_FIELDS.title,
     ...BUSINESS_LINE_FIELDS.person,
     ...BUSINESS_LINE_FIELDS.address,
   ],
   lines: [
-    {
-      ...ROW_LINES[0],
-      leading: "titleLead",
-      entity: "business",
-      relation: null,
-    },
+    { ...ROW_LINES[0], entity: "business", relation: null },
     { ...ROW_LINES[1], entity: "business", relation: null },
     lineOf("person", "person", "people"),
     lineOf("address", "address", "addresses"),
   ],
   defaults: Object.freeze({
     ...DEFAULT_ROW_LAYOUT,
-    titleLead: null,
-    personLead: "personIcon",
     personBadge: null,
     personTrailingBadge: null,
     personTrailing: "personRole",
-    addressLead: "addressIcon",
     addressBadge: null,
     addressTrailingBadge: null,
     addressTrailing: "addressRole",
   }),
-  // The head's fields go anywhere in the head, as they always have; its icon
-  // only before the name; a listed line's fields only on their own line.
+  // The head's fields go anywhere in the head, as they always have; a listed
+  // line's fields only on their own line.
   accepts: (place, field) =>
     HEAD_PLACES.includes(place)
       ? HEAD_FIELDS.includes(field)
       : acceptsBusinessLine(place, field),
+  iconSegments: BUSINESS_ICON_SEGMENTS,
 };
 
 /** Each search's row. */
@@ -298,6 +321,18 @@ export const ROW_KINDS = {
   people: PERSON_ROW,
   addresses: ADDRESS_ROW,
 } as const;
+
+/**
+ * The segments that carry an icon when the host names none: every name on a
+ * person's and an address's rows, and nothing on a business row.
+ */
+export const DEFAULT_ICON_SEGMENTS: {
+  readonly [R in Route]: readonly IconSegmentByRoute[R][];
+} = Object.freeze({
+  businesses: [],
+  people: ["name", "businessName", "addressName"],
+  addresses: ["name", "businessName", "personName"],
+});
 
 /** The relations a search's rows list under them when the host names none. */
 export const DEFAULT_LIST: Readonly<Record<Route, readonly Relation[]>> =

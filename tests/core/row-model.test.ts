@@ -5,6 +5,7 @@ import {
   BUSINESS_ROW,
   DEFAULT_LIST,
   DEFAULT_ENABLED_LINES,
+  DEFAULT_ICON_SEGMENTS,
   DEFAULT_ROW_LAYOUT,
   PERSON_ROW,
   ROW_KINDS,
@@ -51,36 +52,28 @@ describe("the row a search draws", () => {
     });
   });
 
-  it("gives each line a place before its name, then its three", () => {
+  it("gives each line three places after its name, and none for an icon", () => {
     expect(BUSINESS_ROW.places).toEqual([
-      "titleLead",
-      "titleBadge",
-      "titleTrailingBadge",
-      "titleTrailing",
-      "subtitle",
-      "subtitleBadge",
-      "subtitleTrailingBadge",
-      "subtitleTrailing",
-      "personLead",
+      ...ROW_PLACES,
       "personBadge",
       "personTrailingBadge",
       "personTrailing",
-      "addressLead",
       "addressBadge",
       "addressTrailingBadge",
       "addressTrailing",
     ]);
-    expect(PERSON_ROW.places.slice(0, 4)).toEqual([
-      "headLead",
+    expect(PERSON_ROW.places.slice(0, 3)).toEqual([
       "headBadge",
       "headTrailingBadge",
       "headTrailing",
     ]);
     for (const kind of Object.values(ROW_KINDS)) {
-      for (const { line, leading } of kind.lines) {
-        expect(leading, line).toBe(
-          line === "subtitle" ? undefined : `${line}Lead`,
-        );
+      const places: readonly string[] = kind.places;
+      const fields: readonly string[] = kind.fields;
+      expect(places.filter(place => place.endsWith("Lead"))).toEqual([]);
+      expect(fields.filter(field => field.endsWith("Icon"))).toEqual([]);
+      for (const line of kind.lines) {
+        expect(Object.keys(line), line.line).not.toContain("leading");
       }
     }
   });
@@ -96,33 +89,27 @@ describe("the row a search draws", () => {
 });
 
 describe("a business row's layout", () => {
-  it("is today's by default, its new places empty or on lines it does not list", () => {
+  it("is today's by default, its lines' places on lines it does not list", () => {
     const layout = resolveLayout(BUSINESS_ROW);
 
     expect(
       Object.fromEntries(ROW_PLACES.map(place => [place, layout[place]])),
     ).toEqual(DEFAULT_ROW_LAYOUT);
-    expect(layout.titleLead).toBeNull();
     expect(layout).toMatchObject({
-      personLead: "personIcon",
       personTrailing: "personRole",
-      addressLead: "addressIcon",
       addressTrailing: "addressRole",
     });
     // The head's own layout is untouched: its places, its fields, its keys.
     expect(resolveRowLayout()).toEqual(DEFAULT_ROW_LAYOUT);
   });
 
-  it("puts an icon only before a line's name, and nothing else there", () => {
-    expect(
-      resolveLayout(BUSINESS_ROW, { titleLead: "titleIcon" }).titleLead,
-    ).toBe("titleIcon");
-    expect(
-      resolveLayout(BUSINESS_ROW, { titleTrailing: "titleIcon" }).titleTrailing,
-    ).toBe("states");
-    expect(
-      resolveLayout(BUSINESS_ROW, { titleLead: "structure" }).titleLead,
-    ).toBeNull();
+  it("has no place for an icon, so a staged one is left out", () => {
+    const layout = resolveLayout(BUSINESS_ROW, {
+      titleLead: "titleIcon",
+    } as never);
+
+    expect(Object.keys(layout)).not.toContain("titleLead");
+    expect(Object.values(layout)).not.toContain("titleIcon");
   });
 
   it("keeps each field to its own line", () => {
@@ -151,28 +138,42 @@ describe("a business row's layout", () => {
   });
 });
 
-describe("a person's or an address's row, with icons", () => {
-  it("draws each line's icon before its name by default", () => {
-    expect(resolveLayout(PERSON_ROW)).toMatchObject({
-      headLead: "headIcon",
-      businessLead: "businessIcon",
-      addressLead: "addressIcon",
-    });
-    expect(resolveLayout(ADDRESS_ROW)).toMatchObject({
-      headLead: "headIcon",
-      businessLead: "businessIcon",
-      personLead: "personIcon",
-    });
+describe("the segments an icon rides on", () => {
+  it("are a row's names, and the segments with a glyph of their own", () => {
+    expect(BUSINESS_ROW.iconSegments).toEqual([
+      "name",
+      "address",
+      "people",
+      "personName",
+      "addressName",
+    ]);
+    expect(PERSON_ROW.iconSegments).toEqual([
+      "name",
+      "firstAddress",
+      "businessName",
+      "address",
+      "addressName",
+    ]);
+    expect(ADDRESS_ROW.iconSegments).toEqual([
+      "name",
+      "businessName",
+      "address",
+      "personName",
+    ]);
   });
 
-  it("puts a line's icon nowhere but before its name", () => {
-    expect(
-      resolveLayout(PERSON_ROW, { businessTrailing: "businessIcon" })
-        .businessTrailing,
-    ).toBe("role");
-    expect(
-      resolveLayout(PERSON_ROW, { headLead: "businessIcon" }).headLead,
-    ).toBe("headIcon");
+  it("are the names on a person's and an address's rows by default, and none on a business row", () => {
+    expect(DEFAULT_ICON_SEGMENTS).toEqual({
+      businesses: [],
+      people: ["name", "businessName", "addressName"],
+      addresses: ["name", "businessName", "personName"],
+    });
+    for (const route of ["businesses", "people", "addresses"] as const) {
+      const segments: readonly string[] = ROW_KINDS[route].iconSegments;
+      for (const segment of DEFAULT_ICON_SEGMENTS[route]) {
+        expect(segments).toContain(segment);
+      }
+    }
   });
 });
 

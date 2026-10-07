@@ -583,19 +583,16 @@ export const CHOICE_LABELS: Record<PlaceChoice, string> = {
 };
 
 /**
- * A business's row: its head, as a business row has always drawn it, with the
- * icon's place before the name, and the officers and addresses it can list.
+ * A business's row: its head, as a business row has always drawn it, and the
+ * officers and addresses it can list.
  */
 export const BUSINESS_EDITOR: RowEditor<BusinessRowPlace, BusinessRowField> = {
   kind: BUSINESS_ROW,
   placeLabels: {
-    titleLead: "Before the name",
     ...PLACE_LABELS,
-    personLead: "Before person",
     personBadge: "Beside person",
     personTrailingBadge: "Beside person, right",
     personTrailing: "Person, right",
-    addressLead: "Before address",
     addressBadge: "Beside address",
     addressTrailingBadge: "Beside address, right",
     addressTrailing: "Address, right",
@@ -605,18 +602,12 @@ export const BUSINESS_EDITOR: RowEditor<BusinessRowPlace, BusinessRowField> = {
     structure: CHOICE_LABELS.structure,
     address: CHOICE_LABELS.address,
     people: CHOICE_LABELS.people,
-    titleIcon: "Icon",
-    personIcon: "Icon",
     personRole: "Role",
-    addressIcon: "Icon",
     addressRole: "Held as",
   },
   fieldWire: {
     ...FIELD_WIRE,
-    titleIcon: ["type"],
-    personIcon: ["related.people.items[].type"],
     personRole: ["related.people.items[].role"],
-    addressIcon: ["related.addresses.items[].type"],
     addressRole: ["related.addresses.items[].role"],
   },
   lineNames: {
@@ -645,23 +636,17 @@ const BUSINESS_LINE_WIRE = {
 export const PERSON_EDITOR: RowEditor<PersonRowPlace, PersonRowField> = {
   kind: PERSON_ROW,
   placeLabels: {
-    headLead: "Before the name",
     headBadge: "Beside the name",
     headTrailingBadge: "Beside head, right",
     headTrailing: "Head, right",
-    businessLead: "Before business",
     businessBadge: "Beside business",
     businessTrailingBadge: "Beside business, right",
     businessTrailing: "Business, right",
-    addressLead: "Before address",
     addressBadge: "Beside address",
     addressTrailingBadge: "Beside address, right",
     addressTrailing: "Address, right",
   },
   fieldLabels: {
-    headIcon: "Icon",
-    businessIcon: "Icon",
-    addressIcon: "Icon",
     firstAddress: "First address",
     counts: "Counts",
     address: "Address",
@@ -677,9 +662,6 @@ export const PERSON_EDITOR: RowEditor<PersonRowPlace, PersonRowField> = {
     counts: ["related.businesses.count", "related.addresses.count"],
     ...BUSINESS_LINE_WIRE,
     addressRole: ["related.addresses.items[].role"],
-    headIcon: ["type"],
-    businessIcon: ["related.businesses.items[].type"],
-    addressIcon: ["related.addresses.items[].type"],
   },
   lineNames: {
     head: { long: "Person's name", short: "Name" },
@@ -697,23 +679,17 @@ export const PERSON_EDITOR: RowEditor<PersonRowPlace, PersonRowField> = {
 export const ADDRESS_EDITOR: RowEditor<AddressRowPlace, AddressRowField> = {
   kind: ADDRESS_ROW,
   placeLabels: {
-    headLead: "Before the address",
     headBadge: "Beside the address",
     headTrailingBadge: "Beside head, right",
     headTrailing: "Head, right",
-    businessLead: "Before business",
     businessBadge: "Beside business",
     businessTrailingBadge: "Beside business, right",
     businessTrailing: "Business, right",
-    personLead: "Before person",
     personBadge: "Beside person",
     personTrailingBadge: "Beside person, right",
     personTrailing: "Person, right",
   },
   fieldLabels: {
-    headIcon: "Icon",
-    businessIcon: "Icon",
-    personIcon: "Icon",
     counts: "Counts",
     address: "Its own address",
     states: "States",
@@ -724,9 +700,6 @@ export const ADDRESS_EDITOR: RowEditor<AddressRowPlace, AddressRowField> = {
     counts: ["related.businesses.count", "related.people.count"],
     ...BUSINESS_LINE_WIRE,
     personRole: ["related.people.items[].role"],
-    headIcon: ["type"],
-    businessIcon: ["related.businesses.items[].type"],
-    personIcon: ["related.people.items[].type"],
   },
   lineNames: {
     head: { long: "Address", short: "Address" },
@@ -791,8 +764,8 @@ export function lineFields(route: Route, relation: Relation | null): string[] {
   const places = lineKinds(route)
     .filter(each => each.relation === relation)
     .flatMap(each => each.lines)
-    .flatMap(({ leading, lead, trailing }) =>
-      [leading, lead.field, lead.badge, trailing.badge, trailing.field].filter(
+    .flatMap(({ lead, trailing }) =>
+      [lead.field, lead.badge, trailing.badge, trailing.field].filter(
         (place): place is string => place !== null && place !== undefined,
       ),
     );
@@ -938,8 +911,7 @@ export function changedRowLayout(
     lineKinds(route)
       .filter(each => each.relation === null || list.includes(each.relation))
       .flatMap(each => each.lines)
-      .flatMap(({ leading, lead, trailing }) => [
-        leading,
+      .flatMap(({ lead, trailing }) => [
         lead.field,
         lead.badge,
         trailing.badge,

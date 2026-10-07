@@ -212,19 +212,13 @@ describe("the Components fold", () => {
     expect(DEFAULT_STYLE.rows.businesses.layout).toEqual(BUSINESS);
     expect(INITIAL_STYLE.rows.businesses.layout).toEqual(BUSINESS);
     expect(head(BUSINESS)).toEqual(DEFAULT_ROW_LAYOUT);
-    expect(BUSINESS.titleLead).toBeNull();
   });
 
-  it("offers the place before the name only the business's icon", () => {
-    expect(placeOptions(BUSINESS, "titleLead").map(o => o.value)).toEqual([
-      EMPTY_PLACE,
-      "titleIcon",
-    ]);
+  it("offers a line's places only its own line's fields", () => {
     expect(placeOptions(BUSINESS, "personTrailing").map(o => o.value)).toEqual([
       EMPTY_PLACE,
       "personRole",
     ]);
-    expect(canDrop(BUSINESS, "states", "titleLead")).toBe(false);
     expect(canDrop(BUSINESS, "states", "personBadge")).toBe(false);
   });
 
@@ -234,14 +228,9 @@ describe("the Components fold", () => {
       "structure",
       "address",
       "people",
-      "titleIcon",
     ]);
-    expect(lineFields("businesses", "people")).toEqual([
-      "personIcon",
-      "personRole",
-    ]);
+    expect(lineFields("businesses", "people")).toEqual(["personRole"]);
     expect(lineFields("people", "businesses")).toEqual([
-      "businessIcon",
       "address",
       "states",
       "role",
@@ -322,12 +311,12 @@ describe("the Components fold", () => {
     let layout = BUSINESS;
     for (const choice of ["people", "structure", "states"] as const) {
       layout = withPlaced(layout, "subtitle", choice);
-      expect(unplacedFields(layout), choice).toEqual(["titleIcon"]);
+      expect(unplacedFields(layout), choice).toEqual([]);
     }
     for (const choice of ["structure", "people", "address"] as const) {
       layout = withPlaced(layout, "subtitle", choice);
     }
-    expect(unplacedFields(layout)).toEqual(["titleIcon"]);
+    expect(unplacedFields(layout)).toEqual([]);
     expect(layout.subtitle).toBe("address");
   });
 
@@ -373,7 +362,7 @@ describe("dragging a field", () => {
   it("hides a field dropped on the tray, and places one dragged out of it", () => {
     const hidden = moveField(BUSINESS, "people", TRAY);
     expect(hidden).toEqual({ ...BUSINESS, subtitleTrailing: null });
-    expect(unplacedFields(hidden)).toEqual(["people", "titleIcon"]);
+    expect(unplacedFields(hidden)).toEqual(["people"]);
 
     // From the tray onto a taken place: what that place held goes to the tray.
     const placed = moveField(hidden, "people", "subtitle");
@@ -382,7 +371,7 @@ describe("dragging a field", () => {
       subtitle: "people",
       subtitleTrailing: null,
     });
-    expect(unplacedFields(placed)).toEqual(["address", "titleIcon"]);
+    expect(unplacedFields(placed)).toEqual(["address"]);
   });
 
   it("takes a field only where the row would draw it, and not on its own place", () => {

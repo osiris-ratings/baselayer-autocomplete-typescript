@@ -62,19 +62,27 @@ export function classes(
 /** How much of a disabled line's fading is its ink rather than its colour. */
 const DISABLED_INK = 0.15;
 
+/**
+ * A disabled line's fade at `dim`, as the stylesheet's variables hold it: the
+ * whole line's filter (`--bl-ac-disabled-filter`), and the opacity of its
+ * name, icon and state squares (`--bl-ac-disabled-opacity`).
+ */
+export function disabledFade(dim: number): { filter: string; opacity: string } {
+  const round = (value: number) => String(Math.round(value * 1000) / 1000);
+  return {
+    filter: dim === 0 ? "none" : `saturate(${round(1 - dim)})`,
+    opacity: round(1 - dim * DISABLED_INK),
+  };
+}
+
 /** The look's colors as CSS variables, only where they differ from the stylesheet's. */
 export function lookVariables(look: Look): CSSProperties {
   const vars: Record<string, string> = {};
   // One knob, two variables: the stylesheet's fallbacks are the default's.
   if (look.disabledDim !== DEFAULT_LOOK.disabledDim) {
-    const round = (value: number) => String(Math.round(value * 1000) / 1000);
-    vars["--bl-ac-disabled-filter"] =
-      look.disabledDim === 0
-        ? "none"
-        : `saturate(${round(1 - look.disabledDim)})`;
-    vars["--bl-ac-disabled-opacity"] = round(
-      1 - look.disabledDim * DISABLED_INK,
-    );
+    const fade = disabledFade(look.disabledDim);
+    vars["--bl-ac-disabled-filter"] = fade.filter;
+    vars["--bl-ac-disabled-opacity"] = fade.opacity;
   }
   const set = (name: string, value: string, fallback: string) => {
     if (value !== fallback) {

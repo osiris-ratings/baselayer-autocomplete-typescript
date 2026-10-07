@@ -48,6 +48,7 @@ export {
   type MintTiming,
   type Pick,
 } from "./BusinessAutocomplete";
+export type { IconKey, IconSet } from "./icons";
 export {
   DEFAULT_MESSAGES,
   resolveMessages,

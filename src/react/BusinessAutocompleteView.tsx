@@ -3,6 +3,7 @@ import { type ReactElement, type ReactNode, type Ref } from "react";
 import {
   BUSINESS_ROW,
   DEFAULT_ENABLED_LINES,
+  DEFAULT_ICON_SEGMENTS,
   ROUTES,
   ROW_LINES,
   drawnLayout,
@@ -12,9 +13,11 @@ import {
   resolveLayout,
   resolveLook,
   resolveRowLayout,
+  type BusinessIconSegment,
   type BusinessRowLayoutInput,
   type EntityPick,
   type EntityType,
+  type RelatedRole,
   type GroupedOption,
   type Include,
   type Look,
@@ -36,7 +39,7 @@ import {
 } from "@baselayer-sdk/autocomplete";
 import type { BusinessSuggestion, Filters } from "@baselayer-sdk/autocomplete";
 
-import { iconFor, type IconSet } from "./icons";
+import { SegmentIcon, type IconSet } from "./icons";
 import { resolveMessages, type AutocompleteMessages } from "./messages";
 import type { GroupedSelection } from "./selection";
 import { useSuggestionCombobox } from "./useBusinessCombobox";
@@ -107,8 +110,13 @@ export interface BusinessAutocompleteViewProps {
   list?: readonly Include[] | undefined;
   /** Which lines can be picked, by type: the business itself by default. */
   enabledLines?: readonly EntityType[] | undefined;
-  /** The icon before each name, per entity; `false` draws none. */
+  /** A host's own icons, by entity or by entity and role; `false` draws none. */
   icons?: IconSet | undefined;
+  /**
+   * The segments that carry an icon before their text, wherever they are
+   * placed: none by default, so a row draws as it always has.
+   */
+  iconSegments?: readonly BusinessIconSegment[] | undefined;
   /** What the line under the field names; none drawn when null. */
   selection?: GroupedSelection | null | undefined;
   /** An officer or an address picked from a line under `row`. */
@@ -177,9 +185,16 @@ interface DefaultRowProps {
   stateFilter: readonly string[] | undefined;
   /** An id for the name, which labels the row's group when it lists lines. */
   nameId?: string | undefined;
-  /** The icon before the name, where the layout places one. */
-  icon?: ReactNode;
+  /** The icon a segment carries, for an entity in a role, or none. */
+  iconOf: IconOf;
 }
+
+/** The icon a segment carries, for an entity in a role; nothing for none. */
+type IconOf = (
+  segment: BusinessIconSegment,
+  entity: EntityType,
+  role: RelatedRole | null,
+) => ReactNode;
 
 /**
  * One business as the component draws it: each line of `ROW_LINES` as its
@@ -195,7 +210,7 @@ function DefaultRow({
   cx,
   stateFilter,
   nameId,
-  icon,
+  iconOf,
 }: DefaultRowProps) {
   const region = look.matchEmphasisRegion;
   // Plain draws none of the marks, which is no parts at all.
@@ -255,6 +270,11 @@ function DefaultRow({
           text.noAddress
         ) : (
           <>
+            {iconOf(
+              "address",
+              "address",
+              item.related.addresses.items[0]?.role ?? null,
+            )}
             {wholeMark(address.label, address.matched)}
             {addressSuffix}
           </>
@@ -271,6 +291,7 @@ function DefaultRow({
           data-emphasis={look.matchEmphasis}
           data-matched={people.matched > 0 ? "true" : undefined}
         >
+          {iconOf("people", "person", people.role)}
           {wholeMark(people.names[0] ?? "", people.matched > 0)}
           {people.more > 0 ? ` ${text.more(people.more)}` : ""}
           {people.role === "agent" ? text.agentSuffix : ""}
@@ -321,7 +342,7 @@ function DefaultRow({
       {/* One piece, so `also …` leaves the line whole rather than splitting
           the name from its badge. */}
       <span className={cx("nameGroup", "bl-ac-name-group")}>
-        {icon}
+        {iconOf("name", "business", null)}
         <span
           id={nameId}
           className={cx("name", "bl-ac-name")}
@@ -423,6 +444,7 @@ export function BusinessAutocompleteView({
   list,
   enabledLines = DEFAULT_ENABLED_LINES,
   icons,
+  iconSegments = DEFAULT_ICON_SEGMENTS.businesses,
   selection = null,
   onSelectEntity,
 }: BusinessAutocompleteViewProps) {
@@ -478,23 +500,16 @@ export function BusinessAutocompleteView({
     open,
     rowCount: suggestions.length,
   });
-  const headIcon =
-    rowLayout.titleLead === "titleIcon" ? iconFor(icons, "business") : null;
-  const iconNode = (entity: EntityType, place: string) => {
-    const icon = iconFor(icons, entity);
-    return (
-      icon !== null && (
-        <span
-          className={cx("icon", "bl-ac-icon")}
-          data-place={place}
-          data-entity={entity}
-          aria-hidden="true"
-        >
-          {icon}
-        </span>
-      )
+  const withIcon: ReadonlySet<string> = new Set(iconSegments);
+  const iconOf: IconOf = (segment, entity, role) =>
+    withIcon.has(segment) && (
+      <SegmentIcon
+        icons={icons}
+        entity={entity}
+        role={role}
+        className={cx("icon", "bl-ac-icon")}
+      />
     );
-  };
   // What was typed, as the autocomplete service tokenizes it, for cutting a
   // marked word down to the typed characters under the `substring` region.
   const tokens = queryTokens(value);
@@ -531,9 +546,7 @@ export function BusinessAutocompleteView({
   /** A field of a line under a business, as drawn in `place`. */
   const lineField = (place: string, related: RelatedItem): ReactNode => {
     const name = rowLayout[place] ?? null;
-    if (name === null) return null;
-    if (name.endsWith("Icon")) return iconNode(related.type, place);
-    if (related.role === null) return null;
+    if (name === null || related.role === null) return null;
     const role =
       name === "addressRole"
         ? text.addressRoles[related.role]
@@ -549,8 +562,8 @@ export function BusinessAutocompleteView({
     );
   };
   /**
-   * An officer's or an address's line under a business: its icon, its name,
-   * and the role at the right. An enabled one is an option; any other is
+   * An officer's or an address's line under a business: its name, with its
+   * icon where the host asks, and the role at the right. An enabled one is an option; any other is
    * disabled, read through the group's description.
    */
   const listedLine = (
@@ -588,7 +601,11 @@ export function BusinessAutocompleteView({
         data-matched={related.matched ? "true" : undefined}
       >
         <span className={cx("corner", "bl-ac-group-lead")} data-corner="lead">
-          {lineField(`${line}Lead`, related)}
+          {iconOf(
+            line === "person" ? "personName" : "addressName",
+            related.type,
+            related.role,
+          )}
           <span className={cx("lineName", "bl-ac-line-name")}>
             {related.label}
           </span>
@@ -678,7 +695,7 @@ export function BusinessAutocompleteView({
                   cx={cx}
                   stateFilter={appliedFilters?.state}
                   nameId={headId}
-                  icon={headIcon !== null && iconNode("business", "titleLead")}
+                  iconOf={iconOf}
                 />
               );
               // What the lines that are not picks say, and what each list
@@ -760,9 +777,7 @@ export function BusinessAutocompleteView({
                   text={text}
                   cx={cx}
                   stateFilter={appliedFilters?.state}
-                  {...(headIcon !== null
-                    ? { icon: iconNode("business", "titleLead") }
-                    : {})}
+                  iconOf={iconOf}
                 />
               );
               return (

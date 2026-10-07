@@ -25,6 +25,7 @@ import {
 import {
   matchedOn,
   pickedNameOf,
+  type BusinessIconSegment,
   type BusinessSuggestion,
   type MatchedOn,
 } from "@baselayer-sdk/autocomplete";
@@ -118,8 +119,18 @@ interface CommonProps {
    * then each row is the one option it has always been.
    */
   list?: Include[];
-  /** The icon before each name, per entity; `false` draws none. */
+  /**
+   * A host's own icons, by entity (`address`) or by entity and role
+   * (`address:mailing`), the role's winning; `false` hides that one, and
+   * `false` for all draws none.
+   */
   icons?: IconSet;
+  /**
+   * The segments that carry an icon before their text, wherever they are
+   * placed: the name, the address, the people, a listed line's name. None by
+   * default, so a business row draws as it always has.
+   */
+  iconSegments?: readonly BusinessIconSegment[];
   /**
    * After a pick from a line under a row, a line under the field names it
    * (the default), while the field holds the business's name. Off, draw your
@@ -220,6 +231,7 @@ function Connected({
   enabledLines,
   onPickEntity,
   icons,
+  iconSegments,
   showSelection = true,
   menuFollowsInputWidth,
   onUnavailable,
@@ -325,6 +337,7 @@ function Connected({
       list={list}
       enabledLines={enabledLines}
       icons={icons}
+      iconSegments={iconSegments}
       onInputFocus={() => {
         if (mintOn === "focus" && enabled) {
           client.prewarm();
