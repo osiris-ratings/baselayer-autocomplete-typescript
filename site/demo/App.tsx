@@ -70,8 +70,17 @@ const ENVIRONMENTS: Environment[] =
   DEV_SERVER_PATH === null
     ? ["production", "custom"]
     : ["dev-server", "production", "custom"];
+/** What the dev server forwards to, for the page to name: `sample` is made up. */
+const DEV_SERVER_TARGET =
+  typeof __DEMO_API__ === "undefined" ? PRODUCTION : __DEMO_API__;
+
 const ENVIRONMENT_LABELS: Record<Environment, string> = {
-  "dev-server": "Production, through this dev server",
+  "dev-server":
+    DEV_SERVER_TARGET === "sample"
+      ? "Made-up data, from this dev server"
+      : DEV_SERVER_TARGET.replace(/\/+$/, "") === PRODUCTION
+        ? "Production, through this dev server"
+        : `${DEV_SERVER_TARGET.replace(/^https?:\/\//, "").replace(/\/+$/, "")}, through this dev server`,
   production: "Production (api.baselayer.com)",
   custom: "Custom URL",
 };
@@ -598,10 +607,13 @@ export function App() {
             )}
             <p className="warning">
               Your key stays in this tab&apos;s memory and is sent only to{" "}
-              {environment === "dev-server" ? (
+              {environment === "dev-server" &&
+              DEV_SERVER_TARGET === "sample" ? (
+                <>this dev server, which answers with made-up data</>
+              ) : environment === "dev-server" ? (
                 <>
                   this dev server, which forwards it to{" "}
-                  <code>{PRODUCTION}</code>
+                  <code>{DEV_SERVER_TARGET.replace(/\/+$/, "")}</code>
                 </>
               ) : (
                 <code>{apiHost || "the API"}</code>

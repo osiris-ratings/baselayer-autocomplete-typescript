@@ -2,6 +2,8 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import react from "@vitejs/plugin-react";
+import type { IncomingMessage } from "node:http";
+
 import { defineConfig, type Plugin, type ProxyOptions } from "vite";
 
 import { apiReference } from "./api/spec/plugin";
@@ -91,6 +93,10 @@ function linkPreview(): Plugin {
   };
 }
 
+/** Where `pnpm demo` forwards the page's calls: an API host, or `sample`. */
+const demoApi = process.env.DEMO_API ?? "https://api.baselayer.com";
+const sampleMode = demoApi === "sample";
+
 /**
  * `pnpm demo` stands in for your backend: the page calls this dev server on
  * its own origin, and the dev server forwards the autocomplete routes, and
@@ -103,7 +109,7 @@ function linkPreview(): Plugin {
  * http). The page sends no `Referer`, on purpose, so that cannot stand in.
  */
 const throughDevServer: ProxyOptions = {
-  target: process.env.DEMO_API ?? "https://api.baselayer.com",
+  target: demoApi,
   changeOrigin: true,
   rewrite: path => path.replace(/^\/_baselayer/, ""),
   configure: server => {
@@ -116,6 +122,67 @@ const throughDevServer: ProxyOptions = {
   },
 };
 
+function bodyOf(request: IncomingMessage): Promise<string | null> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    request.on("data", (chunk: Buffer) => chunks.push(chunk));
+    request.on("end", () =>
+      resolve(chunks.length === 0 ? null : Buffer.concat(chunks).toString()),
+    );
+    request.on("error", reject);
+  });
+}
+
+/**
+ * `DEMO_API=sample pnpm demo`: the dev server answers the page's calls itself,
+ * from the made-up rows in site/demo/sample.ts, so the demo runs with no
+ * network and any key. `DEMO_SCOPE`, a comma list of routes, narrows what its
+ * sessions may search. Never part of a build.
+ */
+function sampleApi(): Plugin {
+  const routes = (process.env.DEMO_SCOPE ?? "businesses,people,addresses")
+    .split(",")
+    .map(route => route.trim())
+    .filter(route => route !== "");
+  return {
+    name: "demo-sample-api",
+    apply: "serve",
+    configureServer(server) {
+      if (!sampleMode) return;
+      server.middlewares.use("/_baselayer", (request, response, next) => {
+        void (async () => {
+          const { answerSample } = (await server.ssrLoadModule(
+            "/demo/sample-api.ts",
+          )) as typeof import("./demo/sample-api");
+          const headers = Object.fromEntries(
+            Object.entries(request.headers).map(([name, value]) => [
+              name,
+              Array.isArray(value) ? value[0] : value,
+            ]),
+          );
+          const reply = answerSample(
+            {
+              method: request.method ?? "GET",
+              path: request.url ?? "/",
+              headers,
+              body: await bodyOf(request),
+            },
+            { routes },
+          );
+          if (reply === null) {
+            next();
+            return;
+          }
+          response.statusCode = reply.status;
+          response.setHeader("Content-Type", "application/json");
+          response.setHeader("X-Autocomplete-Index", "sample");
+          response.end(JSON.stringify(reply.body));
+        })().catch(next);
+      });
+    },
+  };
+}
+
 // The site: the overview at `/`, the API reference at `/api/` and the demo at
 // `/demo/`. The demo runs on the SDK's source, so it always shows what `main`
 // does. `SITE_BASE` serves it under a sub-path of whatever domain hosts it.
@@ -123,12 +190,18 @@ export default defineConfig({
   root: fileURLToPath(new URL(".", import.meta.url)),
   base: process.env.SITE_BASE ?? "/",
   appType: "mpa",
-  define: { __SDK_VERSION__: JSON.stringify(version) },
+  define: {
+    __SDK_VERSION__: JSON.stringify(version),
+    // What the dev server stands in front of, for the demo to name. Read from
+    // the environment when the server starts; never written anywhere.
+    __DEMO_API__: JSON.stringify(demoApi),
+  },
   plugins: [
     react(),
     contentSecurityPolicy(),
     linkPreview(),
     apiReference(fileURLToPath(new URL("..", import.meta.url))),
+    sampleApi(),
   ],
   resolve: {
     alias: [
@@ -146,10 +219,12 @@ export default defineConfig({
   server: {
     port: Number(process.env.SITE_PORT ?? 3000),
     strictPort: true,
-    proxy: {
-      "/_baselayer/autocomplete": throughDevServer,
-      "/_baselayer/searches": throughDevServer,
-    },
+    proxy: sampleMode
+      ? {}
+      : {
+          "/_baselayer/autocomplete": throughDevServer,
+          "/_baselayer/searches": throughDevServer,
+        },
   },
   build: {
     outDir: fileURLToPath(new URL("../site-dist", import.meta.url)),

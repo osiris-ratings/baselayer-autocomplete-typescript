@@ -3,13 +3,16 @@
 // domicile square and the overflow, a spread of structures (one on a name
 // that carries no suffix, and one not known), an address, officers with a +N,
 // and a registered agent, and two rows a filter reached: by an officer, and by
-// an officer's address. None of these businesses is real.
+// an officer's address. Then people and addresses, each leading to some of
+// these businesses. None of these businesses, people or addresses is real.
 
 import { queryTokens } from "@baselayer-sdk/autocomplete";
 import type {
+  AddressSuggestion,
   BusinessSuggestion,
   HighlightPart,
   Include,
+  PersonSuggestion,
   RelatedItem,
   RelatedSet,
 } from "@baselayer-sdk/autocomplete";
@@ -50,14 +53,26 @@ export function person(
  * A name split as the autocomplete service splits it: each word a typed token
  * starts is one highlighted part, whole, and the text between words is another.
  */
-function highlight(name: string): HighlightPart[] {
+export function highlightFor(
+  name: string,
+  tokens: readonly string[],
+): HighlightPart[] {
   return name
     .split(/([A-Za-z0-9]+)/)
     .filter(text => text !== "")
     .map(text => ({
       text,
-      matched: TOKENS.some(token => text.toLowerCase().startsWith(token)),
+      matched: tokens.some(token => text.toLowerCase().startsWith(token)),
     }));
+}
+
+function highlight(name: string): HighlightPart[] {
+  return highlightFor(name, TOKENS);
+}
+
+/** The token a sample business carries, wherever it is offered. */
+export function sampleToken(label: string): string {
+  return `sample-${label.toLowerCase().replace(/[^a-z]+/g, "-")}`;
 }
 
 function row(
@@ -73,7 +88,7 @@ function row(
   return {
     ...rest,
     type: "business",
-    token: `sample-${label.toLowerCase().replace(/[^a-z]+/g, "-")}`,
+    token: sampleToken(label),
     label,
     matched_name: matchedName ?? null,
     match: "strong",
@@ -203,3 +218,165 @@ export const SAMPLE_META = {
   indexTag: "sample",
   roundTripMs: 42,
 } as const;
+
+/** What the people and address previews pretend was typed. */
+export const SAMPLE_PEOPLE_QUERY = "dana";
+export const SAMPLE_ADDRESSES_QUERY = "1200 river";
+
+/** A business offered under a person or an address: one of the rows above. */
+function business(
+  label: string,
+  role: RelatedItem["role"],
+  matched = false,
+): RelatedItem {
+  if (!SAMPLE_SUGGESTIONS.some(row => row.label === label)) {
+    throw new Error(`no sample business is called ${label}`);
+  }
+  return { type: "business", token: sampleToken(label), label, role, matched };
+}
+
+function personRow(
+  label: string,
+  businesses: RelatedSet,
+  addresses: RelatedSet = NOT_REQUESTED,
+): PersonSuggestion {
+  return {
+    type: "person",
+    token: `sample-person-${label.toLowerCase().replace(/[^a-z]+/g, "-")}`,
+    label,
+    matched_name: null,
+    match: "strong",
+    highlight: highlightFor(label, queryTokens(SAMPLE_PEOPLE_QUERY)),
+    related: { businesses, addresses },
+  };
+}
+
+export const SAMPLE_PEOPLE: PersonSuggestion[] = [
+  personRow(
+    "Dana Whitfield",
+    set(
+      [
+        business("HARBOR CONCRETE PUMPING CO., INC.", "officer"),
+        business("HARBOR CONCRETE SUPPLY, INC.", "officer"),
+        business("BAYSIDE HARBOR CONCRETE, INC.", "officer"),
+      ],
+      7,
+    ),
+    set([address("1200 River Rd, Pittsburgh, PA 15212", "officer")]),
+  ),
+  personRow(
+    "Dana Okafor",
+    set(
+      [
+        business("HARBOR CONCRETE & MASONRY", "officer"),
+        business("CONCRETE HARBOR PARTNERS, LP", "officer"),
+      ],
+      2,
+    ),
+  ),
+  personRow(
+    "Dana Kessler",
+    set([business("NORTHSHORE PUMPING, LLC", "officer")]),
+  ),
+  personRow(
+    "Luis Ortega",
+    set([business("HARBOR CONCRETE PUMPING CO., INC.", "officer")]),
+  ),
+  personRow(
+    "Priya Raman",
+    set([business("HARBOR VIEW CONCRETE, INC.", "officer")], 3),
+  ),
+  personRow(
+    "Grace Oduya",
+    set([business("HARBOR CONCRETE & MASONRY", "officer")]),
+  ),
+  personRow(
+    "Meridian Registered Agents, LLC",
+    set(
+      [
+        business("NORTHSHORE PUMPING, LLC", "agent"),
+        business("HARBOR CONCRETE PUMPING CO., INC.", "agent"),
+      ],
+      38,
+    ),
+  ),
+];
+
+function addressRow(
+  line1: string,
+  line2: string | null,
+  city: string,
+  state: string,
+  postalCode: string,
+  businesses: RelatedSet,
+): AddressSuggestion {
+  const first = line2 === null ? line1 : `${line1} ${line2}`;
+  const label = `${first}, ${city}, ${state} ${postalCode}`;
+  return {
+    type: "address",
+    token: `sample-address-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+    label,
+    matched_name: null,
+    match: "strong",
+    highlight: highlightFor(label, queryTokens(SAMPLE_ADDRESSES_QUERY)),
+    components: { line1, line2, city, state, postal_code: postalCode },
+    related: { businesses, people: NOT_REQUESTED },
+  };
+}
+
+export const SAMPLE_ADDRESSES: AddressSuggestion[] = [
+  addressRow(
+    "1200 River Rd",
+    null,
+    "Pittsburgh",
+    "PA",
+    "15212",
+    set(
+      [
+        business("HARBOR CONCRETE PUMPING CO., INC.", "principal"),
+        business("HARBOR CONCRETE SUPPLY, INC.", "mailing"),
+      ],
+      2,
+    ),
+  ),
+  // A registered agent's office: the one address most businesses share.
+  addressRow(
+    "77 Quillfeather Ln",
+    "Ste 300",
+    "Dover",
+    "DE",
+    "19904",
+    set(
+      [
+        business("NORTHSHORE PUMPING, LLC", "agent"),
+        business("HARBOR CONCRETE PUMPING CO., INC.", "agent"),
+        business("CONCRETE HARBOR PARTNERS, LP", "agent"),
+      ],
+      412,
+    ),
+  ),
+  addressRow(
+    "700 Harborside Dr",
+    null,
+    "Galveston",
+    "TX",
+    "77550",
+    set([business("CONCRETE HARBOR PARTNERS, LP", "principal")]),
+  ),
+  addressRow(
+    "2210 Key Hwy",
+    null,
+    "Baltimore",
+    "MD",
+    "21230",
+    set([business("HARBOR CONCRETE & MASONRY", "officer")]),
+  ),
+  addressRow(
+    "400 Bayfront Ave",
+    null,
+    "Tampa",
+    "FL",
+    "33602",
+    set([business("HARBOR VIEW CONCRETE, INC.", "principal")]),
+  ),
+];

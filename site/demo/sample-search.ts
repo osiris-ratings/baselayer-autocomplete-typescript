@@ -26,10 +26,10 @@ const MAIL_DROP: Address = {
 };
 
 const AGENT_OFFICE: Address = {
-  street: "251 LITTLE FALLS DR",
-  city: "WILMINGTON",
+  street: "77 QUILLFEATHER LN STE 300",
+  city: "DOVER",
   state: "DE",
-  zip: "19808",
+  zip: "19904",
   rdi: "Commercial",
   deliverable: true,
   cmra: false,
