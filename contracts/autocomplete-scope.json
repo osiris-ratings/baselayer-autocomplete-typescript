@@ -1,0 +1,26 @@
+{
+  "routes": [
+    "addresses",
+    "businesses",
+    "people"
+  ],
+  "relations": [
+    "addresses",
+    "businesses",
+    "people"
+  ],
+  "legal_relations": {
+    "addresses": [
+      "businesses",
+      "people"
+    ],
+    "businesses": [
+      "addresses",
+      "people"
+    ],
+    "people": [
+      "addresses",
+      "businesses"
+    ]
+  }
+}

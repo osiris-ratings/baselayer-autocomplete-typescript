@@ -84,7 +84,9 @@
     "site:build": "tsc --noEmit -p site && vite build --config site/vite.config.ts",
     "demo": "vite --config site/vite.config.ts --open /demo/",
     "demo:turns": "node scripts/turn-keyframes.ts",
+    "contracts:autocomplete": "node scripts/vendor-autocomplete-spec.ts",
     "contracts:sessions": "node scripts/vendor-sessions-spec.ts",
+    "contracts:scope": "node scripts/vendor-scope.ts",
     "release": "node scripts/release.ts",
     "diagrams": "UPDATE_DIAGRAMS=1 vitest run --project site tests/site/diagrams.test.tsx"
   },

@@ -36,11 +36,15 @@ export {
 } from "./core/businesses";
 export {
   ENTITY_OF,
+  LEGAL_RELATIONS,
+  RELATIONS,
   RELATION_OF,
   ROUTES,
+  ROUTE_NAMES,
   type EntityType,
   type IncludeOf,
   type Relation,
+  type Route,
   type RouteSpec,
 } from "./core/entities";
 export {

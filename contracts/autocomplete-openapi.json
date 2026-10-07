@@ -45,7 +45,7 @@
             "$ref": "#/components/schemas/MatchGrade"
           },
           "matched_name": {
-            "description": "The indexed name that matched when it is not `label`.",
+            "description": "A name the business is also known by that fits the typed name better than `label` does,\nwhen there is one; null when `label` fits at least as well.",
             "type": [
               "string",
               "null"
@@ -181,12 +181,129 @@
         "type": "object"
       },
       "MatchGrade": {
+        "description": "How the best of a business's names fits the typed name: `exact` is the name itself,\n`strong` starts with it or has it at a later word, and `partial` has every word of it,\nin another order or spread over the business's names.",
         "enum": [
           "exact",
           "strong",
           "partial"
         ],
         "type": "string"
+      },
+      "PeopleResponse": {
+        "description": "`GET /autocomplete/people`: the people a typed name fits, best first, each with\nthe businesses they hold a role on. A pick is one of those businesses.",
+        "properties": {
+          "found": {
+            "description": "People matched before `limit`; a floor when `found_capped`.",
+            "format": "int32",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "found_capped": {
+            "description": "`found` is a floor rather than an exact count.",
+            "type": "boolean"
+          },
+          "query": {
+            "description": "The `q` this answers.",
+            "type": "string"
+          },
+          "sources": {
+            "$ref": "#/components/schemas/PeopleSources"
+          },
+          "suggestions": {
+            "description": "Ordered best-first, at most `limit`.",
+            "items": {
+              "$ref": "#/components/schemas/PersonSuggestion"
+            },
+            "type": "array"
+          },
+          "truncated": {
+            "description": "The search did not finish, so a person who fits may be missing.",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "query",
+          "found",
+          "found_capped",
+          "truncated",
+          "sources",
+          "suggestions"
+        ],
+        "type": "object"
+      },
+      "PeopleSources": {
+        "properties": {
+          "addresses": {
+            "$ref": "#/components/schemas/Source"
+          },
+          "businesses": {
+            "$ref": "#/components/schemas/Source"
+          }
+        },
+        "required": [
+          "businesses",
+          "addresses"
+        ],
+        "type": "object"
+      },
+      "PersonRelated": {
+        "properties": {
+          "addresses": {
+            "$ref": "#/components/schemas/RelatedSet"
+          },
+          "businesses": {
+            "$ref": "#/components/schemas/RelatedSet",
+            "description": "The businesses the person holds a role on: each item's `token` is a\n`business_token` `POST /searches` redeems, reached through this person."
+          }
+        },
+        "required": [
+          "businesses",
+          "addresses"
+        ],
+        "type": "object"
+      },
+      "PersonSuggestion": {
+        "properties": {
+          "highlight": {
+            "items": {
+              "$ref": "#/components/schemas/HighlightPart"
+            },
+            "type": "array"
+          },
+          "label": {
+            "description": "Display-cased, rendered verbatim.",
+            "type": "string"
+          },
+          "match": {
+            "$ref": "#/components/schemas/MatchGrade"
+          },
+          "matched_name": {
+            "description": "Always null: a person is matched by the name they are shown under.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "related": {
+            "$ref": "#/components/schemas/PersonRelated"
+          },
+          "token": {
+            "description": "Opaque handle for the person, sealed like a business's and bound to the same\norganization and fifteen minutes. Nothing redeems one yet: pick one of the\nperson's businesses instead.",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/EntityType"
+          }
+        },
+        "required": [
+          "type",
+          "token",
+          "label",
+          "match",
+          "highlight",
+          "related"
+        ],
+        "type": "object"
       },
       "Related": {
         "properties": {
@@ -213,9 +330,13 @@
             "type": "boolean"
           },
           "role": {
-            "type": [
-              "string",
-              "null"
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RelatedRole"
+              }
             ]
           },
           "token": {
@@ -235,6 +356,16 @@
           "matched"
         ],
         "type": "object"
+      },
+      "RelatedRole": {
+        "description": "The role a related item stands in. A business row's people and a person row's\nbusinesses: `officer` or `agent`. An address: the role the family filed it under\n(`principal`, `mailing`, `agent`, `officer`), or the role of the person standing\nat it. Null when the filing names none.",
+        "enum": [
+          "officer",
+          "agent",
+          "principal",
+          "mailing"
+        ],
+        "type": "string"
       },
       "RelatedSet": {
         "properties": {
@@ -412,7 +543,7 @@
     }
   },
   "info": {
-    "description": "Keystroke typeahead over businesses, served from the read-only SQLite index. Every request carries a session grant minted by `POST /autocomplete/sessions`.",
+    "description": "Keystroke typeahead over businesses, and over the people who hold a role on them, served from the read-only SQLite index. Every request carries a session grant minted by `POST /autocomplete/sessions`.",
     "license": {
       "name": ""
     },
@@ -580,6 +711,16 @@
             },
             "description": "Session missing, invalid or expired: mint one"
           },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The session's scope does not reach this route (code 501), or a parameter touches a relation it leaves out (code 502, `metadata.param`)"
+          },
           "422": {
             "content": {
               "application/json": {
@@ -588,7 +729,7 @@
                 }
               }
             },
-            "description": "A parameter is unknown, repeated or invalid, a filter was sent with a query too short to narrow, or `structure` was sent before the serving index carries it"
+            "description": "A parameter is unknown, repeated or invalid, `limit` is past the session's most, a filter was sent with a query too short to narrow, or `structure` was sent before the serving index carries it"
           },
           "429": {
             "content": {
@@ -617,6 +758,137 @@
           }
         ],
         "summary": "Autocomplete a business name, narrowed by the officer and address typed so far.",
+        "tags": [
+          "Autocomplete"
+        ]
+      }
+    },
+    "/autocomplete/people": {
+      "get": {
+        "operationId": "get_people",
+        "parameters": [
+          {
+            "description": "A person's name: every word but the last matched whole, the last as the start\nof a word, accents and case ignored. Two or more characters as the index spells\na name, at most 256.",
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "description": "1\u201320, default 10.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "format": "int32",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Comma list of `businesses`, `addresses`; default `businesses`.",
+            "in": "query",
+            "name": "include",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Comma list of state codes; keeps the people who hold a role on a business\nwhose footprint touches any of them.",
+            "in": "query",
+            "name": "business.state",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeopleResponse"
+                }
+              }
+            },
+            "description": "People, best first, each with the businesses a pick is made from",
+            "headers": {
+              "Server-Timing": {
+                "description": "total, sqlite, page-cache misses, driver",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "X-Autocomplete-Index": {
+                "description": "`v<schema>-<recipe>-<ingestion id>`, the artifact that answered",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Session missing, invalid or expired: mint one"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "The session's scope does not reach this route (code 501), or a parameter touches a relation it leaves out (code 502, `metadata.param`)"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidationEnvelope"
+                }
+              }
+            },
+            "description": "A parameter is unknown, repeated or invalid, `limit` is past the session's most, or `business.state` was sent with a query too short to narrow"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "Rate limited, the session's request budget is spent, or the session changed its query too many times"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            },
+            "description": "No index is being served yet, the one served predates people search (`metadata.reason` `index_too_old`), or the autocomplete service seals tokens older than version 6 (`token_version_too_old`)"
+          }
+        },
+        "security": [
+          {
+            "autocomplete_session": []
+          }
+        ],
+        "summary": "Find a person by name, and the businesses they hold a role on.",
         "tags": [
           "Autocomplete"
         ]
