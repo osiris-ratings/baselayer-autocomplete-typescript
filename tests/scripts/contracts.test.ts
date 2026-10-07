@@ -117,23 +117,43 @@ describe("vendoredJson", () => {
 });
 
 describe("the vendored autocomplete spec", () => {
-  it("says a business under a person or an address row is a token a search redeems", () => {
-    const vendored = JSON.parse(
-      readFileSync(
-        join(__dirname, "../../contracts/autocomplete-openapi.json"),
-        "utf8",
-      ),
-    ) as {
-      components: {
-        schemas: Record<
-          string,
-          { properties: Record<string, { description: string }> }
-        >;
-      };
+  // The two descriptions upstream once wrote for its own readers. Held to
+  // their public text exactly, so any change to them is a deliberate update
+  // here, read before it ships.
+  const vendored = JSON.parse(
+    readFileSync(
+      join(__dirname, "../../contracts/autocomplete-openapi.json"),
+      "utf8",
+    ),
+  ) as {
+    components: {
+      schemas: Record<
+        string,
+        {
+          description?: string;
+          properties?: Record<string, { description?: string }>;
+        }
+      >;
     };
+  };
+  const { schemas } = vendored.components;
 
-    expect(
-      vendored.components.schemas.RelatedItem!.properties.token!.description,
-    ).toContain("`business_token` `POST /searches` redeems");
+  it("describes a related item's token in exactly its public words", () => {
+    expect(schemas.RelatedItem?.properties?.token?.description).toBe(
+      [
+        "Opaque handle for this row, sealed the way the suggestion's own `token` is",
+        "and bound to the same organization and fifteen minutes. A business's handle",
+        "(on a person row) is a `business_token` `POST /searches` redeems; nothing",
+        "redeems a person's or an address's handle yet. Null when the autocomplete service cannot",
+        "name the row: its id was unreadable, or it is a kind of row this service",
+        "version cannot seal yet.",
+      ].join("\n"),
+    );
+  });
+
+  it("describes the error envelope in exactly its public words", () => {
+    expect(schemas.ErrorEnvelope?.description).toBe(
+      "The error envelope the API answers with: a numeric `code`, a `message`, and\n`metadata` that names the reason.",
+    );
   });
 });
