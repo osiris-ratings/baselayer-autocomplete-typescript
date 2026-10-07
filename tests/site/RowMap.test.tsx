@@ -650,6 +650,20 @@ describe("the row map as the row's configuration", () => {
     expect(onChange.mock.calls[1]![0].rows.people.enabled).toEqual([]);
   });
 
+  it("says a hidden line is hidden on its checkbox, though it stays enabled for later", () => {
+    const { check } = mountOn(
+      "people",
+      withListed(DEFAULT_STYLE, "people", "businesses", false),
+    );
+    expect(check("businesses").title).toBe(
+      "Businesses: hidden, not drawn (enabledLines)",
+    );
+    cleanup();
+    expect(mountOn("people").check("businesses").title).toBe(
+      "Businesses: enabled, a choice in the menu (enabledLines)",
+    );
+  });
+
   it("leaves a hidden line's checkbox disabled", () => {
     const { check } = mountOn("people");
     expect(check("addresses").disabled).toBe(true);

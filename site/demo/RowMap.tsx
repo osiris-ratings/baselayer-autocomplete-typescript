@@ -26,6 +26,7 @@ import {
 import { createPortal } from "react-dom";
 
 import { SegmentIcon } from "../../src/react/icons";
+import { mapInks } from "./map-ink";
 
 import {
   ADDRESS_EDITOR,
@@ -83,14 +84,17 @@ function capitalized(name: string): string {
  */
 function rowMapColors(state: StyleState): CSSProperties {
   const { look, vars } = state;
+  const inks = mapInks(state);
   return {
+    "--map-ink": inks.ink,
+    "--map-soft": inks.soft,
+    "--map-ink-disabled": inks.disabled,
+    "--map-ink-hidden": inks.hidden,
     "--map-enabled-bg": vars["--bl-ac-highlight-bg"],
     "--map-bg": look.backgroundColor,
     "--map-border": vars["--bl-ac-border"],
     "--map-radius": vars["--bl-ac-radius"],
     "--map-pill-radius": vars["--bl-ac-pill-radius"],
-    "--map-title": look.titleColor,
-    "--map-subtitle": look.subtitleColor,
     "--map-pill-bg": look.pillBackgroundColor,
     "--map-pill-fg": look.pillForegroundColor,
     "--map-pill-border": look.primaryPillBorderColor,
@@ -779,7 +783,7 @@ function KindRowMap<P extends string, F extends string>({
             type="checkbox"
             className="row-map-check"
             aria-label={`Disable ${name}`}
-            title={`${capitalized(name)}: ${on ? "enabled, a choice in the menu" : "disabled, drawn greyed in the menu"} (enabledLines)`}
+            title={`${capitalized(name)}: ${!isListed ? "hidden, not drawn" : on ? "enabled, a choice in the menu" : "disabled, drawn greyed in the menu"} (enabledLines)`}
             checked={isListed && !on}
             // A hidden line is not drawn, so not a choice either.
             disabled={!isListed}

@@ -605,6 +605,9 @@
   border: 1px solid var(--map-border, var(--line-soft));
   border-radius: var(--map-radius, 4px);
   box-shadow: 0 2px 6px rgba(9, 35, 79, 0.06);
+  /* Everything in the card is in the look's inks (`map-ink.ts`), never the
+     page's, so a dark look reads as well as a light one. */
+  color: var(--map-ink);
 }
 
 .row-map-line {
@@ -655,7 +658,7 @@
 .row-map-head {
   align-items: end;
   margin-bottom: -2px;
-  color: var(--muted);
+  color: var(--map-ink);
   font-family: var(--mono);
   font-size: 10px;
   letter-spacing: 0.08em;
@@ -683,13 +686,14 @@
   grid-column: 2;
   margin: 0;
   padding: 6px 0 6px var(--map-box-pad);
-  color: var(--muted);
+  color: var(--map-ink);
   font-size: 12px;
 }
 
 /* The box of a line kind's lines. An enabled one is tinted as the menu tints
    the line under the pointer; a disabled one is greyed, all its colour gone
-   and dimmed; a hidden one greyer still, and nothing of it moves. */
+   and its ink faded toward the card, a hidden one more, each no further than
+   it still reads (`map-ink.ts`); nothing of a hidden one moves. */
 .row-map-kind-lines {
   display: grid;
   gap: 8px;
@@ -702,13 +706,20 @@
   background: var(--map-enabled-bg, #f1f6fd);
 }
 
+.row-map-kind-lines {
+  color: var(--map-ink);
+}
+
 .row-map-kind:not([data-state="enabled"]) .row-map-kind-lines {
   filter: saturate(0);
-  opacity: 0.6;
+}
+
+.row-map-kind[data-state="disabled"] .row-map-kind-lines {
+  --map-ink: var(--map-ink-disabled);
 }
 
 .row-map-kind[data-state="hidden"] .row-map-kind-lines {
-  opacity: 0.45;
+  --map-ink: var(--map-ink-hidden);
 }
 
 .row-map-kind[data-state="hidden"] .row-map-place :is(select, .row-map-face) {
@@ -733,20 +744,21 @@
   height: 20px;
   padding: 0;
   background:
-    radial-gradient(currentColor 1px, transparent 1.5px) 1px 1px / 5px 5px,
+    radial-gradient(currentColor 1.25px, transparent 1.75px) 0.5px 1px / 5.5px
+      5.5px,
     var(--map-bg, var(--paper));
   box-shadow: var(--map-col-gap) 0 0 var(--map-bg, var(--paper));
   border: 0;
   border-radius: 3px;
-  color: var(--faded);
+  color: var(--map-soft);
   cursor: grab;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
 }
 
-.row-map-grip:hover {
-  color: var(--blue);
+.row-map-grip:is(:hover, :focus-visible) {
+  color: var(--map-ink);
 }
 
 /* The head is always shown: no grip, but its room. */
@@ -771,7 +783,7 @@
   background: var(--map-bg, var(--paper));
   box-shadow:
     calc(-1 * var(--map-col-gap)) 0 0 var(--map-bg, var(--paper)),
-    -12px 0 8px -8px rgba(9, 35, 79, 0.18);
+    -12px 0 8px -8px color-mix(in srgb, var(--map-ink) 35%, transparent);
 }
 
 .row-map-check {
@@ -795,7 +807,7 @@
   background: var(--map-bg, var(--paper));
   border: 1px solid var(--blue);
   border-radius: var(--map-pill-radius, 3px);
-  color: var(--ink-soft);
+  color: var(--map-ink);
   font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
@@ -864,8 +876,14 @@
   transform: translateY(-50%);
 }
 
+/* On, the segment's ink on a ground of its own; off, the soft ink, still
+   there to be seen and pressed. */
+.row-map-icon[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--map-ink) 14%, transparent);
+}
+
 .row-map-icon[aria-pressed="false"] {
-  opacity: 0.3;
+  color: var(--map-soft);
 }
 
 .row-map-icon:hover:not(:disabled) {
@@ -885,14 +903,19 @@
   display: inline-flex;
 }
 
+/* A stroke thick enough to read at this size on any look's ground. */
+.row-map-icon-glyph svg {
+  stroke-width: 1.9;
+}
+
 .row-map-place[data-icon] .row-map-face,
 .row-map-slot[data-icon] .row-map-name {
   padding-left: 24px;
 }
 
 .row-map-name {
-  background: color-mix(in srgb, var(--map-title, var(--ink)) 6%, transparent);
-  color: color-mix(in srgb, var(--map-title, var(--ink)) 60%, transparent);
+  background: color-mix(in srgb, var(--map-ink) 8%, transparent);
+  color: var(--map-ink);
   font-weight: 600;
   cursor: not-allowed;
 }
@@ -974,13 +997,8 @@
   font-weight: 600;
 }
 
-.row-map-place[data-field="address"],
-.row-map-place[data-field="people"] {
-  color: var(--map-subtitle, #718096);
-}
-
 .row-map-place[data-field="empty"] {
-  color: color-mix(in srgb, var(--map-subtitle, #718096) 60%, transparent);
+  color: var(--map-soft);
 }
 
 /* The dropdown's own list stays legible whatever the look. */
@@ -1135,10 +1153,10 @@
   align-items: center;
   height: 26px;
   padding: 0 9px;
-  background: var(--paper, #ffffff);
+  background: var(--map-bg, var(--paper));
   border: 1px dashed color-mix(in srgb, currentColor 45%, transparent);
   border-radius: var(--map-pill-radius, 3px);
-  color: var(--map-subtitle, #718096);
+  color: var(--map-ink);
   font-size: 12px;
   white-space: nowrap;
 }

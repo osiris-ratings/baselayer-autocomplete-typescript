@@ -5,6 +5,7 @@ import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
 import { commands, userEvent } from "vitest/browser";
 
+import { mapInks } from "../../site/demo/map-ink";
 import { RowMap } from "../../site/demo/RowMap";
 import {
   DEFAULT_STYLE,
@@ -135,13 +136,18 @@ describe("the row map's drawers", () => {
       expect(lines("businesses").backgroundColor).toBe(
         rgb(DEFAULT_STYLE.vars["--bl-ac-highlight-bg"]!),
       );
+      const inks = mapInks(DEFAULT_STYLE);
       expect(lines("businesses").filter).toBe("none");
-      expect(lines("businesses").opacity).toBe("1");
-      // The person is shown, and disabled by default.
+      expect(lines("businesses").color).toBe(rgb(inks.ink));
+      // The person is shown, and disabled by default: its colour gone and its
+      // ink faded, never its opacity, which would leave a dark look unread.
       expect(lines("head").filter).toBe("saturate(0)");
-      expect(lines("head").opacity).toBe("0.6");
+      expect(lines("head").color).toBe(rgb(inks.disabled));
       expect(lines("addresses").filter).toBe("saturate(0)");
-      expect(Number(lines("addresses").opacity)).toBeLessThan(0.6);
+      expect(lines("addresses").color).toBe(rgb(inks.hidden));
+      for (const relation of ["head", "businesses", "addresses"]) {
+        expect(lines(relation).opacity).toBe("1");
+      }
       // The controls are never greyed.
       for (const relation of ["head", "addresses"]) {
         for (const control of [".row-map-check-cell", ".row-map-grip"]) {
