@@ -106,7 +106,7 @@ character that folds to `% _ * ?` under NFKC, so `a%%` passes the
 
 Your search can refuse the `business_token`: 422 with code 3040 (not
 Baselayer's, or another organization's), 3042 (expired, after 15 minutes),
-3023 (the business is gone), 3043 (sandbox application), or 503 code 3041.
+3023 (the business is gone), or 503 code 3041.
 In every one of those cases drop the token and search by the `name` and
 `address` as typed. `refusedThePin(status, code)` is true for all of them, as
 for any other status under 500, and false for any other 5xx and a network
