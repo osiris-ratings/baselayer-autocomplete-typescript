@@ -141,24 +141,21 @@ function GroupedLists({
   route: "people" | "addresses";
 }) {
   const { listedLegend, listed, pickable } = GROUPED_LISTS[route];
-  const include: readonly Relation[] =
-    route === "people" ? state.personInclude : state.addressInclude;
-  const picks: readonly EntityType[] =
-    route === "people" ? state.personPickable : state.addressPickable;
+  const row = state.rows[route];
+  const include: readonly Relation[] = row.list;
+  const picks: readonly EntityType[] = row.pickable;
   const listOrder = listed.map(([value]) => value);
   const pickOrder = pickable.map(([value]) => value);
-  const setInclude = (next: Relation[]) =>
-    onChange(
-      route === "people"
-        ? { ...state, personInclude: next as StyleState["personInclude"] }
-        : { ...state, addressInclude: next as StyleState["addressInclude"] },
-    );
-  const setPickable = (next: EntityType[]) =>
-    onChange(
-      route === "people"
-        ? { ...state, personPickable: next }
-        : { ...state, addressPickable: next },
-    );
+  const setRow = (changes: { list?: Relation[]; pickable?: EntityType[] }) =>
+    onChange({
+      ...state,
+      rows: {
+        ...state.rows,
+        [route]: { ...row, ...changes },
+      } as StyleState["rows"],
+    });
+  const setInclude = (next: Relation[]) => setRow({ list: next });
+  const setPickable = (next: EntityType[]) => setRow({ pickable: next });
   return (
     <div className="field-grid grouped-lists">
       <fieldset className="field-row">

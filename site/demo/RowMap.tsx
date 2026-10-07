@@ -325,8 +325,13 @@ export function RowMap({
       return (
         <KindRowMap
           editor={PERSON_EDITOR}
-          layout={state.personLayout}
-          onLayout={personLayout => onChange({ ...state, personLayout })}
+          layout={state.rows.people.layout}
+          onLayout={layout =>
+            onChange({
+              ...state,
+              rows: { ...state.rows, people: { ...state.rows.people, layout } },
+            })
+          }
           colors={colors}
         />
       );
@@ -334,8 +339,16 @@ export function RowMap({
       return (
         <KindRowMap
           editor={ADDRESS_EDITOR}
-          layout={state.addressLayout}
-          onLayout={addressLayout => onChange({ ...state, addressLayout })}
+          layout={state.rows.addresses.layout}
+          onLayout={layout =>
+            onChange({
+              ...state,
+              rows: {
+                ...state.rows,
+                addresses: { ...state.rows.addresses, layout },
+              },
+            })
+          }
           colors={colors}
         />
       );
@@ -343,8 +356,16 @@ export function RowMap({
       return (
         <KindRowMap
           editor={BUSINESS_EDITOR}
-          layout={state.layout}
-          onLayout={layout => onChange({ ...state, layout })}
+          layout={state.rows.businesses.layout}
+          onLayout={layout =>
+            onChange({
+              ...state,
+              rows: {
+                ...state.rows,
+                businesses: { ...state.rows.businesses, layout },
+              },
+            })
+          }
           colors={colors}
         />
       );

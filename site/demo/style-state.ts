@@ -268,18 +268,26 @@ export const STRUCTURE_FLAGS = Object.fromEntries(
   ]),
 ) as Record<Structure, string>;
 
+/** A search's row as the Components fold edits it. */
+export interface RowState<R extends Route, L> {
+  /** The field each place shows (`layout`). */
+  layout: L;
+  /** The relations listed under each row, a line per item (`list`). */
+  list: IncludeOf<R>[];
+  /** What a pick can be: the head, and the lines' entities (`pickable`). */
+  pickable: EntityType[];
+}
+
+/** Each search's row. */
+export interface RowStates {
+  businesses: RowState<"businesses", RowLayout>;
+  people: RowState<"people", PersonRowLayout>;
+  addresses: RowState<"addresses", AddressRowLayout>;
+}
+
 export interface StyleState {
   look: Look;
-  /** The field each place of a row shows (`layout`). */
-  layout: RowLayout;
-  /** The same for a person's row, and what it lists and can pick. */
-  personLayout: PersonRowLayout;
-  personInclude: IncludeOf<"people">[];
-  personPickable: EntityType[];
-  /** The same for an address's row. */
-  addressLayout: AddressRowLayout;
-  addressInclude: IncludeOf<"addresses">[];
-  addressPickable: EntityType[];
+  rows: RowStates;
   vars: Record<CssVariable, string>;
   limit: number;
   minChars: number;
@@ -303,13 +311,23 @@ export const DEFAULT_LABEL = "Business name";
 
 export const DEFAULT_STYLE: StyleState = {
   look: { ...DEFAULT_LOOK },
-  layout: { ...DEFAULT_ROW_LAYOUT },
-  personLayout: resolveLayout(PERSON_ROW),
-  personInclude: [...DEFAULT_LIST.people] as IncludeOf<"people">[],
-  personPickable: [...DEFAULT_PICKABLE],
-  addressLayout: resolveLayout(ADDRESS_ROW),
-  addressInclude: [...DEFAULT_LIST.addresses] as IncludeOf<"addresses">[],
-  addressPickable: [...DEFAULT_PICKABLE],
+  rows: {
+    businesses: {
+      layout: { ...DEFAULT_ROW_LAYOUT },
+      list: [...DEFAULT_LIST.businesses] as IncludeOf<"businesses">[],
+      pickable: [...DEFAULT_PICKABLE],
+    },
+    people: {
+      layout: resolveLayout(PERSON_ROW),
+      list: [...DEFAULT_LIST.people] as IncludeOf<"people">[],
+      pickable: [...DEFAULT_PICKABLE],
+    },
+    addresses: {
+      layout: resolveLayout(ADDRESS_ROW),
+      list: [...DEFAULT_LIST.addresses] as IncludeOf<"addresses">[],
+      pickable: [...DEFAULT_PICKABLE],
+    },
+  },
   vars: Object.fromEntries(
     Object.entries(CSS_VARIABLES).map(([name, spec]) => [name, spec.value]),
   ) as Record<CssVariable, string>,
@@ -673,11 +691,52 @@ export const { canDrop, moveField, placeOptions, unplacedFields, withPlaced } =
 
 /** The places that show another field than the SDK's default, in reading order. */
 export function changedLayout(state: StyleState): Partial<RowLayout> {
+  const { layout } = state.rows.businesses;
   return Object.fromEntries(
-    ROW_PLACES.filter(
-      place => state.layout[place] !== DEFAULT_ROW_LAYOUT[place],
-    ).map(place => [place, state.layout[place]]),
+    ROW_PLACES.filter(place => layout[place] !== DEFAULT_ROW_LAYOUT[place]).map(
+      place => [place, layout[place]],
+    ),
   );
+}
+
+/** What the preview's component for each search takes from the Components fold. */
+export interface ComponentProps {
+  businesses: { layout: RowLayout };
+  people: {
+    layout: PersonRowLayout;
+    list: IncludeOf<"people">[];
+    pickable: EntityType[];
+  };
+  addresses: {
+    layout: AddressRowLayout;
+    list: IncludeOf<"addresses">[];
+    pickable: EntityType[];
+  };
+}
+
+/**
+ * The props the preview spreads on the component for `route`, so it draws the
+ * row the Components fold shows.
+ */
+export function componentProps<R extends Route>(
+  state: StyleState,
+  route: R,
+): ComponentProps[R] {
+  const { businesses, people, addresses } = state.rows;
+  const props: ComponentProps = {
+    businesses: { layout: businesses.layout },
+    people: {
+      layout: people.layout,
+      list: people.list,
+      pickable: people.pickable,
+    },
+    addresses: {
+      layout: addresses.layout,
+      list: addresses.list,
+      pickable: addresses.pickable,
+    },
+  };
+  return props[route];
 }
 
 /** The preview's stylesheet: the changed variables, on the demo's component only. */
@@ -697,7 +756,7 @@ export function changedGroupedLayout(
   route: "people" | "addresses",
 ): [string, string | null][] {
   const layout: Readonly<Record<string, string | null>> =
-    route === "people" ? state.personLayout : state.addressLayout;
+    state.rows[route].layout;
   const defaults: Readonly<Record<string, string | null>> =
     route === "people" ? resolveLayout(PERSON_ROW) : resolveLayout(ADDRESS_ROW);
   return Object.keys(defaults)
@@ -710,11 +769,12 @@ export function changedGroupedLayout(
  * places, and what a person's and an address's rows list and can pick.
  */
 export function componentChanges(state: StyleState): number {
+  const { people, addresses } = state.rows;
   const lists: [readonly string[], readonly string[]][] = [
-    [state.personInclude, DEFAULT_LIST.people],
-    [state.personPickable, DEFAULT_PICKABLE],
-    [state.addressInclude, DEFAULT_LIST.addresses],
-    [state.addressPickable, DEFAULT_PICKABLE],
+    [people.list, DEFAULT_LIST.people],
+    [people.pickable, DEFAULT_PICKABLE],
+    [addresses.list, DEFAULT_LIST.addresses],
+    [addresses.pickable, DEFAULT_PICKABLE],
   ];
   return (
     Object.keys(changedLayout(state)).length +
@@ -794,10 +854,7 @@ export function exportCode(
     );
   }
   if (route !== "businesses") {
-    const [include, pickable] =
-      route === "people"
-        ? [state.personInclude, state.personPickable]
-        : [state.addressInclude, state.addressPickable];
+    const { list: include, pickable } = state.rows[route];
     props.push(
       ...listProp("include", include, DEFAULT_LIST[route]),
       ...listProp("pickable", pickable, DEFAULT_PICKABLE),

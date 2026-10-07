@@ -48,6 +48,17 @@ function exportedLayout(tsx: string): Partial<RowLayout> | null {
 }
 
 /** Every layout the SDK draws: each place a field or empty, no field twice. */
+/** The default state with the business row's layout set. */
+function withBusinessLayout(layout: RowLayout): StyleState {
+  return {
+    ...DEFAULT_STYLE,
+    rows: {
+      ...DEFAULT_STYLE.rows,
+      businesses: { ...DEFAULT_STYLE.rows.businesses, layout },
+    },
+  };
+}
+
 function everyLayout(): RowLayout[] {
   const choices = [null, ...ROW_FIELDS];
   return ROW_PLACES.reduce<Partial<RowLayout>[]>(
@@ -89,16 +100,15 @@ describe("the Styling panel's exported configuration", () => {
   });
 
   it("names only the places that show another field, in reading order", () => {
-    const { tsx } = exportCode({
-      ...DEFAULT_STYLE,
-      layout: {
+    const { tsx } = exportCode(
+      withBusinessLayout({
         ...DEFAULT_ROW_LAYOUT,
         titleBadge: null,
         titleTrailing: null,
         subtitle: "people",
         subtitleTrailing: "states",
-      },
-    });
+      }),
+    );
 
     expect(tsx).toContain(
       `layout={{
@@ -113,7 +123,7 @@ describe("the Styling panel's exported configuration", () => {
   it("reproduces the preview: the layout it writes is the one drawn, for every layout", () => {
     const layouts = everyLayout();
     for (const layout of layouts) {
-      const state: StyleState = { ...DEFAULT_STYLE, layout };
+      const state = withBusinessLayout(layout);
       const written = exportedLayout(exportCode(state).tsx) ?? {};
 
       expect(written, JSON.stringify(layout)).toEqual(changedLayout(state));
@@ -182,8 +192,8 @@ describe("the Components fold", () => {
   const key = (layout: RowLayout) => JSON.stringify(layout);
 
   it("opens on the SDK's default layout", () => {
-    expect(DEFAULT_STYLE.layout).toEqual(DEFAULT_ROW_LAYOUT);
-    expect(INITIAL_STYLE.layout).toEqual(DEFAULT_ROW_LAYOUT);
+    expect(DEFAULT_STYLE.rows.businesses.layout).toEqual(DEFAULT_ROW_LAYOUT);
+    expect(INITIAL_STYLE.rows.businesses.layout).toEqual(DEFAULT_ROW_LAYOUT);
   });
 
   it("offers every field in every place, and says which one a pick would swap", () => {

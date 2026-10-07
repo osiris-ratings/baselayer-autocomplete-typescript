@@ -12,6 +12,7 @@ import {
   INITIAL_STYLE,
   PERSON_EDITOR,
   TRAY,
+  componentProps,
   editorOps,
   exportCode,
   type StyleState,
@@ -25,13 +26,41 @@ const addressDefault = resolveLayout(ADDRESS_ROW);
 describe("the People and Addresses tabs' rows", () => {
   it("open on the SDK's default layouts, listing and picking businesses", () => {
     for (const state of [DEFAULT_STYLE, INITIAL_STYLE]) {
-      expect(state.personLayout).toEqual(personDefault);
-      expect(state.addressLayout).toEqual(addressDefault);
-      expect(state.personInclude).toEqual(["businesses"]);
-      expect(state.addressInclude).toEqual(["businesses"]);
-      expect(state.personPickable).toEqual(["business"]);
-      expect(state.addressPickable).toEqual(["business"]);
+      expect(state.rows.people.layout).toEqual(personDefault);
+      expect(state.rows.addresses.layout).toEqual(addressDefault);
+      expect(state.rows.people.list).toEqual(["businesses"]);
+      expect(state.rows.addresses.list).toEqual(["businesses"]);
+      expect(state.rows.people.pickable).toEqual(["business"]);
+      expect(state.rows.addresses.pickable).toEqual(["business"]);
     }
+  });
+
+  it("hand the preview's components each row as the props they take", () => {
+    const state: StyleState = {
+      ...DEFAULT_STYLE,
+      rows: {
+        ...DEFAULT_STYLE.rows,
+        people: {
+          layout: { ...personDefault, headBadge: null },
+          list: ["businesses", "addresses"],
+          pickable: ["business", "address"],
+        },
+      },
+    };
+
+    expect(componentProps(state, "people")).toEqual({
+      layout: { ...personDefault, headBadge: null },
+      list: ["businesses", "addresses"],
+      pickable: ["business", "address"],
+    });
+    expect(componentProps(state, "addresses")).toEqual({
+      layout: addressDefault,
+      list: ["businesses"],
+      pickable: ["business"],
+    });
+    expect(componentProps(state, "businesses")).toEqual({
+      layout: DEFAULT_STYLE.rows.businesses.layout,
+    });
   });
 
   it("offer a place only its own line's fields", () => {
@@ -103,9 +132,14 @@ describe("the exported configuration of a person or an address field", () => {
   it("names the changed places, what is listed and what can be picked, with somewhere for a person or an address to go", () => {
     const state: StyleState = {
       ...DEFAULT_STYLE,
-      personLayout: { ...personDefault, headBadge: null },
-      personInclude: ["businesses", "addresses"],
-      personPickable: ["business", "address"],
+      rows: {
+        ...DEFAULT_STYLE.rows,
+        people: {
+          layout: { ...personDefault, headBadge: null },
+          list: ["businesses", "addresses"],
+          pickable: ["business", "address"],
+        },
+      },
     };
 
     const { tsx } = exportCode(state, "people");
@@ -123,7 +157,13 @@ describe("the exported configuration of a person or an address field", () => {
   it("keeps each field's export to its own row", () => {
     const state: StyleState = {
       ...DEFAULT_STYLE,
-      personLayout: { ...personDefault, headBadge: null },
+      rows: {
+        ...DEFAULT_STYLE.rows,
+        people: {
+          ...DEFAULT_STYLE.rows.people,
+          layout: { ...personDefault, headBadge: null },
+        },
+      },
     };
 
     expect(exportCode(state, "businesses").tsx).not.toContain("headBadge");

@@ -50,6 +50,7 @@ import { NetworkCount, NetworkTimeline } from "./NetworkTimeline";
 import {
   INITIAL_STYLE,
   changedLook,
+  componentProps,
   previewCss,
   type StyleState,
 } from "./style-state";
@@ -934,7 +935,7 @@ export function App() {
                       messages={messages}
                       unstyled={style.unstyled}
                       open={styling || filtering}
-                      layout={style.layout}
+                      {...componentProps(style, "businesses")}
                       {...(style.pageInput
                         ? { classNames: { input: "demo-input" } }
                         : {})}
@@ -952,9 +953,7 @@ export function App() {
                       // A person or an address picked: nothing redeems its
                       // token, so there is no business for step 03 to search.
                       onPickEntity={() => setPicked(null)}
-                      layout={style.personLayout}
-                      list={style.personInclude}
-                      pickable={style.personPickable}
+                      {...componentProps(style, "people")}
                       look={{ ...changedLook(style) }}
                       limit={style.limit}
                       minChars={style.minChars}
@@ -981,9 +980,7 @@ export function App() {
                       onChange={editName}
                       onPick={pickedThrough}
                       onPickEntity={() => setPicked(null)}
-                      layout={style.addressLayout}
-                      list={style.addressInclude}
-                      pickable={style.addressPickable}
+                      {...componentProps(style, "addresses")}
                       look={{ ...changedLook(style) }}
                       limit={style.limit}
                       minChars={style.minChars}
@@ -1019,7 +1016,9 @@ export function App() {
                         )}
                         suggestions={sampleRows({
                           limit: style.limit,
-                          include: includeForLayout(style.layout),
+                          include: includeForLayout(
+                            componentProps(style, "businesses").layout,
+                          ),
                         })}
                         found={SAMPLE_META.found}
                         foundCapped={false}
@@ -1032,7 +1031,7 @@ export function App() {
                         look={{ ...changedLook(style) }}
                         messages={messages}
                         unstyled={style.unstyled}
-                        layout={style.layout}
+                        {...componentProps(style, "businesses")}
                         // The sample rows answer to the filters above, so a state
                         // typed there marks its flag on them.
                         {...(filters !== undefined
@@ -1050,9 +1049,7 @@ export function App() {
                           <input {...inputProps} hidden tabIndex={-1} />
                         )}
                         suggestions={SAMPLE_PEOPLE.slice(0, style.limit)}
-                        layout={style.personLayout}
-                        list={style.personInclude}
-                        pickable={style.personPickable}
+                        {...componentProps(style, "people")}
                         found={SAMPLE_PEOPLE.length}
                         foundCapped={false}
                         truncated={false}
@@ -1076,9 +1073,7 @@ export function App() {
                           <input {...inputProps} hidden tabIndex={-1} />
                         )}
                         suggestions={SAMPLE_ADDRESSES.slice(0, style.limit)}
-                        layout={style.addressLayout}
-                        list={style.addressInclude}
-                        pickable={style.addressPickable}
+                        {...componentProps(style, "addresses")}
                         found={SAMPLE_ADDRESSES.length}
                         foundCapped={false}
                         truncated={false}

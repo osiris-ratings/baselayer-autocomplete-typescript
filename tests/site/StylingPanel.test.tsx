@@ -82,10 +82,10 @@ describe("the Components fold's searches", () => {
         <output data-testid="route">{route}</output>
         <output data-testid="lists">
           {JSON.stringify([
-            state.personInclude,
-            state.personPickable,
-            state.addressInclude,
-            state.addressPickable,
+            state.rows.people.list,
+            state.rows.people.pickable,
+            state.rows.addresses.list,
+            state.rows.addresses.pickable,
           ])}
         </output>
         <StylingPanel

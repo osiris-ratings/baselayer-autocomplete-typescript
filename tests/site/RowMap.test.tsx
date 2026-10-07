@@ -71,7 +71,7 @@ describe("the Components fold's row", () => {
       target: { value: "states" },
     });
 
-    const { layout } = onChange.mock.calls[0]![0];
+    const { layout } = onChange.mock.calls[0]![0].rows.businesses;
     expect(layout.subtitle).toBe("states");
     expect(layout.titleTrailing).toBe("address");
   });
@@ -82,7 +82,7 @@ describe("the Components fold's row", () => {
       spot("titleBadge").querySelector(".row-map-handle")!,
       spot("subtitleTrailingBadge"),
     );
-    const { layout } = onChange.mock.calls[0]![0];
+    const { layout } = onChange.mock.calls[0]![0].rows.businesses;
     expect(layout.titleBadge).toBeNull();
     expect(layout.subtitleTrailingBadge).toBe("structure");
   });
@@ -93,7 +93,7 @@ describe("the Components fold's row", () => {
       spot("titleTrailing").querySelector(".row-map-handle")!,
       spot("subtitleTrailing"),
     );
-    const { layout } = onChange.mock.calls[0]![0];
+    const { layout } = onChange.mock.calls[0]![0].rows.businesses;
     expect(layout.titleTrailing).toBe("people");
     expect(layout.subtitleTrailing).toBe("states");
   });
@@ -105,14 +105,16 @@ describe("the Components fold's row", () => {
       spot("tray"),
     );
     const out = onChange.mock.calls[0]![0];
-    expect(out.layout.subtitleTrailing).toBeNull();
+    expect(out.rows.businesses.layout.subtitleTrailing).toBeNull();
 
     view.rerender(<RowMap state={out} onChange={onChange} />);
     const chip = view.container.querySelector(
       '.row-map-chip[data-field="people"]',
     )!;
     drag(chip, spot("subtitleBadge"));
-    expect(onChange.mock.calls[1]![0].layout.subtitleBadge).toBe("people");
+    expect(
+      onChange.mock.calls[1]![0].rows.businesses.layout.subtitleBadge,
+    ).toBe("people");
   });
 
   it("lights every spot that takes the field while it is dragged", () => {
@@ -172,7 +174,7 @@ describe("the Components fold's row", () => {
     });
     fireEvent.pointerUp(document.body, { clientX: 40, clientY: 30 });
 
-    const { layout } = onChange.mock.calls[0]![0];
+    const { layout } = onChange.mock.calls[0]![0].rows.businesses;
     expect(layout.titleTrailing).toBe("people");
     expect(layout.subtitleTrailing).toBe("states");
   });
@@ -198,7 +200,9 @@ describe("the Components fold's row", () => {
     });
     fireEvent.pointerUp(document.body, { clientX: 60, clientY: 40 });
 
-    expect(onChange.mock.calls[0]![0].layout.subtitleTrailing).toBe("states");
+    expect(
+      onChange.mock.calls[0]![0].rows.businesses.layout.subtitleTrailing,
+    ).toBe("states");
   });
 
   it("drags from a bare mousedown, as Safari sends right after its menu closes", () => {
@@ -221,7 +225,9 @@ describe("the Components fold's row", () => {
     });
     fireEvent.mouseUp(document.body, { clientX: 40, clientY: 30 });
 
-    expect(onChange.mock.calls[0]![0].layout.subtitleTrailing).toBe("states");
+    expect(
+      onChange.mock.calls[0]![0].rows.businesses.layout.subtitleTrailing,
+    ).toBe("states");
   });
 
   it("leaves a mousedown on the chevron to the menu too", () => {
@@ -352,7 +358,7 @@ describe("the Components fold's row", () => {
     under.mockReturnValue(spot("tray"));
     fireEvent.pointerUp(document.body, { clientX: 40, clientY: 30 });
 
-    const { layout } = onChange.mock.calls[0]![0];
+    const { layout } = onChange.mock.calls[0]![0].rows.businesses;
     expect(layout.titleTrailing).toBeNull();
     expect(layout.subtitleTrailing).toBe("people");
   });
@@ -420,10 +426,10 @@ describe("the Components fold's row on People and Addresses", () => {
     );
 
     const next = onChange.mock.calls[0]![0];
-    expect(next.personLayout.businessBadge).toBe("role");
-    expect(next.personLayout.businessTrailing).toBe("address");
-    expect(next.layout).toBe(DEFAULT_STYLE.layout);
-    expect(next.addressLayout).toBe(DEFAULT_STYLE.addressLayout);
+    expect(next.rows.people.layout.businessBadge).toBe("role");
+    expect(next.rows.people.layout.businessTrailing).toBe("address");
+    expect(next.rows.businesses).toBe(DEFAULT_STYLE.rows.businesses);
+    expect(next.rows.addresses).toBe(DEFAULT_STYLE.rows.addresses);
   });
 
   it("takes a field on no other line's place", () => {
@@ -443,7 +449,7 @@ describe("the Components fold's row on People and Addresses", () => {
     });
 
     const next = onChange.mock.calls[0]![0];
-    expect(next.addressLayout.headTrailing).toBeNull();
-    expect(next.personLayout).toBe(DEFAULT_STYLE.personLayout);
+    expect(next.rows.addresses.layout.headTrailing).toBeNull();
+    expect(next.rows.people).toBe(DEFAULT_STYLE.rows.people);
   });
 });
