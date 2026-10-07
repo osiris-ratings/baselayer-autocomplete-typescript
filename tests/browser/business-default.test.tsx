@@ -181,7 +181,7 @@ function drawn(element: Element): Drawn {
     style: Object.fromEntries(
       STYLES.map(name => [name, computed.getPropertyValue(name)]),
     ),
-    children: [...element.childNodes].flatMap(node =>
+    children: [...element.childNodes].flatMap((node): (Drawn | string)[] =>
       node.nodeType === Node.ELEMENT_NODE
         ? [drawn(node as Element)]
         : node.nodeType === Node.TEXT_NODE && node.textContent !== ""
