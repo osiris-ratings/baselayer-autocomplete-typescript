@@ -156,10 +156,19 @@ const part = (line: HTMLElement, selector: string) =>
   line.querySelector<HTMLElement>(selector)!;
 
 describe("a disabled line", () => {
-  it("is drained of colour, its text faded toward the ground and its squares dimmed; an enabled line is not", () => {
+  it("has its squares and icons drained of colour, its text faded toward the ground and its squares dimmed; an enabled line has not", () => {
     const { head, enabled, disabled, done } = draw();
     try {
-      expect(getComputedStyle(disabled).filter).toBe("saturate(0)");
+      // No filter on the line itself, which would grey a match mark too.
+      expect(getComputedStyle(disabled).filter).toBe("none");
+      for (const colour of [".bl-ac-states", ".bl-ac-icon"]) {
+        expect(getComputedStyle(part(disabled, colour)).filter, colour).toBe(
+          "saturate(0)",
+        );
+        expect(getComputedStyle(part(enabled, colour)).filter, colour).toBe(
+          "none",
+        );
+      }
       expect(
         getComputedStyle(part(disabled, ".bl-ac-states")).opacity,
       ).not.toBe("1");
@@ -170,8 +179,12 @@ describe("a disabled line", () => {
         getComputedStyle(part(enabled, ".bl-ac-role")).color,
       );
       expect(getComputedStyle(enabled).filter).toBe("none");
-      // The head, a person's, is not a pick by default: it fades too.
-      expect(getComputedStyle(head).filter).toBe("saturate(0)");
+      // The head, a person's, is not a pick by default: it fades too, its
+      // icon drained of colour and nothing else.
+      expect(getComputedStyle(head).filter).toBe("none");
+      expect(getComputedStyle(part(head, ".bl-ac-icon")).filter).toBe(
+        "saturate(0)",
+      );
       expect(getComputedStyle(part(enabled, ".bl-ac-states")).opacity).toBe(
         "1",
       );
@@ -364,6 +377,104 @@ describe("a row's head that is not a pick", () => {
           const disabledName = await drawnContrast(disabled.name);
           expect(disabledName).toBeGreaterThanOrEqual(3);
           expect(disabledName).toBeLessThanOrEqual(0.6 * enabledName);
+        } finally {
+          disabled.done();
+        }
+      });
+    }
+  }
+});
+
+/** Every element from `element` up to the menu draws without a filter. */
+function unfiltered(element: Element): boolean {
+  for (let at: Element | null = element; at !== null; at = at.parentElement) {
+    if (getComputedStyle(at).filter !== "none") return false;
+    if (at.classList.contains("bl-ac-menu")) break;
+  }
+  return true;
+}
+
+describe("a match mark on a head that is not a pick", () => {
+  const marked = {
+    person: {
+      ...DANA,
+      highlight: [
+        { text: "Dana", matched: true },
+        { text: " Whitfield", matched: false },
+      ],
+    },
+    business: {
+      ...HARBOR,
+      highlight: [
+        { text: "HARBOR", matched: true },
+        { text: " CONCRETE PUMPING, LLC", matched: false },
+      ],
+    },
+  };
+
+  function drawMarked(
+    search: "person" | "business",
+    enabled: boolean,
+    look: LookInput,
+  ) {
+    const host = document.createElement("div");
+    host.style.width = "760px";
+    document.body.append(host);
+    const root = createRoot(host);
+    const lines: EntityType[] = enabled
+      ? ["business", "person", "address"]
+      : search === "business"
+        ? ["person"]
+        : ["business"];
+    flushSync(() =>
+      root.render(
+        search === "person" ? (
+          <PersonAutocompleteView
+            {...viewProps}
+            value="dana"
+            id="person"
+            suggestions={[marked.person]}
+            enabledLines={lines}
+            look={look}
+          />
+        ) : (
+          <BusinessAutocompleteView
+            {...viewProps}
+            value="harbor"
+            id="business"
+            suggestions={[marked.business]}
+            list={["people"]}
+            enabledLines={lines}
+            look={look}
+          />
+        ),
+      ),
+    );
+    return {
+      mark: host.querySelector<HTMLElement>('[role="group"] .bl-ac-mark')!,
+      done() {
+        root.unmount();
+        host.remove();
+      },
+    };
+  }
+
+  for (const preset of PRESETS.filter(
+    each => each.name === "Light" || each.name === "Midnight",
+  )) {
+    for (const search of ["person", "business"] as const) {
+      it(`keeps the look's match colour on a ${search}'s head, on ${preset.name}`, () => {
+        const enabled = drawMarked(search, true, preset.look);
+        const line = getComputedStyle(enabled.mark).textDecorationColor;
+        enabled.done();
+        const disabled = drawMarked(search, false, preset.look);
+        try {
+          expect(disabled.mark).not.toBeNull();
+          expect(getComputedStyle(disabled.mark).textDecorationColor).toBe(
+            line,
+          );
+          // Nothing between it and the menu greys what it is drawn in.
+          expect(unfiltered(disabled.mark)).toBe(true);
         } finally {
           disabled.done();
         }

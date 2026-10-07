@@ -299,24 +299,25 @@ icons and the role keep theirs, each segment's icon inside its own box, so
 nothing overlaps. In a group narrower than 22.5rem the columns go: the squares
 take only their own room, and the role gives way as text does.
 
-A disabled line under a row reads as inactive: all of it loses its colour
-(`--bl-ac-disabled-filter`), its name and its other text fade toward the menu's
-ground (`--bl-ac-disabled-name`, `--bl-ac-disabled-text`, the icon with the
-text), and its state squares dim (`--bl-ac-disabled-opacity`).
-`look.disabledDim` sets how far, 0 for none, and the component works the inks
-out from the look's colours. WCAG exempts an inactive component from its
-contrast minimum, so the fade is deliberately strong, with floors that keep it
-legible on any colours: a disabled name keeps 4.6:1 by the formula, which draws
-at 3:1 or more once antialiasing has its share, and the rest keeps 40% of its
-contrast and at least 1.8:1, drawing at about half an enabled line's. A colour
-set only in CSS, not through `look`, fades by the default look's shares
-(`color-mix`), without the floors. A translucent title or subtitle is faded as
-it is drawn on the ground; a translucent background shows whatever is under the
-menu, which the component cannot know, so the floors then hold only on the
-background's own colour. A row's head that is not a pick fades as a disabled
-line does: a person's and an address's by default, since a business is the
-pick, their businesses at full strength. A pick does not fade, and nothing
-fades under forced colours.
+A disabled line under a row reads as inactive: its squares, its flag and its
+icons lose their colour (`--bl-ac-disabled-filter`, on each of them, never on
+the line, so a match mark keeps the look's match colour), its name and its
+other text fade toward the menu's ground (`--bl-ac-disabled-name`,
+`--bl-ac-disabled-text`, the icon with the text), and its state squares dim
+(`--bl-ac-disabled-opacity`). `look.disabledDim` sets how far, 0 for none, and
+the component works the inks out from the look's colours. WCAG exempts an
+inactive component from its contrast minimum, so the fade is deliberately
+strong, with floors that keep it legible on any colours: a disabled name keeps
+4.6:1 by the formula, which draws at 3:1 or more once antialiasing has its
+share, and the rest keeps 40% of its contrast and at least 1.8:1, drawing at
+about half an enabled line's. A colour set only in CSS, not through `look`,
+fades by the default look's shares (`color-mix`), without the floors. A
+translucent title or subtitle is faded as it is drawn on the ground; a
+translucent background shows whatever is under the menu, which the component
+cannot know, so the floors then hold only on the background's own colour. A
+row's head that is not a pick fades as a disabled line does: a person's and an
+address's by default, since a business is the pick, their businesses at full
+strength. A pick does not fade, and nothing fades under forced colours.
 
 After a pick from a line under a row, the line under the field
 (`bl-ac-selection`, `data-type` the picked line's type) names what was

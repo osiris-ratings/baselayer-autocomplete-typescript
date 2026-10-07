@@ -1,5 +1,6 @@
-// A disabled line's inks: drained of colour, its text faded toward the menu's
-// ground no further than it stays readable, whatever the look.
+// A disabled line's inks: its squares, flag and icons drained of colour, its
+// text faded toward the menu's ground no further than it stays readable,
+// whatever the look.
 
 import type { Look } from "@baselayer-sdk/autocomplete";
 
@@ -90,7 +91,7 @@ function fadeShare(ink: Rgb, ground: Rgb, most: number, floor: number) {
 
 /** A disabled line as the stylesheet's variables draw it. */
 export interface DisabledInks {
-  /** The whole line's filter: its colour drained (`--bl-ac-disabled-filter`). */
+  /** The squares', the flag's and the icons' filter (`--bl-ac-disabled-filter`). */
   filter: string;
   /** Its state squares' opacity (`--bl-ac-disabled-opacity`). */
   opacity: string;
@@ -105,10 +106,11 @@ export interface DisabledInks {
 }
 
 /**
- * A disabled line under `look`: at `disabledDim` d, drained of colour by 2d,
- * its text moved up to d of the way toward the ground, its names no further
- * than 4.6:1 and the rest than 40% of its contrast (1.8:1 at least), and its
- * squares' opacity 1 - 0.8d. At 0, nothing changes.
+ * A disabled line under `look`: at `disabledDim` d, its squares, flag and
+ * icons drained of colour by 2d, its text moved up to d of the way toward the
+ * ground, its names no further than 4.6:1 and the rest than 40% of its
+ * contrast (1.8:1 at least), and its squares' opacity 1 - 0.8d. At 0, nothing
+ * changes.
  */
 export function disabledInks(look: Look): DisabledInks {
   const dim = look.disabledDim;

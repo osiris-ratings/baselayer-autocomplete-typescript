@@ -191,7 +191,7 @@ describe("a disabled line", () => {
     // fallback must be the default's: the filter, the squares' opacity, and
     // the share of the title's and the subtitle's colour each text keeps.
     const inks = disabledInks(DEFAULT_LOOK);
-    expect(rule(".bl-ac-group-line:not([data-enabled])")).toContain(
+    expect(css).toContain(
       `filter: var(--bl-ac-disabled-filter, ${inks.filter});`,
     );
     const flat = css.replace(/\s+/g, " ");

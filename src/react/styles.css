@@ -387,9 +387,14 @@
    disabled, so it draws as it always has.
    The component sets the inks from the look (`disabledInks`); the fallbacks
    are the default look's, mixed from whatever colours are set. */
-.bl-ac-group-line:not([data-enabled]),
-.bl-ac-group-head:not([data-enabled]),
-.bl-ac-group > .bl-ac-row:not([data-enabled]) {
+/* Drained of colour where it has colour of its own, on its own element: the
+   squares, the flag and the icons. Never the whole line, which would grey a
+   match mark too; the text fades by its colour alone. */
+.bl-ac-group-line:not([data-enabled]) :is(.bl-ac-states, .bl-ac-icon),
+.bl-ac-group-head:not([data-enabled]) .bl-ac-icon,
+.bl-ac-group
+  > .bl-ac-row:not([data-enabled])
+  :is(.bl-ac-states, .bl-ac-structure, .bl-ac-icon) {
   filter: var(--bl-ac-disabled-filter, saturate(0));
 }
 
@@ -424,9 +429,11 @@
 
 /* Forced colours draw the text in the system's own; fading it would not. */
 @media (forced-colors: active) {
-  .bl-ac-group-line:not([data-enabled]),
-  .bl-ac-group-head:not([data-enabled]),
-  .bl-ac-group > .bl-ac-row:not([data-enabled]) {
+  .bl-ac-group-line:not([data-enabled]) :is(.bl-ac-states, .bl-ac-icon),
+  .bl-ac-group-head:not([data-enabled]) .bl-ac-icon,
+  .bl-ac-group
+    > .bl-ac-row:not([data-enabled])
+    :is(.bl-ac-states, .bl-ac-structure, .bl-ac-icon) {
     filter: none;
   }
 
