@@ -204,16 +204,29 @@ describe("the presets", () => {
     for (const name of names) expect(name).toMatch(/^\p{Lu}\p{Ll}+$/u);
   });
 
-  it("mark matches every way the menu can, over both regions", () => {
+  it("mark matches every way the menu can but plain, over both regions", () => {
     const applied = PRESETS.map(
       preset => applyPreset(DEFAULT_STYLE, preset).look,
     );
+    // Plain marks nothing, and every preset shows what matched.
     expect(new Set(applied.map(look => look.matchEmphasis))).toEqual(
-      new Set(MATCH_EMPHASES),
+      new Set(MATCH_EMPHASES.filter(emphasis => emphasis !== "plain")),
     );
     expect(new Set(applied.map(look => look.matchEmphasisRegion))).toEqual(
       new Set(MATCH_REGIONS),
     );
+  });
+
+  it("colour a match they mark by weight, so it stands out in more than its strokes", () => {
+    const weighted = PRESETS.filter(
+      preset => preset.highlight?.matchEmphasis === "weight",
+    );
+    expect(weighted.length).toBeGreaterThan(0);
+    for (const preset of weighted) {
+      expect(preset.highlight?.matchEmphasisColor, preset.name).toMatch(
+        /^#[0-9a-f]{6}$/,
+      );
+    }
   });
 
   it("change the font in about a third, only to fonts the Font fold offers", () => {

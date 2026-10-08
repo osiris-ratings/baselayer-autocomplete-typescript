@@ -12,6 +12,8 @@ import {
   nameSegment,
 } from "../../site/demo/style-state";
 
+import { distance, ground, rgb } from "./support/colour";
+
 import "../../site/shared/brand.css";
 import "../../site/demo/demo.css";
 
@@ -223,6 +225,12 @@ describe("a preset's swatch", () => {
         expect(mark, preset.name).not.toBeNull();
         const style = getComputedStyle(mark!);
         expect(style.backgroundColor, preset.name).not.toBe("rgba(0, 0, 0, 0)");
+        // Plain to see on its card, held to the menu's floor for a fill.
+        const swatch = all[at]!;
+        expect(
+          distance(rgb(style.backgroundColor), ground(swatch)),
+          preset.name,
+        ).toBeGreaterThanOrEqual(10);
         expect(
           mark!.getBoundingClientRect().width,
           preset.name,

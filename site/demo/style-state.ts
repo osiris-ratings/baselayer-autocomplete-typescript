@@ -1371,7 +1371,11 @@ export const PRESETS: Preset[] = [
       "--bl-ac-shadow": "none",
       "--bl-ac-font": MONO,
     },
-    highlight: { matchEmphasis: "weight", matchEmphasisRegion: "substring" },
+    highlight: {
+      matchEmphasis: "weight",
+      matchEmphasisRegion: "substring",
+      matchEmphasisColor: "#fd971f",
+    },
     rows: {
       businesses: { layout: BUSINESS_LAYOUTS.compact, iconSegments: [] },
       people: { layout: PERSON_LAYOUTS.countsBeside, iconSegments: [] },
@@ -1473,7 +1477,7 @@ export const PRESETS: Preset[] = [
       "--bl-ac-highlight-bg": "#eef2f7",
       "--bl-ac-border": "#cbd5e1",
       "--bl-ac-more-fg": "#1e293b",
-      "--bl-ac-ink-base": "#475569",
+      "--bl-ac-ink-base": "#52525b",
       "--bl-ac-ink-mark": "#1d4ed8",
       "--bl-ac-also-mark": "#0f172a",
       "--bl-ac-underline": "#2563eb",
@@ -1644,7 +1648,11 @@ export const PRESETS: Preset[] = [
       "--bl-ac-line-height": "1.6",
       "--bl-ac-font": MONO,
     },
-    highlight: { matchEmphasis: "weight", matchEmphasisRegion: "substring" },
+    highlight: {
+      matchEmphasis: "weight",
+      matchEmphasisRegion: "substring",
+      matchEmphasisColor: "#94540f",
+    },
     rows: {
       businesses: {
         layout: BUSINESS_LAYOUTS.statesBelow,
@@ -1770,7 +1778,11 @@ export const PRESETS: Preset[] = [
       "--bl-ac-weight-base": "500",
       "--bl-ac-weight-mark": "800",
     },
-    highlight: { matchEmphasis: "weight", matchEmphasisRegion: "substring" },
+    highlight: {
+      matchEmphasis: "weight",
+      matchEmphasisRegion: "substring",
+      matchEmphasisColor: "#fb923c",
+    },
     rows: {
       businesses: {
         layout: BUSINESS_LAYOUTS.addressRight,
@@ -1857,7 +1869,7 @@ export const PRESETS: Preset[] = [
       "--bl-ac-shadow": "none",
       "--bl-ac-line-height": "1.7",
     },
-    highlight: { matchEmphasis: "plain", matchEmphasisRegion: "token" },
+    highlight: { matchEmphasis: "underline", matchEmphasisRegion: "token" },
     rows: {
       businesses: { layout: BUSINESS_LAYOUTS.statesBelow, iconSegments: [] },
       people: { layout: PERSON_LAYOUTS.noStates, list: [], iconSegments: [] },
@@ -1885,7 +1897,7 @@ export const PRESETS: Preset[] = [
       "--bl-ac-highlight-bg": "#e7f0fc",
       "--bl-ac-border": "#d3e1f5",
       "--bl-ac-more-fg": "#173d74",
-      "--bl-ac-ink-base": "#4a5d7a",
+      "--bl-ac-ink-base": "#5c5f66",
       "--bl-ac-ink-mark": "#1d4ed8",
       "--bl-ac-also-mark": "#10233f",
       "--bl-ac-underline": "#3b82f6",
@@ -1962,7 +1974,7 @@ export const PRESETS: Preset[] = [
       "--bl-ac-highlight-bg": "#f5e6dd",
       "--bl-ac-border": "#ead3c6",
       "--bl-ac-more-fg": "#7a2e12",
-      "--bl-ac-ink-base": "#7d5848",
+      "--bl-ac-ink-base": "#6b625d",
       "--bl-ac-ink-mark": "#a63a0e",
       "--bl-ac-also-mark": "#3b1f14",
       "--bl-ac-underline": "#ea580c",
@@ -2015,7 +2027,11 @@ export const PRESETS: Preset[] = [
       "--bl-ac-name-weight": "800",
       "--bl-ac-weight-mark": "800",
     },
-    highlight: { matchEmphasis: "weight", matchEmphasisRegion: "token" },
+    highlight: {
+      matchEmphasis: "weight",
+      matchEmphasisRegion: "token",
+      matchEmphasisColor: "#975500",
+    },
     rows: {
       businesses: {
         layout: BUSINESS_LAYOUTS.compact,
