@@ -151,7 +151,7 @@ describe("resolveRowLayout", () => {
       null,
       ...ROW_FIELDS,
     ];
-    // Every layout a host could stage, 6 values in each of the 7 places.
+    // Every layout a host could stage, 7 values in each of the 7 places.
     const stagings: RowLayoutInput[] = ROW_PLACES.reduce<RowLayoutInput[]>(
       (partial, place) =>
         partial.flatMap(staged =>

@@ -184,8 +184,8 @@ pnpm demo` runs it on made-up data with no network. In Styling, the row map
   `contract` error. A related item must be the entity its relation holds.
 - **Breaking:** `Look` gains `disabledDim`, `AutocompleteMessages` the messages
   for the new rows, `SlotName` the new slots and `RowField` `counts`, so a
-  complete literal of any of them, or a switch over every `RowField`, needs them
-  too.
+  complete literal of any of them, or a switch over every `RowField` or a record
+  keyed by it, needs them too.
 - **Breaking:** `AutocompleteErrorKind` gains `out_of_scope` and
   `route_unserved`, so a switch over it that ends in `never`, or a record keyed
   by it, needs them.

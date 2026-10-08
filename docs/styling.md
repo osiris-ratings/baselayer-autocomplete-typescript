@@ -446,11 +446,11 @@ where it is drawn,
 `data-place="titleBadge"` and so on, and the title's says
 `data-place="title"`.
 
-The placed fields also decide what is fetched: `address` asks for the
-addresses, `people` for the people (officers and registered agents) and
-`counts` for both, while the states and the structure come on the row itself.
-`includeForLayout(layout)` in the core says what a layout asks for. With
-neither placed, the autocomplete service refuses an empty `include`, so none is
+The placed fields also decide what is fetched: `address` asks for the addresses,
+`people` for the people (officers and registered agents) and `counts` for both,
+while the states and the structure come on the row itself.
+`includeForLayout(layout)` in the core says what a layout asks for. With none of
+them placed, the autocomplete service refuses an empty `include`, so none is
 sent and its default, people and addresses, stands. A form that fills an address
 from the pick keeps the address placed. A relation `list` lists is asked for
 too, whatever the layout places. `include` on `BusinessAutocomplete` asks for
