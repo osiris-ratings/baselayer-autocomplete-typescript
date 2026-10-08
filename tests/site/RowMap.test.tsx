@@ -16,8 +16,9 @@ import {
 } from "../../site/demo/style-state";
 
 beforeAll(() => {
-  // jsdom has neither pointer events nor hit testing: a pointer event is a
-  // mouse event with an id, and the page answers what is under a point below.
+  // jsdom has neither pointer events, hit testing nor scrolling: a pointer
+  // event is a mouse event with an id, and the page answers what is under a
+  // point below.
   class PointerEvent extends MouseEvent {
     pointerId: number;
     constructor(type: string, init: PointerEventInit = {}) {
@@ -28,6 +29,7 @@ beforeAll(() => {
   vi.stubGlobal("PointerEvent", PointerEvent);
   Element.prototype.setPointerCapture = () => {};
   document.elementFromPoint = () => null;
+  Element.prototype.scrollIntoView = () => {};
 });
 
 afterEach(() => {
@@ -1048,4 +1050,52 @@ describe("a segment's icon in the row map", () => {
     expect(toggle("people")).toBeNull();
     expect(toggle("address")).not.toBeNull();
   });
+});
+
+describe("the Disabled column's guide with no canvas to measure on", () => {
+  afterEach(() => {
+    // jsdom has no offscreen canvas of its own.
+    Reflect.deleteProperty(globalThis, "OffscreenCanvas");
+  });
+
+  const canvases: [string, unknown][] = [
+    ["no offscreen canvas", undefined],
+    [
+      "no 2d context",
+      class {
+        getContext() {
+          return null;
+        }
+      },
+    ],
+    [
+      "a context that throws",
+      class {
+        getContext() {
+          throw new Error("The context is lost");
+        }
+      },
+    ],
+  ];
+
+  for (const [name, canvas] of canvases) {
+    it(`still draws the guide, with ${name}`, () => {
+      if (canvas !== undefined) vi.stubGlobal("OffscreenCanvas", canvas);
+      // jsdom implements no canvas element, and reports asking one for a
+      // context as an error.
+      const element = vi.spyOn(HTMLCanvasElement.prototype, "getContext");
+      const view = render(
+        <RowMap
+          state={withListed(DEFAULT_STYLE, "people", "addresses", true)}
+          onChange={() => {}}
+          route="people"
+        />,
+      );
+
+      expect(element).not.toHaveBeenCalled();
+      expect(
+        view.container.querySelectorAll(".row-map-guide").length,
+      ).toBeGreaterThan(0);
+    });
+  }
 });

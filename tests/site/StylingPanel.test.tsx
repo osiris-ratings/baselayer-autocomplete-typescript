@@ -8,7 +8,7 @@ import {
   within,
 } from "@testing-library/react";
 import { useState } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
 import type { Route } from "@baselayer-sdk/autocomplete";
 
@@ -18,6 +18,11 @@ import {
   DEFAULT_STYLE,
   type StyleState,
 } from "../../site/demo/style-state";
+
+beforeAll(() => {
+  // jsdom lays nothing out: the row map brings what is focused into view.
+  Element.prototype.scrollIntoView = () => {};
+});
 
 afterEach(cleanup);
 

@@ -77,26 +77,55 @@ function relationOf(item: string): Relation | null {
 const SHOWN = "shown";
 const HIDDEN = "hidden";
 
+/** A face's metrics, in ems, where none can be measured: a typical face's. */
+const TYPICAL_FACE = { ascent: 0.92, descent: 0.24 };
+
 /**
- * Where a heading's ink ends, measured on its own font: its line's leading
- * and its face both move it. Null with no canvas to measure on.
+ * A heading's face at its size: measured on an offscreen canvas, or a typical
+ * face's, its ink ending on the baseline, on a page with no canvas to measure
+ * on.
  */
-function inkBottom(label: HTMLElement): number | null {
-  const context = document.createElement("canvas").getContext("2d");
-  if (context === null) return null;
+function faceOf(style: CSSStyleDeclaration, text: string) {
+  const size = parseFloat(style.fontSize);
+  const typical = {
+    ascent: TYPICAL_FACE.ascent * size,
+    descent: TYPICAL_FACE.descent * size,
+    ink: 0,
+  };
+  if (typeof OffscreenCanvas !== "function") return typical;
+  try {
+    const context = new OffscreenCanvas(1, 1).getContext("2d");
+    if (context === null) return typical;
+    context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+    const metrics = context.measureText(text);
+    return {
+      ascent: metrics.fontBoundingBoxAscent,
+      descent: metrics.fontBoundingBoxDescent,
+      ink: metrics.actualBoundingBoxDescent,
+    };
+  } catch {
+    return typical;
+  }
+}
+
+/**
+ * Where a heading's ink ends, on its own font: its line's leading and its
+ * face both move it.
+ */
+function inkBottom(label: HTMLElement): number {
   const style = getComputedStyle(label);
-  context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
   const text = label.textContent ?? "";
-  const metrics = context.measureText(
+  const face = faceOf(
+    style,
     style.textTransform === "uppercase" ? text.toUpperCase() : text,
   );
-  const glyphs = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
+  const glyphs = face.ascent + face.descent;
   const line = parseFloat(style.lineHeight);
   const top =
     label.getBoundingClientRect().top +
     parseFloat(style.paddingTop) +
     ((Number.isNaN(line) ? glyphs : line) - glyphs) / 2;
-  return top + metrics.fontBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+  return top + face.ascent + face.ink;
 }
 
 /** Marks a scroller's frame with the edges there is more beyond. */
@@ -846,8 +875,8 @@ function KindRowMap<P extends string, F extends string>({
       part.style.top = "";
       part.style.bottom = "";
     }
+    if (parts.length === 0) return;
     const ink = inkBottom(label);
-    if (ink === null || parts.length === 0) return;
     const gap = parseFloat(
       getComputedStyle(parts[0]!).getPropertyValue("--map-guide-gap"),
     );
