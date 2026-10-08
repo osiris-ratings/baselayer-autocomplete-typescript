@@ -718,6 +718,14 @@
   min-width: 0;
 }
 
+/* The soft shade at an edge there is more beyond, rounded: the row map's
+   lines and the presets' row draw the same one. */
+:root {
+  --shade-depth: 12px;
+  --shade-share: 22%;
+  --shade-radius: 8px;
+}
+
 /* Where a line's places go under the grip or the Enabled column, while
    there is more of them beyond that edge, its box takes a soft shade there,
    rounded as the box is, in the look's ink: on the line alone, never on a
@@ -727,7 +735,7 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  width: 12px;
+  width: var(--shade-depth);
   content: "";
   opacity: 0;
   pointer-events: none;
@@ -738,7 +746,7 @@
   left: 100%;
   background: linear-gradient(
     to right,
-    color-mix(in srgb, var(--map-ink) 22%, transparent),
+    color-mix(in srgb, var(--map-ink) var(--shade-share), transparent),
     transparent
   );
   border-radius: var(--map-line-radius) 0 0 var(--map-line-radius);
@@ -748,7 +756,7 @@
   right: 100%;
   background: linear-gradient(
     to left,
-    color-mix(in srgb, var(--map-ink) 22%, transparent),
+    color-mix(in srgb, var(--map-ink) var(--shade-share), transparent),
     transparent
   );
   border-radius: 0 var(--map-line-radius) var(--map-line-radius) 0;
@@ -2442,19 +2450,108 @@
   margin: 0;
 }
 
-/* As many to a row as the panel has room for, each at least as wide as the
-   longest name, so the names never run into each other: a narrow panel
-   takes two rows, or three. */
+/* One row that scrolls sideways, snapping to a preset, with the row map's
+   shade at each edge there is more beyond, in the page's ink. Its padding is
+   room for the chosen preset's ring. */
+.presets-frame {
+  position: relative;
+}
+
+.presets-frame::before,
+.presets-frame::after {
+  position: absolute;
+  z-index: 1;
+  top: 4px;
+  height: 58px;
+  width: var(--shade-depth);
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.presets-frame::before {
+  left: 0;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--ink) var(--shade-share), transparent),
+    transparent
+  );
+  border-radius: var(--shade-radius) 0 0 var(--shade-radius);
+}
+
+.presets-frame::after {
+  right: 0;
+  background: linear-gradient(
+    to left,
+    color-mix(in srgb, var(--ink) var(--shade-share), transparent),
+    transparent
+  );
+  border-radius: 0 var(--shade-radius) var(--shade-radius) 0;
+}
+
+.presets-frame[data-more-before]::before,
+.presets-frame[data-more-after]::after {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .presets-frame::before,
+  .presets-frame::after {
+    transition: none;
+  }
+}
+
 .presets {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(5.75rem, 1fr));
+  display: flex;
   gap: 12px;
-  margin-bottom: 18px;
+  padding: 4px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-padding-inline: 4px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.presets::-webkit-scrollbar {
+  display: none;
+}
+
+.presets-nav {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin: 6px 0 18px;
+}
+
+.presets-nav button {
+  width: 32px;
+  height: 28px;
+  padding: 0;
+  background: var(--paper, #fff);
+  border: 1px solid #d6d9e0;
+  border-radius: 6px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.presets-nav button:hover:not(:disabled) {
+  border-color: var(--ink-soft);
+}
+
+.presets-nav button:disabled {
+  color: #b8bcc6;
+  cursor: default;
 }
 
 .preset {
   display: flex;
+  flex: 0 0 5.75rem;
   flex-direction: column;
+  scroll-snap-align: start;
   align-items: stretch;
   gap: 8px;
   padding: 0;

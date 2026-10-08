@@ -30,6 +30,7 @@ import { createPortal } from "react-dom";
 
 import { SegmentIcon } from "../../src/react/icons";
 import { mapInks } from "./map-ink";
+import { markEdges } from "./scroll-edges";
 
 import {
   ADDRESS_EDITOR,
@@ -126,16 +127,6 @@ function inkBottom(label: HTMLElement): number {
     parseFloat(style.paddingTop) +
     ((Number.isNaN(line) ? glyphs : line) - glyphs) / 2;
   return top + face.ascent + face.ink;
-}
-
-/** Marks a scroller's frame with the edges there is more beyond. */
-function markEdges(scroller: HTMLElement) {
-  const frame = scroller.parentElement!;
-  frame.toggleAttribute("data-more-before", scroller.scrollLeft > 0.5);
-  frame.toggleAttribute(
-    "data-more-after",
-    scroller.scrollLeft + scroller.clientWidth < scroller.scrollWidth - 0.5,
-  );
 }
 
 /** "their addresses" as a line's tooltip starts it. */

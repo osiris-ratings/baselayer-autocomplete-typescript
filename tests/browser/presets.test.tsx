@@ -54,8 +54,8 @@ describe("the Styling panel's presets", () => {
             }
           });
         });
-        const panel = host.querySelector<HTMLElement>(".presets")!;
-        expect(panel.scrollWidth).toBeLessThanOrEqual(panel.clientWidth);
+        // The row scrolls; the page never does.
+        expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth);
       } finally {
         root.unmount();
         host.remove();
