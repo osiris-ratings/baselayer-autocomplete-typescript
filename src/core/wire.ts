@@ -458,8 +458,8 @@ function source(value: Json, path: string): Source {
 
 /**
  * The body of a 200 from `GET /autocomplete/{relation}`, validated. Unknown
- * keys are dropped, so the value a caller sees is exactly this type; unknown
- * enum values are kept as the strings they are.
+ * keys are dropped, so the value a caller sees is exactly this type; an
+ * unknown enum value is a contract error.
  */
 export function parseSuggestResponse<R extends Route>(
   relation: R,
