@@ -27,10 +27,14 @@ function mount(width: number) {
   host.className = "demo";
   host.style.width = `${width}px`;
   document.body.append(host);
-  const latest = { state: INITIAL_STYLE };
+  const latest = {
+    state: INITIAL_STYLE,
+    set: (() => {}) as (state: StyleState) => void,
+  };
   function Kept() {
     const [state, setState] = useState<StyleState>(INITIAL_STYLE);
     latest.state = state;
+    latest.set = setState;
     return <StylingPanel state={state} onChange={setState} />;
   }
   const root = createRoot(host);
@@ -208,4 +212,42 @@ describe("the presets' carousel", () => {
       done();
     }
   });
+
+  for (const width of [560, 320]) {
+    it(`never moves the form when the Custom label comes and goes, at ${width}px`, async () => {
+      const { scroller, frame: carousel, latest, done } = mount(width);
+      try {
+        const fold = scroller
+          .closest(".styling-panel")!
+          .querySelector(".presets-nav")!.nextElementSibling!;
+        const tops = () => [
+          carousel.getBoundingClientRect().top,
+          fold.getBoundingClientRect().top,
+        ];
+        const custom = () =>
+          scroller
+            .closest(".styling-panel")!
+            .querySelector<HTMLElement>(".presets-custom")!;
+        expect(getComputedStyle(custom()).visibility).toBe("hidden");
+        const before = tops();
+        flushSync(() =>
+          latest.set({
+            ...latest.state,
+            look: { ...latest.state.look, titleColor: "#123456" },
+          }),
+        );
+        expect(activePreset(latest.state)).toBeNull();
+        expect(getComputedStyle(custom()).visibility).toBe("visible");
+        expect(tops()).toEqual(before);
+        await userEvent.click(
+          scroller.querySelector<HTMLElement>('[role="radio"]')!,
+        );
+        expect(activePreset(latest.state)?.name).toBe(PRESETS[0]!.name);
+        expect(tops()).toEqual(before);
+        expect(getComputedStyle(custom()).visibility).toBe("hidden");
+      } finally {
+        done();
+      }
+    });
+  }
 });

@@ -136,7 +136,14 @@ export function StylingPanel({
     <div className="styling-panel">
       <div className="presets-head">
         <p className="mono-label">Presets</p>
-        {active === null && <p className="hint">Custom</p>}
+        {/* Always laid out, so the form below never moves as it comes and goes. */}
+        <p
+          className="hint presets-custom"
+          aria-hidden={active !== null}
+          data-shown={active === null || undefined}
+        >
+          Custom
+        </p>
       </div>
       <PresetCarousel state={state} onChange={onChange} />
 

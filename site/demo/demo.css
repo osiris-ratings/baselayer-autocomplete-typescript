@@ -2450,6 +2450,10 @@
   margin: 0;
 }
 
+.presets-custom:not([data-shown]) {
+  visibility: hidden;
+}
+
 /* One row that scrolls sideways, snapping to a preset, with the row map's
    shade at each edge there is more beyond, in the page's ink. The shade
    spans the whole item, swatch and name, and the row's padding past both,
