@@ -158,6 +158,8 @@ pnpm demo` runs it on made-up data with no network. In Styling, the row map
   dragged into place, and a segment's icon goes on or off from its chip, frozen
   on a hidden line; each line keeps to one row, scrolling sideways when out of
   room. The preview draws the same row, and the export writes its props.
+  Twenty presets, in a carousel that pages sideways, each set the colors, how
+  a match is marked, the font, the shape and sizes, and each search's row.
 
 ### Changed
 
