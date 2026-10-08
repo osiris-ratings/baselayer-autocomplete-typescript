@@ -5,6 +5,9 @@ import {
   resolveLayout,
   type RowKind,
 } from "@baselayer-sdk/autocomplete";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -230,6 +233,26 @@ describe("the presets", () => {
       expect(preset.highlight?.matchEmphasisColor, preset.name).toMatch(
         /^#[0-9a-f]{6}$/,
       );
+    }
+  });
+
+  it("draw the mono font only in the weights the page loads for it", () => {
+    // The weights fonts.ts loads Geist Mono in: any other is drawn faux bold.
+    const loaded = [
+      ...readFileSync(
+        join(__dirname, "../../site/shared/fonts.ts"),
+        "utf8",
+      ).matchAll(/@fontsource\/geist-mono\/(\d+)\.css/g),
+    ].map(found => found[1]);
+    expect(loaded.length).toBeGreaterThan(0);
+    const mono = PRESETS.filter(preset =>
+      preset.vars["--bl-ac-font"]?.includes("Geist Mono"),
+    );
+    expect(mono.length).toBeGreaterThan(0);
+    for (const preset of mono) {
+      const { look, vars } = applyPreset(DEFAULT_STYLE, preset);
+      expect(loaded, preset.name).toContain(vars["--bl-ac-name-weight"]);
+      expect(look.matchEmphasis, preset.name).not.toBe("weight");
     }
   });
 

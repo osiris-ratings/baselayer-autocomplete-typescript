@@ -1370,9 +1370,11 @@ export const PRESETS: Preset[] = [
       "--bl-ac-pill-radius": "0",
       "--bl-ac-shadow": "none",
       "--bl-ac-font": MONO,
+      // Geist Mono loads in 400 and 500 only; a heavier name is faux bold.
+      "--bl-ac-name-weight": "500",
     },
     highlight: {
-      matchEmphasis: "weight",
+      matchEmphasis: "ink",
       matchEmphasisRegion: "substring",
       matchEmphasisColor: "#fd971f",
     },
@@ -1526,6 +1528,7 @@ export const PRESETS: Preset[] = [
       "--bl-ac-pill-radius": "2px",
       "--bl-ac-shadow": "0 18px 48px rgba(0, 0, 0, 0.55)",
       "--bl-ac-font": MONO,
+      "--bl-ac-name-weight": "500",
     },
     highlight: { matchEmphasis: "ink", matchEmphasisRegion: "token" },
     rows: {
@@ -1647,9 +1650,10 @@ export const PRESETS: Preset[] = [
       "--bl-ac-shadow": "none",
       "--bl-ac-line-height": "1.6",
       "--bl-ac-font": MONO,
+      "--bl-ac-name-weight": "500",
     },
     highlight: {
-      matchEmphasis: "weight",
+      matchEmphasis: "underline",
       matchEmphasisRegion: "substring",
       matchEmphasisColor: "#94540f",
     },
