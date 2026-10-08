@@ -69,6 +69,12 @@ release.
   `aria-disabled`, which a screen reader calls unavailable, the keys pass over
   and a click does not pick; a head still names its group. `isItemDisabled` on
   `useSuggestionCombobox` does the same for a host's own rows.
+- A grouped row's line, the head's too, gives way in reading order when it runs
+  out of room, whatever the layout: the name keeps its width, up to 60% of the
+  line, and is cut only after the text that follows it; the squares, the icons
+  and the role keep theirs, and nothing overlaps. The states and the role are
+  columns only at the right of a line, and a field placed beside the name sits
+  one gap after it. In a group narrower than 22.5rem the columns go.
 - The line under the field after a pick from a line under a row
   (`bl-ac-selection`, a `GroupedSelection` on the views), the field described
   by it. It names the picked line while the field holds the name the pick put
@@ -130,12 +136,17 @@ release.
   `relationCounts`, `moreNotShown`, `personRoles`, `addressRoles`,
   `outOfScope` and `routeUnserved`. Slots: `group`, `groupHead`, `groupLine`,
   `lineName`, `counts`, `role`, `more`, `icon` and `selection`.
-- The demo searches by business, person or address, offering what the
-  session's scope allows, and `DEMO_API=sample pnpm demo` runs it on made-up
-  data with no network. In Styling, the row map builds each search's row: a
-  segment is dragged into a place, each line is switched Off, Visible or
-  Enabled, and a segment's icon goes on or off from its chip; the preview
-  draws the same row and the export writes its props.
+- The demo searches by business, person or address, offering what the session's
+  scope allows, each search keeping its own text and pick, and `DEMO_API=sample
+pnpm demo` runs it on made-up data with no network. In Styling, the row map
+  builds each search's row: a line is dragged by its grip between the Shown and
+  the Hidden drawers, and reordered in Shown, the others making way; a Disabled
+  checkbox, in a column with a guide down it, keeps a shown line from being
+  chosen and draws it dimmed; the faintly striped Hidden drawer holds the hidden
+  lines and the fields the row leaves out; a field is dragged into place, and a
+  segment's icon goes on or off from its chip, frozen on a hidden line; each
+  line keeps to one row, scrolling sideways when out of room. The preview draws
+  the same row, and the export writes its props.
 
 ### Changed
 

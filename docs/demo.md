@@ -226,18 +226,24 @@ lying over it. With nothing typed it shows made-up rows, as many as Rows asks
 for (five by default, eight at most), that carry every field of a row
 (highlighted words, a matched alternative name, the domicile square and the
 overflow, a spread of structures, one on a name with no suffix and one not
-known, an address, officers with a +N, a registered agent, the count), so
-every knob can be judged before a keystroke; type a name and the real rows
-take their place. On Person and Address the made-up rows are people and
-addresses, each with its businesses, as many as Rows asks for. The
-Components fold edits the row of the search the form is on, with a tab for
-each (Business, Person, Address) that moves the form with it. On Person and
-Address it says first what each row lists under it (a person's addresses,
-the people at an address) and what can be picked (the businesses, the row
-itself, what it lists), then draws that row's places, a field moving only
-within its own line. The rows pretend "harbor concr" was typed, one word in full
-and the next only begun, so the region shows its difference: whole word
-highlights CONCRETE, typed characters only its CONCR.
+known, an address, officers with a +N, a registered agent, the count), so every
+knob can be judged before a keystroke; type a name and the real rows take their
+place. On Person and Address the made-up rows are people and addresses, each
+with its businesses, as many as Rows asks for. The Components fold edits the
+row of the search the form is on, with a tab for each (Business, Person,
+Address) that moves the form with it. Its row map draws each line of that row,
+the head first, in two drawers. Shown holds the lines the row lists, in the
+order it lists them: a line is dragged by its grip to another spot in Shown,
+the other lines making way, or into Hidden to leave it out, and back again as
+it was. A shown line's Disabled checkbox, in a column with a faint guide down
+it, keeps it from being chosen, and the line is drawn dimmed, as the menu draws
+it. Hidden, faintly striped, holds the hidden lines and the fields the row
+leaves out. A field moves only within its own line, and a segment's icon goes
+on or off from its chip: on, off with a slash, or frozen on a hidden line. Each
+line keeps to one row, scrolling sideways when it runs out of room. The rows
+pretend "harbor concr" was typed, one word in full and the next only begun, so
+the region shows its difference: whole word highlights CONCRETE, typed
+characters only its CONCR.
 
 Behavior acts on the sample rows as it would on real ones: Rows sets how many
 there are, up to the sample's eight. The characters, the pause and the session
@@ -252,43 +258,43 @@ colors: Light (the default, with matched ink in green), Baselayer, Midnight,
 Monokai, Sepia and Rosé. A preset sets the colors, the corners and the shadow,
 and leaves your sizes, behavior and text alone. Then every knob the styled
 component has, in sections that start folded: the components a row shows, drawn
-as the row itself (the name, which always shows, then each line's two corners, a
-field and the badge pinned to its inner side; each place drawn as the field it
-holds, and as wide as where it sits, whatever it holds, so the two lines'
-columns line up and a chevron stays put. Under the row, a table says which
-fields of the autocomplete service's answer each field reads. A field is
-dragged, by mouse or by finger, onto another place, where it swaps with what was
-there, or onto a tray of the fields the row leaves out. While it flies, tilted
-and drawn as the cell it left, every spot that takes it is lit. The fold shows
-only layouts the row can draw: a drop lands only where the field would stay; a
-place nothing can go in yet, a badge beside an empty field or the second line's
-right with no lead, is hidden, keeping its room; and a field that leaves the
-lead lets the right corner slide into it, as the row does. Each place's chevron
-is also a dropdown of what it can show, and picking a field from another place
-swaps it with what the place held, as a drop does), how matched words are
-highlighted (the emphasis, the region, and one color override for every
-emphasis) and whether the footer shows the round trip and the index that
-answered (`look.showDebugInfo`, a switch in the same fold), every color (the
-`look` prop's and the stylesheet's own variables, each with a swatch that opens
-a color picker), the font (the page's, the system's, a serif or a mono this page
-loads, or a stack of your own; the name's weight and the weight emphasis's two;
-and the HTML or CSS that loads a font of your own in the weights picked), shape
-and size, behavior (rows, 1 to 20; the characters typed before it asks, 2 to 10
-and 3 by default; the pause before asking; when the session is minted: on the
-first keystroke, as it is by default, on focus or with the first request; and
-whether the menu is as wide as the input, as it is by default), the text (the
-label, and every message that is a string: `more` and `httpFallback` are
-functions, so they keep their defaults; and each structure's flag, an empty one
-drawing none), and the markup switches (`classNames`, `unstyled`). Changes apply
-as you make them. A color changed from its preset's carries a reset inside its
-field, which puts back the value the last preset chosen gave it. **Your
-configuration** at the bottom is the code that reproduces the result, in a React
-tab and a CSS tab with a **Copy**: the props every host gives (the `id` filled
-in; the client, the value and the handlers left to you), then those that differ
-from the defaults (the `layout` names only the places that differ from the
-SDK's), for the search the form is on, and the CSS variables to set. Its
-**Reset** puts the whole panel back as it opened: the Light preset and every
-default.
+as the row itself (the name, which always shows, then each line's two corners,
+a field and the badge pinned to its inner side; each place drawn as the field
+it holds, and as wide as where it sits, whatever it holds, so the two lines'
+columns line up and a chevron stays put. Under the row, folded away, a table
+says which fields of the autocomplete service's answer each field reads. A
+field is dragged, by mouse or by finger, onto another place, where it swaps
+with what was there, or into Hidden, with the fields the row leaves out. While
+it flies, tilted and drawn as the cell it left, every spot that takes it is
+lit. The fold shows only layouts the row can draw: a drop lands only where the
+field would stay; a place nothing can go in yet, a badge beside an empty field
+or the second line's right with no lead, is hidden, keeping its room; and a
+field that leaves the lead lets the right corner slide into it, as the row
+does. Each place's chevron is also a dropdown of what it can show, and picking
+a field from another place swaps it with what the place held, as a drop does),
+how matched words are highlighted (the emphasis, the region, and one color
+override for every emphasis) and whether the footer shows the round trip and
+the index that answered (`look.showDebugInfo`, a switch in the same fold),
+every color (the `look` prop's and the stylesheet's own variables, each with a
+swatch that opens a color picker), the font (the page's, the system's, a serif
+or a mono this page loads, or a stack of your own; the name's weight and the
+weight emphasis's two; and the HTML or CSS that loads a font of your own in the
+weights picked), shape and size, behavior (rows, 1 to 20; the characters typed
+before it asks, 2 to 10 and 3 by default; the pause before asking; when the
+session is minted: on the first keystroke, as it is by default, on focus or
+with the first request; and whether the menu is as wide as the input, as it is
+by default), the text (the label, and every message that is a string: `more`
+and `httpFallback` are functions, so they keep their defaults; and each
+structure's flag, an empty one drawing none), and the markup switches
+(`classNames`, `unstyled`). Changes apply as you make them. A color changed
+from its preset's carries a reset inside its field, which puts back the value
+the last preset chosen gave it. **Your configuration** at the bottom is the
+code that reproduces the result, in a React tab and a CSS tab with a **Copy**:
+the props every host gives (the `id` filled in; the client, the value and the
+handlers left to you), then those that differ from the defaults (the `layout`
+names only the places that differ from the SDK's), for the search the form is
+on, and the CSS variables to set. Its **Reset** puts the whole panel back as it
+opened: the Light preset and every default.
 
 ![The styling panel](images/demo-styling.png)
 
