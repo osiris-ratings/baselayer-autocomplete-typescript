@@ -1108,7 +1108,7 @@
   box-shadow:
     0 0 0 1px var(--map-border, var(--line-soft)),
     0 10px 24px rgba(9, 35, 79, 0.18);
-  transform: rotate(-2deg);
+  transform: rotate(-1deg);
 }
 
 .row-map-row-ghost[data-settling] {
@@ -1450,9 +1450,14 @@
 }
 
 .row-map[data-dragging] .row-map-place:not([data-accepts]),
-.row-map-chip[data-dragged],
-.row-map-kind[data-dragged] {
+.row-map-chip[data-dragged] {
   opacity: 0.4;
+}
+
+/* A carried line is not drawn in its drawer: where it would drop is a blank
+   line, and the copy in hand is all there is of it. */
+.row-map-kind[data-dragged] {
+  opacity: 0;
 }
 
 /* A place nothing can go in until the one beside it is filled is not drawn,

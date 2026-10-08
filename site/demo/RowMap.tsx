@@ -60,6 +60,12 @@ type DropSpot = string;
 const DRAG_SLOP = 4;
 
 /**
+ * How far past a line's middle the pointer goes before a carried line's slot
+ * moves past it, so a hand resting on the boundary does not flip the order.
+ */
+const DEAD_BAND = 8;
+
+/**
  * How long after a drop a click on what was dragged is the browser's own,
  * from the pointer's release, and not a press of its own.
  */
@@ -318,8 +324,11 @@ function useFieldDrag(
       update(null);
       if (now.moving) {
         droppedAt.current = Date.now();
-        // Where it is let go, which a scroll since the last move can change.
-        const spot = landing(now.field, event.clientX, event.clientY);
+        // A line lands in the slot it was shown; a field where it is let go,
+        // which a scroll since the last move can change.
+        const spot = now.lifted.line
+          ? now.over
+          : landing(now.field, event.clientX, event.clientY);
         if (spot !== null) latest.current.onDrop(now.field, spot);
         latest.current.onLetGo(now);
         return;
@@ -463,6 +472,55 @@ function Ghost({
       </span>
     </span>
   );
+}
+
+type Drawer = typeof SHOWN | typeof HIDDEN;
+const DRAWERS: readonly Drawer[] = [SHOWN, HIDDEN];
+
+/** The drawers as a line was lifted from them: where its slot can go. */
+interface Slots {
+  relation: Relation;
+  /** The drawer it came from, and its place among that drawer's lines. */
+  origin: Drawer;
+  from: number;
+  /** A line and the gap after it. */
+  step: number;
+  /** The middles of Shown's other lines, from the top of its frame. */
+  middles: number[];
+  /** Its place in Hidden, which keeps the row's own order. */
+  hiddenAt: number;
+}
+
+/**
+ * Shown's and Hidden's lines, untransformed, as `carried` is lifted. `order`
+ * is the row's own order of its lines, which Hidden keeps.
+ */
+function snapshot(
+  carried: Relation,
+  shown: HTMLElement[],
+  hidden: HTMLElement[],
+  order: readonly string[],
+): Slots | null {
+  const origin = shown.some(row => row.dataset.relation === carried)
+    ? SHOWN
+    : HIDDEN;
+  const lines = origin === SHOWN ? shown : hidden;
+  const lifted = lines.find(row => row.dataset.relation === carried);
+  if (lifted === undefined) return null;
+  const gap = parseFloat(getComputedStyle(lifted.parentElement!).rowGap || "0");
+  const rank = (relation: string | undefined) => order.indexOf(relation ?? "");
+  return {
+    relation: carried,
+    origin,
+    from: lines.indexOf(lifted),
+    step: lifted.offsetHeight + gap,
+    middles: shown
+      .filter(row => row !== lifted)
+      .map(row => row.offsetTop + row.offsetHeight / 2),
+    hiddenAt: hidden.filter(
+      row => row !== lifted && rank(row.dataset.relation) < rank(carried),
+    ).length,
+  };
 }
 
 /** How long a let-go row takes to settle flat into its place. */
@@ -931,54 +989,105 @@ function KindRowMap<P extends string, F extends string>({
     }
     return () => observer.disconnect();
   }, []);
-  // A line carried over Shown makes its way: the lines it would land among
-  // slide aside to open its gap there, and the row it was lifted from goes
-  // to the gap, so the drawer shows the order a drop would make.
+  // A carried line leaves a blank line where a drop would put it: in the
+  // drawer under the pointer, or where it came from over neither. The lines
+  // around the slot slide aside, the drawer it would join grows by a line and
+  // the one it left closes up. Where the slot falls is read off the drawers as
+  // they were when the line was lifted, which no slide moves, and it passes a
+  // line only once the pointer is clearly past that line's middle.
   const carried = moving === null ? null : relationOf(moving.field);
   const pointerY = moving?.y ?? null;
+  const slots = useRef<Slots | null>(null);
+  // The row's own order of its lines, as each one is named in the DOM.
+  const lineOrder = kinds.map(kind => kind.relation ?? "head").join(" ");
+  /** The slot in Shown while the pointer is over it, for the dead band. */
+  const held = useRef<number | null>(null);
   useLayoutEffect(() => {
-    const scroller = shownScroller.current;
-    if (scroller === null) return;
-    const rows = [
-      ...scroller.querySelectorAll<HTMLElement>(
+    const scrollers = {
+      [SHOWN]: shownScroller.current,
+      [HIDDEN]: hiddenScroller.current,
+    };
+    const lines = (drawer: Drawer) => [
+      ...(scrollers[drawer]?.querySelectorAll<HTMLElement>(
         '.row-map-kind:not([data-relation="head"])',
-      ),
+      ) ?? []),
     ];
-    for (const row of rows) row.style.transform = "";
-    scroller.style.paddingBottom = "";
-    dropAt.current = null;
-    if (carried === null || over !== SHOWN || pointerY === null) return;
-    // Measured untransformed: an offset ignores the slides above.
-    const frame = scroller.parentElement!;
-    const y = pointerY - frame.getBoundingClientRect().top + scroller.scrollTop;
-    const others = rows.filter(row => row.dataset.relation !== carried);
-    const at = others.filter(
-      row => row.offsetTop + row.offsetHeight / 2 < y,
-    ).length;
-    dropAt.current = at;
-    const lifted =
-      rows.find(row => row.dataset.relation === carried) ??
-      wrap.current?.querySelector<HTMLElement>(
-        `[data-drawer="hidden"] .row-map-kind[data-relation="${carried}"]`,
-      ) ??
-      null;
-    const step =
-      (lifted?.offsetHeight ?? 0) +
-      parseFloat(getComputedStyle(scroller).rowGap || "0");
-    const from = others.length === rows.length ? null : rows.indexOf(lifted!);
-    others.forEach((row, index) => {
-      const was = from !== null && index >= from ? index + 1 : index;
-      const now = index >= at ? index + 1 : index;
-      if (now !== was)
-        row.style.transform = `translateY(${(now - was) * step}px)`;
-    });
-    if (from === null) {
-      // From Hidden: the drawer grows by the line it is to take.
-      scroller.style.paddingBottom = `${step}px`;
-    } else if (lifted !== null && at !== from) {
-      lifted.style.transform = `translateY(${(at - from) * step}px)`;
+    if (carried === null) {
+      for (const drawer of DRAWERS) {
+        const scroller = scrollers[drawer];
+        if (scroller === null) continue;
+        for (const row of lines(drawer)) row.style.transform = "";
+        scroller.style.paddingBottom = "";
+        scroller.style.marginBottom = "";
+        delete scroller.closest<HTMLElement>(".row-map-drawer")?.dataset.slot;
+      }
+      slots.current = null;
+      held.current = null;
+      dropAt.current = null;
+      return;
     }
-  }, [carried, over, pointerY]);
+    if (slots.current?.relation !== carried) {
+      slots.current = snapshot(
+        carried,
+        lines(SHOWN),
+        lines(HIDDEN),
+        lineOrder.split(" "),
+      );
+      held.current = null;
+    }
+    const at = slots.current;
+    const shown = scrollers[SHOWN];
+    if (at === null || shown === null) return;
+    let target = at.origin;
+    let slot = at.from;
+    if (over === SHOWN && pointerY !== null) {
+      // Measured untransformed: an offset ignores the slides above.
+      const frame = shown.parentElement!;
+      const y = pointerY - frame.getBoundingClientRect().top + shown.scrollTop;
+      slot = held.current ?? at.middles.filter(middle => middle < y).length;
+      while (slot < at.middles.length && y > at.middles[slot]! + DEAD_BAND) {
+        slot += 1;
+      }
+      while (slot > 0 && y < at.middles[slot - 1]! - DEAD_BAND) slot -= 1;
+      held.current = slot;
+      target = SHOWN;
+    } else {
+      held.current = null;
+      if (over === HIDDEN) {
+        target = HIDDEN;
+        slot = at.hiddenAt;
+      }
+    }
+    dropAt.current = over === SHOWN ? slot : null;
+    for (const drawer of DRAWERS) {
+      const scroller = scrollers[drawer];
+      if (scroller === null) continue;
+      const origin = drawer === at.origin;
+      const opens = drawer === target;
+      lines(drawer)
+        .filter(row => row.dataset.relation !== carried)
+        .forEach((row, index) => {
+          const was = origin && index >= at.from ? index + 1 : index;
+          const now = opens && index >= slot ? index + 1 : index;
+          const slide =
+            now === was ? "" : `translateY(${(now - was) * at.step}px)`;
+          // Only a change: a slide set again would start over.
+          if (row.style.transform !== slide) row.style.transform = slide;
+        });
+      const grow = opens && !origin ? `${at.step}px` : "";
+      const close = origin && !opens ? `${-at.step}px` : "";
+      if (scroller.style.paddingBottom !== grow) {
+        scroller.style.paddingBottom = grow;
+      }
+      if (scroller.style.marginBottom !== close) {
+        scroller.style.marginBottom = close;
+      }
+      const holder = scroller.closest<HTMLElement>(".row-map-drawer");
+      if (holder === null) continue;
+      if (opens) holder.dataset.slot = String(slot);
+      else delete holder.dataset.slot;
+    }
+  }, [carried, over, pointerY, lineOrder]);
   // A line let go settles where its row now rests, which the drop has drawn.
   useLayoutEffect(() => {
     if (landing === null || landing.to !== null) return;

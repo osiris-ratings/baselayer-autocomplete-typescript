@@ -151,8 +151,8 @@ describe("a line carried by its grip", () => {
         expect(row!.hasAttribute("data-dragged")).toBe(false);
 
         const tilt = degrees(getComputedStyle(card()).transform);
-        expect(Math.abs(tilt)).toBeGreaterThanOrEqual(1.5);
-        expect(Math.abs(tilt)).toBeLessThanOrEqual(3.5);
+        expect(Math.abs(tilt)).toBeGreaterThanOrEqual(0.75);
+        expect(Math.abs(tilt)).toBeLessThanOrEqual(1.25);
 
         // Held where it was grabbed: the pointer is over the copy's grip.
         const copyGrip = row!
