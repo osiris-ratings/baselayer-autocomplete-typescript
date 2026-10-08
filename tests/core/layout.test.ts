@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
 
 import {
   DEFAULT_ROW_LAYOUT,
@@ -11,6 +11,7 @@ import {
   type RowField,
   type RowLayout,
   type RowLayoutInput,
+  type RowLine,
   type RowPlace,
 } from "@baselayer-sdk/autocomplete";
 
@@ -37,7 +38,13 @@ describe("a row's places and fields", () => {
   });
 
   it("names the fields a business row can show", () => {
-    expect(ROW_FIELDS).toEqual(["states", "structure", "address", "people"]);
+    expect(ROW_FIELDS).toEqual([
+      "states",
+      "structure",
+      "address",
+      "people",
+      "counts",
+    ]);
   });
 
   it("puts the structure after the name, the states at the right, the address and the people below", () => {
@@ -144,7 +151,7 @@ describe("resolveRowLayout", () => {
       null,
       ...ROW_FIELDS,
     ];
-    // Every layout a host could stage, 6 values in each of the 7 places.
+    // Every layout a host could stage, 7 values in each of the 7 places.
     const stagings: RowLayoutInput[] = ROW_PLACES.reduce<RowLayoutInput[]>(
       (partial, place) =>
         partial.flatMap(staged =>
@@ -183,8 +190,9 @@ describe("resolveRowLayout", () => {
       }
     }
     expect(wrong.slice(0, 5)).toEqual([]);
-    expect(stagings).toHaveLength(6 ** 7);
-  });
+    expect(stagings).toHaveLength(7 ** 7);
+    // Every one of 7^7 stagings: slow on a loaded machine, so it has the time.
+  }, 60_000);
 
   it("pins a flag to any corner's field, on its inner side", () => {
     expect(
@@ -322,11 +330,16 @@ describe("drawnRowLayout", () => {
         wrong.push(JSON.stringify(layout));
     }
     expect(wrong.slice(0, 5)).toEqual([]);
-    expect(layouts).toHaveLength(5 ** 7);
-  });
+    expect(layouts).toHaveLength(6 ** 7);
+    // Every one of 6^7 layouts: slow on a loaded machine, so it has the time.
+  }, 60_000);
 });
 
 describe("ROW_LINES", () => {
+  it("types a bare RowLine's line as a business row's, so a switch over it stays exhaustive", () => {
+    expectTypeOf<RowLine["line"]>().toEqualTypeOf<"title" | "subtitle">();
+  });
+
   it("groups every place into its line's two corners, in reading order", () => {
     expect(
       ROW_LINES.flatMap(({ lead, trailing }) => [

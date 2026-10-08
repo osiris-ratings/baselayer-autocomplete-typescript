@@ -39,6 +39,9 @@ const cinder: BusinessSuggestion = {
           label: "NORTHGATE AGENT SERVICES, INC",
           role: "agent",
           matched: false,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
         {
           type: "person",
@@ -46,6 +49,9 @@ const cinder: BusinessSuggestion = {
           label: "Wesley Crane",
           role: "officer",
           matched: false,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
         {
           type: "person",
@@ -53,6 +59,9 @@ const cinder: BusinessSuggestion = {
           label: "Ada Fox",
           role: "officer",
           matched: false,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
       ],
     },
@@ -67,9 +76,12 @@ const cinder: BusinessSuggestion = {
         {
           type: "address",
           token: "tok-7f1a2c3d",
-          label: "412 Orchard Ln, Springfield, MO 65806",
+          label: "412 Wrenmoor Ln, Springfield, MO 65806",
           role: "principal",
           matched: false,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
         {
           type: "address",
@@ -77,13 +89,19 @@ const cinder: BusinessSuggestion = {
           label: "PO Box 4417, Durham, NC 27702",
           role: "mailing",
           matched: false,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
         {
           type: "address",
           token: "tok-8f1a2c3d",
-          label: "88 Cactus Wren Dr, Tempe, AZ 85281",
+          label: "88 Thistlecrest Dr, Tempe, AZ 85281",
           role: "agent",
           matched: false,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
       ],
     },
@@ -121,6 +139,9 @@ const agentsOnly: BusinessSuggestion = {
           label: "NORTHGATE AGENT SERVICES, INC",
           role: "agent",
           matched: false,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
         {
           type: "person",
@@ -128,6 +149,9 @@ const agentsOnly: BusinessSuggestion = {
           label: "LAKESIDE FILING AGENTS",
           role: "agent",
           matched: false,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
       ],
     },
@@ -152,6 +176,9 @@ const crowded: BusinessSuggestion = {
           label: "Wesley Crane",
           role: "officer",
           matched: false,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
         {
           type: "person",
@@ -159,6 +186,9 @@ const crowded: BusinessSuggestion = {
           label: "Ada Fox",
           role: "officer",
           matched: false,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
         {
           type: "person",
@@ -166,6 +196,9 @@ const crowded: BusinessSuggestion = {
           label: "Sam Lee",
           role: "officer",
           matched: false,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
       ],
     },
@@ -174,7 +207,9 @@ const crowded: BusinessSuggestion = {
 
 describe("leadAddressOf", () => {
   it("takes the autocomplete service's first address whatever its role, and nothing from an empty head", () => {
-    expect(leadAddressOf(cinder)).toBe("412 Orchard Ln, Springfield, MO 65806");
+    expect(leadAddressOf(cinder)).toBe(
+      "412 Wrenmoor Ln, Springfield, MO 65806",
+    );
     // The autocomplete service ranks a registered agent's address last, but
     // when it is all a family has, it is the family's lead address rather than
     // nothing.
@@ -191,7 +226,7 @@ describe("leadAddressOf", () => {
       },
     };
     expect(leadAddressOf(agentAddressOnly)).toBe(
-      "88 Cactus Wren Dr, Tempe, AZ 85281",
+      "88 Thistlecrest Dr, Tempe, AZ 85281",
     );
     expect(leadAddressOf(stable)).toBeNull();
   });
@@ -296,10 +331,10 @@ describe("structureLabel", () => {
     expect(structureLabel("PROFESSIONAL_ASSOCIATION")).not.toBe("PA");
   });
 
-  it("draws no flag for no structure, or for one this build has no label for", () => {
-    // `structure` is open: a newer autocomplete service's value is kept, and
-    // draws nothing until a build labels it. So does a value that happens to
-    // name a member of every object.
+  it("draws no flag for no structure, or for a value untyped data slips in", () => {
+    // The parser refuses a structure the contract does not list, but a host
+    // calling this with untyped data still gets no flag, even for a value
+    // that names a member of every object.
     for (const structure of [
       null,
       "FOUNDATION",
@@ -308,7 +343,10 @@ describe("structureLabel", () => {
       "toString",
       "__proto__",
     ]) {
-      expect(structureLabel(structure), String(structure)).toBeNull();
+      expect(
+        structureLabel(structure as BusinessStructure | null),
+        String(structure),
+      ).toBeNull();
     }
   });
 
@@ -317,14 +355,12 @@ describe("structureLabel", () => {
       LLC: "L.L.C.",
       C_CORPORATION: "",
       OTHER: "Other",
-      FOUNDATION: "Foundation",
     };
 
     expect(structureLabel("LLC", labels)).toBe("L.L.C.");
     expect(structureLabel("S_CORPORATION", labels)).toBe("S-Corp");
     expect(structureLabel("C_CORPORATION", labels)).toBeNull();
     expect(structureLabel("OTHER", labels)).toBe("Other");
-    expect(structureLabel("FOUNDATION", labels)).toBe("Foundation");
     expect(structureLabel(null, labels)).toBeNull();
   });
 

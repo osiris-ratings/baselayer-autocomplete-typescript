@@ -35,8 +35,9 @@ function describeRefusal(refused: Refused): string {
     return "The key lacks the autocomplete.read permission.";
   if (status === 403 && code === 37)
     return "Autocomplete is not enabled for this organization.";
+  // Only a deployment from before sandbox support answers 483.
   if (status === 422 && code === 483)
-    return "The key belongs to a sandbox application; use a production application's key.";
+    return "This deployment does not serve sandbox sessions yet.";
   if (status === 429) {
     const wait = refused.retryAfterSeconds;
     return `The organization's session pool is spent${wait !== null ? `; it admits another in ${wait} s` : ""}.`;

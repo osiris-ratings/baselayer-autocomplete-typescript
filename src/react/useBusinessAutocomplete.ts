@@ -19,11 +19,14 @@ import { resolveMessages, type AutocompleteMessages } from "./messages";
 export const MIN_QUERY_CHARS = 3;
 /** One window per keystroke; a keystroke inside it cancels the pending one. */
 export const DEBOUNCE_MS = 250;
-/** Rows per keystroke: five two-line cells plus the count row fit a field. */
+/**
+ * Rows per keystroke: five two-line cells plus the count row fit a field.
+ * Fewer when the session's scope allows fewer.
+ */
 export const DEFAULT_LIMIT = 5;
 
 export interface UseEntityAutocompleteOptions<R extends Relation> {
-  /** The route to ask: `businesses` today; people and addresses to come. */
+  /** The route to ask: `businesses`, `people` or `addresses`. */
   relation: R;
   /** The text as typed. */
   query: string;
@@ -32,7 +35,9 @@ export interface UseEntityAutocompleteOptions<R extends Relation> {
   client?: AutocompleteClient;
   /** Narrowing filters; held back while the text is shorter than the grant's stem. */
   filters?: FiltersByRelation[R];
+  /** Rows to ask for; left out, `DEFAULT_LIMIT` or the session's most, whichever is fewer. */
   limit?: number;
+  /** The relations to expand; any the session's scope does not grant are left out. */
   include?: IncludeOf<R>[];
   minChars?: number;
   debounceMs?: number;
@@ -72,6 +77,13 @@ export interface EntityAutocompleteState<R extends Relation> {
    * holds now, says what the rows matched on.
    */
   appliedFilters: FiltersByRelation[R] | undefined;
+  /**
+   * The relations `suggestions` expanded: those the answer's `sources` mark
+   * `ok`, whatever was asked for. Any other comes back empty (`not_requested`,
+   * as one the session's scope left out) or not looked at, so a row lists
+   * only these, whatever a grant since allows.
+   */
+  expanded: IncludeOf<R>[];
   requestId: string | null;
 }
 
@@ -91,6 +103,7 @@ export const EMPTY_AUTOCOMPLETE_STATE: BusinessAutocompleteState =
     errorKind: null,
     filtersWithheld: false,
     appliedFilters: undefined,
+    expanded: [],
     requestId: null,
   }) as BusinessAutocompleteState;
 
@@ -99,6 +112,15 @@ const UNAVAILABLE_STATE: BusinessAutocompleteState = Object.freeze({
   unavailable: true,
   errorKind: "session_unavailable",
 }) as BusinessAutocompleteState;
+
+/** The relations an answer expanded: those its `sources` mark `ok`. */
+function expandedIn<R extends Relation>(
+  sources: Record<IncludeOf<R>, { status: string }>,
+): IncludeOf<R>[] {
+  return (Object.keys(sources) as IncludeOf<R>[]).filter(
+    relation => sources[relation].status === "ok",
+  );
+}
 
 // One frozen empty state serves every route: its rows are an empty array.
 function emptyState<R extends Relation>(): EntityAutocompleteState<R> {
@@ -137,7 +159,7 @@ export function useEntityAutocomplete<R extends Relation>({
   enabled,
   client,
   filters,
-  limit = DEFAULT_LIMIT,
+  limit,
   include,
   minChars = MIN_QUERY_CHARS,
   debounceMs = DEBOUNCE_MS,
@@ -206,12 +228,20 @@ export function useEntityAutocomplete<R extends Relation>({
         unavailable: false,
       }));
       try {
+        // The session's scope bounds what is asked: the rows it allows, and
+        // the relations it grants. A relation it does not grant is simply not
+        // fetched, where the client would refuse the request.
+        const { scope } = await resolved.getSession();
+        const granted: readonly Relation[] = scope.routes[relation] ?? [];
+        const included = stableInclude?.filter(item => granted.includes(item));
         const result = await resolved.search(
           relation,
           {
             q: trimmedQuery,
-            limit,
-            ...(stableInclude !== undefined ? { include: stableInclude } : {}),
+            limit: limit ?? Math.min(DEFAULT_LIMIT, scope.maxLimit),
+            ...(included !== undefined && included.length > 0
+              ? { include: included }
+              : {}),
             ...(stableFilters !== undefined ? { filters: stableFilters } : {}),
           },
           { signal: controller.signal },
@@ -232,6 +262,7 @@ export function useEntityAutocomplete<R extends Relation>({
           errorKind: null,
           filtersWithheld: result.filtersWithheld,
           appliedFilters: result.filtersWithheld ? undefined : stableFilters,
+          expanded: expandedIn(result.response.sources),
           requestId: result.requestId,
         });
       } catch (error) {
@@ -264,6 +295,20 @@ export function useEntityAutocomplete<R extends Relation>({
           case "query_invalid":
             setState({ ...emptyState<R>(), errorKind: error.kind });
             return;
+          case "out_of_scope":
+            setState({
+              ...emptyState<R>(),
+              error: textRef.current.outOfScope,
+              errorKind: error.kind,
+            });
+            return;
+          case "route_unserved":
+            setState({
+              ...emptyState<R>(),
+              error: textRef.current.routeUnserved,
+              errorKind: error.kind,
+            });
+            return;
           case "auth_braked":
             setState({
               ...emptyState<R>(),
@@ -292,6 +337,12 @@ export function useEntityAutocomplete<R extends Relation>({
               errorKind: error.kind,
             });
             return;
+          default: {
+            // A kind added to the client without a case here fails to
+            // compile, rather than leaving the field searching forever.
+            const unhandled: never = error.kind;
+            return unhandled;
+          }
         }
       }
     }, debounceMs);

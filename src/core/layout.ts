@@ -4,7 +4,7 @@
  * each place shows. See docs/styling.md, "A row's places and fields".
  */
 
-import { ROUTES } from "./entities";
+import { ROUTES, type EntityType, type Relation } from "./entities";
 import type { Include } from "./wire";
 
 /**
@@ -27,10 +27,16 @@ export type RowPlace = (typeof ROW_PLACES)[number];
 
 /**
  * What a place can show of a business: its states (the domicile first, then
- * `+N`), its legal structure, its lead address, and its officers or its
- * registered agent.
+ * `+N`), its legal structure, its lead address, its officers or its
+ * registered agent, and how many people and addresses it has.
  */
-export const ROW_FIELDS = ["states", "structure", "address", "people"] as const;
+export const ROW_FIELDS = [
+  "states",
+  "structure",
+  "address",
+  "people",
+  "counts",
+] as const;
 export type RowField = (typeof ROW_FIELDS)[number];
 
 /** The field each place shows, or null for an empty place. */
@@ -49,36 +55,103 @@ export const DEFAULT_ROW_LAYOUT: Readonly<RowLayout> = Object.freeze({
   subtitleTrailing: "people",
 });
 
-function isField(value: unknown): value is RowField {
+/** A corner of a line: the place of its field, and of the badge pinned to the field's inner side. */
+export interface RowCorner<
+  Field extends string | null = RowPlace,
+  Badge extends string = RowPlace,
+> {
+  field: Field;
+  badge: Badge;
+}
+
+/** A line of a row: its lead corner, then its trailing corner. */
+export interface RowLine<
+  P extends string = RowPlace,
+  L extends string = "title" | "subtitle",
+> {
+  line: L;
+  /** When the lead's field is the row's name, which no place holds: null. */
+  lead: RowCorner<P | null, P>;
+  trailing: RowCorner<P, P>;
+  /** The entity the line draws, and so what `enabledLines` names to enable it. */
+  entity?: EntityType;
+  /** The relation a line lists, one line per item; null on the row's head. */
+  relation?: Relation | null;
+}
+
+/**
+ * A kind of row a host lays out: its places in reading order, the fields a
+ * place can show, its lines, and the field each place shows by default.
+ * `accepts` says which fields a place may hold; left out, any field may go in
+ * any place. `iconSegments` are the segments, names and fields, an icon can
+ * ride on.
+ */
+export interface RowKind<
+  P extends string,
+  F extends string,
+  S extends string = string,
+> {
+  places: readonly P[];
+  fields: readonly F[];
+  lines: readonly RowLine<P, string>[];
+  defaults: Readonly<Record<P, F | null>>;
+  accepts?: (place: P, field: F) => boolean;
+  iconSegments: readonly S[];
+}
+
+/** The field each place of a kind shows, or null for an empty place. */
+export type LayoutOf<P extends string, F extends string> = Record<P, F | null>;
+
+/** A layout of a kind as a host stages it: any place may be left out. */
+export type LayoutInputOf<P extends string, F extends string> = {
+  [K in P]?: F | null | undefined;
+};
+
+/** Whether `place` of `kind` may hold `value`, a field of that kind. */
+function holds<P extends string, F extends string>(
+  kind: RowKind<P, F>,
+  place: P,
+  value: unknown,
+): value is F {
   return (
     typeof value === "string" &&
-    (ROW_FIELDS as readonly string[]).includes(value)
+    (kind.fields as readonly string[]).includes(value) &&
+    (kind.accepts?.(place, value as F) ?? true)
   );
 }
 
 /**
- * The complete layout from a staged one. A place left out keeps its default
- * field unless the host placed that field somewhere else, and a field placed
- * twice stays in the first place in reading order, leaving the later one
- * empty: no field is drawn twice. A value this build cannot use counts as
- * left out, and so does a null layout.
+ * The complete layout of a kind from a staged one. A place left out keeps its
+ * default field unless the host placed that field somewhere else, and a field
+ * placed twice stays in the first place in reading order, leaving the later
+ * one empty: no field is drawn twice. A value this build cannot use, or one
+ * the place does not accept, counts as left out, and so does a null layout.
  */
-export function resolveRowLayout(input: RowLayoutInput | null = {}): RowLayout {
-  const staged: RowLayoutInput = input ?? {};
-  const placed = new Set(
-    ROW_PLACES.map((place): unknown => staged[place]).filter(isField),
-  );
-  const drawn = new Set<RowField>();
-  const layout = {} as RowLayout;
-  for (const place of ROW_PLACES) {
+export function resolveLayout<P extends string, F extends string>(
+  kind: RowKind<P, F>,
+  input: LayoutInputOf<P, F> | null = {},
+): LayoutOf<P, F> {
+  const staged: LayoutInputOf<P, F> = input ?? {};
+  const placed = new Set<F>();
+  for (const place of kind.places) {
     const value: unknown = staged[place];
-    const fallback = DEFAULT_ROW_LAYOUT[place];
-    const field =
-      value === null || isField(value)
-        ? value
-        : fallback !== null && placed.has(fallback)
-          ? null
-          : fallback;
+    if (holds(kind, place, value)) {
+      placed.add(value);
+    }
+  }
+  const drawn = new Set<F>();
+  const layout = {} as LayoutOf<P, F>;
+  for (const place of kind.places) {
+    const value: unknown = staged[place];
+    const fallback = kind.defaults[place];
+    const field: F | null =
+      value === null
+        ? null
+        : holds(kind, place, value)
+          ? value
+          : fallback !== null && placed.has(fallback)
+            ? null
+            : fallback;
     layout[place] = field !== null && drawn.has(field) ? null : field;
     if (field !== null) {
       drawn.add(field);
@@ -87,18 +160,43 @@ export function resolveRowLayout(input: RowLayoutInput | null = {}): RowLayout {
   return layout;
 }
 
-/** A corner of a line: the place of its field, and of the badge pinned to the field's inner side. */
-export interface RowCorner<Field extends RowPlace | null = RowPlace> {
-  field: Field;
-  badge: RowPlace;
+/**
+ * The layout of a kind as a row draws it. A badge beside an empty field is
+ * drawn as that field, and a line whose lead is empty draws its trailing
+ * corner there, badge and all: no badge is pinned beside nothing, and no line
+ * starts with a gap. A drawn layout is its own.
+ */
+export function drawnLayout<P extends string, F extends string>(
+  kind: RowKind<P, F>,
+  layout: LayoutOf<P, F>,
+): LayoutOf<P, F> {
+  const drawn = { ...layout };
+  for (const { lead, trailing } of kind.lines) {
+    for (const { field, badge } of [lead, trailing]) {
+      if (field !== null && drawn[field] === null) {
+        drawn[field] = drawn[badge];
+        drawn[badge] = null;
+      }
+    }
+    if (lead.field !== null && drawn[lead.field] === null) {
+      drawn[lead.field] = drawn[trailing.field];
+      drawn[lead.badge] = drawn[trailing.badge];
+      drawn[trailing.field] = null;
+      drawn[trailing.badge] = null;
+    }
+  }
+  return drawn;
 }
 
-/** A line of a row: its lead corner, then its trailing corner. */
-export interface RowLine {
-  line: "title" | "subtitle";
-  /** On the first line the lead's field is the name, which no place holds: null. */
-  lead: RowCorner<RowPlace | null>;
-  trailing: RowCorner;
+/**
+ * The complete layout from a staged one (`resolveLayout` for a business row).
+ * A place left out keeps its default field unless the host placed that field
+ * somewhere else, and a field placed twice stays in the first place in reading
+ * order, leaving the later one empty: no field is drawn twice. A value this
+ * build cannot use counts as left out, and so does a null layout.
+ */
+export function resolveRowLayout(input: RowLayoutInput | null = {}): RowLayout {
+  return resolveLayout(BUSINESS_HEAD, input);
 }
 
 /**
@@ -117,37 +215,33 @@ export const ROW_LINES = [
     lead: { field: "subtitle", badge: "subtitleBadge" },
     trailing: { badge: "subtitleTrailingBadge", field: "subtitleTrailing" },
   },
-] as const satisfies readonly RowLine[];
+] as const satisfies readonly RowLine<RowPlace, "title" | "subtitle">[];
 
 /**
- * The layout as a row draws it. A badge beside an empty field is drawn as
- * that field, and a line whose lead is empty draws its trailing corner there,
- * badge and all: no badge is pinned beside nothing, and no line starts with a
- * gap. A drawn layout is its own.
+ * A business row's head as a kind: any of its fields may go in any of its
+ * places. `BUSINESS_ROW` is the whole row, the lines it can list included.
  */
+const BUSINESS_HEAD: RowKind<RowPlace, RowField> = {
+  places: ROW_PLACES,
+  fields: ROW_FIELDS,
+  lines: ROW_LINES,
+  defaults: DEFAULT_ROW_LAYOUT,
+  iconSegments: [],
+};
+
+/** The layout as a business row draws it (`drawnLayout` for a business row). */
 export function drawnRowLayout(layout: RowLayout): RowLayout {
-  const drawn = { ...layout };
-  for (const { lead, trailing } of ROW_LINES) {
-    for (const { field, badge } of [lead, trailing]) {
-      if (field !== null && drawn[field] === null) {
-        drawn[field] = drawn[badge];
-        drawn[badge] = null;
-      }
-    }
-    if (lead.field !== null && drawn[lead.field] === null) {
-      drawn[lead.field] = drawn[trailing.field];
-      drawn[lead.badge] = drawn[trailing.badge];
-      drawn[trailing.field] = null;
-      drawn[trailing.badge] = null;
-    }
-  }
-  return drawn;
+  return drawnLayout(BUSINESS_HEAD, layout);
 }
 
-/** The related entity a field is drawn from; the states and the structure come on the row. */
-const FIELD_SOURCES: Partial<Record<RowField, Include>> = {
-  address: "addresses",
-  people: "people",
+/**
+ * The related entities a field is drawn from; the states and the structure
+ * come on the row, and the counts count every relation.
+ */
+const FIELD_SOURCES: Partial<Record<RowField, readonly Include[]>> = {
+  address: ["addresses"],
+  people: ["people"],
+  counts: ["people", "addresses"],
 };
 
 /**
@@ -161,9 +255,10 @@ export function includeForLayout(
 ): Include[] {
   const layout = resolveRowLayout(staged);
   const needed = new Set(
-    ROW_PLACES.map(place => layout[place]).map(field =>
-      field === null ? undefined : FIELD_SOURCES[field],
-    ),
+    ROW_PLACES.flatMap(place => {
+      const field = layout[place];
+      return field === null ? [] : (FIELD_SOURCES[field] ?? []);
+    }),
   );
   return ROUTES.businesses.includes.filter(relation => needed.has(relation));
 }

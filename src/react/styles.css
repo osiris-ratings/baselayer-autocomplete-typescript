@@ -261,6 +261,13 @@
   color: var(--bl-ac-subtitle);
 }
 
+/* A business row's counts give way as its other text does. */
+:is(.bl-ac-corner, .bl-ac-name-group) > .bl-ac-group-count {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .bl-ac-states {
   display: flex;
   gap: 0.25rem;
@@ -299,6 +306,355 @@
   white-space: nowrap;
   background: var(--bl-ac-structure-bg);
   border: 1px solid transparent;
+}
+
+/*
+ * A person or an address, as a group of lines: its head, the row's name
+ * marked as a business's is, then a line for each business, address or
+ * person listed under it, indented. Each line is its lead (the name, then its
+ * badge) and its trailing corner. A line the host enabled is an option
+ * the keys and the pointer move to; any other line is disabled.
+ */
+.bl-ac-group {
+  container-type: inline-size;
+  margin: 0;
+  padding: 0.25rem 0;
+}
+
+.bl-ac-group:first-child {
+  padding-top: 0.5rem;
+}
+
+.bl-ac-group + .bl-ac-group {
+  border-top: 1px solid var(--bl-ac-border);
+}
+
+.bl-ac-group-head,
+.bl-ac-group-line {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  margin: 0;
+}
+
+.bl-ac-group-head {
+  padding: 0.25rem 0.875rem;
+}
+
+.bl-ac-group-line {
+  padding: 0.375rem 0.875rem 0.375rem 1.75rem;
+}
+
+.bl-ac-group-head[data-enabled],
+.bl-ac-group-line[data-enabled] {
+  cursor: pointer;
+}
+
+.bl-ac-group-head[data-highlighted],
+.bl-ac-group-line[data-highlighted] {
+  background: var(--bl-ac-highlight-bg);
+}
+
+/* A line's segments are one row, given way to in reading order: the name
+   keeps its own width, up to 60% of the line, and gives way only once all
+   the text after it has, down to a few letters. That text takes what room is
+   left, each up to its own width, and the flags, the icons and the role keep
+   theirs. Whatever gives way is cut with an ellipsis, inside its own box. */
+.bl-ac-group-lead,
+.bl-ac-group-trailing {
+  display: contents;
+}
+
+.bl-ac-group-lead > *,
+.bl-ac-group-trailing > * {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: max-content;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bl-ac-group-lead > .bl-ac-name,
+.bl-ac-group-lead > .bl-ac-line-name {
+  flex: 0 1 auto;
+  min-width: 3rem;
+  max-width: 60%;
+}
+
+/* The trailing corner starts at the right, so its columns line up down the
+   group. */
+.bl-ac-group-trailing > :first-child {
+  margin-left: auto;
+}
+
+/* A disabled line, or a head that is not a pick, reads as inactive: drained
+   of colour, its text faded toward the ground no further than it stays
+   readable, its squares dimmed. A business row outside a group is never
+   disabled, so it draws as it always has.
+   The component sets the inks from the look (`disabledInks`); the fallbacks
+   are the default look's, mixed from whatever colours are set. */
+/* Drained of colour where it has colour of its own, on its own element: the
+   squares, the flag and the icons. Never the whole line, which would grey a
+   match mark too; the text fades by its colour alone. */
+.bl-ac-group-line:not([data-enabled]) :is(.bl-ac-states, .bl-ac-icon),
+.bl-ac-group-head:not([data-enabled]) .bl-ac-icon,
+.bl-ac-group
+  > .bl-ac-row:not([data-enabled])
+  :is(.bl-ac-states, .bl-ac-structure, .bl-ac-icon) {
+  filter: var(--bl-ac-disabled-filter, saturate(0));
+}
+
+/* A disabled name, a line's or a head's, drops to the regular weight, never
+   above the lines', so nothing disabled reads as bold or as a title to click,
+   and fades to one faint ink. At `disabledDim` 0 the component sets a pick's
+   weights. */
+.bl-ac-group-line:not([data-enabled]) .bl-ac-line-name {
+  font-weight: var(
+    --bl-ac-disabled-line-weight,
+    min(400, var(--bl-ac-weight-base))
+  );
+}
+
+.bl-ac-group-head:not([data-enabled]) .bl-ac-name,
+.bl-ac-group > .bl-ac-row:not([data-enabled]) .bl-ac-name {
+  font-weight: var(
+    --bl-ac-disabled-head-weight,
+    min(400, var(--bl-ac-weight-base))
+  );
+}
+
+.bl-ac-group-line:not([data-enabled]) .bl-ac-line-name,
+.bl-ac-group-head:not([data-enabled]) .bl-ac-name,
+.bl-ac-group > .bl-ac-row:not([data-enabled]) .bl-ac-name {
+  color: var(
+    --bl-ac-disabled-name,
+    color-mix(in srgb, var(--bl-ac-title) 40.8%, var(--bl-ac-bg))
+  );
+}
+
+/* A role is the smallest text, so it keeps a little more to stay legible. */
+.bl-ac-group-line:not([data-enabled]) .bl-ac-role {
+  color: var(
+    --bl-ac-disabled-role,
+    color-mix(in srgb, var(--bl-ac-subtitle) 48.4%, var(--bl-ac-bg))
+  );
+}
+
+.bl-ac-group-line:not([data-enabled]) :is(.bl-ac-address, .bl-ac-icon),
+.bl-ac-group-head:not([data-enabled])
+  :is(.bl-ac-address, .bl-ac-group-count, .bl-ac-icon),
+.bl-ac-group
+  > .bl-ac-row:not([data-enabled])
+  :is(
+    .bl-ac-address,
+    .bl-ac-people,
+    .bl-ac-also,
+    .bl-ac-group-count,
+    .bl-ac-icon
+  ) {
+  color: var(
+    --bl-ac-disabled-text,
+    color-mix(in srgb, var(--bl-ac-subtitle) 44%, var(--bl-ac-bg))
+  );
+}
+
+.bl-ac-group-line:not([data-enabled]) .bl-ac-states,
+.bl-ac-group
+  > .bl-ac-row:not([data-enabled])
+  :is(.bl-ac-states, .bl-ac-structure) {
+  opacity: var(--bl-ac-disabled-opacity, 0.52);
+}
+
+/* A match mark on a disabled line or head keeps its hue, a little faded
+   toward the ground (`--bl-ac-disabled-mark`, by the look's `disabledDim`):
+   its underline, its fill or its ink, whichever the emphasis draws. */
+:is(.bl-ac-group-head, .bl-ac-group-line):not([data-enabled])
+  [data-emphasis="underline"]
+  .bl-ac-mark,
+.bl-ac-group
+  > .bl-ac-row:not([data-enabled])
+  [data-emphasis="underline"]
+  .bl-ac-mark {
+  text-decoration-color: color-mix(
+    in srgb,
+    var(--bl-ac-mark, var(--bl-ac-underline)) var(--bl-ac-disabled-mark, 67%),
+    var(--bl-ac-bg)
+  );
+}
+
+:is(.bl-ac-group-head, .bl-ac-group-line):not([data-enabled])
+  [data-emphasis="background"]
+  .bl-ac-mark,
+.bl-ac-group
+  > .bl-ac-row:not([data-enabled])
+  [data-emphasis="background"]
+  .bl-ac-mark {
+  background: color-mix(
+    in srgb,
+    var(--bl-ac-mark, var(--bl-ac-marker)) var(--bl-ac-disabled-mark, 67%),
+    var(--bl-ac-bg)
+  );
+}
+
+:is(.bl-ac-group-head, .bl-ac-group-line):not([data-enabled])
+  .bl-ac-name[data-emphasis="ink"]
+  > .bl-ac-mark,
+.bl-ac-group
+  > .bl-ac-row:not([data-enabled])
+  .bl-ac-name[data-emphasis="ink"]
+  > .bl-ac-mark {
+  color: color-mix(
+    in srgb,
+    var(--bl-ac-mark, var(--bl-ac-ink-mark, var(--bl-ac-title)))
+      var(--bl-ac-disabled-mark, 67%),
+    var(--bl-ac-bg)
+  );
+}
+
+.bl-ac[data-mark-color]
+  :is(.bl-ac-group-head, .bl-ac-group-line):not([data-enabled])
+  .bl-ac-name[data-emphasis="weight"]
+  > .bl-ac-mark,
+.bl-ac[data-mark-color]
+  .bl-ac-group
+  > .bl-ac-row:not([data-enabled])
+  .bl-ac-name[data-emphasis="weight"]
+  > .bl-ac-mark {
+  color: color-mix(
+    in srgb,
+    var(--bl-ac-mark) var(--bl-ac-disabled-mark, 67%),
+    var(--bl-ac-bg)
+  );
+}
+
+.bl-ac-group
+  > .bl-ac-row:not([data-enabled])
+  :is(.bl-ac-also, .bl-ac-address, .bl-ac-people):is(
+    [data-emphasis="ink"],
+    [data-emphasis="weight"]
+  )
+  .bl-ac-mark {
+  color: color-mix(
+    in srgb,
+    var(--bl-ac-mark, var(--bl-ac-also-mark)) var(--bl-ac-disabled-mark, 67%),
+    var(--bl-ac-bg)
+  );
+}
+
+/* Forced colours draw the text in the system's own; fading it would not. */
+@media (forced-colors: active) {
+  .bl-ac-group-line:not([data-enabled]) :is(.bl-ac-states, .bl-ac-icon),
+  .bl-ac-group-head:not([data-enabled]) .bl-ac-icon,
+  .bl-ac-group
+    > .bl-ac-row:not([data-enabled])
+    :is(.bl-ac-states, .bl-ac-structure, .bl-ac-icon) {
+    filter: none;
+  }
+
+  .bl-ac-group-line:not([data-enabled]) .bl-ac-states,
+  .bl-ac-group
+    > .bl-ac-row:not([data-enabled])
+    :is(.bl-ac-states, .bl-ac-structure) {
+    opacity: 1;
+  }
+}
+
+/* A segment's icon: the size of its text, in the subtitle's colour,
+   centred on its line, and never given up for room. */
+.bl-ac-icon {
+  display: inline-flex;
+  flex: none;
+  align-self: center;
+  color: var(--bl-ac-subtitle);
+}
+
+.bl-ac-group-lead > .bl-ac-icon {
+  flex: none;
+  overflow: visible;
+}
+
+/* The icon on a field's text: inline, first, kept apart from the text and
+   sat on it as a glyph would be; the text gives way after it. */
+:is(.bl-ac-address, .bl-ac-people) > .bl-ac-icon {
+  margin-inline-end: 0.4em;
+  vertical-align: -0.125em;
+}
+
+.bl-ac-group-lead > .bl-ac-states,
+.bl-ac-group-trailing > .bl-ac-states,
+.bl-ac-group-line .bl-ac-role {
+  flex: none;
+  overflow: visible;
+}
+
+.bl-ac-group-lead > .bl-ac-states,
+.bl-ac-group-trailing .bl-ac-states {
+  align-self: center;
+}
+
+.bl-ac-line-name {
+  font-size: 0.9375em;
+  font-weight: var(--bl-ac-weight-base);
+  color: var(--bl-ac-title);
+}
+
+/* On a line under a row the states and the role are columns: the states as
+   wide as three squares and a +N, the role as wide as the menu's longest, so
+   the squares start at one edge down the group. The role is a step quieter
+   than the name. */
+.bl-ac-group-trailing > .bl-ac-states {
+  box-sizing: border-box;
+  min-width: 7.25rem;
+}
+
+.bl-ac-group-line .bl-ac-role {
+  font-size: 13px;
+}
+
+/* A column only at the right; beside the name, a role is as wide as it is,
+   one gap after it. */
+.bl-ac-group-trailing > .bl-ac-role {
+  min-width: calc(var(--bl-ac-role-chars, 0) * 1ch);
+  text-align: right;
+}
+
+/* Too narrow for the columns, the squares take only their own room, and the
+   role, last on its line, gives way as text does, before the name. */
+@container (max-width: 22.5rem) {
+  .bl-ac-group-trailing > .bl-ac-states {
+    min-width: 0;
+  }
+
+  .bl-ac-group-line .bl-ac-role {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: max-content;
+    overflow: hidden;
+  }
+}
+
+.bl-ac-group-count,
+.bl-ac-role,
+.bl-ac-more {
+  font-size: 14px;
+  color: var(--bl-ac-subtitle);
+  white-space: nowrap;
+}
+
+.bl-ac-more {
+  margin: 0;
+  padding: 0.125rem 0.875rem 0.25rem 1.75rem;
+}
+
+/* Under the field, after a pick: what was picked. */
+.bl-ac-selection {
+  margin: 0.25rem 0 0;
+  overflow: hidden;
+  font-size: 14px;
+  color: var(--bl-ac-subtitle);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .bl-ac-footer {

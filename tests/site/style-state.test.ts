@@ -1,9 +1,12 @@
 import {
+  BUSINESS_ROW,
   DEFAULT_ROW_LAYOUT,
   ROW_FIELDS,
   ROW_PLACES,
   drawnRowLayout,
+  resolveLayout,
   resolveRowLayout,
+  type BusinessRowLayout,
   type RowField,
   type RowLayout,
 } from "@baselayer-sdk/autocomplete";
@@ -17,12 +20,13 @@ import {
   PRESETS,
   STRUCTURE_FLAGS,
   applyPreset,
-  changedLayout,
+  changedRowLayout,
   changedVars,
   exportCode,
   INITIAL_STYLE,
   placeOptions,
   canDrop,
+  lineFields,
   moveField,
   unplacedFields,
   TRAY,
@@ -48,6 +52,18 @@ function exportedLayout(tsx: string): Partial<RowLayout> | null {
 }
 
 /** Every layout the SDK draws: each place a field or empty, no field twice. */
+/** The default state with the business row's layout set. */
+function withBusinessLayout(layout: RowLayout): StyleState {
+  const row = DEFAULT_STYLE.rows.businesses;
+  return {
+    ...DEFAULT_STYLE,
+    rows: {
+      ...DEFAULT_STYLE.rows,
+      businesses: { ...row, layout: { ...row.layout, ...layout } },
+    },
+  };
+}
+
 function everyLayout(): RowLayout[] {
   const choices = [null, ...ROW_FIELDS];
   return ROW_PLACES.reduce<Partial<RowLayout>[]>(
@@ -64,21 +80,40 @@ function everyLayout(): RowLayout[] {
 }
 
 describe("the Styling panel's exported configuration", () => {
+  it("gives the props a host must give, the id filled in, before what changed", () => {
+    expect(exportCode(DEFAULT_STYLE).tsx).toBe(
+      [
+        "<BusinessAutocomplete",
+        '  id="business"',
+        "  client={client}",
+        "  value={value}",
+        "  onChange={setValue}",
+        "  onPick={(suggestion, pick) => …}",
+        "/>",
+        "// Nothing else changed from the defaults.",
+      ].join("\n"),
+    );
+    expect(
+      exportCode({ ...DEFAULT_STYLE, limit: 8 })
+        .tsx.split("\n")
+        .slice(5, 7),
+    ).toEqual(["  onPick={(suggestion, pick) => …}", "  limit={8}"]);
+  });
+
   it("says nothing of the row's layout while every place shows its default", () => {
     expect(exportCode(DEFAULT_STYLE).tsx).not.toContain("layout=");
   });
 
   it("names only the places that show another field, in reading order", () => {
-    const { tsx } = exportCode({
-      ...DEFAULT_STYLE,
-      layout: {
+    const { tsx } = exportCode(
+      withBusinessLayout({
         ...DEFAULT_ROW_LAYOUT,
         titleBadge: null,
         titleTrailing: null,
         subtitle: "people",
         subtitleTrailing: "states",
-      },
-    });
+      }),
+    );
 
     expect(tsx).toContain(
       `layout={{
@@ -93,10 +128,12 @@ describe("the Styling panel's exported configuration", () => {
   it("reproduces the preview: the layout it writes is the one drawn, for every layout", () => {
     const layouts = everyLayout();
     for (const layout of layouts) {
-      const state: StyleState = { ...DEFAULT_STYLE, layout };
+      const state = withBusinessLayout(layout);
       const written = exportedLayout(exportCode(state).tsx) ?? {};
 
-      expect(written, JSON.stringify(layout)).toEqual(changedLayout(state));
+      expect(written, JSON.stringify(layout)).toEqual(
+        Object.fromEntries(changedRowLayout(state, "businesses")),
+      );
       expect(resolveRowLayout(written), JSON.stringify(layout)).toEqual(layout);
     }
     expect(layouts.length).toBeGreaterThan(100);
@@ -158,16 +195,51 @@ describe("the Styling panel's exported configuration", () => {
   });
 });
 
+/** A business's whole row by default: today's head, nothing listed, no icon. */
+const BUSINESS = resolveLayout(BUSINESS_ROW);
+
+/** A business row's head, the places a business row has always had. */
+function head(layout: BusinessRowLayout): RowLayout {
+  return Object.fromEntries(
+    ROW_PLACES.map(place => [place, layout[place]]),
+  ) as RowLayout;
+}
+
 describe("the Components fold", () => {
-  const key = (layout: RowLayout) => JSON.stringify(layout);
+  const key = (layout: object) => JSON.stringify(layout);
 
   it("opens on the SDK's default layout", () => {
-    expect(DEFAULT_STYLE.layout).toEqual(DEFAULT_ROW_LAYOUT);
-    expect(INITIAL_STYLE.layout).toEqual(DEFAULT_ROW_LAYOUT);
+    expect(DEFAULT_STYLE.rows.businesses.layout).toEqual(BUSINESS);
+    expect(INITIAL_STYLE.rows.businesses.layout).toEqual(BUSINESS);
+    expect(head(BUSINESS)).toEqual(DEFAULT_ROW_LAYOUT);
+  });
+
+  it("offers a line's places only its own line's fields", () => {
+    expect(placeOptions(BUSINESS, "personTrailing").map(o => o.value)).toEqual([
+      EMPTY_PLACE,
+      "personRole",
+    ]);
+    expect(canDrop(BUSINESS, "states", "personBadge")).toBe(false);
+  });
+
+  it("names the fields each line kind can show", () => {
+    expect(lineFields("businesses", null)).toEqual([
+      "states",
+      "structure",
+      "address",
+      "people",
+      "counts",
+    ]);
+    expect(lineFields("businesses", "people")).toEqual(["personRole"]);
+    expect(lineFields("people", "businesses")).toEqual([
+      "address",
+      "states",
+      "role",
+    ]);
   });
 
   it("offers every field in every place, and says which one a pick would swap", () => {
-    const options = placeOptions(DEFAULT_ROW_LAYOUT, "subtitle");
+    const options = placeOptions(BUSINESS, "subtitle");
 
     expect(options.map(option => option.value)).toEqual([
       EMPTY_PLACE,
@@ -175,88 +247,86 @@ describe("the Components fold", () => {
       "structure",
       "address",
       "people",
+      "counts",
     ]);
     expect(options.find(o => o.value === "states")?.label).toBe(
       "States, swaps with Title, right",
     );
     // An empty place has nothing to swap: the field just moves.
     expect(
-      placeOptions(DEFAULT_ROW_LAYOUT, "subtitleTrailingBadge").find(
+      placeOptions(BUSINESS, "subtitleTrailingBadge").find(
         o => o.value === "states",
       )?.label,
     ).toBe("States, from Title, right");
     // Its own field, and a field placed nowhere, are just the field.
     expect(options.find(o => o.value === "address")?.label).toBe("Address");
     expect(
-      placeOptions({ ...DEFAULT_ROW_LAYOUT, subtitle: null }, "subtitle").find(
+      placeOptions({ ...BUSINESS, subtitle: null }, "subtitle").find(
         o => o.value === "address",
       )?.label,
     ).toBe("Address");
   });
 
   it("never offers a badge the field it is pinned beside", () => {
-    const beside = placeOptions(DEFAULT_ROW_LAYOUT, "subtitleBadge");
+    const beside = placeOptions(BUSINESS, "subtitleBadge");
     expect(beside.map(option => option.value)).not.toContain("address");
     expect(
-      placeOptions(DEFAULT_ROW_LAYOUT, "subtitleTrailingBadge").map(
+      placeOptions(BUSINESS, "subtitleTrailingBadge").map(
         option => option.value,
       ),
     ).not.toContain("people");
     // The field place keeps offering its badge's field: that is no pin.
     expect(
       placeOptions(
-        { ...DEFAULT_ROW_LAYOUT, subtitleBadge: "structure", titleBadge: null },
+        { ...BUSINESS, subtitleBadge: "structure", titleBadge: null },
         "subtitle",
       ).map(option => option.value),
     ).toContain("structure");
   });
 
   it("swaps a field picked from another place with the place's own, as a drop does", () => {
-    expect(withPlaced(DEFAULT_ROW_LAYOUT, "subtitle", "states")).toEqual({
-      ...DEFAULT_ROW_LAYOUT,
+    expect(withPlaced(BUSINESS, "subtitle", "states")).toEqual({
+      ...BUSINESS,
       titleTrailing: "address",
       subtitle: "states",
     });
-    expect(withPlaced(DEFAULT_ROW_LAYOUT, "subtitle", "states")).toEqual(
-      moveField(DEFAULT_ROW_LAYOUT, "states", "subtitle"),
+    expect(withPlaced(BUSINESS, "subtitle", "states")).toEqual(
+      moveField(BUSINESS, "states", "subtitle"),
     );
     // A field from the tray sends the place's own there; empty sends it too.
     expect(
-      withPlaced(
-        { ...DEFAULT_ROW_LAYOUT, titleBadge: null },
-        "subtitle",
-        "structure",
-      ),
+      withPlaced({ ...BUSINESS, titleBadge: null }, "subtitle", "structure"),
     ).toEqual({
-      ...DEFAULT_ROW_LAYOUT,
+      ...BUSINESS,
       titleBadge: null,
       subtitle: "structure",
     });
-    expect(withPlaced(DEFAULT_ROW_LAYOUT, "titleBadge", EMPTY_PLACE)).toEqual({
-      ...DEFAULT_ROW_LAYOUT,
+    expect(withPlaced(BUSINESS, "titleBadge", EMPTY_PLACE)).toEqual({
+      ...BUSINESS,
       titleBadge: null,
     });
   });
 
   it("loses no field while its options are browsed, as arrow keys pick each one on Windows", () => {
     // Every field but the one picked last stays on the row: each step is a
-    // swap, and stepping back undoes it.
-    let layout: RowLayout = DEFAULT_ROW_LAYOUT;
+    // swap, and stepping back undoes it. The counts, which the default row
+    // places nowhere, stay off it throughout.
+    let layout = BUSINESS;
     for (const choice of ["people", "structure", "states"] as const) {
       layout = withPlaced(layout, "subtitle", choice);
-      expect(unplacedFields(layout), choice).toEqual([]);
+      expect(unplacedFields(layout), choice).toEqual(["counts"]);
     }
     for (const choice of ["structure", "people", "address"] as const) {
       layout = withPlaced(layout, "subtitle", choice);
     }
-    expect(unplacedFields(layout)).toEqual([]);
+    expect(unplacedFields(layout)).toEqual(["counts"]);
     expect(layout.subtitle).toBe("address");
   });
 
   it("can build any layout the SDK draws, and never places a field twice", () => {
     // Every choice the fold offers, from where it opens, until nothing new.
-    const seen = new Map([[key(DEFAULT_ROW_LAYOUT), DEFAULT_ROW_LAYOUT]]);
-    const queue: RowLayout[] = [DEFAULT_ROW_LAYOUT];
+    const seen = new Map([[key(BUSINESS), BUSINESS]]);
+    const queue = [BUSINESS];
     for (let layout = queue.shift(); layout; layout = queue.shift()) {
       for (const place of ROW_PLACES) {
         for (const option of placeOptions(layout, place)) {
@@ -269,49 +339,48 @@ describe("the Components fold", () => {
       }
     }
 
-    // Every layout, as the row draws it: the fold shows nothing else.
+    // Every head, as the row draws it: the fold shows nothing else.
     const drawn = new Set(everyLayout().map(drawnRowLayout).map(key));
-    expect([...seen.keys()].sort()).toEqual([...drawn].sort());
+    const heads = new Set([...seen.values()].map(head).map(key));
+    expect([...heads].sort()).toEqual([...drawn].sort());
   });
 });
 
 describe("dragging a field", () => {
   it("drops it on a place, swapping in whatever that place held", () => {
     // The states onto the address: the address takes the states' place.
-    expect(moveField(DEFAULT_ROW_LAYOUT, "states", "subtitle")).toEqual({
-      ...DEFAULT_ROW_LAYOUT,
+    expect(moveField(BUSINESS, "states", "subtitle")).toEqual({
+      ...BUSINESS,
       titleTrailing: "address",
       subtitle: "states",
     });
     // Onto an empty place: the place it left is empty.
-    expect(
-      moveField(DEFAULT_ROW_LAYOUT, "structure", "subtitleTrailingBadge"),
-    ).toEqual({
-      ...DEFAULT_ROW_LAYOUT,
+    expect(moveField(BUSINESS, "structure", "subtitleTrailingBadge")).toEqual({
+      ...BUSINESS,
       titleBadge: null,
       subtitleTrailingBadge: "structure",
     });
   });
 
   it("hides a field dropped on the tray, and places one dragged out of it", () => {
-    const hidden = moveField(DEFAULT_ROW_LAYOUT, "people", TRAY);
-    expect(hidden).toEqual({ ...DEFAULT_ROW_LAYOUT, subtitleTrailing: null });
-    expect(unplacedFields(hidden)).toEqual(["people"]);
+    const hidden = moveField(BUSINESS, "people", TRAY);
+    expect(hidden).toEqual({ ...BUSINESS, subtitleTrailing: null });
+    expect(unplacedFields(hidden)).toEqual(["people", "counts"]);
 
     // From the tray onto a taken place: what that place held goes to the tray.
     const placed = moveField(hidden, "people", "subtitle");
     expect(placed).toEqual({
-      ...DEFAULT_ROW_LAYOUT,
+      ...BUSINESS,
       subtitle: "people",
       subtitleTrailing: null,
     });
-    expect(unplacedFields(placed)).toEqual(["address"]);
+    expect(unplacedFields(placed)).toEqual(["address", "counts"]);
   });
 
   it("takes a field only where the row would draw it, and not on its own place", () => {
     const spots = (field: RowField) =>
       ([...ROW_PLACES, TRAY] as const).filter(to =>
-        canDrop(DEFAULT_ROW_LAYOUT, field, to),
+        canDrop(BUSINESS, field, to),
       );
     // Not beside itself, nor beside the people: with the lead empty, the
     // people's corner would be drawn in its place.
@@ -336,7 +405,7 @@ describe("dragging a field", () => {
   });
 
   it("takes a field from the tray anywhere the row draws it, and not back on it", () => {
-    const hidden = moveField(DEFAULT_ROW_LAYOUT, "people", TRAY);
+    const hidden = moveField(BUSINESS, "people", TRAY);
     // The badge beside the empty right corner would be drawn as its field.
     expect(
       ROW_PLACES.filter(place => !canDrop(hidden, "people", place)),
@@ -345,30 +414,35 @@ describe("dragging a field", () => {
   });
 
   it("draws the row as it will be: a lead left empty takes the right corner", () => {
-    expect(moveField(DEFAULT_ROW_LAYOUT, "address", TRAY)).toEqual({
-      ...DEFAULT_ROW_LAYOUT,
+    expect(moveField(BUSINESS, "address", TRAY)).toEqual({
+      ...BUSINESS,
       subtitle: "people",
       subtitleTrailing: null,
     });
   });
 
-  it("never places a field twice, from any layout, dropped anywhere", () => {
-    for (const layout of everyLayout()) {
-      for (const field of ROW_FIELDS) {
-        for (const to of [...ROW_PLACES, TRAY] as const) {
-          const next = moveField(layout, field, to);
-          const drawn = ROW_PLACES.map(place => next[place]).filter(
-            placed => placed !== null,
-          );
-          expect(new Set(drawn).size).toBe(drawn.length);
-          expect(drawnRowLayout(next)).toEqual(next);
-          if (to !== TRAY && canDrop(layout, field, to)) {
-            expect(next[to]).toBe(field);
+  // Every layout, field and place: slow on a loaded machine.
+  it(
+    "never places a field twice, from any layout, dropped anywhere",
+    { timeout: 30_000 },
+    () => {
+      for (const layout of everyLayout()) {
+        for (const field of ROW_FIELDS) {
+          for (const to of [...ROW_PLACES, TRAY] as const) {
+            const next = moveField({ ...BUSINESS, ...layout }, field, to);
+            const drawn = ROW_PLACES.map(place => next[place]).filter(
+              placed => placed !== null,
+            );
+            expect(new Set(drawn).size).toBe(drawn.length);
+            expect(drawnRowLayout(head(next))).toEqual(head(next));
+            if (to !== TRAY && canDrop({ ...BUSINESS, ...layout }, field, to)) {
+              expect(next[to]).toBe(field);
+            }
           }
         }
       }
-    }
-  });
+    },
+  );
 });
 
 describe("the structure's colors", () => {

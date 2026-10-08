@@ -1,19 +1,41 @@
 /**
- * The entities autocomplete searches, and a route per entity, as the working
- * specification lays them out: one `GET /autocomplete/{relation}` per entity
- * type, each row a `type` of that entity, each route expanding its own set of
- * related entities.
+ * The entities autocomplete searches, and a route per entity: one
+ * `GET /autocomplete/{route}` per entity type, each row a `type` of that
+ * entity, each route expanding its own set of related entities.
  *
- * Only `businesses` is served today. The others are here so a route going
- * live is a row flipping to `served`, not a new shape for every host: their
- * row types and filters are the specification's and may still move.
+ * The route and relation names, and which relations each route's rows carry,
+ * are the session scope's contract (`contracts/autocomplete-scope.json`): the
+ * API, the autocomplete service and this SDK all carry them, and a test pins
+ * these tables to it.
  */
 
-/** The singular value on a row: what the row is. */
-export type EntityType = "business" | "person" | "address";
+/** The routes a session's scope may name, in the order the SDK lists them. */
+export const ROUTE_NAMES = ["businesses", "people", "addresses"] as const;
 
-/** The plural token: the route's path segment, an `include` value, a `sources` key. */
-export type Relation = "businesses" | "people" | "addresses";
+/** A route: the path segment after `/autocomplete/`. */
+export type Route = (typeof ROUTE_NAMES)[number];
+
+/** The relations a row may carry, in the order the SDK lists them. */
+export const RELATIONS = ["businesses", "people", "addresses"] as const;
+
+/** The singular value on a row: what the row is, in the contract's order. */
+export const ENTITY_TYPES = ["business", "person", "address"] as const;
+
+/** What a row, or an item it relates to, is. */
+export type EntityType = (typeof ENTITY_TYPES)[number];
+
+/** The plural token: an `include` value, a `sources` key, a `related` key. */
+export type Relation = (typeof RELATIONS)[number];
+
+/**
+ * The relations each route's rows may carry, and so the only ones a session's
+ * scope may grant it.
+ */
+export const LEGAL_RELATIONS = {
+  businesses: ["people", "addresses"],
+  people: ["businesses", "addresses"],
+  addresses: ["businesses", "people"],
+} as const satisfies Record<Route, readonly Relation[]>;
 
 export const RELATION_OF = {
   business: "businesses",
@@ -42,26 +64,25 @@ export const ROUTES = {
   businesses: {
     path: "/autocomplete/businesses",
     entity: "business",
-    includes: ["people", "addresses"],
+    includes: LEGAL_RELATIONS.businesses,
     defaultInclude: ["people", "addresses"],
     served: true,
   },
   people: {
     path: "/autocomplete/people",
     entity: "person",
-    includes: ["businesses", "addresses"],
+    includes: LEGAL_RELATIONS.people,
     defaultInclude: ["businesses"],
-    served: false,
+    served: true,
   },
   addresses: {
     path: "/autocomplete/addresses",
     entity: "address",
-    includes: ["businesses", "people"],
+    includes: LEGAL_RELATIONS.addresses,
     defaultInclude: ["businesses"],
-    served: false,
+    served: true,
   },
-} as const satisfies Record<Relation, RouteSpec>;
+} as const satisfies Record<Route, RouteSpec>;
 
 /** The relations a route can expand. */
-export type IncludeOf<R extends Relation> =
-  (typeof ROUTES)[R]["includes"][number];
+export type IncludeOf<R extends Route> = (typeof ROUTES)[R]["includes"][number];

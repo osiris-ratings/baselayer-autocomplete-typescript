@@ -36,6 +36,9 @@ const suggestion = {
           label: "Wesley Crane",
           role: "officer",
           matched: true,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
       ],
     },
@@ -47,9 +50,12 @@ const suggestion = {
         {
           type: "address",
           token: "tok-7f1a2c3d",
-          label: "1200 EMBARCADERO RD FL 3, OAKLAND, CA 94606",
+          label: "1200 TIDECASTER RD FL 3, OAKLAND, CA 94606",
           role: "principal",
           matched: false,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
       ],
     },
@@ -95,14 +101,12 @@ describe("a business suggestion", () => {
     ).toEqual({ ...response, truncated: false, suggestions: [suggestion] });
   });
 
-  it("does not go dark over a related type or a grade it has never seen", () => {
-    // The contract anticipates growth ("null only for type: person, until the
-    // person entity ships"); nothing renders `type` or `match`, so a new value
-    // on the autocomplete service must degrade nothing, the way
-    // `sources.*.status` already does.
+  it("refuses a related type, a grade or a status it has never seen", () => {
+    // Every closed value is a typed union: the SDK learns a value before the
+    // autocomplete service sends it, so one it does not know is a contract
+    // error, never a value the types say cannot exist.
     const grown = {
       ...suggestion,
-      match: "fuzzy",
       related: {
         ...suggestion.related,
         addresses: {
@@ -122,13 +126,16 @@ describe("a business suggestion", () => {
       },
     };
 
-    expect(() => parseSuggestion(grown)).not.toThrow();
+    expect(() => parseSuggestion(grown)).toThrow(ContractViolation);
+    expect(() => parseSuggestion({ ...suggestion, match: "fuzzy" })).toThrow(
+      ContractViolation,
+    );
     expect(() =>
       parseBusinessesResponse({
         ...response,
         sources: { ...response.sources, addresses: { status: "degraded" } },
       }),
-    ).not.toThrow();
+    ).toThrow(ContractViolation);
   });
 
   it("reads an absent optional key as null, as the published contract allows", () => {
@@ -175,7 +182,7 @@ describe("a business suggestion", () => {
             {
               type: "address",
               token: handle,
-              label: "412 Orchard Ln, Springfield, MO 65806",
+              label: "412 Wrenmoor Ln, Springfield, MO 65806",
               role: "principal",
               matched: false,
             },
@@ -207,7 +214,7 @@ describe("a business suggestion", () => {
             {
               type: "address",
               id: "7f1a2c3d-4e5f-4a0c-9c0e-0d3b2b6e2b7e",
-              label: "412 Orchard Ln, Springfield, MO 65806",
+              label: "412 Wrenmoor Ln, Springfield, MO 65806",
               role: "principal",
               matched: false,
             },
@@ -221,7 +228,7 @@ describe("a business suggestion", () => {
     const item = parsed.related.addresses.items[0];
     expect(item).not.toHaveProperty("id");
     expect(item?.token).toBeNull();
-    expect(item?.label).toBe("412 Orchard Ln, Springfield, MO 65806");
+    expect(item?.label).toBe("412 Wrenmoor Ln, Springfield, MO 65806");
   });
 
   describe("structure", () => {
@@ -266,16 +273,12 @@ describe("a business suggestion", () => {
       ).toBe(null);
     });
 
-    it("keeps a structure this build does not know as the string it is", () => {
-      expect(
-        parseSuggestion({ ...suggestion, structure: "FOUNDATION" }).structure,
-      ).toBe("FOUNDATION");
-    });
-
-    it("still refuses a structure that is not a string", () => {
-      expect(() => parseSuggestion({ ...suggestion, structure: 3 })).toThrow(
-        "response.suggestions[0].structure: expected a string",
-      );
+    it("refuses a structure this build does not know, or one that is not a string", () => {
+      for (const structure of ["FOUNDATION", 3]) {
+        expect(() => parseSuggestion({ ...suggestion, structure })).toThrow(
+          "response.suggestions[0].structure: expected one of SOLE_PROPRIETORSHIP",
+        );
+      }
     });
   });
 

@@ -1,12 +1,14 @@
 import { useCombobox, type UseComboboxReturnValue } from "downshift";
 import type { ChangeEvent, FocusEventHandler, Ref } from "react";
 
-import type {
-  BusinessSuggestion,
-  Suggestion,
-} from "@baselayer-sdk/autocomplete";
+import type { BusinessSuggestion } from "@baselayer-sdk/autocomplete";
 
-export interface UseSuggestionComboboxOptions<T extends Suggestion> {
+/** Anything the combobox can offer: it reads only the label. */
+export interface ComboboxItem {
+  label: string;
+}
+
+export interface UseSuggestionComboboxOptions<T extends ComboboxItem> {
   id: string;
   items: T[];
   /** The input's value; the host owns it. */
@@ -17,6 +19,16 @@ export interface UseSuggestionComboboxOptions<T extends Suggestion> {
   /** Whether a footer row (count, "searching", an error) has anything to say. */
   hasFooter: boolean;
   /**
+   * How many rows the menu draws, when that is not how many items it offers:
+   * a row whose lines are none of them picks is drawn, and offers nothing.
+   */
+  rowCount?: number | undefined;
+  /**
+   * An item drawn as an option that cannot be picked: the keys pass over it,
+   * the pointer does not highlight it, and a click on it picks nothing.
+   */
+  isItemDisabled?: ((item: T) => boolean) | undefined;
+  /**
    * Hold the menu open whatever focus and Escape do, for a preview. Read
    * alongside downshift's own state rather than controlling it, so letting go
    * leaves downshift where it was.
@@ -24,7 +36,7 @@ export interface UseSuggestionComboboxOptions<T extends Suggestion> {
   open?: boolean | undefined;
 }
 
-export interface SuggestionCombobox<T extends Suggestion> extends Pick<
+export interface SuggestionCombobox<T extends ComboboxItem> extends Pick<
   UseComboboxReturnValue<T>,
   | "getLabelProps"
   | "getMenuProps"
@@ -68,7 +80,7 @@ export function useBusinessCombobox(
  * - `aria-expanded` follows what is drawn, and the footer lives outside the
  *   listbox, so a screen reader hears a list of rows and then a note.
  */
-export function useSuggestionCombobox<T extends Suggestion>({
+export function useSuggestionCombobox<T extends ComboboxItem>({
   id,
   items,
   inputValue,
@@ -76,11 +88,16 @@ export function useSuggestionCombobox<T extends Suggestion>({
   onPick,
   hasFooter,
   open = false,
+  rowCount,
+  isItemDisabled,
 }: UseSuggestionComboboxOptions<T>): SuggestionCombobox<T> {
   const combobox = useCombobox<T>({
     id,
     items,
     inputValue,
+    ...(isItemDisabled !== undefined
+      ? { isItemDisabled: (item: T) => isItemDisabled(item) }
+      : {}),
     itemToString: item => item?.label ?? "",
     onSelectedItemChange: ({ selectedItem }) => {
       if (selectedItem) {
@@ -97,7 +114,7 @@ export function useSuggestionCombobox<T extends Suggestion>({
         : changes,
   });
   const isOpen = open || combobox.isOpen;
-  const hasRows = isOpen && items.length > 0;
+  const hasRows = isOpen && (rowCount ?? items.length) > 0;
   const menuVisible = hasRows || (isOpen && hasFooter);
   return {
     isOpen,

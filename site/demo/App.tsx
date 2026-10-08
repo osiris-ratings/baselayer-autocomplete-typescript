@@ -1,19 +1,31 @@
 import {
+  DEFAULT_SESSION_SCOPE,
+  ROUTE_NAMES,
+  allowedFilters,
   createAutocompleteClient,
-  includeForLayout,
+  offeredRoutes,
   pickedNameOf,
+  requestFor,
+  type AddressesFilters,
   type AutocompleteClient,
-  type BusinessSuggestion,
+  type BusinessPick,
   type Filters,
+  type PeopleFilters,
+  type Route,
   type SessionPhase,
+  type SessionScope,
 } from "@baselayer-sdk/autocomplete";
 import {
+  AddressAutocomplete,
+  AddressAutocompleteView,
   BusinessAutocomplete,
   BusinessAutocompleteView,
+  PersonAutocomplete,
+  PersonAutocompleteView,
   useAutocompleteSession,
-  type Pick,
 } from "@baselayer-sdk/autocomplete/react";
 import {
+  useCallback,
   useEffect,
   useId,
   useMemo,
@@ -32,18 +44,28 @@ import { Collapsible, FOLD_MS, Field, Select } from "./controls";
 import { keyMint, readClaims } from "./credentials";
 import { useExit } from "./exit";
 import { useFocusWithin } from "./focus";
-import type { Typed } from "./search-view";
+import { pickFromRow, pickThrough, type PickToSearch } from "./search-view";
 import { NetworkLog } from "./network";
 import { NetworkCount, NetworkTimeline } from "./NetworkTimeline";
 import {
   INITIAL_STYLE,
   changedLook,
+  componentProps,
   previewCss,
   type StyleState,
 } from "./style-state";
 import { morph } from "./morph";
-import { SAMPLE_META, SAMPLE_QUERY, sampleRows } from "./sample";
+import {
+  SAMPLE_ADDRESSES,
+  SAMPLE_ADDRESSES_QUERY,
+  SAMPLE_META,
+  SAMPLE_PEOPLE,
+  SAMPLE_PEOPLE_QUERY,
+  SAMPLE_QUERY,
+  sampleRows,
+} from "./sample";
 import { SearchStep } from "./SearchStep";
+import { SearchTitle } from "./SearchTitle";
 import { StylingPanel } from "./StylingPanel";
 
 const PRODUCTION = "https://api.baselayer.com";
@@ -70,8 +92,17 @@ const ENVIRONMENTS: Environment[] =
   DEV_SERVER_PATH === null
     ? ["production", "custom"]
     : ["dev-server", "production", "custom"];
+/** What the dev server forwards to, for the page to name: `sample` is made up. */
+const DEV_SERVER_TARGET =
+  typeof __DEMO_API__ === "undefined" ? PRODUCTION : __DEMO_API__;
+
 const ENVIRONMENT_LABELS: Record<Environment, string> = {
-  "dev-server": "Production, through this dev server",
+  "dev-server":
+    DEV_SERVER_TARGET === "sample"
+      ? "Made-up data, from this dev server"
+      : DEV_SERVER_TARGET.replace(/\/+$/, "") === PRODUCTION
+        ? "Production, through this dev server"
+        : `${DEV_SERVER_TARGET.replace(/^https?:\/\//, "").replace(/\/+$/, "")}, through this dev server`,
   production: "Production (api.baselayer.com)",
   custom: "Custom URL",
 };
@@ -115,6 +146,36 @@ function useClient(applied: Applied | null, network: NetworkLog) {
     });
   }, [applied, network]);
 }
+
+/**
+ * What the connected session may search: its grant's scope, the first grant's
+ * until one is held, and the default before any key is applied.
+ */
+function useSessionScope(
+  client: AutocompleteClient | null,
+  applied: Applied | null,
+): SessionScope {
+  const subscribe = useCallback(
+    (onChange: () => void) =>
+      client === null ? () => {} : client.on("stateChange", onChange),
+    [client],
+  );
+  const phase = useSyncExternalStore(
+    subscribe,
+    () => client?.getSnapshot().session ?? null,
+  );
+  if (phase?.phase === "ready") {
+    return phase.grant.scope;
+  }
+  return applied?.firstGrant?.grant.scope ?? DEFAULT_SESSION_SCOPE;
+}
+
+/** What the switch above the field calls each search. */
+/** The field's label in each search but the business one, which Styling sets. */
+const FIELD_LABELS: Record<Exclude<Route, "businesses">, string> = {
+  people: "Person's name",
+  addresses: "Address",
+};
 
 function useLog(client: AutocompleteClient | null): [LogLine[], () => void] {
   const [lines, setLines] = useState<LogLine[]>([]);
@@ -160,8 +221,8 @@ function useLog(client: AutocompleteClient | null): [LogLine[], () => void] {
         ok: event.error === null,
         text:
           event.error === null
-            ? `"${event.q}" → ${event.status} in ${event.roundTripMs} ms${event.recovery !== "none" ? ` after ${event.recovery}` : ""}${event.filtersWithheld ? ", filters held back" : ""}`
-            : `"${event.q}" → ${event.error.kind}: ${event.error.message}`,
+            ? `${event.relation} "${event.q}" → ${event.status} in ${event.roundTripMs} ms${event.recovery !== "none" ? ` after ${event.recovery}` : ""}${event.filtersWithheld ? ", filters held back" : ""}`
+            : `${event.relation} "${event.q}" → ${event.error.kind}: ${event.error.message}`,
       });
     });
     return () => {
@@ -319,6 +380,26 @@ function parseStates(text: string): string[] {
     .filter(s => /^[A-Z]{2}$/.test(s));
 }
 
+/** A pick in a search's field, and the business step 03 searches for. */
+interface Picked {
+  /** The business step 03 searches for. */
+  toSearch: PickToSearch;
+  /** What the pick wrote into the field: editing it lets the pick go. */
+  fill: string;
+}
+
+const NO_NAMES: Readonly<Record<Route, string>> = Object.freeze({
+  businesses: "",
+  people: "",
+  addresses: "",
+});
+
+const NO_PICKS: Readonly<Record<Route, Picked | null>> = Object.freeze({
+  businesses: null,
+  people: null,
+  addresses: null,
+});
+
 export function App() {
   const network = useMemo(() => new NetworkLog(), []);
   const entries = useSyncExternalStore(network.subscribe, network.getSnapshot);
@@ -378,15 +459,12 @@ export function App() {
     else if (panel === "styling") switchSide("debug");
   };
   const debugTabsId = useId();
-  const [name, setName] = useState("");
-  const [picked, setPicked] = useState<{
-    suggestion: BusinessSuggestion;
-    pick: Pick;
-    /** The state codes the visitor had filtered by when they picked. */
-    asked: readonly string[];
-    /** What else they had typed: the name, and the person and address filters. */
-    typed: Typed;
-  } | null>(null);
+  // Each search keeps its own text and its own pick: switching back puts them
+  // back, rather than searching what another search's field held.
+  const [names, setNames] = useState<Record<Route, string>>(NO_NAMES);
+  const [picks, setPicks] = useState<Record<Route, Picked | null>>(NO_PICKS);
+  // Which search the field runs.
+  const [searchBy, setSearchBy] = useState<Route>("businesses");
   const [person, setPerson] = useState("");
   const [states, setStates] = useState("");
   const [address, setAddress] = useState("");
@@ -405,6 +483,26 @@ export function App() {
   const apiHost = environment === "custom" ? customBase : PRODUCTION;
   const client = useClient(applied, network);
   const [log, clearLog] = useLog(client);
+  // The searches the session may offer, and the filters each may send: the
+  // switch and the filter fields show nothing the session would refuse.
+  const scope = useSessionScope(client, applied);
+  // Before a key is applied there is no session to hold the switch to: it
+  // offers every search, so Styling can preview each one's rows.
+  const offered: Route[] =
+    client === null ? [...ROUTE_NAMES] : offeredRoutes(scope);
+  // The search asked for, if the session offers it, or else the first it does.
+  const mode: Route = offered.includes(searchBy)
+    ? searchBy
+    : (offered[0] ?? searchBy);
+  const name = names[mode];
+  const picked = picks[mode];
+  const setName = (value: string) =>
+    setNames(all => ({ ...all, [mode]: value }));
+  const setPicked = (pick: Picked | null) =>
+    setPicks(all => ({ ...all, [mode]: pick }));
+  const allowed = new Set(
+    allowedFilters(scope, mode).map(({ param }) => param),
+  );
 
   // When the last error happened, a refused or failed request or an error in
   // the log, against when the debug panel last showed it: the folded tab
@@ -446,8 +544,8 @@ export function App() {
       ...(result.grant !== undefined ? { firstGrant: result.grant } : {}),
     });
     // A pick's token belongs to the organization whose session received it:
-    // after another key, the search for it would be refused.
-    setPicked(null);
+    // after another key, the search for any of them would be refused.
+    setPicks(NO_PICKS);
     setCheck(null);
     setAnnounced(result.message);
     setConnectOpen(false);
@@ -457,19 +555,59 @@ export function App() {
     window.setTimeout(() => setCheck(result), FOLD_MS);
   };
 
+  // One field per filter, read by the search that takes it: the officer and
+  // address only by the business search, the states by all three (a
+  // business's own, a person's businesses', an address's own).
+  const showPerson = mode === "businesses" && allowed.has("person.name");
+  const showAddress = mode === "businesses" && allowed.has("address.text");
+  const showStates = allowed.has(
+    mode === "people" ? "business.state" : "state",
+  );
+  const codes = useMemo(() => parseStates(states), [states]);
   const filters: Filters | undefined = useMemo(() => {
     const f: Filters = {};
-    if (person.trim()) f.person = { name: person.trim() };
-    const codes = parseStates(states);
+    if (showPerson && person.trim()) f.person = { name: person.trim() };
     if (codes.length > 0) f.state = codes;
-    if (address.trim()) f.address = { text: address.trim() };
+    if (showAddress && address.trim()) f.address = { text: address.trim() };
     return Object.keys(f).length > 0 ? f : undefined;
-  }, [person, states, address]);
+  }, [person, codes, address, showPerson, showAddress]);
+  const peopleFilters: PeopleFilters | undefined = useMemo(
+    () =>
+      showStates && codes.length > 0
+        ? { business: { state: codes } }
+        : undefined,
+    [codes, showStates],
+  );
+  const addressFilters: AddressesFilters | undefined = useMemo(
+    () => (showStates && codes.length > 0 ? { state: codes } : undefined),
+    [codes, showStates],
+  );
   const filterCount = [
-    person.trim(),
-    parseStates(states).join(""),
-    address.trim(),
+    showPerson ? person.trim() : "",
+    showStates ? codes.join("") : "",
+    showAddress ? address.trim() : "",
   ].filter(Boolean).length;
+
+  // A business picked through a person or an address: the field keeps to the
+  // search it was made in, with the person's or the address's name, the
+  // component names the business under it, and step 03 searches for it with
+  // the person or address it came through.
+  const pickedThrough = (pick: BusinessPick) => {
+    setPicked({
+      toSearch: pickThrough(pick, {
+        typed: name,
+        asked: mode === "people" ? codes : [],
+      }),
+      fill:
+        pick.through.route === "people"
+          ? pick.through.person.label
+          : pick.through.address.label,
+    });
+  };
+  const editName = (value: string) => {
+    setName(value);
+    if (picked !== null && value !== picked.fill) setPicked(null);
+  };
 
   // The third step is for the pick it was made from: when the name or a filter
   // changes the pick goes, and the step closes up before it is taken away. It
@@ -494,7 +632,7 @@ export function App() {
 
   const label = (
     <>
-      {style.label}
+      {mode === "businesses" ? style.label : FIELD_LABELS[mode]}
       <span className="field-required" aria-hidden="true">
         *
       </span>
@@ -539,7 +677,7 @@ export function App() {
             </div>
             <div className="demo-intro-body" data-vt="intro-body">
               <h1 className="display-sm" id="demo-title">
-                The typeahead, against your own organization
+                The typeahead, against your own Baselayer account
               </h1>
               <p className="lede">
                 Configure the component and watch every request it makes, as it
@@ -551,7 +689,7 @@ export function App() {
         ) : (
           <div className="pane-rail">
             <h1 className="visually-hidden">
-              The typeahead, against your own organization
+              The typeahead, against your own Baselayer account
             </h1>
             <button
               type="button"
@@ -598,10 +736,13 @@ export function App() {
             )}
             <p className="warning">
               Your key stays in this tab&apos;s memory and is sent only to{" "}
-              {environment === "dev-server" ? (
+              {environment === "dev-server" &&
+              DEV_SERVER_TARGET === "sample" ? (
+                <>this dev server, which answers with made-up data</>
+              ) : environment === "dev-server" ? (
                 <>
                   this dev server, which forwards it to{" "}
-                  <code>{PRODUCTION}</code>
+                  <code>{DEV_SERVER_TARGET.replace(/\/+$/, "")}</code>
                 </>
               ) : (
                 <code>{apiHost || "the API"}</code>
@@ -661,9 +802,13 @@ export function App() {
 
           <section className="demo-card" aria-labelledby="demo-business-title">
             <div className="demo-card-head">
-              <h2 className="demo-card-title" id="demo-business-title">
-                <span className="demo-num">02</span> Try autocomplete here
-              </h2>
+              <SearchTitle
+                id="demo-business-title"
+                panelId="demo-search-panel"
+                routes={offered}
+                route={mode}
+                onRoute={setSearchBy}
+              />
               <button
                 type="button"
                 className="link-toggle"
@@ -686,7 +831,13 @@ export function App() {
               {...filterFocus}
             >
               <p className="hint" data-testid="demo-filters-hint">
-                Filters apply once the business name has{" "}
+                Filters apply once the{" "}
+                {mode === "businesses"
+                  ? "business name"
+                  : mode === "people"
+                    ? "person's name"
+                    : "address"}{" "}
+                has{" "}
                 {client === null ? (
                   "enough characters to narrow by"
                 ) : (
@@ -696,47 +847,63 @@ export function App() {
                 filter narrows the list, and the row says which one it matched:
                 the officer or the address is marked, a state on its flag.
               </p>
-              <Field label="Officer or agent name" optional>
-                <input
-                  value={person}
-                  onChange={e => {
-                    setPerson(e.target.value);
-                    setPicked(null);
-                  }}
-                  placeholder="dana"
-                  autoComplete="off"
-                />
-              </Field>
-              <Field
-                label="States"
-                optional
-                hint="Two-letter codes, separated by commas."
-              >
-                <input
-                  value={states}
-                  onChange={e => {
-                    setStates(e.target.value);
-                    setPicked(null);
-                  }}
-                  placeholder="PA, OH"
-                  autoComplete="off"
-                />
-              </Field>
-              <Field label="Address" optional>
-                <input
-                  value={address}
-                  onChange={e => {
-                    setAddress(e.target.value);
-                    setPicked(null);
-                  }}
-                  placeholder="1200 River Rd"
-                  autoComplete="off"
-                />
-              </Field>
+              {showPerson && (
+                <Field label="Officer or agent name" optional>
+                  <input
+                    value={person}
+                    onChange={e => {
+                      setPerson(e.target.value);
+                      setPicks(NO_PICKS);
+                    }}
+                    placeholder="dana"
+                    autoComplete="off"
+                  />
+                </Field>
+              )}
+              {showStates && (
+                <Field
+                  label={
+                    mode === "people" ? "Their businesses' states" : "States"
+                  }
+                  optional
+                  hint="Two-letter codes, separated by commas."
+                >
+                  <input
+                    value={states}
+                    onChange={e => {
+                      setStates(e.target.value);
+                      setPicks(NO_PICKS);
+                    }}
+                    placeholder="PA, OH"
+                    autoComplete="off"
+                  />
+                </Field>
+              )}
+              {showAddress && (
+                <Field label="Address" optional>
+                  <input
+                    value={address}
+                    onChange={e => {
+                      setAddress(e.target.value);
+                      setPicks(NO_PICKS);
+                    }}
+                    placeholder="1200 Tallowmere Rd"
+                    autoComplete="off"
+                  />
+                </Field>
+              )}
             </div>
             <div
               className="demo-preview"
               data-held={styling ? "true" : "false"}
+              // The title's words switch what the field searches for.
+              {...(offered.length > 1
+                ? {
+                    id: "demo-search-panel",
+                    role: "tabpanel",
+                    "aria-labelledby": `demo-business-title-tab-${mode}`,
+                  }
+                : {})}
             >
               {previewCss(style) !== "" && <style>{previewCss(style)}</style>}
               {client === null ? (
@@ -753,50 +920,113 @@ export function App() {
                       style.pageInput ? "bl-ac-input demo-input" : "bl-ac-input"
                     }
                     disabled
-                    placeholder="Connect first, then type a business name"
+                    placeholder={`Connect first, then type ${
+                      mode === "businesses"
+                        ? "a business name"
+                        : mode === "people"
+                          ? "a person's name"
+                          : "an address"
+                    }`}
                   />
                 </div>
               ) : (
                 <>
-                  <BusinessAutocomplete
-                    key={applied?.id}
-                    client={client}
-                    id="demo-business"
-                    label={label}
-                    value={name}
-                    onChange={value => {
-                      setName(value);
-                      if (
-                        picked !== null &&
-                        value !== pickedNameOf(picked.suggestion)
-                      )
-                        setPicked(null);
-                    }}
-                    onPick={(suggestion, pick) =>
-                      setPicked({
-                        suggestion,
-                        pick,
-                        asked: filters?.state ?? [],
-                        // The field holds the pick's fill by now; the closure
-                        // still holds what was typed to find it.
-                        typed: { name, person, address },
-                      })
-                    }
-                    look={{ ...changedLook(style) }}
-                    limit={style.limit}
-                    minChars={style.minChars}
-                    debounceMs={style.debounceMs}
-                    mintOn={style.mintOn}
-                    menuFollowsInputWidth={style.menuFollowsInputWidth}
-                    messages={messages}
-                    unstyled={style.unstyled}
-                    open={styling || filtering}
-                    layout={style.layout}
-                    {...(style.pageInput
-                      ? { classNames: { input: "demo-input" } }
-                      : {})}
-                    {...(filters !== undefined ? { filters } : {})}
-                  />
+                  {mode === "businesses" ? (
+                    <BusinessAutocomplete
+                      key={`${applied?.id}:businesses`}
+                      client={client}
+                      id="demo-business"
+                      label={label}
+                      value={name}
+                      onChange={editName}
+                      onPick={(suggestion, pick) =>
+                        setPicked({
+                          toSearch: pickFromRow(
+                            suggestion,
+                            pick,
+                            filters?.state ?? [],
+                            // The field holds the pick's fill by now; the
+                            // closure still holds what was typed to find it.
+                            { name, person, address },
+                          ),
+                          fill: pickedNameOf(suggestion),
+                        })
+                      }
+                      look={{ ...changedLook(style) }}
+                      limit={style.limit}
+                      minChars={style.minChars}
+                      debounceMs={style.debounceMs}
+                      mintOn={style.mintOn}
+                      menuFollowsInputWidth={style.menuFollowsInputWidth}
+                      messages={messages}
+                      unstyled={style.unstyled}
+                      open={styling || filtering}
+                      // A person or an address picked: nothing redeems its
+                      // token, so there is no business for step 03 to search.
+                      onPickEntity={() => setPicked(null)}
+                      {...componentProps(style, "businesses")}
+                      {...(style.pageInput
+                        ? { classNames: { input: "demo-input" } }
+                        : {})}
+                      {...(filters !== undefined ? { filters } : {})}
+                    />
+                  ) : mode === "people" ? (
+                    <PersonAutocomplete
+                      key={`${applied?.id}:people`}
+                      client={client}
+                      id="demo-person"
+                      label={label}
+                      value={name}
+                      onChange={editName}
+                      onPick={pickedThrough}
+                      // A person or an address picked: nothing redeems its
+                      // token, so there is no business for step 03 to search.
+                      onPickEntity={() => setPicked(null)}
+                      {...componentProps(style, "people")}
+                      look={{ ...changedLook(style) }}
+                      limit={style.limit}
+                      minChars={style.minChars}
+                      debounceMs={style.debounceMs}
+                      mintOn={style.mintOn}
+                      menuFollowsInputWidth={style.menuFollowsInputWidth}
+                      messages={messages}
+                      unstyled={style.unstyled}
+                      open={styling || filtering}
+                      {...(style.pageInput
+                        ? { classNames: { input: "demo-input" } }
+                        : {})}
+                      {...(peopleFilters !== undefined
+                        ? { filters: peopleFilters }
+                        : {})}
+                    />
+                  ) : (
+                    <AddressAutocomplete
+                      key={`${applied?.id}:addresses`}
+                      client={client}
+                      id="demo-address"
+                      label={label}
+                      value={name}
+                      onChange={editName}
+                      onPick={pickedThrough}
+                      onPickEntity={() => setPicked(null)}
+                      {...componentProps(style, "addresses")}
+                      look={{ ...changedLook(style) }}
+                      limit={style.limit}
+                      minChars={style.minChars}
+                      debounceMs={style.debounceMs}
+                      mintOn={style.mintOn}
+                      menuFollowsInputWidth={style.menuFollowsInputWidth}
+                      messages={messages}
+                      unstyled={style.unstyled}
+                      open={styling || filtering}
+                      {...(style.pageInput
+                        ? { classNames: { input: "demo-input" } }
+                        : {})}
+                      {...(addressFilters !== undefined
+                        ? { filters: addressFilters }
+                        : {})}
+                    />
+                  )}
                 </>
               )}
               {styling && name.trim() === "" && (
@@ -804,44 +1034,103 @@ export function App() {
                   {/* Sample rows under the empty field, drawn by the same view
                       the live component uses, so every knob shows on them. */}
                   <div className="demo-sample" aria-hidden="true">
-                    <BusinessAutocompleteView
-                      id="demo-sample"
-                      value={SAMPLE_QUERY}
-                      onInputChange={() => {}}
-                      onSelect={() => {}}
-                      renderInput={inputProps => (
-                        <input {...inputProps} hidden tabIndex={-1} />
-                      )}
-                      suggestions={sampleRows({
-                        limit: style.limit,
-                        include: includeForLayout(style.layout),
-                      })}
-                      found={SAMPLE_META.found}
-                      foundCapped={false}
-                      truncated={false}
-                      indexTag={SAMPLE_META.indexTag}
-                      roundTripMs={SAMPLE_META.roundTripMs}
-                      isSearching={false}
-                      error={null}
-                      open
-                      look={{ ...changedLook(style) }}
-                      messages={messages}
-                      unstyled={style.unstyled}
-                      layout={style.layout}
-                      // The sample rows answer to the filters above, so a state
-                      // typed there marks its flag on them.
-                      {...(filters !== undefined
-                        ? { appliedFilters: filters }
-                        : {})}
-                      menuFollowsInputWidth={style.menuFollowsInputWidth}
-                    />
+                    {mode === "businesses" ? (
+                      <BusinessAutocompleteView
+                        id="demo-sample"
+                        value={SAMPLE_QUERY}
+                        onInputChange={() => {}}
+                        onSelect={() => {}}
+                        renderInput={inputProps => (
+                          <input {...inputProps} hidden tabIndex={-1} />
+                        )}
+                        suggestions={sampleRows({
+                          limit: style.limit,
+                          include: requestFor(
+                            "businesses",
+                            componentProps(style, "businesses").layout,
+                            componentProps(style, "businesses").list,
+                          ).include,
+                        })}
+                        found={SAMPLE_META.found}
+                        foundCapped={false}
+                        truncated={false}
+                        indexTag={SAMPLE_META.indexTag}
+                        roundTripMs={SAMPLE_META.roundTripMs}
+                        isSearching={false}
+                        error={null}
+                        open
+                        look={{ ...changedLook(style) }}
+                        messages={messages}
+                        unstyled={style.unstyled}
+                        {...componentProps(style, "businesses")}
+                        // The sample rows answer to the filters above, so a state
+                        // typed there marks its flag on them.
+                        {...(filters !== undefined
+                          ? { appliedFilters: filters }
+                          : {})}
+                        menuFollowsInputWidth={style.menuFollowsInputWidth}
+                      />
+                    ) : mode === "people" ? (
+                      <PersonAutocompleteView
+                        id="demo-sample"
+                        value={SAMPLE_PEOPLE_QUERY}
+                        onInputChange={() => {}}
+                        onSelect={() => {}}
+                        renderInput={inputProps => (
+                          <input {...inputProps} hidden tabIndex={-1} />
+                        )}
+                        suggestions={SAMPLE_PEOPLE.slice(0, style.limit)}
+                        {...componentProps(style, "people")}
+                        found={SAMPLE_PEOPLE.length}
+                        foundCapped={false}
+                        truncated={false}
+                        indexTag={SAMPLE_META.indexTag}
+                        roundTripMs={SAMPLE_META.roundTripMs}
+                        isSearching={false}
+                        error={null}
+                        open
+                        look={{ ...changedLook(style) }}
+                        messages={messages}
+                        unstyled={style.unstyled}
+                        menuFollowsInputWidth={style.menuFollowsInputWidth}
+                      />
+                    ) : (
+                      <AddressAutocompleteView
+                        id="demo-sample"
+                        value={SAMPLE_ADDRESSES_QUERY}
+                        onInputChange={() => {}}
+                        onSelect={() => {}}
+                        renderInput={inputProps => (
+                          <input {...inputProps} hidden tabIndex={-1} />
+                        )}
+                        suggestions={SAMPLE_ADDRESSES.slice(0, style.limit)}
+                        {...componentProps(style, "addresses")}
+                        found={SAMPLE_ADDRESSES.length}
+                        foundCapped={false}
+                        truncated={false}
+                        indexTag={SAMPLE_META.indexTag}
+                        roundTripMs={SAMPLE_META.roundTripMs}
+                        isSearching={false}
+                        error={null}
+                        open
+                        look={{ ...changedLook(style) }}
+                        messages={messages}
+                        unstyled={style.unstyled}
+                        menuFollowsInputWidth={style.menuFollowsInputWidth}
+                      />
+                    )}
                   </div>
                   <p className="hint demo-sample-note">
-                    Sample rows for &ldquo;{SAMPLE_QUERY}&rdquo; while Styling
-                    is open.{" "}
+                    Sample rows for &ldquo;
+                    {mode === "businesses"
+                      ? SAMPLE_QUERY
+                      : mode === "people"
+                        ? SAMPLE_PEOPLE_QUERY
+                        : SAMPLE_ADDRESSES_QUERY}
+                    &rdquo; while Styling is open.{" "}
                     {client === null
-                      ? "Connect and type a name to see real ones."
-                      : "Type a name to see real ones."}
+                      ? "Connect and type to see real ones."
+                      : "Type to see real ones."}
                   </p>
                 </>
               )}
@@ -865,7 +1154,7 @@ export function App() {
             <div className="step-exit-inner">
               {shownStep !== null && (
                 <SearchStep
-                  key={`${shownStep.applied.id}:${shownStep.picked.pick.businessToken}:${shownStep.picked.pick.pickedAt}`}
+                  key={`${shownStep.applied.id}:${shownStep.picked.toSearch.businessToken}:${shownStep.picked.toSearch.expiresAt}`}
                   apiKey={shownStep.applied.secret}
                   baseUrl={shownStep.applied.baseUrl}
                   // The host the applied connection reaches, not the form's:
@@ -875,7 +1164,7 @@ export function App() {
                       ? shownStep.applied.baseUrl
                       : PRODUCTION
                   }
-                  picked={shownStep.picked}
+                  picked={shownStep.picked.toSearch}
                   fetchImpl={network.fetch}
                   onShowDebug={showDebug}
                 />
@@ -1073,7 +1362,13 @@ export function App() {
                   aria-label="Styling"
                   data-testid="demo-styling"
                 >
-                  <StylingPanel state={style} onChange={setStyle} />
+                  <StylingPanel
+                    state={style}
+                    onChange={setStyle}
+                    route={mode}
+                    routes={offered}
+                    onRoute={setSearchBy}
+                  />
                 </section>
               )}
             </div>

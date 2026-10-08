@@ -69,6 +69,29 @@ By default the client holds the filters back below that length and says so with
 ever seeing a 422. `onShortStem: "send"` sends them anyway; `"throw"` rejects
 locally.
 
+### Other routes, and the session's scope
+
+`search(route, query)` asks any route; `suggest` is the businesses one.
+
+```ts
+const { scope } = await client.getSession();
+if (offeredRoutes(scope).includes("people")) {
+  const { response } = await client.search("people", {
+    q: "dana whitfield",
+    filters: { business: { state: ["PA"] } },
+  });
+}
+```
+
+A session searches only what its scope allows (see
+[What a session may search](entities.md#what-a-session-may-search)). The
+client refuses a route, an `include` member or a filter outside it before
+anything is sent, as `out_of_scope` with `route`, `relation` and `param`
+saying what, and a `limit` past `scope.maxLimit` as `query_invalid`.
+`offeredRoutes(scope)` and `allowedFilters(scope, route)` say beforehand what
+to offer; `scopeViolation(scope, route, { include, filters })` says what a
+request would be refused for, or null.
+
 ### Configuration
 
 Every timing and threshold is configuration, with Baselayer's defaults:
@@ -113,12 +136,17 @@ expiry, is discarded; `reset()` removes it.
 
 ```ts
 client.on("mint", e => console.log(e.reason, e.outcome.kind, e.durationMs));
-client.on("request", e => console.log(e.q, e.status, e.roundTripMs));
+client.on("request", e =>
+  console.log(e.relation, e.q, e.status, e.roundTripMs),
+);
 client.on("stateChange", snapshot => console.log(snapshot.session.phase));
 ```
 
 `getSnapshot()` is synchronous and referentially stable between changes, so
-it plugs into `useSyncExternalStore` or any store.
+it plugs into `useSyncExternalStore` or any store. Its `usage` counts the
+requests on the current session, in all (`requestsSinceMint`) and per route
+(`requestsByRoute`), as the autocomplete service budgets them; each request
+event carries its route's count as `requestsOnRoute`.
 
 ## React hooks
 
@@ -181,9 +209,11 @@ Its options past `query` and `enabled`:
 
 - `client`: else the provider's; with neither, the hook throws
 - `filters` and `include`: as on the client, compared by what they say, so a
-  fresh object on every render does not refire the request
-- `limit` (`5`, `DEFAULT_LIMIT`): rows per keystroke, where a bare client
-  call gets the autocomplete service's 10
+  fresh object on every render does not refire the request; an `include`
+  member the session's scope does not grant is left out
+- `limit` (`5`, `DEFAULT_LIMIT`, or the session's `maxLimit` when fewer):
+  rows per keystroke, where a bare client call gets the autocomplete
+  service's 10; a `limit` you give is sent as given
 - `minChars` (`3`, `MIN_QUERY_CHARS`): characters of trimmed text before it
   asks
 - `debounceMs` (`250`, `DEBOUNCE_MS`): the pause after each keystroke
@@ -201,8 +231,84 @@ Its state, besides `suggestions`, `isSearching` and `unavailable`:
   is null (a window backoff, an invalid query)
 - `indexTag`, `roundTripMs` and `requestId`: the shown answer's, or null
 - `filtersWithheld`: the filters were held back for a short stem
+- `expanded`: the relations the shown rows expanded, those the answer's
+  `sources` mark `ok`, whatever was asked for; list only these under a row,
+  since any other came back empty (`not_requested`) or was not looked at
 
 `EMPTY_AUTOCOMPLETE_STATE` is the state before anything is asked.
+
+`useEntityAutocomplete({ relation, query, ... })` is the same hook for any
+route, typed by it. `requestFor(route, layout, list)` says what to ask for: the
+relations listed under each row, in the order given (`DEFAULT_LIST` when left
+out), and whatever the layout draws besides. `groupedLines(row, list,
+enabledLines)` turns a row of any route into its head and a line per listed
+item, each with what picking it hands, or null where it is disabled;
+`enabledLines` is `DEFAULT_ENABLED_LINES`, businesses, when left out.
+`groupedOptions(lines)` lists the enabled ones in the order they are drawn.
+Each is a `GroupedOption`:
+
+| `kind`     | What was picked                         | What to do with it                                 |
+| ---------- | --------------------------------------- | -------------------------------------------------- |
+| `row`      | a business row's own head, `row`        | pick it as any business row: its `token`           |
+| `business` | a business under a person or an address | `businessPickFrom(row, business, Date.now())`      |
+| `entity`   | a person or an address, a row or a line | `pick`, an `EntityPick` (`type`, `token`, `label`) |
+
+```tsx
+const layout = drawnLayout(PERSON_ROW, resolveLayout(PERSON_ROW));
+const request = requestFor("people", layout, ["businesses"]);
+const state = useEntityAutocomplete({
+  relation: "people",
+  query: value,
+  enabled: true,
+  include: request.include,
+});
+// List only what the rows expanded: their answer's sources say.
+const listed = request.list.filter(relation =>
+  state.expanded.includes(relation),
+);
+const rows = state.suggestions.map(row =>
+  groupedLines(row, listed, ["business", "person"]),
+);
+const options = rows.flatMap(groupedOptions).map(option => ({
+  option,
+  label:
+    option.kind === "business"
+      ? option.business.label
+      : option.kind === "entity"
+        ? option.pick.label
+        : option.row.label,
+}));
+const combobox = useSuggestionCombobox({
+  id: "person",
+  items: options,
+  inputValue: value,
+  onInputChange: setValue,
+  onPick: ({ option }) => {
+    switch (option.kind) {
+      case "business":
+        onPick(businessPickFrom(option.row, option.business, Date.now()));
+        break;
+      case "entity":
+        onPickEntity(option.pick);
+        break;
+      case "row":
+        // Only a business search's rows have a head of this kind.
+        break;
+    }
+  },
+  hasFooter: state.isSearching || state.error !== null,
+});
+```
+
+Draw each row as a `role="group"` labelled by its name, its lines inside, so
+the arrow keys move from pick to pick and a screen reader hears whose they are.
+A line that is not enabled is best an option too, disabled, as the styled
+components draw it: give `useSuggestionCombobox` every line as an item and
+`isItemDisabled` for those `groupedLines` hands no option, and a screen reader
+calls it unavailable while the keys pass over it. The hook leaves out any
+relation the session's scope does not grant, and its `expanded` says what the
+shown rows expanded: list only those, as above, and a grant that changes while
+they are on screen draws no empty list.
 
 `useBusinessCombobox` is downshift's combobox with three decisions made: the
 caret never jumps on a mid-word insert, a blur never commits the highlighted
@@ -231,9 +337,15 @@ agents, addresses, states and the alias; see
 [What matched](styling.md#what-matched)),
 `structureLabel` (a structure's flag, `C-Corp` for `C_CORPORATION`),
 `formatFound`, `queryTokens` and `partsFor` (the highlight parts to draw for
-a name, whole-word or cut at the typed prefix). To lay your rows out in the
-styled component's places, `drawnRowLayout(resolveRowLayout(layout))` is the
-field each place draws, as the component has it, `ROW_LINES` groups the
+a name, whole-word or cut at the typed prefix), and for a person's or an
+address's row `groupedLines`, `groupedOptions`, `businessPickFrom` and
+`pickableBusinesses`. To lay your rows out in the styled component's places,
+`drawnRowLayout(resolveRowLayout(layout))` is the field each place of a
+business row's head draws, as the component has it, `ROW_LINES` groups the
 places into each line's lead and trailing corner, and
 `includeForLayout(layout)` says what to ask the autocomplete service to expand
 for it (see [A row's places and fields](styling.md#5-a-rows-places-and-fields)).
+For any kind of row, a business's with its lines, a person's or an
+address's, `drawnLayout(kind, resolveLayout(kind, layout))` is the same, the
+kind's `lines` are its corners and `requestFor` what to ask for (see
+[Every kind of row](styling.md#every-kind-of-row)).

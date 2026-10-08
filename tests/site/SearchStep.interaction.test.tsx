@@ -20,6 +20,7 @@ import {
 import { SAMPLE_SUGGESTIONS } from "../../site/demo/sample";
 import { SAMPLE_SEARCH } from "../../site/demo/sample-search";
 import { SEARCH_WAIT_SECONDS } from "../../site/demo/searches";
+import { pickFromRow } from "../../site/demo/search-view";
 import { SearchStep } from "../../site/demo/SearchStep";
 
 // Step 03 as a visitor uses it: the Run button after a refusal, where focus
@@ -74,17 +75,17 @@ function step(fetchImpl: FetchImpl) {
       apiKey="key"
       baseUrl="https://api.example.test"
       apiHost="https://api.example.test"
-      picked={{
+      picked={pickFromRow(
         suggestion,
-        pick: {
+        {
           businessToken: "token",
           pickedAt: Date.now(),
           expiresAt: Date.now() + 10 * 60_000,
           matchedOn: [],
         },
-        asked: [],
-        typed: { name: "", person: "", address: "" },
-      }}
+        [],
+        { name: "", person: "", address: "" },
+      )}
       fetchImpl={fetchImpl}
       onShowDebug={() => undefined}
     />

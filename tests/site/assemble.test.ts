@@ -181,12 +181,17 @@ describe("normalizeMarkdown", () => {
 describe("assembleReference", () => {
   const reference = assembleReference({ autocomplete, sessions, overlay });
 
-  it("documents exactly the two public routes", () => {
+  it("documents the mint and every search route the autocomplete service serves", () => {
     expect(
       Object.entries(reference.paths).flatMap(([path, item]) =>
         Object.keys(item).map(method => `${method.toUpperCase()} ${path}`),
       ),
-    ).toEqual(["POST /autocomplete/sessions", "GET /autocomplete/businesses"]);
+    ).toEqual([
+      "POST /autocomplete/sessions",
+      "GET /autocomplete/businesses",
+      "GET /autocomplete/people",
+      "GET /autocomplete/addresses",
+    ]);
   });
 
   it("resolves every reference it contains", () => {

@@ -1,0 +1,1562 @@
+import {
+  act,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useState } from "react";
+import { describe, expect, it, vi } from "vitest";
+
+import {
+  BUSINESS_TOKEN_TTL_SECONDS,
+  DEFAULT_ENABLED_LINES,
+  createAutocompleteClient,
+  type AddressesFilters,
+  type BusinessPick,
+  type EntityPick,
+  type EntityType,
+  type FetchLike,
+  type MintFunction,
+  type MintOutcome,
+  type PeopleFilters,
+  type PersonIconSegment,
+  type PersonRowLayoutInput,
+  type ResponseLike,
+  type SessionScope,
+} from "@baselayer-sdk/autocomplete";
+
+import {
+  AddressAutocomplete,
+  DEFAULT_MESSAGES,
+  PersonAutocomplete,
+  PersonAutocompleteView,
+  useEntityAutocomplete,
+  type IconSet,
+} from "../../src/react";
+
+// Made-up people, addresses and businesses.
+const BASE_URL = "https://api.example.test";
+
+const SCOPE: SessionScope = {
+  routes: {
+    businesses: ["people", "addresses"],
+    people: ["businesses", "addresses"],
+    addresses: ["businesses", "people"],
+  },
+  maxLimit: 20,
+};
+
+function reply(status: number, body: unknown): ResponseLike {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    headers: { get: () => null },
+    json: async () => body,
+  };
+}
+
+const business = (
+  label: string,
+  token: string | null,
+  role: string,
+  address: string | null = null,
+  states: string[] = ["DE"],
+) => ({
+  type: "business",
+  token,
+  label,
+  role,
+  matched: false,
+  address,
+  states,
+  domicile_state: states[states.length - 1],
+});
+
+const entity = (
+  type: "person" | "address",
+  label: string,
+  token: string | null,
+  role: string,
+) => ({
+  type,
+  token,
+  label,
+  role,
+  matched: false,
+  address: null,
+  states: null,
+  domicile_state: null,
+});
+
+const PEOPLE = {
+  query: "dana",
+  found: 2,
+  found_capped: false,
+  truncated: false,
+  sources: {
+    businesses: { status: "ok" },
+    addresses: { status: "ok" },
+  },
+  suggestions: [
+    {
+      type: "person",
+      token: "tok-p-dana",
+      label: "Dana Whitfield",
+      matched_name: null,
+      match: "strong",
+      highlight: [
+        { text: "Dana", matched: true },
+        { text: " Whitfield", matched: false },
+      ],
+      related: {
+        businesses: {
+          count: 9,
+          matched: null,
+          truncated: true,
+          items: [
+            business(
+              "Harbor Concrete Pumping Co., Inc.",
+              "tok-b-harbor",
+              "officer",
+              "1200 Tallowmere Rd, Wilmington, DE 19801",
+              // Sorted by code, as the wire sends them; the domicile is PA.
+              ["DE", "FL", "PA"],
+            ),
+            business("Unsealed Holdings LLC", null, "officer"),
+            business("Cobalt Tile Supply LLC", "tok-b-cobalt", "agent"),
+          ],
+        },
+        addresses: {
+          count: 3,
+          matched: null,
+          truncated: false,
+          items: [
+            entity(
+              "address",
+              "12 Fernhallow Ln, Dover, DE 19901",
+              "tok-a-oak",
+              "officer",
+            ),
+            entity("address", "9 Ashcombe Ct, Dover, DE 19904", null, "agent"),
+          ],
+        },
+      },
+    },
+    {
+      type: "person",
+      token: "tok-p-danae",
+      label: "Danae Ortega",
+      matched_name: null,
+      match: "strong",
+      highlight: [{ text: "Danae", matched: true }],
+      related: {
+        businesses: {
+          count: 1,
+          matched: null,
+          truncated: false,
+          items: [business("Ortega Masonry LLC", "tok-b-ortega", "officer")],
+        },
+        addresses: { count: 0, matched: null, truncated: false, items: [] },
+      },
+    },
+  ],
+};
+
+const ADDRESSES = {
+  query: "45 corvel",
+  found: 1,
+  found_capped: false,
+  truncated: false,
+  sources: {
+    businesses: { status: "ok" },
+    people: { status: "ok" },
+  },
+  suggestions: [
+    {
+      type: "address",
+      token: "tok-a-corvel",
+      label: "45 Corvel Landing Ste 200, Erie, PA 16507",
+      matched_name: null,
+      match: "strong",
+      highlight: [
+        { text: "45 Corvel", matched: true },
+        { text: " Landing Ste 200, Erie, PA 16507", matched: false },
+      ],
+      components: {
+        line1: "45 Corvel Landing",
+        line2: "Ste 200",
+        city: "Erie",
+        state: "PA",
+        postal_code: "16507",
+      },
+      related: {
+        businesses: {
+          count: 412,
+          matched: null,
+          truncated: true,
+          items: [
+            business("Ridgeline Freight LLC", "tok-b-ridgeline", "principal"),
+            business("Cinder Rigging, Inc.", "tok-b-cinder", "agent"),
+          ],
+        },
+        people: {
+          count: 2,
+          matched: null,
+          truncated: false,
+          items: [
+            entity("person", "Wesley Crane", "tok-p-wesley", "officer"),
+            entity("person", "Ada Fox", "tok-p-ada", "agent"),
+          ],
+        },
+      },
+    },
+  ],
+};
+
+/** The answer with only the relations asked for, as the service sends it. */
+function answer(body: typeof PEOPLE | typeof ADDRESSES, include: string[]) {
+  const unasked = { count: null, matched: null, truncated: false, items: [] };
+  return {
+    ...body,
+    sources: Object.fromEntries(
+      Object.keys(body.sources).map(relation => [
+        relation,
+        { status: include.includes(relation) ? "ok" : "not_requested" },
+      ]),
+    ),
+    suggestions: body.suggestions.map(row => ({
+      ...row,
+      related: Object.fromEntries(
+        Object.entries(row.related).map(([relation, set]) => [
+          relation,
+          include.includes(relation) ? set : unasked,
+        ]),
+      ),
+    })),
+  };
+}
+
+/** A mint that grants `scope`. */
+const grant = (scope: SessionScope): MintOutcome => ({
+  kind: "granted",
+  grant: {
+    sessionToken: "sess-1",
+    expiresIn: 300,
+    requestBudget: 50,
+    pivotAllowance: 5,
+    filterMinStem: 3,
+    scope,
+  },
+});
+
+function setup(
+  scope: SessionScope = SCOPE,
+  mint: MintFunction = async () => grant(scope),
+) {
+  const fetch = vi.fn<FetchLike>(async url => {
+    const include = (
+      new URL(url).searchParams.get("include") ?? "businesses"
+    ).split(",");
+    return reply(
+      200,
+      answer(
+        url.includes("/autocomplete/people") ? PEOPLE : ADDRESSES,
+        include,
+      ),
+    );
+  });
+  return {
+    fetch,
+    client: createAutocompleteClient({ baseUrl: BASE_URL, mint, fetch }),
+  };
+}
+
+function aMoment() {
+  return act(() => new Promise(resolve => setTimeout(resolve, 30)));
+}
+
+type Client = ReturnType<typeof setup>["client"];
+
+function PersonHost({
+  client,
+  onPick = () => {},
+  onPickEntity = () => {},
+  list,
+  enabledLines,
+  layout,
+  showSelection,
+  icons,
+  iconSegments,
+  filters,
+}: {
+  client: Client;
+  onPick?: (pick: BusinessPick) => void;
+  onPickEntity?: (pick: EntityPick) => void;
+  list?: ("businesses" | "addresses")[];
+  enabledLines?: EntityType[];
+  layout?: PersonRowLayoutInput;
+  showSelection?: boolean;
+  icons?: IconSet;
+  iconSegments?: PersonIconSegment[];
+  filters?: PeopleFilters;
+}) {
+  const [value, setValue] = useState("");
+  return (
+    <>
+      <button type="button" onClick={() => setValue("")}>
+        Start over
+      </button>
+      <button type="button" onClick={() => setValue("Dana Whitfield")}>
+        Put back
+      </button>
+      <button type="button" onClick={() => setValue("dana")}>
+        Back to what was typed
+      </button>
+      <PersonAutocomplete
+        client={client}
+        id="person"
+        label="Person"
+        value={value}
+        debounceMs={0}
+        onChange={setValue}
+        onPick={onPick}
+        onPickEntity={onPickEntity}
+        {...(list !== undefined ? { list } : {})}
+        enabledLines={enabledLines ?? DEFAULT_ENABLED_LINES}
+        {...(layout !== undefined ? { layout } : {})}
+        {...(showSelection !== undefined ? { showSelection } : {})}
+        {...(icons !== undefined ? { icons } : {})}
+        {...(iconSegments !== undefined ? { iconSegments } : {})}
+        {...(filters !== undefined ? { filters } : {})}
+      />
+    </>
+  );
+}
+
+function AddressHost({
+  client,
+  onPick = () => {},
+  onPickEntity = () => {},
+  list,
+  enabledLines,
+  filters,
+}: {
+  client: Client;
+  onPick?: (pick: BusinessPick) => void;
+  onPickEntity?: (pick: EntityPick) => void;
+  list?: ("businesses" | "people")[];
+  enabledLines?: EntityType[];
+  filters?: AddressesFilters;
+}) {
+  const [value, setValue] = useState("");
+  return (
+    <AddressAutocomplete
+      client={client}
+      id="address"
+      label="Address"
+      value={value}
+      debounceMs={0}
+      onChange={setValue}
+      onPick={onPick}
+      onPickEntity={onPickEntity}
+      {...(list !== undefined ? { list } : {})}
+      enabledLines={enabledLines ?? DEFAULT_ENABLED_LINES}
+      {...(filters !== undefined ? { filters } : {})}
+    />
+  );
+}
+
+/** The options in `element` a pick can land on: those not disabled. */
+function enabledOptions(element: HTMLElement): HTMLElement[] {
+  return within(element)
+    .queryAllByRole("option")
+    .filter(option => option.getAttribute("aria-disabled") !== "true");
+}
+
+/** The lines of a group, by kind, each as its text. */
+function linesOf(group: HTMLElement, line: string): string[] {
+  return within(group)
+    .queryAllByTestId(`${line}-line`)
+    .map(element => element.textContent ?? "");
+}
+
+async function typeDana(client: Client, props = {}) {
+  const user = userEvent.setup();
+  render(<PersonHost client={client} {...props} />);
+  await user.type(screen.getByRole("combobox"), "dana");
+  return {
+    user,
+    dana: await screen.findByRole("group", { name: "Dana Whitfield" }),
+  };
+}
+
+describe("PersonAutocomplete", () => {
+  it("asks the people route for each person's businesses, and their addresses for the head", async () => {
+    const { client, fetch } = setup();
+    await typeDana(client);
+
+    const url = new URL(fetch.mock.calls.at(-1)![0]);
+    expect(url.pathname).toBe("/autocomplete/people");
+    expect(url.searchParams.get("include")).toBe("businesses,addresses");
+  });
+
+  it("draws the head: the name, the first address with how many more, and every count", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client);
+
+    const head = within(dana).getByTestId("group-head");
+    expect(within(head).getByTestId("grouped-firstAddress")).toHaveTextContent(
+      "12 Fernhallow Ln, Dover, DE 19901 +2",
+    );
+    expect(within(head).getByTestId("grouped-counts")).toHaveTextContent(
+      "9 businesses · 3 addresses",
+    );
+    expect(
+      within(dana)
+        .getAllByTestId("person-suggestion-match")
+        .map(m => m.textContent),
+    ).toEqual(["Dana"]);
+    const danae = screen.getByRole("group", { name: "Danae Ortega" });
+    expect(within(danae).getByTestId("grouped-counts")).toHaveTextContent(
+      "1 business · 0 addresses",
+    );
+    expect(within(danae).queryByTestId("grouped-firstAddress")).toBeNull();
+    expect(screen.getByText("2 people")).toBeInTheDocument();
+  });
+
+  it("draws a line per business, with its address, its states domicile first, and the role", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client);
+
+    const [harbor] = within(dana).getAllByTestId("business-line");
+    expect(within(harbor!).getByTestId("grouped-address")).toHaveTextContent(
+      "1200 Tallowmere Rd, Wilmington, DE 19801",
+    );
+    expect(
+      within(harbor!)
+        .getAllByTestId("business-suggestion-state")
+        .map(state => state.textContent),
+    ).toEqual(["PA", "DE", "FL"]);
+    expect(within(harbor!).getByTestId("grouped-role")).toHaveTextContent(
+      "officer",
+    );
+    // Every business is drawn; the one the service could not seal is disabled.
+    expect(linesOf(dana, "business")).toEqual([
+      expect.stringContaining("Harbor Concrete Pumping Co., Inc."),
+      expect.stringContaining("Unsealed Holdings LLC"),
+      expect.stringContaining("Cobalt Tile Supply LLC"),
+    ]);
+    expect(enabledOptions(dana).map(option => option.textContent)).toEqual([
+      expect.stringContaining("Harbor Concrete Pumping Co., Inc."),
+      expect.stringContaining("Cobalt Tile Supply LLC"),
+    ]);
+    expect(within(dana).getByText("+6 more not shown")).toBeInTheDocument();
+    // Addresses are counted, but not listed unless asked.
+    expect(linesOf(dana, "address")).toEqual([]);
+  });
+
+  it("describes each group by its head's first address, its counts and what each list leaves out", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client, {
+      list: ["businesses", "addresses"],
+    });
+
+    // Every line is an option, enabled or not, and speaks for itself; the
+    // group's description is what no option says.
+    const described = (dana.getAttribute("aria-describedby") ?? "")
+      .split(" ")
+      .map(id => document.getElementById(id)?.textContent ?? "");
+    expect(described).toEqual([
+      "12 Fernhallow Ln, Dover, DE 19901 +2",
+      "9 businesses · 3 addresses",
+      "+6 more not shown",
+      "+1 more not shown",
+    ]);
+    expect(
+      screen.getByRole("group", { name: "Danae Ortega" }),
+    ).toHaveAccessibleDescription("1 business · 0 addresses");
+  });
+
+  it("makes a line or a head that is not a pick a disabled option, the head still the group's label", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client, {
+      list: ["businesses", "addresses"],
+    });
+
+    // Not a pick by default: a person's head is a disabled option, and still
+    // what the group is named by.
+    const head = within(dana).getByTestId("group-head");
+    expect(head).toHaveAttribute("role", "option");
+    expect(head).toHaveAttribute("aria-disabled", "true");
+    expect(dana).toHaveAccessibleName("Dana Whitfield");
+    const disabled = [
+      within(dana).getAllByTestId("business-line")[1]!,
+      ...within(dana).getAllByTestId("address-line"),
+    ];
+    for (const line of disabled) {
+      expect(line).toHaveAttribute("role", "option");
+      expect(line).toHaveAttribute("aria-disabled", "true");
+    }
+    const [harbor] = within(dana).getAllByTestId("business-line");
+    expect(harbor).toHaveAttribute("role", "option");
+    expect(harbor).not.toHaveAttribute("aria-disabled", "true");
+    // Named by its text, so a screen reader says what it is, and unavailable.
+    expect(
+      within(dana).getByRole("option", { name: /Unsealed Holdings LLC/ }),
+    ).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("picks nothing, and leaves the field as it was, when a disabled line is clicked", async () => {
+    const { client } = setup();
+    const onPick = vi.fn<(pick: BusinessPick) => void>();
+    const onPickEntity = vi.fn<(pick: EntityPick) => void>();
+    const { user, dana } = await typeDana(client, {
+      list: ["businesses", "addresses"],
+      onPick,
+      onPickEntity,
+    });
+
+    await user.click(within(dana).getAllByTestId("address-line")[0]!);
+    await user.click(within(dana).getAllByTestId("business-line")[1]!);
+
+    expect(onPick).not.toHaveBeenCalled();
+    expect(onPickEntity).not.toHaveBeenCalled();
+    expect(screen.getByRole<HTMLInputElement>("combobox").value).toBe("dana");
+    expect(screen.queryByTestId("grouped-selection")).toBeNull();
+  });
+
+  it("lists a person's addresses when the host includes them, each with the person's role there", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client, {
+      list: ["businesses", "addresses"],
+    });
+
+    expect(linesOf(dana, "address")).toEqual([
+      "12 Fernhallow Ln, Dover, DE 19901officer",
+      "9 Ashcombe Ct, Dover, DE 19904agent",
+    ]);
+    expect(within(dana).getByText("+1 more not shown")).toBeInTheDocument();
+    // Listed, not enabled: an address is a disabled option.
+    const [fernhallow] = within(dana).getAllByTestId("address-line");
+    expect(fernhallow).toHaveAttribute("role", "option");
+    expect(fernhallow).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("moves through the enabled lines only, and picks a business with the person it came through", async () => {
+    const { client } = setup();
+    const onPick = vi.fn<(pick: BusinessPick) => void>();
+    const { user } = await typeDana(client, { onPick });
+
+    await user.keyboard("{ArrowDown}{ArrowDown}{ArrowDown}{Enter}");
+
+    expect(onPick).toHaveBeenCalledTimes(1);
+    const pick = onPick.mock.calls[0]![0];
+    expect(pick).toMatchObject({
+      businessToken: "tok-b-ortega",
+      businessName: "Ortega Masonry LLC",
+      through: { route: "people", role: "officer" },
+    });
+    expect(pick.through.route === "people" && pick.through.person.label).toBe(
+      "Danae Ortega",
+    );
+    expect(pick.expiresAt - pick.pickedAt).toBe(
+      BUSINESS_TOKEN_TTL_SECONDS * 1000,
+    );
+  });
+
+  it("picks a business with a click", async () => {
+    const { client } = setup();
+    const onPick = vi.fn<(pick: BusinessPick) => void>();
+    const { user } = await typeDana(client, { onPick });
+
+    await user.click(
+      screen.getByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    expect(onPick.mock.calls[0]![0]).toMatchObject({
+      businessToken: "tok-b-cobalt",
+      through: { route: "people", role: "agent" },
+    });
+  });
+
+  it("shows a view's rows though none of their lines is a pick and no footer has anything to say", () => {
+    render(
+      <PersonAutocompleteView
+        id="person"
+        value="dana"
+        onInputChange={() => {}}
+        onSelect={() => {}}
+        suggestions={PEOPLE.suggestions as never}
+        found={2}
+        foundCapped={false}
+        truncated={false}
+        indexTag={null}
+        roundTripMs={null}
+        isSearching={false}
+        error={null}
+        enabledLines={[]}
+        open
+      />,
+    );
+
+    expect(screen.getByTestId("autocomplete-menu")).not.toHaveAttribute(
+      "hidden",
+    );
+    expect(screen.getAllByRole("group")).toHaveLength(2);
+  });
+
+  it("draws a person's rows though none of their lines is a pick", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client, { enabledLines: [] });
+
+    expect(within(dana).getAllByTestId("business-line")).toHaveLength(3);
+    expect(enabledOptions(document.body)).toHaveLength(0);
+  });
+
+  it("highlights an enabled line under the pointer, and leaves a disabled one be", async () => {
+    const { client } = setup();
+    const { user, dana } = await typeDana(client);
+    const [, unsealed, cobalt] = within(dana).getAllByTestId("business-line");
+
+    await user.hover(unsealed!);
+    expect(unsealed).not.toHaveAttribute("data-highlighted");
+    expect(unsealed).not.toHaveAttribute("data-enabled");
+
+    await user.hover(cobalt!);
+    expect(cobalt).toHaveAttribute("data-highlighted", "true");
+    expect(cobalt).toHaveAttribute("data-enabled", "true");
+  });
+
+  it("picks the person, or an address listed under them, as a typed pick when they are enabled", async () => {
+    const { client } = setup();
+    const onPick = vi.fn<(pick: BusinessPick) => void>();
+    const onPickEntity = vi.fn<(pick: EntityPick) => void>();
+    const { user, dana } = await typeDana(client, {
+      onPick,
+      onPickEntity,
+      list: ["businesses", "addresses"],
+      enabledLines: ["person", "address"],
+    });
+
+    // The head, then the one address with a token; businesses are disabled.
+    expect(enabledOptions(dana).map(option => option.dataset.testid)).toEqual([
+      "group-head",
+      "address-line",
+    ]);
+
+    await user.keyboard("{ArrowDown}{Enter}");
+    // The pick holds the search for the name it put in the field; typing
+    // brings the rows back.
+    await user.clear(screen.getByRole("combobox"));
+    await user.type(screen.getByRole("combobox"), "dana");
+    // The head names the first address too; the address's own line is the pick.
+    const [oak] = await screen.findAllByTestId("address-line");
+    await user.click(oak!);
+
+    expect(onPickEntity.mock.calls.map(([pick]) => pick)).toEqual([
+      { type: "person", token: "tok-p-dana", label: "Dana Whitfield" },
+      {
+        type: "address",
+        token: "tok-a-oak",
+        label: "12 Fernhallow Ln, Dover, DE 19901",
+      },
+    ]);
+    expect(onPick).not.toHaveBeenCalled();
+  });
+
+  it("draws the fields where the layout puts them, and asks only for what it draws", async () => {
+    const { client, fetch } = setup();
+    const { dana } = await typeDana(client, {
+      layout: {
+        headBadge: null,
+        headTrailing: null,
+        businessTrailingBadge: null,
+      },
+    });
+
+    expect(
+      new URL(fetch.mock.calls.at(-1)![0]).searchParams.get("include"),
+    ).toBe("businesses");
+    expect(within(dana).queryByTestId("grouped-counts")).toBeNull();
+    expect(within(dana).queryByTestId("grouped-firstAddress")).toBeNull();
+    expect(within(dana).queryAllByTestId("business-suggestion-state")).toEqual(
+      [],
+    );
+    expect(within(dana).getAllByTestId("grouped-role")).toHaveLength(3);
+  });
+
+  it("drops what the session's scope leaves out, instead of failing the search", async () => {
+    const { client, fetch } = setup({
+      routes: { businesses: ["people", "addresses"], people: ["businesses"] },
+      maxLimit: 20,
+    });
+    const { dana } = await typeDana(client, {
+      list: ["businesses", "addresses"],
+    });
+
+    expect(
+      new URL(fetch.mock.calls.at(-1)![0]).searchParams.get("include"),
+    ).toBe("businesses");
+    expect(within(dana).getByTestId("grouped-counts")).toHaveTextContent(
+      /^9 businesses$/,
+    );
+    expect(within(dana).queryByTestId("grouped-firstAddress")).toBeNull();
+    expect(linesOf(dana, "address")).toEqual([]);
+    expect(enabledOptions(dana)).toHaveLength(2);
+  });
+
+  it("says the search is out of reach when the session's scope leaves people out", async () => {
+    const { client, fetch } = setup({
+      routes: { businesses: ["people", "addresses"] },
+      maxLimit: 20,
+    });
+    const user = userEvent.setup();
+    render(<PersonHost client={client} />);
+
+    await user.type(screen.getByRole("combobox"), "dana");
+    await aMoment();
+
+    expect(
+      await screen.findByText(DEFAULT_MESSAGES.outOfScope),
+    ).toBeInTheDocument();
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("needs somewhere to send a person or an address picked", () => {
+    const client = setup().client;
+    const props = {
+      client,
+      id: "person",
+      value: "",
+      onChange: () => {},
+      onPick: () => {},
+    };
+
+    // @ts-expect-error: a person to pick needs onPickEntity.
+    const bare = <PersonAutocomplete {...props} enabledLines={["person"]} />;
+    const businessesOnly = (
+      <PersonAutocomplete {...props} enabledLines={["business"]} />
+    );
+
+    expect([bare, businessesOnly]).toHaveLength(2);
+  });
+});
+
+describe("AddressAutocomplete", () => {
+  it("draws each address with every count, and its businesses with how each holds it", async () => {
+    const { client, fetch } = setup();
+    const user = userEvent.setup();
+    render(<AddressHost client={client} />);
+
+    await user.type(screen.getByRole("combobox"), "45 corvel");
+    const corvel = await screen.findByRole("group", {
+      name: "45 Corvel Landing Ste 200, Erie, PA 16507",
+    });
+
+    const url = new URL(fetch.mock.calls.at(-1)![0]);
+    expect(url.pathname).toBe("/autocomplete/addresses");
+    expect(url.searchParams.get("include")).toBe("businesses,people");
+    expect(within(corvel).getByTestId("grouped-counts")).toHaveTextContent(
+      "412 businesses · 2 people",
+    );
+    const options = enabledOptions(corvel);
+    expect(options[0]).toHaveTextContent("Ridgeline Freight LLC");
+    expect(options[0]).toHaveTextContent("principal office");
+    expect(options[1]).toHaveTextContent(/agent$/);
+    expect(within(corvel).getByText("+410 more not shown")).toBeInTheDocument();
+    expect(linesOf(corvel, "person")).toEqual([]);
+    expect(screen.getByText("1 address")).toBeInTheDocument();
+  });
+
+  it("lists the people at an address when the host includes them, each with their role", async () => {
+    const { client } = setup();
+    const user = userEvent.setup();
+    render(<AddressHost client={client} list={["businesses", "people"]} />);
+
+    await user.type(screen.getByRole("combobox"), "45 corvel");
+    const corvel = await screen.findByRole("group", { name: /45 Corvel/ });
+
+    expect(linesOf(corvel, "person")).toEqual([
+      "Wesley Craneofficer",
+      "Ada Foxagent",
+    ]);
+  });
+
+  it("picks a business with the address it came through", async () => {
+    const { client } = setup();
+    const onPick = vi.fn<(pick: BusinessPick) => void>();
+    const user = userEvent.setup();
+    render(<AddressHost client={client} onPick={onPick} />);
+
+    await user.type(screen.getByRole("combobox"), "45 corvel");
+    await screen.findAllByRole("option");
+    await user.keyboard("{ArrowDown}{Enter}");
+
+    const pick = onPick.mock.calls[0]![0];
+    expect(pick).toMatchObject({
+      businessToken: "tok-b-ridgeline",
+      businessName: "Ridgeline Freight LLC",
+      through: { route: "addresses", role: "principal" },
+    });
+    expect(
+      pick.through.route === "addresses" && pick.through.address.components,
+    ).toMatchObject({ line1: "45 Corvel Landing", postal_code: "16507" });
+  });
+
+  it("picks the address itself, or a person at it, when they are enabled", async () => {
+    const { client } = setup();
+    const onPickEntity = vi.fn<(pick: EntityPick) => void>();
+    const user = userEvent.setup();
+    render(
+      <AddressHost
+        client={client}
+        onPickEntity={onPickEntity}
+        list={["businesses", "people"]}
+        enabledLines={["address", "person", "business"]}
+      />,
+    );
+
+    await user.type(screen.getByRole("combobox"), "45 corvel");
+    await user.click(await screen.findByRole("option", { name: /Ada Fox/ }));
+
+    expect(onPickEntity).toHaveBeenCalledWith({
+      type: "person",
+      token: "tok-p-ada",
+      label: "Ada Fox",
+    });
+  });
+});
+
+describe("a pick", () => {
+  const input = () => screen.getByRole<HTMLInputElement>("combobox");
+  const asked = (fetch: ReturnType<typeof setup>["fetch"]) =>
+    fetch.mock.calls.map(([url]) => new URL(url).searchParams.get("q"));
+
+  it("puts the person's name in the field without searching it", async () => {
+    const { client, fetch } = setup();
+    const { user } = await typeDana(client);
+
+    await user.click(
+      screen.getByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+    await aMoment();
+
+    expect(input().value).toBe("Dana Whitfield");
+    expect(asked(fetch)).not.toContain("Dana Whitfield");
+    expect(screen.queryAllByRole("group")).toHaveLength(0);
+  });
+
+  it("puts the address in the field without searching it", async () => {
+    const { client, fetch } = setup();
+    const user = userEvent.setup();
+    render(<AddressHost client={client} />);
+    await user.type(screen.getByRole("combobox"), "45 corvel");
+    const [business] = enabledOptions(
+      await screen.findByRole("group", {
+        name: "45 Corvel Landing Ste 200, Erie, PA 16507",
+      }),
+    );
+
+    await user.click(business!);
+    await aMoment();
+
+    expect(input().value).toBe("45 Corvel Landing Ste 200, Erie, PA 16507");
+    expect(asked(fetch)).not.toContain(
+      "45 Corvel Landing Ste 200, Erie, PA 16507",
+    );
+    expect(screen.queryAllByRole("group")).toHaveLength(0);
+  });
+
+  it("lets typing search again", async () => {
+    const { client, fetch } = setup();
+    const { user } = await typeDana(client);
+    await user.click(
+      screen.getByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    await user.clear(input());
+    await user.type(input(), "dana");
+
+    expect(
+      await screen.findByRole("group", { name: "Dana Whitfield" }),
+    ).toBeTruthy();
+    expect(asked(fetch).at(-1)).toBe("dana");
+  });
+
+  it("searches the picked name once the filters change, and not for the same filters in a new object", async () => {
+    const { client, fetch } = setup();
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <PersonHost client={client} filters={{ business: { state: ["PA"] } }} />,
+    );
+    await user.type(input(), "dana");
+    await user.click(
+      await screen.findByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+    await aMoment();
+    const before = fetch.mock.calls.length;
+
+    rerender(
+      <PersonHost client={client} filters={{ business: { state: ["PA"] } }} />,
+    );
+    await aMoment();
+    expect(fetch.mock.calls.length).toBe(before);
+
+    rerender(
+      <PersonHost client={client} filters={{ business: { state: ["DE"] } }} />,
+    );
+    await waitFor(() =>
+      expect(fetch.mock.calls.length).toBeGreaterThan(before),
+    );
+    const url = new URL(fetch.mock.calls.at(-1)![0]);
+    expect(url.searchParams.get("q")).toBe("Dana Whitfield");
+    expect(url.searchParams.get("business.state")).toBe("DE");
+  });
+});
+
+describe("a scope that grants none of a route's relations", () => {
+  it("asks with no include, which the service narrows to the scope, and refuses nothing itself", async () => {
+    const { client, fetch } = setup({ routes: { people: [] }, maxLimit: 20 });
+
+    const { dana } = await typeDana(client);
+
+    // The service refuses an empty include, so none is sent: it then expands
+    // only what the session's scope allows, which here is nothing.
+    expect(dana).toBeTruthy();
+    expect(fetch).toHaveBeenCalled();
+    for (const [url] of fetch.mock.calls) {
+      expect(new URL(url).searchParams.has("include")).toBe(false);
+    }
+  });
+});
+
+describe("the selection line", () => {
+  const selection = () => screen.queryByTestId("grouped-selection");
+  const input = () => screen.getByRole<HTMLInputElement>("combobox");
+
+  it("puts the person's name in the field, not what was typed, and names the business picked under it", async () => {
+    const { client } = setup();
+    const { user } = await typeDana(client);
+
+    await user.click(
+      screen.getByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    expect(input().value).toBe("Dana Whitfield");
+    expect(selection()).toHaveTextContent("Cobalt Tile Supply LLC");
+    expect(input()).toHaveAccessibleDescription("Cobalt Tile Supply LLC");
+  });
+
+  it("names the address picked under a person, and leaves the person picked to the field", async () => {
+    const { client } = setup();
+    const { user } = await typeDana(client, {
+      list: ["businesses", "addresses"],
+      enabledLines: ["person", "address"],
+    });
+
+    const [oak] = screen.getAllByTestId("address-line");
+    await user.click(oak!);
+    expect(input().value).toBe("Dana Whitfield");
+    expect(selection()).toHaveTextContent("12 Fernhallow Ln, Dover, DE 19901");
+    expect(selection()).toHaveAttribute("data-type", "address");
+
+    await user.clear(input());
+    await user.type(input(), "danae");
+    await user.click(
+      await screen.findByRole("option", { name: /^Danae Ortega/ }),
+    );
+    // The row itself picked: the field says it, and no line is drawn.
+    expect(input().value).toBe("Danae Ortega");
+    expect(selection()).toBeNull();
+  });
+
+  it("goes with any edit, and stays gone when the edit is undone", async () => {
+    const { client } = setup();
+    const onPick = vi.fn<(pick: BusinessPick) => void>();
+    const { user } = await typeDana(client, { onPick });
+    await user.click(
+      screen.getByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    await user.type(input(), "x");
+    expect(selection()).toBeNull();
+    expect(input()).not.toHaveAccessibleDescription();
+
+    // Back to the very name the pick put there: still no pick.
+    await user.type(input(), "{Backspace}");
+    expect(input().value).toBe("Dana Whitfield");
+    expect(selection()).toBeNull();
+  });
+
+  it("goes when the host empties the field", async () => {
+    const { client } = setup();
+    const { user } = await typeDana(client);
+    await user.click(
+      screen.getByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Start over" }));
+
+    expect(input().value).toBe("");
+    expect(selection()).toBeNull();
+  });
+
+  /** A host that takes the picked name late, or never, and typing at once. */
+  function LateHost({
+    client,
+    takesPick,
+  }: {
+    client: Client;
+    takesPick: "later" | "never";
+  }) {
+    const [value, setValue] = useState("");
+    // Only the pick's name is the host's to take late, or to drop; a name
+    // typed later is typing.
+    const [picks, setPicks] = useState(0);
+    return (
+      <PersonAutocomplete
+        client={client}
+        id="person"
+        label="Person"
+        value={value}
+        debounceMs={0}
+        onChange={next => {
+          if (next !== "Dana Whitfield" || picks > 0) {
+            setValue(next);
+          } else if (takesPick === "later") {
+            setTimeout(() => setValue(next), 20);
+          }
+        }}
+        onPick={() => setPicks(count => count + 1)}
+      />
+    );
+  }
+
+  it("waits for a host that puts the picked name in the field a render later", async () => {
+    const { client } = setup();
+    const user = userEvent.setup();
+    render(<LateHost client={client} takesPick="later" />);
+    await user.type(input(), "dana");
+
+    await user.click(
+      await screen.findByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+    // Still what was typed: the pick is kept for the name to come, and the
+    // line waits for it too.
+    expect(input().value).toBe("dana");
+    expect(selection()).toBeNull();
+    await aMoment();
+
+    expect(input().value).toBe("Dana Whitfield");
+    expect(selection()).toHaveTextContent("Cobalt Tile Supply LLC");
+  });
+
+  it("lets a pick go that the field never took, once the field is edited", async () => {
+    const { client } = setup();
+    const user = userEvent.setup();
+    render(<LateHost client={client} takesPick="never" />);
+    await user.type(input(), "dana");
+    await user.click(
+      await screen.findByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    await user.type(input(), " ");
+    await user.clear(input());
+    // Typed by hand, the name is not the pick.
+    await user.type(input(), "Dana Whitfield");
+
+    expect(selection()).toBeNull();
+  });
+
+  it("stays gone when the host puts the picked name back", async () => {
+    const { client } = setup();
+    const { user } = await typeDana(client);
+    await user.click(
+      screen.getByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Start over" }));
+    await user.click(screen.getByRole("button", { name: "Put back" }));
+
+    expect(input().value).toBe("Dana Whitfield");
+    expect(selection()).toBeNull();
+  });
+
+  it("stays gone when the host puts back what was typed, and then the name", async () => {
+    const { client } = setup();
+    const { user } = await typeDana(client);
+    await user.click(
+      screen.getByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Back to what was typed" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Put back" }));
+
+    expect(input().value).toBe("Dana Whitfield");
+    expect(selection()).toBeNull();
+  });
+
+  it("comes back when the same business is picked again after an edit", async () => {
+    const { client } = setup();
+    const onPick = vi.fn<(pick: BusinessPick) => void>();
+    const { user } = await typeDana(client, { onPick });
+    await user.click(
+      screen.getByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    await user.clear(input());
+    await user.type(input(), "dana");
+    await user.click(
+      await screen.findByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    expect(onPick).toHaveBeenCalledTimes(2);
+    expect(selection()).toHaveTextContent("Cobalt Tile Supply LLC");
+  });
+
+  it("is left to the host with showSelection off, and the field still takes the name", async () => {
+    const { client } = setup();
+    const { user } = await typeDana(client, { showSelection: false });
+
+    await user.click(
+      screen.getByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    expect(input().value).toBe("Dana Whitfield");
+    expect(selection()).toBeNull();
+  });
+
+  it("puts the address in an address field, and names the business or the person picked at it", async () => {
+    const { client } = setup();
+    const user = userEvent.setup();
+    render(
+      <AddressHost
+        client={client}
+        list={["businesses", "people"]}
+        enabledLines={["business", "person"]}
+      />,
+    );
+
+    await user.type(input(), "45 corvel");
+    await user.click(
+      await screen.findByRole("option", { name: /Ridgeline Freight LLC/ }),
+    );
+    expect(input().value).toBe("45 Corvel Landing Ste 200, Erie, PA 16507");
+    expect(selection()).toHaveTextContent("Ridgeline Freight LLC");
+
+    await user.clear(input());
+    await user.type(input(), "45 corvel");
+    await user.click(await screen.findByRole("option", { name: /Ada Fox/ }));
+    expect(selection()).toHaveTextContent("Ada Fox");
+    expect(selection()).toHaveAttribute("data-type", "person");
+  });
+});
+
+describe("the order of a row's lines", () => {
+  /** Each line of `group`, top to bottom, by what it draws. */
+  const drawnOrder = (group: HTMLElement) =>
+    [...group.querySelectorAll<HTMLElement>("[data-line]")].map(
+      line => line.dataset.line,
+    );
+  /** What the keys move to, one ArrowDown at a time: each option's line. */
+  async function keyOrder(user: ReturnType<typeof userEvent.setup>, n: number) {
+    const input = screen.getByRole("combobox");
+    const visited: (string | undefined)[] = [];
+    for (let step = 0; step < n; step++) {
+      await user.keyboard("{ArrowDown}");
+      const active = input.getAttribute("aria-activedescendant")!;
+      visited.push(document.getElementById(active)!.dataset.line);
+    }
+    return visited;
+  }
+
+  it("draws a person's lines in the list's order, the head first", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client, {
+      list: ["addresses", "businesses"],
+    });
+
+    expect(drawnOrder(dana)).toEqual([
+      "head",
+      "address",
+      "address",
+      "business",
+      "business",
+      "business",
+    ]);
+  });
+
+  it("moves the keys through a person's lines in the order they are drawn", async () => {
+    const { client } = setup();
+    const { user } = await typeDana(client, {
+      list: ["addresses", "businesses"],
+      enabledLines: ["business", "address"],
+    });
+
+    // The address with a token, then the two businesses with one.
+    expect(await keyOrder(user, 3)).toEqual([
+      "address",
+      "business",
+      "business",
+    ]);
+  });
+
+  it("moves the keys through an address's lines in the order they are drawn", async () => {
+    const { client } = setup();
+    const user = userEvent.setup();
+    render(
+      <AddressHost
+        client={client}
+        list={["people", "businesses"]}
+        enabledLines={["business", "person"]}
+      />,
+    );
+    await user.type(screen.getByRole("combobox"), "45 corvel");
+    await screen.findByRole("group", { name: /45 Corvel/ });
+
+    expect(await keyOrder(user, 4)).toEqual([
+      "person",
+      "person",
+      "business",
+      "business",
+    ]);
+  });
+
+  it("draws an address's lines in the list's order, the head first", async () => {
+    const { client } = setup();
+    const user = userEvent.setup();
+    render(<AddressHost client={client} list={["people", "businesses"]} />);
+    await user.type(screen.getByRole("combobox"), "45 corvel");
+    const corvel = await screen.findByRole("group", { name: /45 Corvel/ });
+
+    expect(drawnOrder(corvel)).toEqual([
+      "head",
+      "person",
+      "person",
+      "business",
+      "business",
+    ]);
+  });
+});
+
+describe("a listed relation the session's scope leaves out", () => {
+  const listsOf = (group: HTMLElement) =>
+    [...group.querySelectorAll<HTMLElement>("[data-list]")].map(
+      list => list.dataset.list,
+    );
+
+  it("is not drawn under a person, though the host lists it", async () => {
+    const { client } = setup({
+      routes: { people: ["businesses"] },
+      maxLimit: 20,
+    });
+    const { dana } = await typeDana(client, {
+      list: ["addresses", "businesses"],
+    });
+
+    expect(listsOf(dana)).toEqual(["businesses"]);
+  });
+
+  const NARROW: SessionScope = {
+    routes: { people: ["businesses"] },
+    maxLimit: 20,
+  };
+  /** Dana, who has businesses and addresses, has no list drawn empty. */
+  const noEmptyList = () => {
+    const dana = screen.getByRole("group", { name: "Dana Whitfield" });
+    for (const list of dana.querySelectorAll("[data-list]")) {
+      expect(list.querySelector("[data-line]"), list.outerHTML).not.toBeNull();
+    }
+  };
+
+  it("draws rows by what they were asked for, though a wider grant has come since", async () => {
+    let outcome = grant(NARROW);
+    const { client } = setup(SCOPE, async () => outcome);
+    const { dana } = await typeDana(client, {
+      list: ["addresses", "businesses"],
+    });
+    expect(listsOf(dana)).toEqual(["businesses"]);
+
+    outcome = grant(SCOPE);
+    await act(async () => {
+      await client.getSession({ force: true });
+    });
+
+    expect(
+      listsOf(screen.getByRole("group", { name: "Dana Whitfield" })),
+    ).toEqual(["businesses"]);
+    noEmptyList();
+  });
+
+  it("draws rows by what they were asked for while a new grant is refused", async () => {
+    let outcome: MintOutcome = grant(NARROW);
+    const { client } = setup(SCOPE, async () => outcome);
+    await typeDana(client, { list: ["addresses", "businesses"] });
+
+    outcome = {
+      kind: "refused",
+      status: 503,
+      code: null,
+      retryAfterSeconds: 60,
+      scope: null,
+      message: null,
+    };
+    await act(async () => {
+      await client.getSession({ force: true }).catch(() => undefined);
+    });
+
+    expect(client.getSnapshot().session.phase).not.toBe("ready");
+    expect(
+      listsOf(screen.getByRole("group", { name: "Dana Whitfield" })),
+    ).toEqual(["businesses"]);
+    noEmptyList();
+  });
+
+  it("keeps a row's lists whole when a narrower grant comes, until the next answer", async () => {
+    let outcome = grant(SCOPE);
+    const { client } = setup(SCOPE, async () => outcome);
+    const { user, dana } = await typeDana(client, {
+      list: ["addresses", "businesses"],
+    });
+    expect(listsOf(dana)).toEqual(["addresses", "businesses"]);
+
+    outcome = grant(NARROW);
+    await act(async () => {
+      await client.getSession({ force: true });
+    });
+    expect(
+      listsOf(screen.getByRole("group", { name: "Dana Whitfield" })),
+    ).toEqual(["addresses", "businesses"]);
+    noEmptyList();
+
+    await user.type(screen.getByRole("combobox"), " w");
+    await aMoment();
+    expect(
+      listsOf(await screen.findByRole("group", { name: "Dana Whitfield" })),
+    ).toEqual(["businesses"]);
+    noEmptyList();
+  });
+
+  it("keeps the rows' lists while the next answer is on its way", async () => {
+    const { client, fetch } = setup();
+    const { user, dana } = await typeDana(client, {
+      list: ["businesses", "addresses"],
+    });
+    expect(listsOf(dana)).toEqual(["businesses", "addresses"]);
+
+    let release = () => {};
+    const held = new Promise<void>(resolve => (release = resolve));
+    const answer = fetch.getMockImplementation()!;
+    fetch.mockImplementation(async (...args) => {
+      await held;
+      return answer(...args);
+    });
+    await user.type(screen.getByRole("combobox"), "w");
+    await aMoment();
+
+    expect(
+      listsOf(screen.getByRole("group", { name: "Dana Whitfield" })),
+    ).toEqual(["businesses", "addresses"]);
+    noEmptyList();
+    release();
+  });
+
+  it("is not drawn where the service could not look, though it was asked for", async () => {
+    const { client, fetch } = setup();
+    const answer = fetch.getMockImplementation()!;
+    fetch.mockImplementation(async (...args) => {
+      const reply = await answer(...args);
+      const body = (await reply.json()) as typeof PEOPLE;
+      // Asked for, but not looked at: the source says so.
+      const unlooked = {
+        ...body,
+        sources: { ...body.sources, addresses: { status: "unavailable" } },
+      };
+      return { ...reply, json: async () => unlooked };
+    });
+    const { dana } = await typeDana(client, {
+      list: ["addresses", "businesses"],
+    });
+
+    expect(listsOf(dana)).toEqual(["businesses"]);
+  });
+
+  it("is not drawn under an address, though the host lists it", async () => {
+    const { client } = setup({
+      routes: { addresses: ["businesses"] },
+      maxLimit: 20,
+    });
+    const user = userEvent.setup();
+    render(<AddressHost client={client} list={["people", "businesses"]} />);
+    await user.type(screen.getByRole("combobox"), "45 corvel");
+    const corvel = await screen.findByRole("group", { name: /45 Corvel/ });
+
+    expect(listsOf(corvel)).toEqual(["businesses"]);
+  });
+});
+
+describe("what the hook says its rows expanded", () => {
+  async function expandedFor(
+    client: Client,
+    include?: ("businesses" | "addresses")[],
+  ) {
+    const { result } = renderHook(() =>
+      useEntityAutocomplete({
+        relation: "people",
+        query: "dana",
+        enabled: true,
+        client,
+        debounceMs: 0,
+        ...(include !== undefined ? { include } : {}),
+      }),
+    );
+    await waitFor(() => expect(result.current.suggestions).not.toHaveLength(0));
+    return result.current.expanded;
+  }
+
+  it("is what the answer's sources say were looked at, with no include sent", async () => {
+    const { client } = setup();
+    // The service expands its default, businesses, and says so.
+    expect(await expandedFor(client)).toEqual(["businesses"]);
+  });
+
+  it("is what was asked for, with an include sent", async () => {
+    const { client } = setup();
+    expect(await expandedFor(client, ["businesses", "addresses"])).toEqual([
+      "businesses",
+      "addresses",
+    ]);
+  });
+
+  it("leaves out a relation the session's scope does not grant", async () => {
+    const { client } = setup({
+      routes: { people: ["businesses"] },
+      maxLimit: 20,
+    });
+    expect(await expandedFor(client, ["businesses", "addresses"])).toEqual([
+      "businesses",
+    ]);
+  });
+});
+
+describe("the icons", () => {
+  /** Each icon in `element`: the SDK's glyph, or "host" for a host's own. */
+  const glyphsOf = (element: Element) =>
+    [...element.querySelectorAll<HTMLElement>(".bl-ac-icon")].map(
+      icon => icon.dataset.glyph ?? "host",
+    );
+
+  it("draws one before every name by default: the person, each business, each address by the person's role there", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client, {
+      list: ["businesses", "addresses"],
+    });
+
+    const head = within(dana).getByTestId("group-head");
+    expect(glyphsOf(head)).toEqual(["person"]);
+    expect(
+      within(dana).getAllByTestId("business-line").flatMap(glyphsOf),
+    ).toEqual(["building", "building", "building"]);
+    // Their home as an officer is a house; where they are an agent, a briefcase.
+    expect(
+      within(dana).getAllByTestId("address-line").flatMap(glyphsOf),
+    ).toEqual(["house", "briefcase"]);
+    // Right before the name, and nothing a screen reader reads.
+    const icon = head.querySelector<HTMLElement>(".bl-ac-icon")!;
+    expect(icon.nextElementSibling).toHaveClass("bl-ac-name");
+    expect(icon).toHaveAttribute("aria-hidden", "true");
+    expect(icon.dataset).toMatchObject({ entity: "person" });
+    expect(icon).not.toHaveAttribute("data-role");
+    expect(dana).toHaveAccessibleName("Dana Whitfield");
+    const [agentAddress] = within(dana)
+      .getAllByTestId("address-line")
+      .slice(1)
+      .map(line => line.querySelector<HTMLElement>(".bl-ac-icon")!);
+    expect(agentAddress!.dataset).toMatchObject({
+      entity: "address",
+      role: "agent",
+      glyph: "briefcase",
+    });
+  });
+
+  it("rides on the segments named, first in each, wherever the segment is placed", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client, {
+      iconSegments: ["firstAddress", "address"],
+      layout: { businessBadge: null, businessTrailing: "address" },
+    });
+
+    const head = within(dana).getByTestId("group-head");
+    const first = within(head).getByTestId("grouped-firstAddress");
+    expect(first.firstElementChild).toHaveClass("bl-ac-icon");
+    expect(glyphsOf(head)).toEqual(["house"]);
+    const [harbor] = within(dana).getAllByTestId("business-line");
+    const address = within(harbor!).getByTestId("grouped-address");
+    expect(address).toHaveAttribute("data-place", "businessTrailing");
+    expect(address.firstElementChild).toHaveClass("bl-ac-icon");
+    expect(address).toHaveTextContent("1200 Tallowmere Rd, Wilmington, DE");
+    // A business's own address under a person: no role there, a map pin.
+    expect(glyphsOf(harbor!)).toEqual(["pin"]);
+  });
+
+  it("draws a host's icon for an entity, and a role's over it", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client, {
+      list: ["businesses", "addresses"],
+      icons: {
+        address: <b data-testid="any-address">A</b>,
+        "address:agent": <b data-testid="agent-address">G</b>,
+      },
+    });
+
+    const [home, office] = within(dana).getAllByTestId("address-line");
+    expect(within(home!).getByTestId("any-address")).toBeInTheDocument();
+    expect(within(office!).getByTestId("agent-address")).toBeInTheDocument();
+    expect(glyphsOf(office!)).toEqual(["host"]);
+    expect(glyphsOf(within(dana).getByTestId("group-head"))).toEqual([
+      "person",
+    ]);
+  });
+
+  it("hides the one a host sets to false, and leaves the rest", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client, {
+      list: ["businesses", "addresses"],
+      icons: { "address:agent": false },
+    });
+
+    expect(
+      within(dana).getAllByTestId("address-line").flatMap(glyphsOf),
+    ).toEqual(["house"]);
+  });
+
+  it("draws none with icons off", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client, { icons: false });
+    expect(dana.querySelectorAll(".bl-ac-icon")).toHaveLength(0);
+  });
+
+  it("draws none where no segment is named", async () => {
+    const { client } = setup();
+    const { dana } = await typeDana(client, { iconSegments: [] });
+    expect(dana.querySelectorAll(".bl-ac-icon")).toHaveLength(0);
+  });
+
+  it("draws an address's head as a pin, and its people by their role", async () => {
+    const { client } = setup();
+    const user = userEvent.setup();
+    render(<AddressHost client={client} list={["businesses", "people"]} />);
+    await user.type(screen.getByRole("combobox"), "45 corvel");
+    const corvel = await screen.findByRole("group", { name: /45 Corvel/ });
+
+    expect(glyphsOf(within(corvel).getByTestId("group-head"))).toEqual(["pin"]);
+    expect(
+      within(corvel).getAllByTestId("person-line").flatMap(glyphsOf),
+    ).toEqual(["person", "briefcase"]);
+  });
+});

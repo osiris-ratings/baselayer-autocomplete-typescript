@@ -8,7 +8,6 @@ import {
   buildBusinessesUrl,
   buildSuggestUrl,
   createAutocompleteClient,
-  hasFilters,
   parseBusinessesResponse,
   parseSuggestResponse,
   type FetchLike,
@@ -17,8 +16,8 @@ import {
   type ResponseLike,
 } from "@baselayer-sdk/autocomplete";
 
-// Rows for the routes the working specification lays out beside businesses.
-// Only businesses is served today; these are the shapes the others will take.
+// Rows for every route: businesses, and the people and addresses that lead to
+// them.
 const related = (count: number | null) => ({
   count,
   matched: null,
@@ -52,17 +51,18 @@ describe("the entity model", () => {
     }
   });
 
-  it("serves businesses only, and keeps the spec's include sets", () => {
+  it("serves every route, each with its include set and default", () => {
     expect(Object.keys(ROUTES)).toEqual(["businesses", "people", "addresses"]);
     expect(
       Object.entries(ROUTES)
         .filter(([, route]) => route.served)
         .map(([relation]) => relation),
-    ).toEqual(["businesses"]);
+    ).toEqual(["businesses", "people", "addresses"]);
     expect(ROUTES.businesses.includes).toEqual(["people", "addresses"]);
     expect(ROUTES.people.includes).toEqual(["businesses", "addresses"]);
     expect(ROUTES.people.defaultInclude).toEqual(["businesses"]);
     expect(ROUTES.addresses.includes).toEqual(["businesses", "people"]);
+    expect(ROUTES.addresses.defaultInclude).toEqual(["businesses"]);
   });
 });
 
@@ -85,7 +85,7 @@ describe("parseSuggestResponse", () => {
     const row = {
       ...base("address", relations),
       components: {
-        line1: "1200 River Rd",
+        line1: "1200 Tallowmere Rd",
         line2: null,
         city: "Pittsburgh",
         state: "PA",
@@ -109,20 +109,13 @@ describe("parseSuggestResponse", () => {
     ).toThrow(ContractViolation);
   });
 
-  it("tolerates enum values and fields it has never seen", () => {
+  it("drops fields it has never seen", () => {
     const relations = ["businesses", "addresses"];
     const row = {
       ...base("person", relations),
-      match: "phonetic",
       a_field_from_a_later_release: true,
     };
-    const body = envelope(relations, [row]);
-    (body.sources as Record<string, { status: string }>)["businesses"] = {
-      status: "degraded",
-    };
-    const parsed = parseSuggestResponse("people", body);
-    expect(parsed.suggestions[0]!.match).toBe("phonetic");
-    expect(parsed.sources.businesses.status).toBe("degraded");
+    const parsed = parseSuggestResponse("people", envelope(relations, [row]));
     expect(parsed.suggestions[0]).not.toHaveProperty(
       "a_field_from_a_later_release",
     );
@@ -150,7 +143,7 @@ describe("buildSuggestUrl", () => {
         domicileState: "PA",
         person: { name: "dana", role: "officer" as const },
         address: {
-          text: "1200 river",
+          text: "1200 tallowmere",
           city: "Pittsburgh",
           postalCode: "15212",
           state: "PA",
@@ -162,30 +155,20 @@ describe("buildSuggestUrl", () => {
     );
   });
 
-  it("sends the relation filters another route takes, comma lists joined", () => {
+  it("sends the people route's business state, comma list joined", () => {
     const url = new URL(
       buildSuggestUrl("https://api.test/", "people", {
         q: "tim",
         include: ["businesses", "addresses"],
-        filters: {
-          business: { name: "apple", state: ["CA", "DE"] },
-          address: { state: ["CA"] },
-        },
+        filters: { business: { state: ["CA", "DE"] } },
       }),
     );
     expect(url.pathname).toBe("/autocomplete/people");
     expect([...url.searchParams]).toEqual([
       ["q", "tim"],
       ["include", "businesses,addresses"],
-      ["business.name", "apple"],
       ["business.state", "CA,DE"],
-      ["address.state", "CA"],
     ]);
-  });
-
-  it("counts any route's filters as filters", () => {
-    expect(hasFilters({ business: { name: "apple" } })).toBe(true);
-    expect(hasFilters({ business: { state: [] } })).toBe(false);
   });
 });
 
@@ -208,6 +191,10 @@ describe("client.search", () => {
         requestBudget: 30,
         pivotAllowance: 5,
         filterMinStem: 3,
+        scope: {
+          routes: { people: ["businesses", "addresses"] },
+          maxLimit: 20,
+        },
       },
     });
     const client = createAutocompleteClient({

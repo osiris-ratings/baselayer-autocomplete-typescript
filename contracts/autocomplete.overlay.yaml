@@ -20,17 +20,21 @@ actions:
     update:
       info:
         description: |
-          Your backend mints a session with your API key. The browser uses the session to ask for businesses. The [SDK](../) does all of this for you; this is the contract underneath, for building your own client or checking what crosses the wire.
+          Your backend mints a session with your API key. The browser uses the session to ask for businesses, or for the people and addresses that lead to them. The [SDK](../) does all of this for you; this is the contract underneath, for building your own client or checking what crosses the wire.
 
           | Route | Called from | Credential |
           | --- | --- | --- |
           | [`POST /autocomplete/sessions`](#create-a-session) | Your backend | `X-API-Key` |
           | [`GET /autocomplete/businesses`](#search-businesses) | The browser | `X-Autocomplete-Session` |
+          | [`GET /autocomplete/people`](#search-people) | The browser | `X-Autocomplete-Session` |
+          | [`GET /autocomplete/addresses`](#search-addresses) | The browser | `X-Autocomplete-Session` |
 
-          Both routes answer JSON, and neither takes a request body. Your API key is a production application's key from Baselayer, with the `autocomplete.read` permission.
+          Every route answers JSON. The mint takes an optional body, a `scope` that narrows what the session may search; the search takes none. Your API key is an application's key from Baselayer, with the `autocomplete.read` permission.
       tags:
         - name: Sessions
         - name: Businesses
+        - name: People
+        - name: Addresses
         - name: Errors
           x-traitTag: true
           description: |
@@ -41,6 +45,8 @@ actions:
             | 401 | 27 | `session_missing` | Mint, then replay. |
             | 401 | 28 | `session_invalid` | Mint, then replay. `metadata.detail` says why: `malformed`, `wrong_type`, `unknown_key`, `bad_signature`, `not_yet_valid` or `origin_mismatch`, which means your backend did not forward the page's `Origin`. |
             | 401 | 29 | `session_expired` | Mint, then replay. |
+            | 403 | 501 | `route_not_in_scope` | The session's scope leaves the route out: offer the search only where `scope` lists it. |
+            | 403 | 502 | `relation_not_in_scope` | A parameter (`metadata.param`) touches a relation the scope leaves out on the route. |
             | 429 | 480 | `session_budget_spent` | Mint, then replay. |
             | 429 | 482 | `session_pivots_exceeded` | Mint, then replay. |
             | 429 | 429 | `rate_limited` | Wait `Retry-After` seconds, then replay. |
@@ -54,22 +60,17 @@ actions:
           description: |
             Each suggestion's `token` pins a Baselayer search to exactly that business. Send it verbatim as `business_token` on `POST /searches`, from your backend, with your API key, and on its own: it stands in for `name` and `address`, and the search refuses a body that carries it beside either one. It is sealed, bound to your organization, and good for 15 minutes.
 
-            If the search refuses it, drop the token and search by the `name` and `address` as typed: 422 with code 3040 (not Baselayer's, or another organization's), 3042 (expired), 3023 (the business is gone) or 3043 (a sandbox application), or 503 with code 3041. The SDK's `refusedThePin(status, code)` is true for all of them, as for any other status under 500, and false for any other 5xx and a network failure.
+            If the search refuses it, drop the token and search by the `name` and `address` as typed: 422 with code 3040 (not Baselayer's, or another organization's or environment's, such as a sandbox pick searched with a production key), 3042 (expired) or 3023 (the business is gone), or 503 with code 3041. The SDK's `refusedThePin(status, code)` is true for all of them, as for any other status under 500, and false for any other 5xx and a network failure.
 
   - target: $.components.securitySchemes.APIKeyHeader
     description: >-
       Belongs upstream, in the API key's security scheme.
     update:
       description: >-
-        An API key of a production application in your organization, from
-        your backend only. A sandbox application's key is refused.
-
-  - target: $.paths['/autocomplete/sessions'].post.responses['422']
-    description: >-
-      The framework's default validation answer; the route takes no input,
-      and its real 422 is the sandbox refusal below. Belongs upstream, in the
-      route's declared responses.
-    remove: true
+        An API key of an application in your organization, from your
+        backend only. A sandbox application's key mints a session served
+        from the sandbox index; until a deployment has that index available,
+        the session's searches are answered 503, not ready.
 
   - target: $.paths['/autocomplete/sessions'].post
     description: >-
@@ -82,6 +83,8 @@ actions:
         Mints a session for your organization, bound to the page that will use it. Call it from your backend, never from a browser: it takes your API key.
 
         Every session counts against your organization's pools, one per ten minutes and one per rolling day, shared by every user and key in the organization. Put the endpoint that calls this behind your own authentication.
+
+        A `scope` narrows what the session may search: the routes, the relations a request on each may include or filter by, and the most suggestions a request may ask for. A session that leaks from the page can then do no more than that. The answer's `scope` is what the session may do, so a page offers a search only where its route is listed. Either half left out narrows nothing on that side, and no body at all reaches everything your organization may.
       parameters:
         - name: Origin
           in: header
@@ -95,6 +98,17 @@ actions:
           schema:
             type: string
             examples: ["https://app.example.com"]
+      requestBody:
+        content:
+          application/json:
+            examples:
+              narrowed:
+                summary: Businesses and their addresses only, five at a time
+                value:
+                  scope:
+                    routes:
+                      businesses: [addresses]
+                    max_limit: 5
       responses:
         "201":
           description: >-
@@ -112,6 +126,10 @@ actions:
                     request_budget: 30
                     pivot_allowance: 5
                     filter_min_stem: 5
+                    scope:
+                      routes:
+                        businesses: [addresses, people]
+                      max_limit: 20
         "401":
           description: >-
             The key is not recognized (codes 20 to 24). Check the key;
@@ -128,17 +146,19 @@ actions:
           description: >-
             Code 30: the key lacks the `autocomplete.read` permission. Code
             37: autocomplete is not enabled for the organization; contact
-            Baselayer to enable it.
+            Baselayer to enable it. Code 501: `scope` names a route the
+            organization may not search (`metadata.route`). Code 502: it names
+            a relation the organization may not reach on a route it may
+            search (`metadata.route`, `metadata.relation`).
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ErrorEnvelope" }
         "422":
           description: >-
-            The key belongs to a sandbox application (code 483). Use a
-            production application's key.
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ErrorEnvelope" }
+            The body is malformed: `scope` names a route that does not exist,
+            a relation its route's rows never carry, no route at all, or a
+            `max_limit` outside 1 to 20, or the body has a key it does not
+            take. Fix the request; retrying will not help.
         "429":
           description: >-
             A session pool is spent (code 429). `metadata.scope` names it:
@@ -177,7 +197,9 @@ actions:
           source: |-
             curl -s -X POST https://api.baselayer.com/autocomplete/sessions \
               -H "X-API-Key: $BASELAYER_API_KEY" \
-              -H "Origin: https://app.example.com"
+              -H "Origin: https://app.example.com" \
+              -H "Content-Type: application/json" \
+              -d '{"scope": {"routes": {"businesses": ["addresses"]}, "max_limit": 5}}'
         - lang: typescript
           label: Node
           source: |-
@@ -186,6 +208,8 @@ actions:
             const out = await mintForOrigin({
               apiKey: process.env.BASELAYER_API_KEY!,
               origin: "https://app.example.com",
+              // Optional: what the session may search.
+              scope: { routes: { businesses: ["addresses"] }, maxLimit: 5 },
             });
             // out.status, out.headers (Retry-After) and out.body, to pass through
 
@@ -268,7 +292,7 @@ actions:
                             items:
                               - type: address
                                 token: A2leF7_gomJWvMMtp4…
-                                label: 1200 River Rd, Pittsburgh, PA 15212
+                                label: 1200 Tallowmere Rd, Pittsburgh, PA 15212
                                 role: principal
                                 matched: false
                         highlight:
@@ -350,5 +374,169 @@ actions:
           source: |-
             const { response, indexTag, roundTripMs } = await client.suggest(
               { q: "harbor concrete", limit: 5 },
+              { signal },
+            );
+
+  - target: $.paths['/autocomplete/people'].get
+    description: >-
+      Belongs upstream, in the autocomplete service's OpenAPI annotations: the
+      public description, the Origin header and examples.
+    update:
+      tags: [People]
+      summary: Search people
+      description: |
+        The people a typed name fits, best first, each with the businesses they hold a role on. A business under a person is what a pick spends: its `token` is a `business_token` that `POST /searches` redeems, sealed with the person it was reached through. The person's own `token` is redeemed nowhere.
+
+        `related.businesses.count` is every business the person holds a role on; `items` is the first five, and an item's `role` is `officer` or `agent`. `business.state` keeps the people with a business in any of those states, and marks those businesses `matched`. Each parameter may appear once, and the session's scope must list the route, and the `businesses` or `addresses` relation for whatever touches it.
+
+        The route answers CORS as the businesses route does, and counts against the session's `request_budget` on its own.
+      parameters:
+        - name: Origin
+          in: header
+          description: >-
+            Set by the browser. It must equal the origin the session was
+            minted for, or the session is refused with 401 code 28.
+          schema: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                dana:
+                  summary: "`dana whit`, one person kept"
+                  value:
+                    query: dana whit
+                    found: 1
+                    found_capped: false
+                    truncated: false
+                    sources:
+                      businesses: { status: ok }
+                      addresses: { status: not_requested }
+                    suggestions:
+                      - type: person
+                        token: AwGCjUrMDqXaypeR5o…
+                        label: Dana Whitfield
+                        matched_name: null
+                        match: strong
+                        related:
+                          businesses:
+                            count: 7
+                            matched: null
+                            truncated: true
+                            items:
+                              - type: business
+                                token: A4uYMdTtN1PuVsmNF8…
+                                label: HARBOR CONCRETE PUMPING CO., INC.
+                                role: officer
+                                matched: false
+                          addresses:
+                            count: null
+                            matched: null
+                            truncated: false
+                            items: []
+                        highlight:
+                          - { text: Dana, matched: true }
+                          - { text: " ", matched: false }
+                          - { text: Whitfield, matched: true }
+      x-codeSamples:
+        - lang: shell
+          label: curl
+          source: |-
+            curl -s "https://api.baselayer.com/autocomplete/people?q=dana%20whit&limit=5" \
+              -H "X-Autocomplete-Session: $SESSION" \
+              -H "Origin: https://app.example.com"
+        - lang: typescript
+          label: SDK
+          source: |-
+            const { response } = await client.search(
+              "people",
+              { q: "dana whit", filters: { business: { state: ["PA"] } } },
+              { signal },
+            );
+
+  - target: $.paths['/autocomplete/addresses'].get
+    description: >-
+      Belongs upstream, in the autocomplete service's OpenAPI annotations: the
+      public description, the Origin header and examples.
+    update:
+      tags: [Addresses]
+      summary: Search addresses
+      description: |
+        The addresses typed text fits, those with the most businesses first, each with the businesses filed there. A business under an address is what a pick spends: its `token` is a `business_token` that `POST /searches` redeems, pinned to that address. The address's own `token` is redeemed nowhere.
+
+        `related.businesses.count` is every business filed at the address, the exact address, suite included; `items` is the first five, those filed there as their principal or mailing address first, each with its `role` there. `state` keeps the addresses in any of those states. Each parameter may appear once, and the session's scope must list the route, and the `businesses` or `people` relation for whatever `include` asks for.
+
+        The route answers CORS as the businesses route does, and counts against the session's `request_budget` on its own.
+      parameters:
+        - name: Origin
+          in: header
+          description: >-
+            Set by the browser. It must equal the origin the session was
+            minted for, or the session is refused with 401 code 28.
+          schema: { type: string }
+      responses:
+        "200":
+          content:
+            application/json:
+              examples:
+                tallowmere:
+                  summary: "`1200 tallowmere`, one address kept"
+                  value:
+                    query: 1200 tallowmere
+                    found: 1
+                    found_capped: false
+                    truncated: false
+                    sources:
+                      businesses: { status: ok }
+                      people: { status: not_requested }
+                    suggestions:
+                      - type: address
+                        token: A2leF7_gomJWvMMtp4…
+                        label: 1200 Tallowmere Rd, Pittsburgh, PA 15212
+                        matched_name: null
+                        match: strong
+                        components:
+                          line1: 1200 Tallowmere Rd
+                          line2: null
+                          city: Pittsburgh
+                          state: PA
+                          postal_code: "15212"
+                        related:
+                          businesses:
+                            count: 2
+                            matched: null
+                            truncated: false
+                            items:
+                              - type: business
+                                token: A4uYMdTtN1PuVsmNF8…
+                                label: HARBOR CONCRETE PUMPING CO., INC.
+                                role: principal
+                                matched: false
+                                address: 1200 Tallowmere Rd, Pittsburgh, PA 15212
+                                states: [MD, NY, OH, PA, WV]
+                                domicile_state: PA
+                          people:
+                            count: null
+                            matched: null
+                            truncated: false
+                            items: []
+                        highlight:
+                          - { text: "1200", matched: true }
+                          - { text: " ", matched: false }
+                          - { text: Tallowmere, matched: true }
+                          - { text: " Rd, Pittsburgh, PA 15212", matched: false }
+      x-codeSamples:
+        - lang: shell
+          label: curl
+          source: |-
+            curl -s "https://api.baselayer.com/autocomplete/addresses?q=1200%20tallowmere&limit=5" \
+              -H "X-Autocomplete-Session: $SESSION" \
+              -H "Origin: https://app.example.com"
+        - lang: typescript
+          label: SDK
+          source: |-
+            const { response } = await client.search(
+              "addresses",
+              { q: "1200 tallowmere", filters: { state: ["PA"] } },
               { signal },
             );

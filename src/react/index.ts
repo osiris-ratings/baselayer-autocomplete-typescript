@@ -31,12 +31,24 @@ export {
   type SlotName,
 } from "./BusinessAutocompleteView";
 export {
+  AddressAutocomplete,
+  AddressAutocompleteView,
+  PersonAutocomplete,
+  PersonAutocompleteView,
+  type AddressAutocompleteProps,
+  type AddressAutocompleteViewProps,
+  type GroupedSelection,
+  type PersonAutocompleteProps,
+  type PersonAutocompleteViewProps,
+} from "./GroupedAutocomplete";
+export {
   BusinessAutocomplete,
   MINT_TIMINGS,
   type BusinessAutocompleteProps,
   type MintTiming,
   type Pick,
 } from "./BusinessAutocomplete";
+export type { IconKey, IconSet } from "./icons";
 export {
   DEFAULT_MESSAGES,
   resolveMessages,

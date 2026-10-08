@@ -29,14 +29,16 @@ const ENTITIES: {
   {
     name: "People",
     icon: "people",
-    live: false,
-    links: "Officers and registered agents, with the businesses they serve.",
+    live: true,
+    links:
+      "Officers and registered agents, with the businesses they hold a role on: find a business through who runs it.",
   },
   {
     name: "Addresses",
     icon: "address",
-    live: false,
-    links: "Registered addresses, with the businesses and people at them.",
+    live: true,
+    links:
+      "Registered addresses, with how many businesses are filed at each and the first of them.",
   },
 ];
 
@@ -56,9 +58,9 @@ const GRAPH = {
   addresses: {
     count: 3,
     items: [
-      { label: "1200 River Rd, Pittsburgh, PA 15212", role: "principal" },
-      { label: "45 Ferry Landing, Erie, PA 16507", role: "principal" },
-      { label: "300 Liberty Ave, Pittsburgh, PA 15222", role: "officer" },
+      { label: "1200 Tallowmere Rd, Pittsburgh, PA 15212", role: "principal" },
+      { label: "45 Corvel Landing, Erie, PA 16507", role: "principal" },
+      { label: "300 Penderly Ave, Pittsburgh, PA 15222", role: "officer" },
     ],
   },
 };
@@ -376,6 +378,9 @@ function MotionToggle({
   );
 }
 
+/** The entities not served yet, which run past in the hero's lane. */
+const coming = ENTITIES.filter(entity => !entity.live);
+
 export function Home() {
   const [paused, setPaused] = useState(false);
   const toggle = () => setPaused(value => !value);
@@ -407,7 +412,7 @@ export function Home() {
               your Baselayer search is pinned to exactly that business.
             </p>
             {/* What is served, then what is coming, running past in a lane
-                that fades out on the right. */}
+                that fades out on the right, while anything is coming. */}
             <div className="entity-row">
               <ul className="entity-chips" aria-label="What it searches">
                 {ENTITIES.filter(entity => entity.live).map(entity => (
@@ -415,28 +420,32 @@ export function Home() {
                     {entity.name}
                   </li>
                 ))}
-                <li className="entity-lane">
-                  {/* Four copies end to end: the loop moves by one, and the
+                {coming.length > 0 && (
+                  <li className="entity-lane">
+                    {/* Four copies end to end: the loop moves by one, and the
                     other three always cover the lane, however wide. */}
-                  <div className="entity-lane-track">
-                    {[0, 1, 2, 3].map(copy => (
-                      <ul
-                        key={copy}
-                        className="entity-lane-set"
-                        aria-hidden={copy > 0 ? true : undefined}
-                      >
-                        {ENTITIES.filter(entity => !entity.live).map(entity => (
-                          <li key={entity.name} data-live="false">
-                            {entity.name}
-                            <span>soon</span>
-                          </li>
-                        ))}
-                      </ul>
-                    ))}
-                  </div>
-                </li>
+                    <div className="entity-lane-track">
+                      {[0, 1, 2, 3].map(copy => (
+                        <ul
+                          key={copy}
+                          className="entity-lane-set"
+                          aria-hidden={copy > 0 ? true : undefined}
+                        >
+                          {coming.map(entity => (
+                            <li key={entity.name} data-live="false">
+                              {entity.name}
+                              <span>soon</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ))}
+                    </div>
+                  </li>
+                )}
               </ul>
-              <MotionToggle paused={paused} onToggle={toggle} />
+              {coming.length > 0 && (
+                <MotionToggle paused={paused} onToggle={toggle} />
+              )}
             </div>
             <div className="hero-actions">
               <a className="btn btn-primary" href={links.demo}>
@@ -749,7 +758,7 @@ export function Home() {
         <section className="cta" aria-labelledby="cta-title">
           <div className="wrap cta-inner">
             <h2 className="display" id="cta-title">
-              Try it against your own organization
+              Try it against your own Baselayer account
             </h2>
             <div>
               <p>

@@ -77,7 +77,7 @@ describe("the pages that show the body", () => {
     const app = page("demo/App.tsx");
     const step = page("demo/SearchStep.tsx");
     const home = page("home/Home.tsx");
-    expect(step).toContain("searchExample(apiHost, picked.pick.businessToken)");
+    expect(step).toContain("searchExample(apiHost, picked.businessToken)");
     expect(home).toContain("snippets={SEARCH_SNIPPET}");
     expect(app + step + home).not.toMatch(/"business_token":/);
   });

@@ -72,7 +72,7 @@ function wireSuggestion(
           {
             type: "address",
             token: "tok-address",
-            label: "1 Main St, Dover, DE 19901",
+            label: "1 Dunmarrow St, Dover, DE 19901",
             role: "principal",
             matched: false,
           },
@@ -136,7 +136,12 @@ type Source =
   | { mint: MintFunction; baseUrl: string }
   | { mintUrl: string; baseUrl: string };
 
-type HostProps = Omit<
+/** `Omit` for each member of a union: props that are a union stay one. */
+type DistributiveOmit<T, K extends PropertyKey> = T extends unknown
+  ? Omit<T, K>
+  : never;
+
+type HostProps = DistributiveOmit<
   BusinessAutocompleteProps,
   | "client"
   | "mint"

@@ -56,12 +56,22 @@ function changes(layout: RowLayout): Partial<RowLayout> {
   );
 }
 
-function related(type: string, items: Omit<RelatedItem, "type">[]) {
+/** A business row's people or addresses, which carry no business fields. */
+function related(
+  type: RelatedItem["type"],
+  items: Pick<RelatedItem, "token" | "label" | "role" | "matched">[],
+) {
   return {
     count: items.length,
     matched: null,
     truncated: false,
-    items: items.map(item => ({ type, ...item })),
+    items: items.map(item => ({
+      type,
+      ...item,
+      address: null,
+      states: null,
+      domicile_state: null,
+    })),
   };
 }
 
@@ -103,7 +113,7 @@ const ROWS: BusinessSuggestion[] = [
       addresses: related("address", [
         {
           token: "tok-a1",
-          label: "4120 Orchard Lane Suite 1400, Springfield, MO 65806",
+          label: "4120 Wrenmoor Lane Suite 1400, Springfield, MO 65806",
           role: "principal",
           matched: false,
         },
@@ -131,7 +141,7 @@ const ROWS: BusinessSuggestion[] = [
       addresses: related("address", [
         {
           token: "tok-a2",
-          label: "88 Cactus Wren Drive, Building C, Tempe, AZ 85281",
+          label: "88 Thistlecrest Drive, Building C, Tempe, AZ 85281",
           role: "agent",
           matched: false,
         },
@@ -199,7 +209,7 @@ const ROWS: BusinessSuggestion[] = [
         ...related("address", [
           {
             token: "tok-a5",
-            label: "4120 Orchard Lane Suite 1400, Springfield, MO 65806",
+            label: "4120 Wrenmoor Lane Suite 1400, Springfield, MO 65806",
             role: "officer",
             matched: true,
           },
@@ -348,7 +358,7 @@ describe("the rows, laid out", () => {
         }
       }
       expect(wrong.slice(0, 8)).toEqual([]);
-      expect(DRAWN_LAYOUTS).toHaveLength(541);
+      expect(DRAWN_LAYOUTS).toHaveLength(2836);
     },
   );
 

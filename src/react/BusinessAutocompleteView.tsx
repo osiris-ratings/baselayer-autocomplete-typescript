@@ -1,71 +1,69 @@
-import {
-  Fragment,
-  type CSSProperties,
-  type ReactElement,
-  type ReactNode,
-  type Ref,
-} from "react";
+import { type ReactElement, type ReactNode, type Ref } from "react";
 
 import {
-  DEFAULT_LOOK,
+  BUSINESS_ROW,
+  DEFAULT_ENABLED_LINES,
+  DEFAULT_ICON_SEGMENTS,
+  ROUTES,
   ROW_LINES,
+  drawnLayout,
   drawnRowLayout,
+  groupedLines,
+  resolveLayout,
   resolveLook,
   resolveRowLayout,
+  type BusinessIconSegment,
+  type BusinessRowLayoutInput,
+  type EntityPick,
+  type EntityType,
+  type RelatedRole,
+  type GroupedOption,
+  type Include,
   type Look,
   type LookInput,
+  type RelatedItem,
   type RowField,
   type RowLayout,
   type RowLayoutInput,
-  type RowLine,
   type RowPlace,
 } from "@baselayer-sdk/autocomplete";
 import {
   addressLineOf,
   formatFound,
   matchedOn,
-  orderedStates,
   partsFor,
   peopleLineOf,
   queryTokens,
   structureLabel,
 } from "@baselayer-sdk/autocomplete";
-import type {
-  BusinessSuggestion,
-  Filters,
-  HighlightPart,
-} from "@baselayer-sdk/autocomplete";
+import type { BusinessSuggestion, Filters } from "@baselayer-sdk/autocomplete";
 
+import { SegmentIcon, type IconSet } from "./icons";
 import { resolveMessages, type AutocompleteMessages } from "./messages";
-import { useBusinessCombobox } from "./useBusinessCombobox";
+import type { GroupedSelection } from "./selection";
+import { useSuggestionCombobox } from "./useBusinessCombobox";
+import {
+  StateSquares,
+  classes,
+  countsText,
+  roleColumn,
+  lookVariables,
+  marked,
+  type ClassFor,
+  type SlotName,
+} from "./viewParts";
 
-/** Squares shown before the `+N` overflow: the domicile and two more. */
-export const STATE_SQUARES = 3;
+export { STATE_SQUARES } from "./viewParts";
+export type { SlotName } from "./viewParts";
 
-export type SlotName =
-  | "root"
-  | "label"
-  | "input"
-  | "menu"
-  | "list"
-  | "row"
-  | "titleLine"
-  | "title"
-  | "nameGroup"
-  | "name"
-  | "also"
-  | "mark"
-  | "structure"
-  | "states"
-  | "state"
-  | "moreStates"
-  | "subtitleLine"
-  | "corner"
-  | "address"
-  | "people"
-  | "footer"
-  | "count"
-  | "debug";
+/**
+ * A line of a group as the combobox holds it: what picking it hands, or null
+ * for a disabled one, which is an option the keys pass over; and its name.
+ */
+interface OptionItem {
+  option: GroupedOption | null;
+  label: string;
+}
 
 export interface RowRenderProps {
   item: BusinessSuggestion;
@@ -106,7 +104,27 @@ export interface BusinessAutocompleteViewProps {
    * unless it is placed elsewhere, and null leaves a place empty. With
    * `subtitle` empty, the field in `subtitleTrailing` takes its place.
    */
-  layout?: RowLayoutInput | undefined;
+  layout?: BusinessRowLayoutInput | undefined;
+  /**
+   * The relations listed under each row, a line per item: a business's
+   * officers and agents (`people`) and its `addresses`. None by default, and
+   * then each row is the one option it has always been.
+   */
+  list?: readonly Include[] | undefined;
+  /** Which lines can be picked, by type: the business itself by default. */
+  enabledLines?: readonly EntityType[] | undefined;
+  /** A host's own icons, by entity or by entity and role; `false` draws none. */
+  icons?: IconSet | undefined;
+  /**
+   * The segments that carry an icon before their text, wherever they are
+   * placed: none by default, so a row draws as it always has.
+   */
+  iconSegments?: readonly BusinessIconSegment[] | undefined;
+  /** What the line under the field names; none drawn when null. */
+  selection?: GroupedSelection | null | undefined;
+  /** An officer or an address picked from a line under `row`. */
+  onSelectEntity?:
+    ((pick: EntityPick, row: BusinessSuggestion) => void) | undefined;
   /**
    * The filters `suggestions` were fetched with (`appliedFilters` of
    * `useBusinessAutocomplete`), none when there were none or the client withheld
@@ -143,139 +161,9 @@ export interface BusinessAutocompleteViewProps {
   unstyled?: boolean | undefined;
 }
 
-type ClassFor = (slot: SlotName, base: string) => string | undefined;
-
-function classes(
-  unstyled: boolean,
-  classNames: Partial<Record<SlotName, string>> | undefined,
-): ClassFor {
-  return (slot, base) => {
-    const own = classNames?.[slot];
-    const parts = [unstyled ? undefined : base, own].filter(Boolean);
-    return parts.length > 0 ? parts.join(" ") : undefined;
-  };
-}
-
-/** The look's colors as CSS variables, only where they differ from the stylesheet's. */
-function lookVariables(look: Look): CSSProperties {
-  const vars: Record<string, string> = {};
-  const set = (name: string, value: string, fallback: string) => {
-    if (value !== fallback) {
-      vars[name] = value;
-    }
-  };
-  set("--bl-ac-bg", look.backgroundColor, DEFAULT_LOOK.backgroundColor);
-  set("--bl-ac-title", look.titleColor, DEFAULT_LOOK.titleColor);
-  set("--bl-ac-subtitle", look.subtitleColor, DEFAULT_LOOK.subtitleColor);
-  set(
-    "--bl-ac-pill-bg",
-    look.pillBackgroundColor,
-    DEFAULT_LOOK.pillBackgroundColor,
-  );
-  set(
-    "--bl-ac-pill-fg",
-    look.pillForegroundColor,
-    DEFAULT_LOOK.pillForegroundColor,
-  );
-  set(
-    "--bl-ac-pill-primary-border",
-    look.primaryPillBorderColor,
-    DEFAULT_LOOK.primaryPillBorderColor,
-  );
-  set(
-    "--bl-ac-pill-secondary-bg",
-    look.secondaryPillBackgroundColor,
-    DEFAULT_LOOK.secondaryPillBackgroundColor,
-  );
-  set(
-    "--bl-ac-structure-bg",
-    look.structurePillBackgroundColor,
-    DEFAULT_LOOK.structurePillBackgroundColor,
-  );
-  set(
-    "--bl-ac-structure-fg",
-    look.structurePillForegroundColor,
-    DEFAULT_LOOK.structurePillForegroundColor,
-  );
-  if (look.matchEmphasisColor !== null) {
-    vars["--bl-ac-mark"] = look.matchEmphasisColor;
-  }
-  return vars as CSSProperties;
-}
-
-/**
- * `text` with the marks on it: the parts `partsFor` gives this line, the
- * matched ones as spans; the text as it is when the parts belong to the row's
- * other name, or there are none.
- */
-function marked(
-  text: string,
-  parts: HighlightPart[] | null,
-  markClass: string | undefined,
-): ReactNode {
-  if (parts === null) {
-    return text;
-  }
-  return parts.map((part, index) =>
-    part.matched ? (
-      <span
-        key={index}
-        className={markClass}
-        data-testid="business-suggestion-match"
-      >
-        {part.text}
-      </span>
-    ) : (
-      <Fragment key={index}>{part.text}</Fragment>
-    ),
-  );
-}
-
-function StateSquares({
-  suggestion,
-  matched,
-  cx,
-  more,
-  place,
-}: {
-  suggestion: BusinessSuggestion;
-  /** The states a state filter matched: moved forward and marked. */
-  matched: readonly string[];
-  cx: ClassFor;
-  more: (count: number) => string;
-  place: RowPlace;
-}) {
-  const states = orderedStates(suggestion, matched);
-  const shown = states.slice(0, STATE_SQUARES);
-  const hidden = states.length - shown.length;
-  return (
-    <span className={cx("states", "bl-ac-states")} data-place={place}>
-      {shown.map((state, index) => (
-        <span
-          key={state}
-          className={cx("state", "bl-ac-state")}
-          data-testid="business-suggestion-state"
-          data-domicile={index === 0 ? "true" : undefined}
-          data-matched={matched.includes(state) ? "true" : undefined}
-        >
-          {state}
-        </span>
-      ))}
-      {hidden > 0 && (
-        <span
-          className={cx("moreStates", "bl-ac-more-states")}
-          data-testid="business-suggestion-more-states"
-        >
-          {more(hidden)}
-        </span>
-      )}
-    </span>
-  );
-}
-
 /** Each line's slot and classes. */
 const LINE_CLASSES: Record<
-  RowLine["line"],
+  (typeof ROW_LINES)[number]["line"],
   { slot: SlotName; className: string }
 > = {
   title: { slot: "titleLine", className: "bl-ac-line bl-ac-line-title" },
@@ -298,7 +186,18 @@ interface DefaultRowProps {
   cx: ClassFor;
   /** The states the filters the rows were fetched with named, if any. */
   stateFilter: readonly string[] | undefined;
+  /** An id for the name, which labels the row's group when it lists lines. */
+  nameId?: string | undefined;
+  /** The icon a segment carries, for an entity in a role, or none. */
+  iconOf: IconOf;
 }
+
+/** The icon a segment carries, for an entity in a role; nothing for none. */
+type IconOf = (
+  segment: BusinessIconSegment,
+  entity: EntityType,
+  role: RelatedRole | null,
+) => ReactNode;
 
 /**
  * One business as the component draws it: each line of `ROW_LINES` as its
@@ -313,6 +212,8 @@ function DefaultRow({
   text,
   cx,
   stateFilter,
+  nameId,
+  iconOf,
 }: DefaultRowProps) {
   const region = look.matchEmphasisRegion;
   // Plain draws none of the marks, which is no parts at all.
@@ -321,6 +222,7 @@ function DefaultRow({
   const address = addressLineOf(item);
   const people = peopleLineOf(item);
   const structure = structureLabel(item.structure, text.structures);
+  const counts = countsText("businesses", item.related, text);
   const matches = matchedOn(item, { state: stateFilter });
   const matchedStates = matches.flatMap(match =>
     match.kind === "state" ? match.states : [],
@@ -343,7 +245,7 @@ function DefaultRow({
   const fieldNode: Record<RowField, (place: RowPlace) => ReactNode> = {
     states: place => (
       <StateSquares
-        suggestion={item}
+        business={item}
         matched={matchedStates}
         cx={cx}
         more={text.more}
@@ -372,6 +274,11 @@ function DefaultRow({
           text.noAddress
         ) : (
           <>
+            {iconOf(
+              "address",
+              "address",
+              item.related.addresses.items[0]?.role ?? null,
+            )}
             {wholeMark(address.label, address.matched)}
             {addressSuffix}
           </>
@@ -388,9 +295,20 @@ function DefaultRow({
           data-emphasis={look.matchEmphasis}
           data-matched={people.matched > 0 ? "true" : undefined}
         >
+          {iconOf("people", "person", people.role)}
           {wholeMark(people.names[0] ?? "", people.matched > 0)}
           {people.more > 0 ? ` ${text.more(people.more)}` : ""}
           {people.role === "agent" ? text.agentSuffix : ""}
+        </span>
+      ),
+    counts: place =>
+      counts !== null && (
+        <span
+          className={cx("counts", "bl-ac-group-count")}
+          data-place={place}
+          data-testid="business-suggestion-counts"
+        >
+          {counts}
         </span>
       ),
   };
@@ -401,7 +319,8 @@ function DefaultRow({
   /** Whether a place draws text on this row, rather than a flag or nothing. */
   const drawsText = (place: RowPlace) =>
     layout[place] === "address" ||
-    (layout[place] === "people" && people !== null);
+    (layout[place] === "people" && people !== null) ||
+    (layout[place] === "counts" && counts !== null);
   /** Whether a place draws a flag on this row. */
   const drawsFlag = (place: RowPlace) =>
     layout[place] === "states" ||
@@ -438,7 +357,9 @@ function DefaultRow({
       {/* One piece, so `also …` leaves the line whole rather than splitting
           the name from its badge. */}
       <span className={cx("nameGroup", "bl-ac-name-group")}>
+        {iconOf("name", "business", null)}
         <span
+          id={nameId}
           className={cx("name", "bl-ac-name")}
           data-testid="business-suggestion-name"
           data-emphasis={look.matchEmphasis}
@@ -535,22 +456,82 @@ export function BusinessAutocompleteView({
   renderRow,
   classNames,
   unstyled = false,
+  list,
+  enabledLines = DEFAULT_ENABLED_LINES,
+  icons,
+  iconSegments = DEFAULT_ICON_SEGMENTS.businesses,
+  selection = null,
+  onSelectEntity,
 }: BusinessAutocompleteViewProps) {
   const look = resolveLook(lookInput ?? {});
-  // One layout for every row, from the places the host filled, as drawn.
-  const layout = drawnRowLayout(resolveRowLayout(layoutInput));
+  // One layout for every row, from the places the host filled, as drawn: the
+  // head's, as it has always been, and the whole row's, lines included.
+  const layout = drawnRowLayout(
+    resolveRowLayout(layoutInput as RowLayoutInput),
+  );
+  const rowLayout: Readonly<Record<string, string | null>> = drawnLayout(
+    BUSINESS_ROW,
+    resolveLayout(BUSINESS_ROW, layoutInput),
+  );
   const text = resolveMessages(messageOverrides);
   const cx = classes(unstyled, classNames);
   const hasFooter = isSearching || error !== null || roundTripMs !== null;
-  const combobox = useBusinessCombobox({
+  // A row that lists lines under it, or whose business is not itself a pick,
+  // is a group of lines; any other is the one option a row has always been.
+  // In the host's order: the lines are drawn in it, each relation once
+  // (`groupedLines`).
+  const listed = (list ?? []).filter(relation =>
+    ROUTES.businesses.includes.includes(relation),
+  );
+  const grouped = listed.length > 0 || !enabledLines.includes("business");
+  const rowLines = grouped
+    ? suggestions.map(row => groupedLines(row, listed, enabledLines))
+    : [];
+  // Every line of a group is an option, in the order drawn, the business
+  // first: one that is not a pick is a disabled one.
+  const items: (BusinessSuggestion | OptionItem)[] = grouped
+    ? rowLines.flatMap((lines, rowIndex) => [
+        { option: lines.head.option, label: suggestions[rowIndex]!.label },
+        ...lines.lists.flatMap(list =>
+          list.lines.map(({ item, option }) => ({ option, label: item.label })),
+        ),
+      ])
+    : suggestions;
+  const combobox = useSuggestionCombobox<BusinessSuggestion | OptionItem>({
     id,
-    items: suggestions,
+    items,
     inputValue: value,
     onInputChange,
-    onPick: onSelect,
+    onPick: item => {
+      if (!("option" in item)) {
+        onSelect(item);
+        return;
+      }
+      const { option } = item;
+      if (option === null) {
+        return;
+      }
+      if (option.kind === "row") {
+        onSelect(option.row);
+      } else if (option.kind === "entity" && option.row.type === "business") {
+        onSelectEntity?.(option.pick, option.row);
+      }
+    },
+    isItemDisabled: item => "option" in item && item.option === null,
     hasFooter,
     open,
+    rowCount: suggestions.length,
   });
+  const withIcon: ReadonlySet<string> = new Set(iconSegments);
+  const iconOf: IconOf = (segment, entity, role) =>
+    withIcon.has(segment) && (
+      <SegmentIcon
+        icons={icons}
+        entity={entity}
+        role={role}
+        className={cx("icon", "bl-ac-icon")}
+      />
+    );
   // What was typed, as the autocomplete service tokenizes it, for cutting a
   // marked word down to the typed characters under the `substring` region.
   const tokens = queryTokens(value);
@@ -573,13 +554,88 @@ export function BusinessAutocompleteView({
   }
 
   const labelProps = combobox.getLabelProps() as Record<string, unknown>;
+  const selectionId = `${id}-selection`;
   const inputProps = combobox.getInputProps({
     ref: inputRef,
     name: inputName,
     onFocus: onInputFocus,
     onBlur: onInputBlur,
     autoComplete: "off",
+    ...(selection !== null ? { "aria-describedby": selectionId } : {}),
   });
+
+  let optionIndex = 0;
+  /** A field of a line under a business, as drawn in `place`. */
+  const lineField = (place: string, related: RelatedItem): ReactNode => {
+    const name = rowLayout[place] ?? null;
+    if (name === null || related.role === null) return null;
+    const role =
+      name === "addressRole"
+        ? text.addressRoles[related.role]
+        : text.personRoles[related.role];
+    return (
+      <span
+        className={cx("role", "bl-ac-role")}
+        data-place={place}
+        data-testid={`grouped-${name}`}
+      >
+        {role}
+      </span>
+    );
+  };
+  /**
+   * An officer's or an address's line under a business: its name, with its
+   * icon where the host asks, and the role at the right. Every line is an
+   * option; one that is not a pick is disabled, and the keys pass over it.
+   */
+  const listedLine = (
+    line: EntityType,
+    related: RelatedItem,
+    option: GroupedOption | null,
+    key: string,
+  ) => {
+    // An option either way: a disabled one is marked so and passed over.
+    const index = optionIndex++;
+    const props = combobox.getItemProps({
+      item: { option, label: related.label },
+      index,
+    });
+    const trailingBadge = lineField(`${line}TrailingBadge`, related);
+    const trailing = lineField(`${line}Trailing`, related);
+    return (
+      <div
+        {...props}
+        key={key}
+        className={cx("groupLine", "bl-ac-group-line")}
+        data-line={line}
+        data-testid={`${line}-line`}
+        data-enabled={option !== null ? "true" : undefined}
+        data-highlighted={highlightedIndex === index ? "true" : undefined}
+        data-matched={related.matched ? "true" : undefined}
+      >
+        <span className={cx("corner", "bl-ac-group-lead")} data-corner="lead">
+          {iconOf(
+            line === "person" ? "personName" : "addressName",
+            related.type,
+            related.role,
+          )}
+          <span className={cx("lineName", "bl-ac-line-name")}>
+            {related.label}
+          </span>
+          {lineField(`${line}Badge`, related)}
+        </span>
+        {(trailingBadge || trailing) && (
+          <span
+            className={cx("corner", "bl-ac-group-trailing")}
+            data-corner="trailing"
+          >
+            {trailingBadge}
+            {trailing}
+          </span>
+        )}
+      </div>
+    );
+  };
 
   const region = look.matchEmphasisRegion;
 
@@ -612,8 +668,106 @@ export function BusinessAutocompleteView({
       >
         {/* The listbox holds the options and nothing else; the count row sits
             below it. Always mounted, as downshift requires of its menu. */}
-        <div className={cx("list", "bl-ac-list")} {...combobox.getMenuProps()}>
+        <div
+          className={cx("list", "bl-ac-list")}
+          style={
+            grouped
+              ? roleColumn(
+                  rowLines.flatMap(lines =>
+                    lines.lists.flatMap(list =>
+                      list.lines.map(({ item: related }) =>
+                        related.role === null
+                          ? null
+                          : list.relation === "addresses"
+                            ? text.addressRoles[related.role]
+                            : text.personRoles[related.role],
+                      ),
+                    ),
+                  ),
+                )
+              : undefined
+          }
+          {...combobox.getMenuProps()}
+        >
           {hasRows &&
+            grouped &&
+            suggestions.map((item, rowIndex) => {
+              const lines = rowLines[rowIndex]!;
+              const headId = `${id}-group-${rowIndex}`;
+              const head = lines.head.option;
+              const headIndex = optionIndex++;
+              const highlighted = highlightedIndex === headIndex;
+              const defaultRow = (
+                <DefaultRow
+                  item={item}
+                  layout={layout}
+                  look={look}
+                  tokens={tokens}
+                  text={text}
+                  cx={cx}
+                  stateFilter={appliedFilters?.state}
+                  nameId={headId}
+                  iconOf={iconOf}
+                />
+              );
+              // What each list leaves out, which no option says: read as the
+              // group's description.
+              const describedBy = lines.lists.flatMap(list =>
+                list.notShown > 0 ? [`${headId}-more-${list.relation}`] : [],
+              );
+              return (
+                <div
+                  key={item.token}
+                  role="group"
+                  aria-labelledby={headId}
+                  aria-describedby={describedBy.join(" ") || undefined}
+                  className={cx("group", "bl-ac-group")}
+                  data-testid="business-group"
+                >
+                  <div
+                    {...combobox.getItemProps({
+                      item: { option: head, label: item.label },
+                      index: headIndex,
+                    })}
+                    className={cx("row", "bl-ac-row")}
+                    data-highlighted={highlighted ? "true" : undefined}
+                    data-enabled={head !== null ? "true" : undefined}
+                    data-testid="business-suggestion"
+                  >
+                    {renderRow
+                      ? renderRow({
+                          item,
+                          index: rowIndex,
+                          highlighted,
+                          defaultRow,
+                        })
+                      : defaultRow}
+                  </div>
+                  {lines.lists.map(list => (
+                    <div key={list.relation} data-list={list.relation}>
+                      {list.lines.map(({ item: related, option }, itemIndex) =>
+                        listedLine(
+                          list.line,
+                          related,
+                          option,
+                          `${list.line}-${itemIndex}`,
+                        ),
+                      )}
+                      {list.notShown > 0 && (
+                        <div
+                          id={`${headId}-more-${list.relation}`}
+                          className={cx("more", "bl-ac-more")}
+                        >
+                          {text.moreNotShown(list.notShown)}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          {hasRows &&
+            !grouped &&
             suggestions.map((item, index) => {
               const highlighted = highlightedIndex === index;
               const defaultRow = (
@@ -625,6 +779,7 @@ export function BusinessAutocompleteView({
                   text={text}
                   cx={cx}
                   stateFilter={appliedFilters?.state}
+                  iconOf={iconOf}
                 />
               );
               return (
@@ -663,6 +818,17 @@ export function BusinessAutocompleteView({
           </div>
         )}
       </div>
+      {/* After the menu, which floats over it: it sits right under the field. */}
+      {selection !== null && (
+        <div
+          id={selectionId}
+          className={cx("selection", "bl-ac-selection")}
+          data-type={selection.type}
+          data-testid="grouped-selection"
+        >
+          {selection.label}
+        </div>
+      )}
     </div>
   );
 }

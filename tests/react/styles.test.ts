@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 
 import { DEFAULT_LOOK, type Look } from "@baselayer-sdk/autocomplete";
 
+import { disabledInks } from "../../src/react/disabled";
+
 const css = readFileSync(join(__dirname, "../../src/react/styles.css"), "utf8");
 
 /** Every rule, as its selectors and its declarations, comments left out. */
@@ -183,10 +185,53 @@ describe("the type", () => {
   });
 });
 
+describe("a disabled line", () => {
+  it("is drawn by the default look's inks when the component sets none", () => {
+    // The component sets the variables only for another look, so each
+    // fallback must be the default's: the filter, the squares' opacity, and
+    // the share of the title's and the subtitle's colour each text keeps.
+    const inks = disabledInks(DEFAULT_LOOK);
+    expect(css).toContain(
+      `filter: var(--bl-ac-disabled-filter, ${inks.filter});`,
+    );
+    const flat = css.replace(/\s+/g, " ");
+    expect(flat).toContain(
+      `color: var( --bl-ac-disabled-name, color-mix(in srgb, var(--bl-ac-title) ${inks.nameShare}%, var(--bl-ac-bg)) );`,
+    );
+    expect(flat).toContain(
+      `color: var( --bl-ac-disabled-role, color-mix(in srgb, var(--bl-ac-subtitle) ${inks.roleShare}%, var(--bl-ac-bg)) );`,
+    );
+    expect(flat).toContain(
+      `color: var( --bl-ac-disabled-text, color-mix(in srgb, var(--bl-ac-subtitle) ${inks.textShare}%, var(--bl-ac-bg)) );`,
+    );
+    expect(flat).toContain(
+      `opacity: var(--bl-ac-disabled-opacity, ${inks.opacity});`,
+    );
+    expect(flat).toContain(`var(--bl-ac-disabled-mark, ${inks.markShare}%)`);
+  });
+
+  it("fades nothing at 0, and the default far enough to read as inactive", () => {
+    expect(disabledInks({ ...DEFAULT_LOOK, disabledDim: 0 })).toMatchObject({
+      filter: "none",
+      opacity: "1",
+      name: DEFAULT_LOOK.titleColor.toLowerCase(),
+      text: DEFAULT_LOOK.subtitleColor.toLowerCase(),
+      role: DEFAULT_LOOK.subtitleColor.toLowerCase(),
+      nameShare: 100,
+      textShare: 100,
+      roleShare: 100,
+    });
+    expect(disabledInks(DEFAULT_LOOK)).toMatchObject({
+      filter: "saturate(0)",
+      opacity: "0.52",
+    });
+  });
+});
+
 describe("the stylesheet's colors", () => {
   // Each color knob of `look`, and the variable it sets.
   const VARIABLES: Record<
-    Exclude<keyof Look, `match${string}` | "showDebugInfo">,
+    Exclude<keyof Look, `match${string}` | "showDebugInfo" | "disabledDim">,
     string
   > = {
     backgroundColor: "--bl-ac-bg",

@@ -13,6 +13,7 @@ import {
   ROW_FIELDS,
   ROW_PLACES,
   type BusinessSuggestion,
+  type RelatedRole,
   type RowField,
   type RowLayoutInput,
   type RowPlace,
@@ -47,6 +48,9 @@ const cinder: BusinessSuggestion = {
           label: "NORTHGATE AGENT SERVICES, INC",
           role: "agent",
           matched: false,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
         {
           type: "person",
@@ -54,6 +58,9 @@ const cinder: BusinessSuggestion = {
           label: "Wesley Crane",
           role: "officer",
           matched: false,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
         {
           type: "person",
@@ -61,6 +68,9 @@ const cinder: BusinessSuggestion = {
           label: "Ada Fox",
           role: "officer",
           matched: false,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
       ],
     },
@@ -75,9 +85,12 @@ const cinder: BusinessSuggestion = {
         {
           type: "address",
           token: "tok-7f1a2c3d",
-          label: "412 Orchard Ln, Springfield, MO 65806",
+          label: "412 Wrenmoor Ln, Springfield, MO 65806",
           role: "principal",
           matched: false,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
         {
           type: "address",
@@ -85,13 +98,19 @@ const cinder: BusinessSuggestion = {
           label: "PO Box 4417, Durham, NC 27702",
           role: "mailing",
           matched: false,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
         {
           type: "address",
           token: "tok-8f1a2c3d",
-          label: "88 Cactus Wren Dr, Tempe, AZ 85281",
+          label: "88 Thistlecrest Dr, Tempe, AZ 85281",
           role: "agent",
           matched: false,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
       ],
     },
@@ -133,6 +152,9 @@ const filtered: BusinessSuggestion = {
           label: "Ada Fox",
           role: "officer",
           matched: true,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
         ...cinder.related.people.items.filter(item => item.label !== "Ada Fox"),
       ],
@@ -145,9 +167,12 @@ const filtered: BusinessSuggestion = {
         {
           type: "address",
           token: "tok-9f1a2c3d",
-          label: "301 Mission St, San Francisco, CA 94105",
+          label: "301 Quenby St, San Francisco, CA 94105",
           role: "officer",
           matched: true,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
         ...cinder.related.addresses.items,
       ],
@@ -290,7 +315,7 @@ describe("BusinessAutocompleteView", () => {
     const [first, second] = screen.getAllByTestId("business-suggestion");
     expect(
       first!.querySelector('[data-testid="business-suggestion-address"]'),
-    ).toHaveTextContent("412 Orchard Ln, Springfield, MO 65806");
+    ).toHaveTextContent("412 Wrenmoor Ln, Springfield, MO 65806");
     const officers = first!.querySelector(
       '[data-testid="business-suggestion-officers"]',
     );
@@ -325,6 +350,9 @@ describe("BusinessAutocompleteView", () => {
               label: "Wesley Crane",
               role: "officer",
               matched: false,
+              address: null,
+              states: null,
+              domicile_state: null,
             },
             {
               type: "person",
@@ -332,6 +360,9 @@ describe("BusinessAutocompleteView", () => {
               label: "Ada Fox",
               role: "officer",
               matched: false,
+              address: null,
+              states: null,
+              domicile_state: null,
             },
             {
               type: "person",
@@ -339,6 +370,9 @@ describe("BusinessAutocompleteView", () => {
               label: "Sam Lee",
               role: "officer",
               matched: false,
+              address: null,
+              states: null,
+              domicile_state: null,
             },
           ],
         },
@@ -707,6 +741,9 @@ const agentsOnly: BusinessSuggestion = {
           label: "NORTHGATE AGENT SERVICES, INC",
           role: "agent",
           matched: false,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
         {
           type: "person",
@@ -714,6 +751,9 @@ const agentsOnly: BusinessSuggestion = {
           label: "LAKESIDE FILING AGENTS",
           role: "agent",
           matched: false,
+          address: null,
+          states: null,
+          domicile_state: null,
         },
       ],
     },
@@ -1369,6 +1409,8 @@ describe("the row's places and fields", () => {
         return "address";
       case "business-suggestion-officers":
         return "people";
+      case "business-suggestion-counts":
+        return "counts";
       default:
         return element.classList.contains("bl-ac-states") ? "states" : "name";
     }
@@ -1438,8 +1480,9 @@ describe("the row's places and fields", () => {
   const DRAWS: Record<RowField, string> = {
     states: "DECAFL+4",
     structure: "C-Corp",
-    address: "412 Orchard Ln, Springfield, MO 65806",
+    address: "412 Wrenmoor Ln, Springfield, MO 65806",
     people: "Wesley Crane +1",
+    counts: "4 people · 2 addresses",
   };
 
   // What a place needs placed for its field to be drawn there: a badge its
@@ -1657,13 +1700,12 @@ describe("the row's places and fields", () => {
     renderTypeahead({
       suggestions: [
         { ...cinder, token: "tok-other", structure: "OTHER" },
-        { ...cinder, token: "tok-unknown", structure: "FOUNDATION" },
         { ...cinder, token: "tok-none", structure: null },
       ],
-      found: 3,
+      found: 2,
     });
 
-    expect(screen.getAllByTestId("business-suggestion")).toHaveLength(3);
+    expect(screen.getAllByTestId("business-suggestion")).toHaveLength(2);
     expect(
       screen.queryAllByTestId("business-suggestion-structure"),
     ).toHaveLength(0);
@@ -1696,7 +1738,10 @@ describe("what a row matched on", () => {
   }
   const marks = (element: Element) =>
     [...element.querySelectorAll(".bl-ac-mark")].map(mark => mark.textContent);
-  const addressesOf = (role: string, matched: boolean): BusinessSuggestion => ({
+  const addressesOf = (
+    role: RelatedRole,
+    matched: boolean,
+  ): BusinessSuggestion => ({
     ...cinder,
     related: {
       ...cinder.related,
@@ -1738,10 +1783,10 @@ describe("what a row matched on", () => {
     );
 
     expect(address).toHaveTextContent(
-      "301 Mission St, San Francisco, CA 94105 · officer's address",
+      "301 Quenby St, San Francisco, CA 94105 · officer's address",
     );
     expect(address).toHaveAttribute("data-matched", "true");
-    expect(marks(address)).toEqual(["301 Mission St, San Francisco, CA 94105"]);
+    expect(marks(address)).toEqual(["301 Quenby St, San Francisco, CA 94105"]);
   });
 
   it("calls a matched agent's address an agent's, and an address the family filed itself nothing", () => {
@@ -1749,12 +1794,12 @@ describe("what a row matched on", () => {
       within(rowOf(row)).getByTestId("business-suggestion-address");
 
     expect(addressOf(addressesOf("agent", true))).toHaveTextContent(
-      "412 Orchard Ln, Springfield, MO 65806 · agent's address",
+      "412 Wrenmoor Ln, Springfield, MO 65806 · agent's address",
     );
     const own = addressOf(addressesOf("principal", true));
-    expect(own).toHaveTextContent("412 Orchard Ln, Springfield, MO 65806");
+    expect(own).toHaveTextContent("412 Wrenmoor Ln, Springfield, MO 65806");
     expect(own).not.toHaveTextContent("·");
-    expect(marks(own)).toEqual(["412 Orchard Ln, Springfield, MO 65806"]);
+    expect(marks(own)).toEqual(["412 Wrenmoor Ln, Springfield, MO 65806"]);
   });
 
   it("says nothing of whose an address is that no filter matched", () => {

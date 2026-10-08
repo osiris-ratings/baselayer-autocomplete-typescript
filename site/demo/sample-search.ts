@@ -6,7 +6,7 @@
 import type { Address, Search, WatchlistHit } from "./searches";
 
 const OFFICE: Address = {
-  street: "1200 RIVER RD",
+  street: "1200 TALLOWMERE RD",
   city: "PITTSBURGH",
   state: "PA",
   zip: "15212",
@@ -26,10 +26,10 @@ const MAIL_DROP: Address = {
 };
 
 const AGENT_OFFICE: Address = {
-  street: "251 LITTLE FALLS DR",
-  city: "WILMINGTON",
+  street: "77 QUILLFEATHER LN STE 300",
+  city: "DOVER",
   state: "DE",
-  zip: "19808",
+  zip: "19904",
   rdi: "Commercial",
   deliverable: true,
   cmra: false,
@@ -53,7 +53,7 @@ export const SAMPLE_SEARCH: Search = {
   id: "5f0c2d3e-7a41-4b8e-9a52-0d1f6c8e2b17",
   state: "COMPLETED",
   name: "HARBOR CONCRETE PUMPING CO., INC.",
-  address: "1200 RIVER RD, PITTSBURGH, PA 15212",
+  address: "1200 TALLOWMERE RD, PITTSBURGH, PA 15212",
   search_address: OFFICE,
   business_name_match: "EXACT",
   business_address_match: "EXACT",

@@ -5,20 +5,20 @@
 | Page          | Path     | What                                               |
 | ------------- | -------- | -------------------------------------------------- |
 | Overview      | `/`      | the entities it searches, how it fits your backend |
-| API reference | `/api/`  | the two routes, generated from their specs         |
-| Demo          | `/demo/` | the component against your own organization        |
+| API reference | `/api/`  | the routes, generated from their specs             |
+| Demo          | `/demo/` | the components against your own Baselayer account  |
 
 ![The overview](images/site-overview.png)
 
-The overview leads with what the autocomplete searches (businesses today;
-people and addresses, coming soon, run past beside it) and the
-component itself, playing: the real `BusinessAutocompleteView`, fed made-up
-rows (`site/home/reel.ts`), types three business names a letter at a time
-and picks the first row of each. It plays only while on screen, holds still
-with reduced motion, and a toggle beside each moving part stops both. Then
-come how each result links to the rest, and the integration in two
-diagrams: where each piece runs, and every request from focus to submit in
-three swim lanes, for the browser, your backend and Baselayer.
+The overview leads with what the autocomplete searches (businesses, people and
+addresses; an entity not served yet runs past beside them, in a lane of its own)
+and the component itself, playing: the real `BusinessAutocompleteView`, fed
+made-up rows (`site/home/reel.ts`), types three business names a letter at a
+time and picks the first row of each. It plays only while on screen, holds still
+with reduced motion, and a toggle beside each moving part stops both. Then come
+how each result links to the rest, and the integration in two diagrams: where
+each piece runs, and every request from focus to submit in three swim lanes, for
+the browser, your backend and Baselayer.
 
 ![How it works](images/site-how-it-works.png)
 
@@ -30,7 +30,7 @@ document's tags, its fields from the schemas, its refusals from the
 responses, and its examples from `examples` and `x-codeSamples`.
 
 ```text
-contracts/autocomplete-openapi.json  GET /autocomplete/businesses ─┐
+contracts/autocomplete-openapi.json  GET /autocomplete/{route}    ─┐
 contracts/sessions-openapi.json      POST /autocomplete/sessions  ─┤
 contracts/autocomplete.overlay.yaml  what the specs lack          ─┘
                                                                    │ assemble
@@ -39,7 +39,9 @@ contracts/autocomplete.overlay.yaml  what the specs lack          ─┘
 ```
 
 - The two specs are the ones the API publishes, vendored (see
-  [CONTRIBUTING](../CONTRIBUTING.md#contracts)).
+  [CONTRIBUTING](../CONTRIBUTING.md#contracts)). Every search route the
+  autocomplete service's spec carries is documented, each under its own tag
+  (Businesses, People, Addresses), which the overlay gives it.
 - The overlay is an OpenAPI Overlay 1.0 holding what the specs do not say
   yet: the `Origin` rule, the refusal codes, examples. Each action says
   where upstream its text belongs; the goal is an empty overlay.

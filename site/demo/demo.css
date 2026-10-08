@@ -535,6 +535,30 @@
   accent-color: var(--blue);
 }
 
+/* A person's or an address's row: what it lists under it, and what can be
+   picked, each a column of toggles under its legend. */
+.grouped-lists {
+  margin-bottom: 12px;
+}
+
+.grouped-lists fieldset {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.grouped-lists legend {
+  padding: 0;
+}
+
+.demo .components-tabs {
+  margin-top: 0;
+}
+
 /* Fixed on: shown, but not a choice. */
 .toggle[data-disabled] {
   cursor: default;
@@ -581,6 +605,9 @@
   border: 1px solid var(--map-border, var(--line-soft));
   border-radius: var(--map-radius, 4px);
   box-shadow: 0 2px 6px rgba(9, 35, 79, 0.06);
+  /* Everything in the card is in the look's inks (`map-ink.ts`), never the
+     page's, so a dark look reads as well as a light one. */
+  color: var(--map-ink);
 }
 
 .row-map-line {
@@ -590,11 +617,510 @@
   min-width: 0;
 }
 
-/* Every place is as wide as what it holds usually is: a name and an address
-   long, the people middling, a flag short. The name is fixed, so it is drawn
-   as a place that cannot be picked. */
+/* A drawer of lines: Shown, the row as the menu draws it, and Hidden below
+   it, a line in each that the row leaves out. Each line kind is its grip at
+   the left, its lines in their box, and its Enabled checkbox at the right,
+   the grip and the checkbox outside the box. */
+.row-map-drawer + .row-map-drawer {
+  margin-top: 8px;
+}
+
+/* A drawer's lines, each on one row: out of room, they scroll sideways here,
+   and the grips, the Enabled column and its heading stay put at its edges,
+   each cell taking its gutter with it, so what scrolls goes under them and
+   shows only between them. What the keyboard reaches stops clear of them. */
+.row-map-scroll {
+  display: grid;
+  gap: var(--map-row-gap);
+  overflow-x: auto;
+  /* Room for a focus ring too. */
+  scroll-padding-inline: calc(var(--map-grip-cell) + 4px)
+    calc(var(--map-check-cell) + 4px);
+}
+
+/* Hidden's background is faint bands, each as wide as the gap after it, a
+   margin clear of its border, so it reads as set aside. What it holds lies
+   over the bands, each on a ground of its own, ringed in the card's colour. */
+.row-map-hidden {
+  position: relative;
+}
+
+.row-map-hidden::before {
+  position: absolute;
+  z-index: 0;
+  inset: 7px;
+  border-radius: 4px;
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--map-soft) 9%, transparent) 0 6px,
+    transparent 6px 12px
+  );
+  content: "";
+  pointer-events: none;
+}
+
+.row-map-hidden .row-map-kind {
+  position: relative;
+}
+
+.row-map-kind-ground {
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  right: var(--map-check-cell);
+  bottom: 0;
+  left: calc(var(--map-grip-cell) + var(--map-indent));
+  background: var(--map-bg, var(--paper));
+  border-radius: var(--map-line-radius);
+  box-shadow: 0 0 0 2px var(--map-bg, var(--paper));
+}
+
+.row-map-hidden .row-map-chip,
+.row-map-hidden .row-map-drawer-label,
+.row-map-hidden .row-map-drawer-hint {
+  background: var(--map-bg, var(--paper));
+  box-shadow: 0 0 0 2px var(--map-bg, var(--paper));
+}
+
+.row-map-hidden > .row-map-scroll-frame,
+.row-map-hidden > .row-map-tray {
+  position: relative;
+  z-index: 1;
+}
+
+/* Hidden holds listed lines only: its title starts where theirs do. */
+.row-map-hidden .row-map-drawer-label {
+  margin-left: calc(
+    var(--map-indent) + var(--map-box-pad) - var(--map-ground-pad)
+  );
+  /* As much room after the text as before it: its last letter's spacing
+     is room already. */
+  padding: 0 calc(var(--map-ground-pad) - 0.08em) 0 var(--map-ground-pad);
+}
+
+.row-map-head,
+.row-map-hint-row,
+.row-map-kind {
+  display: grid;
+  box-sizing: border-box;
+  grid-template-columns: var(--map-grip-cell) minmax(0, 1fr) var(
+      --map-check-cell
+    );
+  column-gap: 0;
+  align-items: start;
+  width: max-content;
+  min-width: 100%;
+}
+
+.row-map-scroll-frame {
+  position: relative;
+  /* A grid item as narrow as the card, so the lines scroll inside it. */
+  min-width: 0;
+}
+
+/* The soft shade at an edge there is more beyond, rounded: the row map's
+   lines and the presets' row draw the same one. */
+:root {
+  --shade-depth: 12px;
+  --shade-share: 22%;
+  --shade-radius: 8px;
+}
+
+/* Where a line's places go under the grip or the Enabled column, while
+   there is more of them beyond that edge, its box takes a soft shade there,
+   rounded as the box is, in the look's ink: on the line alone, never on a
+   heading or between lines. */
+.row-map-kind .row-map-grip-cell::after,
+.row-map-kind .row-map-check-cell::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--shade-depth);
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.row-map-kind .row-map-grip-cell::after {
+  left: 100%;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--map-ink) var(--shade-share), transparent),
+    transparent
+  );
+  border-radius: var(--map-line-radius) 0 0 var(--map-line-radius);
+}
+
+.row-map-kind .row-map-check-cell::before {
+  right: 100%;
+  background: linear-gradient(
+    to left,
+    color-mix(in srgb, var(--map-ink) var(--shade-share), transparent),
+    transparent
+  );
+  border-radius: 0 var(--map-line-radius) var(--map-line-radius) 0;
+}
+
+.row-map-scroll-frame[data-more-before] .row-map-grip-cell::after,
+.row-map-scroll-frame[data-more-after] .row-map-check-cell::before {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-map-kind .row-map-grip-cell::after,
+  .row-map-kind .row-map-check-cell::before {
+    transition: none;
+  }
+}
+
+.row-map-wrap {
+  --map-grip: 12px;
+  --map-row-gap: 8px;
+  /* The room each side of a heading or a note on a ground of its own. */
+  --map-ground-pad: 5px;
+  /* One gap down the Enabled column: heading, line, box, line, box. */
+  --map-guide-gap: 6px;
+  /* The checkbox and a little room: its heading may run left of it. */
+  --map-check: 28px;
+  --map-col-gap: 6px;
+  /* A line's box's padding: a drawer's title and note start where its
+     chips do. */
+  --map-box-pad: 6px;
+  --map-line-radius: 8px;
+  /* A listed line's indent under the head, the menu's own: its group line's
+     left padding past its head's. */
+  --map-indent: 0.875rem;
+}
+
+/* The grip's and the checkbox's columns with their gutters, on the card,
+   where a narrow panel's gutter is set too. */
+.row-map {
+  --map-grip-cell: calc(var(--map-grip) + var(--map-col-gap));
+  --map-check-cell: calc(var(--map-check) + var(--map-col-gap));
+}
+
+/* A carried line's neighbours slide aside to make its way. */
+.row-map-kind {
+  transition: transform 150ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-map-kind {
+    transition: none;
+  }
+}
+
+/* What a screen reader is told when a line moves: not drawn. */
+.row-map-live {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.row-map-head {
+  align-items: end;
+  color: var(--map-ink);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.row-map-drawer-label {
+  position: sticky;
+  left: var(--map-grip-cell);
+  grid-column: 2;
+  justify-self: start;
+  padding-left: var(--map-box-pad);
+}
+
+/* Pinned to the drawer's right edge, its words running left over the
+   gutter above the lines, so they do not widen the column. */
+.row-map-check-head {
+  position: sticky;
+  z-index: 3;
+  right: 0;
+  grid-column: 3;
+  justify-self: end;
+  width: max-content;
+  padding-left: var(--map-col-gap);
+  background: var(--map-bg, var(--paper));
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* The note wraps inside the drawer rather than widening it, and its ground
+   is an inline box's, so each line's hugs that line, the same room each
+   side, whatever the face. */
+.row-map-hint-row {
+  width: auto;
+}
+
+/* No checkbox on the note's row: it takes the Enabled column's room too. */
+.row-map-drawer-note {
+  grid-column: 2 / -1;
+  justify-self: start;
+  min-width: 0;
+  margin: 4px 0 4px
+    calc(var(--map-indent) + var(--map-box-pad) - var(--map-ground-pad));
+  color: var(--map-ink);
+  font-size: 12px;
+}
+
+.row-map-drawer-hint {
+  padding: 2px var(--map-ground-pad);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* The box of a line kind's lines, a listed one indented under the head as
+   the menu indents it. An enabled line is drawn plainly; a disabled one, the
+   head too, is dimmed whole, and a hidden one more (`map-ink.ts`); nothing of
+   a hidden one moves. */
+.row-map-kind-lines {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px var(--map-box-pad);
+  border-radius: var(--map-line-radius);
+}
+
+.row-map-kind-lines {
+  color: var(--map-ink);
+}
+
+.row-map-kind:not([data-relation="head"]) .row-map-kind-lines {
+  margin-left: var(--map-indent);
+}
+
+.row-map-kind[data-state="disabled"] .row-map-kind-lines {
+  opacity: var(--map-dim-disabled, 0.48);
+}
+
+.row-map-kind[data-state="hidden"] .row-map-kind-lines {
+  opacity: var(--map-dim-hidden, 0.38);
+}
+
+.row-map-kind[data-state="hidden"] .row-map-place :is(select, .row-map-face) {
+  cursor: not-allowed;
+}
+
+/* A line's grip: dragged between the drawers by a pointer, pressed from the
+   keyboard. */
+/* The grip's cell: its whole column, gutter and all, as tall as its line and
+   on the card's ground, so nothing that scrolls shows beside the grip. */
+.row-map-grip-cell {
+  position: sticky;
+  z-index: 3;
+  left: 0;
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  background: var(--map-bg, var(--paper));
+}
+
+/* The grip takes a press anywhere in its cell; its dots, two columns of
+   three, each whole in its tile, sit at the cell's middle. */
+.row-map-grip {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  justify-content: center;
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 3px;
+  color: var(--map-soft);
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.row-map-grip-dots {
+  flex: none;
+  width: var(--map-grip);
+  height: 18px;
+  background: radial-gradient(
+      circle at center,
+      currentColor 1.25px,
+      transparent 1.75px
+    )
+    0 0 / 6px 6px;
+}
+
+/* Over Hidden's bands, a hidden line's grip has a ground of its own, an even
+   margin round its dots, rounded as a line's box is; with no checkbox, its
+   Enabled column draws nothing. Each column covers the line only while its
+   places run under it, scrolled. */
+.row-map-hidden :is(.row-map-grip-cell, .row-map-check-cell) {
+  background: transparent;
+}
+
+.row-map-hidden > .row-map-scroll-frame[data-more-before] .row-map-grip-cell,
+.row-map-hidden > .row-map-scroll-frame[data-more-after] .row-map-check-cell {
+  background: var(--map-bg, var(--paper));
+}
+
+.row-map-hidden .row-map-grip-dots {
+  box-sizing: content-box;
+  padding: 3px;
+  background:
+    radial-gradient(circle at center, currentColor 1.25px, transparent 1.75px) 0
+      0 / 6px 6px content-box,
+    var(--map-bg, var(--paper));
+  border-radius: var(--map-line-radius);
+}
+
+.row-map-grip:is(:hover, :focus-visible) {
+  color: var(--map-ink);
+}
+
+/* The head is always shown: no grip, but its room. */
+.row-map-grip[data-spacer] {
+  visibility: hidden;
+}
+
+.row-map-grip:focus-visible {
+  outline: 2px solid var(--map-ring);
+  outline-offset: 1px;
+}
+
+/* Whether the line is enabled, a plain checkbox in its own column. */
+.row-map-check-cell {
+  position: sticky;
+  z-index: 3;
+  right: 0;
+  display: flex;
+  box-sizing: border-box;
+  align-items: center;
+  align-self: stretch;
+  justify-content: center;
+  padding-left: var(--map-col-gap);
+  background: var(--map-bg, var(--paper));
+}
+
+/* A faint guide down the Enabled column, from just under its heading to
+   the last checkbox, broken clear of each box, so the heading and its
+   boxes read as one column. */
+.row-map-guide {
+  position: absolute;
+  left: calc(var(--map-col-gap) + (100% - var(--map-col-gap)) / 2);
+  width: 1px;
+  background: var(--map-guide);
+  pointer-events: none;
+}
+
+.row-map-guide[data-part="above"] {
+  /* Up through the gap between this line and the one above it. */
+  top: calc(-1 * var(--map-row-gap));
+  bottom: calc(50% + 7px + var(--map-guide-gap));
+}
+
+/* Under the heading, a clear gap first. */
+.row-map-head + .row-map-kind .row-map-guide[data-part="above"] {
+  top: 0;
+}
+
+.row-map-guide[data-part="below"] {
+  top: calc(50% + 7px + var(--map-guide-gap));
+  bottom: 0;
+}
+
+.row-map-kind:last-child .row-map-guide[data-part="below"] {
+  display: none;
+}
+
+/* Drawn quieter than the drags around it, at the native box's size: a thin
+   edge as faint as a control's boundary may be, and a muted fill when it is
+   checked. Forced colours draw the system's own. */
+.row-map-check {
+  --check-edge: var(--map-check-edge);
+  box-sizing: border-box;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  appearance: none;
+  background: var(--map-bg, var(--paper)) center / 100% no-repeat;
+  border: 1px solid var(--check-edge);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.row-map-check:hover {
+  --check-edge: var(--map-check-hover);
+}
+
+.row-map-check:checked {
+  --check-edge: var(--map-check-fill);
+  background-color: var(--map-check-fill);
+  background-image: var(--map-check-mark);
+}
+
+.row-map-check:checked:hover {
+  --check-edge: var(--map-ring);
+}
+
+/* The demo's fields take a blue edge and ring on any focus, by a rule this
+   one follows and matches: a box keeps its own edge, and rings only for the
+   keyboard. */
+.demo input.row-map-check:focus {
+  border-color: var(--check-edge);
+  outline: none;
+}
+
+.demo input.row-map-check:focus-visible {
+  outline: 2px solid var(--map-ring);
+  outline-offset: 2px;
+}
+
+@media (forced-colors: active) {
+  .row-map-check {
+    appearance: auto;
+  }
+}
+
+.row-map-check:disabled {
+  cursor: not-allowed;
+}
+
+/* A line in flight is its name, on a card. */
+.row-map-line-ghost {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  background: var(--map-bg, var(--paper));
+  border: 1px solid var(--blue);
+  border-radius: var(--map-pill-radius, 3px);
+  color: var(--map-ink);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* While a line is carried, the drawer it would go to says so. */
+.row-map-drawer[data-accepts] > .row-map {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 14%, transparent);
+}
+
+.row-map-drawer[data-over] > .row-map {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 32%, transparent);
+}
+
+/* A place draws its field's name whole, in a face as wide as the name, or as
+   its column (below) when that is wider. The name is fixed, so it is drawn as
+   a place that cannot be chosen. */
 .row-map-name,
-.row-map-place :is(select, .row-map-face) {
+.row-map-place .row-map-face {
   box-sizing: border-box;
   width: 100%;
   height: 28px;
@@ -613,16 +1139,98 @@
   white-space: nowrap;
 }
 
-/* The name's slot shrinks as a place does: no padding of its own. */
+/* The name's slot is as wide as the name: no padding of its own. */
 .row-map-slot {
+  position: relative;
   display: inline-flex;
-  flex: 0 1 var(--map-lead);
-  min-width: 0;
+  flex: none;
+}
+
+/* A segment's icon, as a toggle at the start of its chip. On, the solid
+   glyph in the segment's ink, in a filled tile; off, an empty dashed slot,
+   its glyph in the soft ink and struck through. On a hidden line it is
+   frozen: no slot and no tile, nothing to press. It sits over the place's
+   drag handle, and a press on it is its own. */
+.row-map-icon {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 4px;
+  display: inline-flex;
+  box-sizing: border-box;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.row-map-icon[aria-pressed="true"] {
+  background: color-mix(in srgb, var(--map-ink) 16%, transparent);
+  border-color: color-mix(in srgb, var(--map-ink) 45%, transparent);
+  color: var(--map-ink);
+}
+
+.row-map-icon[aria-pressed="false"] {
+  border-style: dashed;
+  border-color: var(--map-soft);
+  color: var(--map-soft);
+}
+
+.row-map-icon[aria-pressed="false"]::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 19px;
+  height: 1.5px;
+  background: currentColor;
+  border-radius: 1px;
+  content: "";
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.row-map-icon:hover:not(:disabled) {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--blue) 45%, transparent);
+}
+
+.row-map-icon:disabled {
+  background: transparent;
+  border-style: none;
+  /* In the ink, which a hidden line's dim leaves readable; the slash still
+     says off. */
+  color: var(--map-ink);
+  cursor: not-allowed;
+}
+
+.row-map-icon:focus-visible {
+  outline: 2px solid var(--map-ring);
+  outline-offset: 1px;
+}
+
+.row-map-icon-glyph {
+  display: inline-flex;
+}
+
+/* A stroke thick enough to read at this size on any look's ground. */
+.row-map-icon-glyph svg {
+  stroke-width: 1.9;
+}
+
+.row-map-place[data-icon] .row-map-face,
+.row-map-slot[data-icon] .row-map-name {
+  padding-left: 27px;
 }
 
 .row-map-name {
-  background: color-mix(in srgb, var(--map-title, var(--ink)) 6%, transparent);
-  color: color-mix(in srgb, var(--map-title, var(--ink)) 60%, transparent);
+  background: color-mix(in srgb, var(--map-ink) 8%, transparent);
+  color: var(--map-ink);
   font-weight: 600;
   cursor: not-allowed;
 }
@@ -630,32 +1238,42 @@
 .row-map-place {
   position: relative;
   display: inline-flex;
-  flex: 0 1 var(--map-trailing);
-  min-width: 0;
+  flex: none;
+  min-width: var(--map-place);
 }
 
-/* A place is as wide as where it sits, whatever it holds, so its chevron
-   stays put as its field changes; the two lines' columns line up. */
+/* A place is as wide as the field it holds, so every field's name shows
+   whole; an empty badge or icon place is a square to fill. A line out of room
+   goes on below. */
 .row-map-wrap {
-  --map-lead: 11rem;
-  --map-badge: 6rem;
-  --map-trailing: 7rem;
+  --map-place: 4rem;
+  --map-empty: 2.5rem;
 }
 
-.row-map-place[data-drop="subtitle"] {
-  flex-basis: var(--map-lead);
-}
-
-.row-map-place[data-badge] {
-  flex-basis: var(--map-badge);
+.row-map-place:is([data-badge], [data-drop$="Lead"])[data-field="empty"] {
+  min-width: var(--map-empty);
 }
 
 .row-map-place[data-trailing] {
   margin-left: auto;
 }
 
-.row-map-place :is(select, .row-map-face) {
+/* The dropdown lies over the face, unseen: a press or a key opens its menu,
+   and the face shows what it holds. */
+.row-map-place select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  opacity: 0;
   appearance: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.row-map-place .row-map-face {
   cursor: pointer;
 }
 
@@ -677,7 +1295,7 @@
   color: var(--map-pill-fg, #22543d);
 }
 
-.row-map-place[data-field="states"] :is(select, .row-map-face) {
+.row-map-place[data-field="states"] .row-map-face {
   background: var(--map-pill-bg, #c6f6d5);
   border-color: var(--map-pill-border, #48bb78);
   font-size: 12px;
@@ -688,23 +1306,17 @@
   color: var(--map-structure-fg, #4a5568);
 }
 
-.row-map-place[data-field="structure"] :is(select, .row-map-face) {
+.row-map-place[data-field="structure"] .row-map-face {
   background: var(--map-structure-bg, #edf2f7);
   font-size: 12px;
   font-weight: 600;
 }
 
-.row-map-place[data-field="address"],
-.row-map-place[data-field="people"] {
-  color: var(--map-subtitle, #718096);
-}
-
 .row-map-place[data-field="empty"] {
-  color: color-mix(in srgb, var(--map-subtitle, #718096) 60%, transparent);
+  color: var(--map-soft);
 }
 
-/* The dropdown's own list stays legible whatever the look, and whatever
-   size its select draws its own text at (none, in an empty badge). */
+/* The dropdown's own list stays legible whatever the look. */
 .row-map-place option {
   font-size: 13px;
   color: #1c1b1c;
@@ -714,24 +1326,27 @@
 /* Over the chevron, or on a place that is all dropdown, the cell's border
    goes: the dash says a field can be dragged, and a press here opens the
    menu instead. */
-.row-map:not([data-dragging]) .row-map-place:not([data-closed]) select:hover {
+.row-map:not([data-dragging])
+  .row-map-place:not([data-closed]):has(select:hover)
+  .row-map-face {
   border-color: transparent;
 }
 
 /* One ring, over the cell's own border rather than around it. */
-.row-map-place select:focus-visible {
-  outline: 2px solid var(--blue);
+.row-map-place:has(select:focus-visible) .row-map-face {
+  outline: 2px solid var(--map-ring);
   outline-offset: -1px;
 }
 
 /* An empty badge slot shows only a `+`. */
-/* Its menu's text is hidden, not its ink: the dashed border is drawn in it. */
-.row-map-place[data-badge][data-field="empty"] :is(select, .row-map-face) {
+.row-map-place[data-badge][data-field="empty"] .row-map-face,
+.row-map-place[data-drop$="Lead"][data-field="empty"] .row-map-face {
   padding: 0;
   font-size: 0;
 }
 
-.row-map-place[data-badge][data-field="empty"]::after {
+.row-map-place[data-badge][data-field="empty"]::after,
+.row-map-place[data-drop$="Lead"][data-field="empty"]::after {
   top: 50%;
   right: 50%;
   width: auto;
@@ -777,7 +1392,8 @@
   transition: opacity 120ms ease;
 }
 
-.row-map-place[data-badge][data-field="empty"]::before {
+.row-map-place[data-badge][data-field="empty"]::before,
+.row-map-place[data-drop$="Lead"][data-field="empty"]::before {
   inset: 4px;
   width: auto;
 }
@@ -792,24 +1408,19 @@
 
 /* While a field is dragged, every spot that takes it says so, the one under
    the pointer most; a spot that does not is faded, and so is the field's own. */
-.row-map-place[data-accepts][data-field] select,
-.row-map-tray[data-accepts] {
+.row-map-place[data-accepts][data-field] .row-map-face {
   border-color: var(--blue);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 14%, transparent);
 }
 
-.row-map-tray[data-accepts] {
-  background: color-mix(in srgb, var(--blue) 5%, transparent);
-}
-
-.row-map-place[data-over][data-field] select,
-.row-map-tray[data-over] {
+.row-map-place[data-over][data-field] .row-map-face {
   border-style: solid;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 32%, transparent);
 }
 
 .row-map[data-dragging] .row-map-place:not([data-accepts]),
-.row-map-chip[data-dragged] {
+.row-map-chip[data-dragged],
+.row-map-kind[data-dragged] {
   opacity: 0.4;
 }
 
@@ -819,29 +1430,27 @@
   visibility: hidden;
 }
 
-/* The fields the row leaves out, to drag back in. */
+/* The fields the row leaves out, in the Hidden drawer under its hidden
+   lines, ruled off from them, and starting where the lines' chips do. */
 .row-map-tray {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
-  min-height: 36px;
-  margin-top: 8px;
-  padding: 4px 8px;
-  border: 1px dashed var(--line);
-  border-radius: 4px;
-  color: var(--muted);
+  padding-left: calc(
+    var(--map-grip-cell) + var(--map-indent) + var(--map-box-pad)
+  );
   font-size: 12px;
 }
 
-.row-map-tray-label {
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+.row-map-tray:empty {
+  display: none;
 }
 
-.row-map-tray-hint {
-  opacity: 0.8;
+.row-map-tray[data-ruled] {
+  margin-top: 4px;
+  padding-top: 10px;
+  border-top: 1px solid var(--map-border, var(--line-soft));
 }
 
 .row-map-chip {
@@ -851,10 +1460,10 @@
   align-items: center;
   height: 26px;
   padding: 0 9px;
-  background: var(--paper, #ffffff);
+  background: var(--map-bg, var(--paper));
   border: 1px dashed color-mix(in srgb, currentColor 45%, transparent);
   border-radius: var(--map-pill-radius, 3px);
-  color: var(--map-subtitle, #718096);
+  color: var(--map-ink);
   font-size: 12px;
   white-space: nowrap;
 }
@@ -876,19 +1485,33 @@
    aligned left, like the search report's tables. */
 .row-map-reads {
   width: 100%;
-  margin-top: 12px;
+  margin-top: 6px;
   border-collapse: collapse;
   font-size: 12px;
 }
 
-.row-map-reads caption {
-  padding-bottom: 6px;
+/* Out of the way until asked for: a small label that opens it. */
+.row-map-reads-fold {
+  margin-top: 12px;
+}
+
+.row-map-reads-fold summary {
+  width: fit-content;
   color: var(--muted);
   font-family: var(--mono);
   font-size: 11px;
   letter-spacing: 0.08em;
-  text-align: left;
   text-transform: uppercase;
+  cursor: pointer;
+}
+
+.row-map-reads-fold summary:hover {
+  color: var(--ink);
+}
+
+.row-map-reads-fold summary:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
 }
 
 .row-map-reads th,
@@ -955,12 +1578,9 @@
 }
 
 @container (max-width: 420px) {
-  /* Four places to a line: the name is short here, so the lead gives the
-     others its room. */
   .row-map {
-    --map-lead: 5.5rem;
-    --map-badge: 5rem;
-    --map-trailing: 5.5rem;
+    --map-place: 3.25rem;
+    --map-empty: 2.25rem;
   }
 
   .row-map {
@@ -972,6 +1592,11 @@
     gap: 5px;
   }
 
+  .row-map {
+    --map-box-pad: 4px;
+    --map-col-gap: 4px;
+  }
+
   .row-map-name-long {
     display: none;
   }
@@ -981,7 +1606,7 @@
   }
 
   .row-map-name,
-  .row-map-place :is(select, .row-map-face) {
+  .row-map-place .row-map-face {
     padding-right: 18px;
     padding-left: 6px;
     font-size: 11.5px;
@@ -1765,6 +2390,57 @@
   border-color: var(--blue);
 }
 
+/* What the field searches for, in the title's own sentence: each search a
+   word, the selected one underlined and the others muted, still a tab each.
+   A word never breaks; the sentence wraps between words. */
+.search-title {
+  min-width: 0;
+}
+
+/* Each word carries room for its tint, given back by its margin, so a tint
+   moves nothing. */
+.search-by-word {
+  margin: 0 -0.2em;
+  padding: 0 0.2em;
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  color: var(--muted);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* A word the pointer or the keys are on, and the selected one, speak in the
+   accent, as the filters toggle beside them does. */
+.search-by-word:not([aria-selected="true"]):hover,
+.search-by-word:not([aria-selected="true"]):focus-visible {
+  background: var(--faded);
+  color: var(--blue);
+}
+
+.search-by-word[aria-selected="true"] {
+  color: var(--blue);
+}
+
+/* The underline is the noun's; its article stays plain. */
+.search-by-word[aria-selected="true"] .search-by-noun {
+  text-decoration: underline;
+  text-decoration-color: var(--blue);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 5px;
+}
+
+/* The ring hugs the word's own room, clear of the dots between words. */
+.search-by-word:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 0;
+}
+
+.search-by-sep {
+  color: var(--muted);
+}
+
 .fold-chevron[data-open="true"] {
   margin-bottom: -2px;
   transform: rotate(-135deg);
@@ -1812,22 +2488,201 @@
   margin: 0;
 }
 
-.presets {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 18px;
+.presets-custom:not([data-shown]) {
+  visibility: hidden;
 }
 
-@media (max-width: 560px) {
-  .presets {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+/* One row that scrolls sideways, snapping to a preset, with the row map's
+   shade at each edge there is more beyond, in the page's ink. The shade
+   spans the whole item, swatch and name, and the row's padding past both,
+   which is also room for the chosen preset's ring. */
+.presets-frame {
+  position: relative;
+}
+
+.presets-frame::before,
+.presets-frame::after {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  width: var(--shade-depth);
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+
+.presets-frame::before {
+  left: 0;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--ink) var(--shade-share), transparent),
+    transparent
+  );
+  border-radius: var(--shade-radius) 0 0 var(--shade-radius);
+}
+
+.presets-frame::after {
+  right: 0;
+  background: linear-gradient(
+    to left,
+    color-mix(in srgb, var(--ink) var(--shade-share), transparent),
+    transparent
+  );
+  border-radius: 0 var(--shade-radius) var(--shade-radius) 0;
+}
+
+.presets-frame[data-more-before]::before,
+.presets-frame[data-more-after]::after {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .presets-frame::before,
+  .presets-frame::after {
+    transition: none;
   }
+}
+
+.presets {
+  display: flex;
+  gap: 12px;
+  padding: 4px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-padding-inline: 4px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.presets::-webkit-scrollbar {
+  display: none;
+}
+
+/* A page control, a small round dot for each page in a faint capsule, with
+   the page buttons right beside it, the three centred as one: each button
+   its arrow alone, faint at its end, in a finger's target. */
+.presets-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  margin: 6px 0 18px;
+}
+
+.presets-nav > button {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 50%;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.presets-nav > button:disabled {
+  color: color-mix(in srgb, var(--ink) 30%, transparent);
+  cursor: default;
+}
+
+.presets-nav > button:focus {
+  outline: none;
+}
+
+.presets-nav > button:focus-visible {
+  outline: 2px solid var(--blue);
+}
+
+/* Drawn rather than typed, so no font can leave it out. */
+.presets-chevron {
+  width: 7px;
+  height: 7px;
+  margin-left: -3px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+}
+
+.presets-chevron[data-way="back"] {
+  margin: 0 -3px 0 0;
+  transform: rotate(135deg);
+}
+
+.presets-dots {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 9px;
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  border-radius: 999px;
+}
+
+.presets-dots button {
+  position: relative;
+  flex: none;
+  width: 7px;
+  height: 7px;
+  min-width: 0;
+  min-height: 0;
+  aspect-ratio: 1;
+  padding: 0;
+  background: color-mix(in srgb, var(--ink) 30%, transparent);
+  border: 0;
+  border-radius: 50%;
+  box-shadow: none;
+  appearance: none;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+/* The target: 24px tall and the dots' pitch wide, drawn nowhere. */
+.presets-dots button::before {
+  position: absolute;
+  inset: -8.5px -4.5px;
+  content: "";
+}
+
+.presets-dots button:hover:not([aria-current]) {
+  background: color-mix(in srgb, var(--ink) 50%, transparent);
+}
+
+.presets-dots button[aria-current] {
+  background: var(--ink);
+}
+
+.presets-dots button:focus {
+  outline: none;
+}
+
+.presets-dots button:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .presets-dots button {
+    transition: none;
+  }
+}
+
+.presets-page {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11.5px;
 }
 
 .preset {
   display: flex;
+  flex: 0 0 5.75rem;
   flex-direction: column;
+  scroll-snap-align: start;
   align-items: stretch;
   gap: 8px;
   padding: 0;
@@ -1841,7 +2696,7 @@
 .preset-swatch {
   position: relative;
   display: block;
-  height: 58px;
+  height: 68px;
   overflow: hidden;
   border: 1px solid #d6d9e0;
   box-shadow: 0 2px 6px rgba(9, 35, 79, 0.08);
@@ -1856,6 +2711,7 @@
   outline-offset: 2px;
 }
 
+.preset-icon,
 .preset-title,
 .preset-mark,
 .preset-sub {
@@ -1865,9 +2721,25 @@
   border-radius: 1px;
 }
 
+/* An icon on the name: a square before the title, the title moved over. */
+.preset-icon {
+  top: 12px;
+  width: 7px;
+  height: 7px;
+}
+
 .preset-title {
   top: 13px;
   width: 52%;
+}
+
+.preset-icon ~ .preset-title,
+.preset-icon ~ .preset-mark {
+  left: 19px;
+}
+
+.preset-icon ~ .preset-title {
+  width: calc(52% - 10px);
 }
 
 .preset-mark {
@@ -1876,11 +2748,22 @@
   height: 2px;
 }
 
+/* A bar for each line below the title, a little unlike the one above it. */
 .preset-sub {
   top: 34px;
   width: 40%;
   height: 4px;
   opacity: 0.8;
+}
+
+.preset-sub + .preset-sub {
+  top: 43px;
+  width: 31%;
+}
+
+.preset-sub + .preset-sub + .preset-sub {
+  top: 52px;
+  width: 36%;
 }
 
 .preset-pill {
@@ -1895,11 +2778,14 @@
 }
 
 .preset-name {
+  overflow: hidden;
   font-family: var(--mono);
   font-size: 11.5px;
   letter-spacing: 0.06em;
   text-align: center;
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .preset[aria-checked="true"] .preset-name {

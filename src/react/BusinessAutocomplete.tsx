@@ -9,13 +9,23 @@ import {
 
 import type { Filters } from "@baselayer-sdk/autocomplete";
 import type { AutocompleteClient } from "@baselayer-sdk/autocomplete";
-import type { LookInput, RowLayoutInput } from "@baselayer-sdk/autocomplete";
+import type {
+  BusinessRowLayoutInput,
+  LookInput,
+} from "@baselayer-sdk/autocomplete";
 import { defaultMint, type MintFunction } from "@baselayer-sdk/autocomplete";
 import { BUSINESS_TOKEN_TTL_SECONDS } from "@baselayer-sdk/autocomplete";
-import { includeForLayout, type Include } from "@baselayer-sdk/autocomplete";
+import {
+  BUSINESS_ROW,
+  drawnLayout,
+  requestFor,
+  resolveLayout,
+  type Include,
+} from "@baselayer-sdk/autocomplete";
 import {
   matchedOn,
   pickedNameOf,
+  type BusinessIconSegment,
   type BusinessSuggestion,
   type MatchedOn,
 } from "@baselayer-sdk/autocomplete";
@@ -26,6 +36,8 @@ import {
   type SlotName,
 } from "./BusinessAutocompleteView";
 import { useAutocompleteClient, useResolvedClient } from "./context";
+import type { IconSet } from "./icons";
+import { usePickedSelection, type PickTargets } from "./selection";
 import type { AutocompleteMessages } from "./messages";
 import {
   filtersKeyOf,
@@ -94,12 +106,37 @@ interface CommonProps {
    */
   open?: boolean;
   /**
-   * The field each place of a row shows (`ROW_PLACES`, `ROW_FIELDS`); a place
-   * left out keeps its default field unless it is placed elsewhere, and null
-   * leaves a place empty. The placed fields also decide what is fetched,
-   * unless `include` says.
+   * The field each place of a row shows (`BUSINESS_ROW`: the head's
+   * `ROW_PLACES` and `ROW_FIELDS`, the icon before the name, and the lines it
+   * lists); a place left out keeps its default field unless it is placed
+   * elsewhere, and null leaves a place empty. The placed fields also decide
+   * what is fetched, unless `include` says.
    */
-  layout?: RowLayoutInput;
+  layout?: BusinessRowLayoutInput;
+  /**
+   * The relations listed under each row, a line per item: the business's
+   * officers and agents (`people`), its `addresses`. None by default, and
+   * then each row is the one option it has always been.
+   */
+  list?: Include[];
+  /**
+   * A host's own icons, by entity (`address`) or by entity and role
+   * (`address:mailing`), the role's winning; `false` or `null` hides that
+   * one, and `false` for all draws none. Decorative: nothing focusable.
+   */
+  icons?: IconSet;
+  /**
+   * The segments that carry an icon before their text, wherever they are
+   * placed: the name, the address, the people, a listed line's name. None by
+   * default, so a business row draws as it always has.
+   */
+  iconSegments?: readonly BusinessIconSegment[];
+  /**
+   * After a pick from a line under a row, a line under the field names it
+   * (the default), while the field holds the business's name. Off, draw your
+   * own from `onPickEntity`.
+   */
+  showSelection?: boolean;
   /**
    * The related entities the autocomplete service expands for each row: by
    * default what `layout` places (`includeForLayout(layout)`). A host drawing
@@ -118,6 +155,7 @@ interface CommonProps {
 
 /** One of: a client, a `mint` function, or a `mintUrl` on the host's backend. */
 export type BusinessAutocompleteProps = CommonProps &
+  PickTargets &
   (
     | {
         client: AutocompleteClient;
@@ -189,9 +227,15 @@ function Connected({
   open,
   layout,
   include: includeGiven,
+  list,
+  enabledLines,
+  onPickEntity,
+  icons,
+  iconSegments,
+  showSelection = true,
   menuFollowsInputWidth,
   onUnavailable,
-}: CommonProps & { client: AutocompleteClient }) {
+}: CommonProps & PickTargets & { client: AutocompleteClient }) {
   const client = useResolvedClient(given);
   // A pick writes the name the row matched on into the field; querying that
   // exact name again would only reopen the menu on the row just chosen.
@@ -216,13 +260,21 @@ function Connected({
   // The fields drawn decide what is fetched unless the host says: a field
   // placed nowhere is not asked for. With none needing a related entity the
   // autocomplete service's default stands, since it refuses an empty include.
-  const include = includeGiven ?? includeForLayout(layout);
+  // The hook drops what the session's scope does not grant as it asks.
+  const request = requestFor(
+    "businesses",
+    drawnLayout(BUSINESS_ROW, resolveLayout(BUSINESS_ROW, layout)),
+    list,
+  );
+  const include = includeGiven ?? request.include;
+  const { selection, pick } = usePickedSelection(value, showSelection);
   const {
     unavailable,
     errorKind,
     filtersWithheld,
     appliedFilters,
     requestId,
+    expanded,
     ...state
   } = useBusinessAutocomplete({
     client,
@@ -235,6 +287,10 @@ function Connected({
     ...(debounceMs !== undefined ? { debounceMs } : {}),
     ...(messages !== undefined ? { messages } : {}),
   });
+  // A row lists only what its answer was asked to expand: a relation outside
+  // the scope it was asked under comes back empty, and a row left nothing to
+  // list is the one option it always was.
+  const listed = request.list.filter(relation => expanded.includes(relation));
   void errorKind;
   void filtersWithheld;
   void requestId;
@@ -263,6 +319,8 @@ function Connected({
         const pickedAt = Date.now();
         const name = pickedNameOf(suggestion);
         setPicked({ name, filtersKey });
+        // The business itself picked: the field names it, no line under it.
+        pick(name, null);
         onChange(name);
         onPick(suggestion, {
           businessToken: suggestion.token,
@@ -271,6 +329,20 @@ function Connected({
           matchedOn: matchedOn(suggestion, { state: appliedFilters?.state }),
         });
       }}
+      onSelectEntity={(entity, suggestion) => {
+        // An officer or an address picked: the field takes the business's
+        // name, and the line under it names who or what was picked.
+        const name = pickedNameOf(suggestion);
+        setPicked({ name, filtersKey });
+        pick(name, { type: entity.type, label: entity.label });
+        onChange(name);
+        onPickEntity?.(entity);
+      }}
+      selection={selection}
+      list={listed}
+      enabledLines={enabledLines}
+      icons={icons}
+      iconSegments={iconSegments}
       onInputFocus={() => {
         if (mintOn === "focus" && enabled) {
           client.prewarm();

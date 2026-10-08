@@ -3,7 +3,11 @@
 
 import { useState } from "react";
 
-import { BUSINESS_STRUCTURES } from "@baselayer-sdk/autocomplete";
+import {
+  BUSINESS_STRUCTURES,
+  ROUTE_NAMES,
+  type Route,
+} from "@baselayer-sdk/autocomplete";
 import {
   MINT_TIMINGS,
   type MintTiming,
@@ -11,6 +15,7 @@ import {
 
 import { Code } from "../shared/Code";
 import { ColorInput, Field, Fold, Select, Toggle } from "./controls";
+import { PresetCarousel } from "./PresetCarousel";
 import { RowMap } from "./RowMap";
 import {
   CSS_VARIABLES,
@@ -24,10 +29,8 @@ import {
   fontSnippets,
   DEFAULT_STYLE,
   INITIAL_STYLE,
-  PRESETS,
   STRUCTURE_FLAGS,
   activePreset,
-  applyPreset,
   presetChanges,
   presetColor,
   presetVar,
@@ -35,10 +38,10 @@ import {
   LOOK_COLORS,
   REGIONS,
   TEXT_MESSAGES,
-  changedLayout,
   changedLook,
   changedMessages,
   changedStructures,
+  componentChanges,
   exportCode,
   type CssVariable,
   type StyleState,
@@ -73,12 +76,26 @@ const MINT_TIMING_LABELS: Record<MintTiming, string> = {
   request: "On first request (lazy)",
 };
 
+const ROW_TAB_LABELS: Record<Route, string> = {
+  businesses: "Business",
+  people: "Person",
+  addresses: "Address",
+};
+
 export function StylingPanel({
   state,
   onChange,
+  route = "businesses",
+  routes = ROUTE_NAMES,
+  onRoute = () => {},
 }: {
   state: StyleState;
   onChange(state: StyleState): void;
+  /** The search the form is on, whose row the Components fold edits. */
+  route?: Route;
+  /** The searches the form offers. */
+  routes?: readonly Route[];
+  onRoute?(route: Route): void;
 }) {
   const set = <K extends keyof StyleState>(key: K, value: StyleState[K]) =>
     onChange({ ...state, [key]: value });
@@ -91,7 +108,7 @@ export function StylingPanel({
   const look = changedLook(state);
   // Counted against the preset, as the resets inside the fields put back.
   const changes = presetChanges(state);
-  const code = exportCode(state);
+  const code = exportCode(state, route);
   const colorVars = (Object.keys(CSS_VARIABLES) as CssVariable[]).filter(
     name => CSS_VARIABLES[name].kind === "color",
   );
@@ -119,69 +136,43 @@ export function StylingPanel({
     <div className="styling-panel">
       <div className="presets-head">
         <p className="mono-label">Presets</p>
-        {active === null && <p className="hint">Custom colors</p>}
-      </div>
-      <div className="presets" role="radiogroup" aria-label="Presets">
-        {PRESETS.map(preset => {
-          const shown = applyPreset(DEFAULT_STYLE, preset);
-          const on = active?.name === preset.name;
-          return (
-            <button
-              key={preset.name}
-              type="button"
-              role="radio"
-              aria-checked={on}
-              className="preset"
-              onClick={() => onChange(applyPreset(state, preset))}
-            >
-              <span
-                className="preset-swatch"
-                aria-hidden="true"
-                style={{
-                  background: shown.look.backgroundColor,
-                  borderRadius: shown.vars["--bl-ac-radius"],
-                }}
-              >
-                <span
-                  className="preset-title"
-                  style={{ background: shown.look.titleColor }}
-                />
-                <span
-                  className="preset-mark"
-                  style={{ background: shown.vars["--bl-ac-underline"] }}
-                />
-                <span
-                  className="preset-pill"
-                  style={{
-                    background: shown.look.pillBackgroundColor,
-                    color: shown.look.pillForegroundColor,
-                    borderColor: shown.look.primaryPillBorderColor,
-                    borderRadius: shown.vars["--bl-ac-pill-radius"],
-                  }}
-                >
-                  PA
-                </span>
-                <span
-                  className="preset-sub"
-                  style={{ background: shown.look.subtitleColor }}
-                />
-              </span>
-              <span className="preset-name">{preset.name}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      <Fold
-        title="Components"
-        summary={count(Object.keys(changedLayout(state)).length)}
-      >
-        <p className="hint fold-note">
-          A row, drawn as its places (<code>layout</code>). Drag a field onto
-          another place, or pick one from a place&rsquo;s chevron; a field that
-          lands on a taken place swaps with it.
+        {/* Always laid out, so the form below never moves as it comes and goes. */}
+        <p
+          className="hint presets-custom"
+          aria-hidden={active !== null}
+          data-shown={active === null || undefined}
+        >
+          Custom
         </p>
-        <RowMap state={state} onChange={onChange} />
+      </div>
+      <PresetCarousel state={state} onChange={onChange} route={route} />
+
+      <Fold title="Components" summary={count(componentChanges(state))}>
+        <p className="hint fold-note">
+          Drag a line by its grip between Shown and Hidden, untick Enabled to
+          keep it from being chosen, and drag a field into place, or into Hidden
+          to leave it out.
+        </p>
+        {routes.length > 1 && (
+          <div
+            className="tabs components-tabs"
+            role="tablist"
+            aria-label="Row of"
+          >
+            {routes.map(tab => (
+              <button
+                key={tab}
+                type="button"
+                role="tab"
+                aria-selected={route === tab}
+                onClick={() => onRoute(tab)}
+              >
+                {ROW_TAB_LABELS[tab]}
+              </button>
+            ))}
+          </div>
+        )}
+        <RowMap state={state} onChange={onChange} route={route} />
       </Fold>
 
       <Fold

@@ -5,6 +5,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { SAMPLE_SUGGESTIONS } from "../../site/demo/sample";
+import { pickFromRow } from "../../site/demo/search-view";
 import { SearchStep } from "../../site/demo/SearchStep";
 
 // Step 03 as a pick leaves it, before a search is run; and where the demo puts
@@ -18,17 +19,17 @@ function html(expiresInMs: number) {
       apiKey="key"
       baseUrl="https://api.example.test"
       apiHost="https://api.example.test"
-      picked={{
+      picked={pickFromRow(
         suggestion,
-        pick: {
+        {
           businessToken: "token",
           pickedAt: Date.now(),
           expiresAt: Date.now() + expiresInMs,
           matchedOn: [],
         },
-        asked: [],
-        typed: { name: "", person: "", address: "" },
-      }}
+        [],
+        { name: "", person: "", address: "" },
+      )}
       fetchImpl={() => Promise.reject(new Error("not called"))}
       onShowDebug={() => undefined}
     />,

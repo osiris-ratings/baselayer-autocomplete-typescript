@@ -6,6 +6,204 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+Find a business through a person or through an address. The people and addresses
+routes are served, each with a component of its own: a person's row shows their
+first address, their counts and a line for each business with its address,
+states and role, and an address's row its counts and each business there. A
+business picked from either spends the same token a business row's pick does,
+and a host can let the person, an address or a listed person be picked as well.
+A session is held to a scope, the searches it may make, which the mint answers
+and your backend can narrow, and the SDK never sends a request outside it.
+
+All three searches draw their rows from one model: a head, the lines it lists
+(`list`), which of them a visitor can pick (`enabledLines`), and an icon on
+each segment a host names (`iconSegments`). A business row can list its
+officers and agents and its addresses; listing nothing, it draws exactly as
+it did.
+
+Every closed value in a search's answer is now a typed union pinned to the API's
+contract, and one the SDK does not know is a `contract` error rather than kept:
+the SDK learns a value before the API sends it. A route or a relation the
+session's scope names but the SDK does not know is dropped. With the changed
+filters of the two routes and the new error kinds, this ships as a minor
+release.
+
+### Added
+
+- `PersonAutocomplete` and `AddressAutocomplete`: styled typeaheads that find a
+  business through a person or an address. Each person or address is a group in
+  the menu: its name with its counts, a person's first address, and a line for
+  each business under it with the business's address, states and role, an icon
+  before every name. `list` lists a person's addresses or an address's people
+  too, drawn in its order, `enabledLines` enables the row itself or the lines it
+  lists, `layout` places each line's fields, as on a business row, and
+  `iconSegments` and `icons` choose the icons. `onPick` hands a `BusinessPick`:
+  `businessToken`, `businessName`, `pickedAt`, `expiresAt`, and `through`, the
+  person or address it was reached by with the business's role there;
+  `onPickEntity` hands an `EntityPick` for a person or an address. A pick puts
+  the row's own name in the field, and a pick from a line under the row draws a
+  line under the field naming it until the next edit (`showSelection`).
+  `PersonAutocompleteView` and `AddressAutocompleteView` draw the same rows from
+  state a host supplies.
+- `list`, `enabledLines`, `onPickEntity`, `icons`, `iconSegments` and
+  `showSelection` on `BusinessAutocomplete`: a business row can list its
+  officers and agents and its addresses, a line each with the role. Such a row
+  is a group whose head is the row as it has always been, picked as it always
+  was; an officer or an address picked hands `onPickEntity` an `EntityPick`,
+  puts the business's name in the field, and is named on a line under it. With
+  none of them, a business row draws exactly as before.
+  `BusinessAutocompleteView` takes `list`, `enabledLines`, `icons`,
+  `iconSegments`, `selection` and `onSelectEntity`.
+- Icons on segments: `iconSegments` on all three components names the segments
+  that carry one, a name or a field with a glyph of its own (an address, a
+  business's people), drawn right before its text wherever it is placed; none on
+  a business row by default, every name on a person's and an address's. The
+  glyph follows the entity and, where the row knows it, the role: a building, a
+  person (an agent a briefcase), a map pin (mailing an envelope, an agent's a
+  briefcase, an officer's a house). `icons` takes your own, keyed by entity or
+  `entity:role`, the role's winning, and `false` or `null` hides one. Each icon
+  carries `data-entity`, `data-role` and `data-glyph`. `IconSet`, `IconKey`,
+  `DEFAULT_ICON_SEGMENTS`, `IconSegmentByRoute` and each kind's segments
+  (`BUSINESS_ICON_SEGMENTS`, …).
+- A disabled line, or a row's head that is not a pick, is an option marked
+  `aria-disabled`, which a screen reader calls unavailable, the keys pass over
+  and a click does not pick; a head still names its group. `isItemDisabled` on
+  `useSuggestionCombobox` does the same for a host's own rows.
+- A grouped row's line, the head's too, gives way in reading order when it runs
+  out of room, whatever the layout: the name keeps its width, up to 60% of the
+  line, and is cut only after the text that follows it; the squares, the icons
+  and the role keep theirs, and nothing overlaps. The states and the role are
+  columns only at the right of a line, and a field placed beside the name sits
+  one gap after it. In a group narrower than 22.5rem the columns go.
+- The line under the field after a pick from a line under a row
+  (`bl-ac-selection`, a `GroupedSelection` on the views), the field described
+  by it. It names the picked line while the field holds the name the pick put
+  there, and any other edit lets it go.
+- `disabledDim` on `look`: how far a disabled line, or a head that is not a
+  pick, fades, 0 to 1 and 0.6 by default, so it reads as inactive: a person's
+  and an address's heads by default. It drains the colour of its squares, flag
+  and icons, fades its text toward the menu's ground, up to twice the dim of the
+  way, and dims its state squares, a match mark keeping its hue a little faded,
+  with floors worked out from the look's colours: a name keeps 2.5:1 (about
+  2.3:1 as drawn) and the rest 25% of its contrast, at least 1.7:1 and a role
+  1.8:1 (about 1.5:1 as drawn). A disabled name, a line's or a head's, drops
+  to the regular weight, never above the lines' (`--bl-ac-disabled-line-weight`,
+  `--bl-ac-disabled-head-weight`), so nothing disabled reads as bold or as a
+  title to click; at 0 it keeps a pick's weight. Nothing fades under forced
+  colours.
+- `counts` on a business row's head: how many people and addresses it has, `·`
+  between, as a person's and an address's heads say theirs (`bl-ac-group-count`,
+  `messages.relationCounts`). Any of the head's places takes it, and none does
+  by default, so the default row draws as it did. Placed, it asks for the people
+  and the addresses, as far as the session's scope grants them, and counts only
+  the relations the answer expanded.
+- One row model for all three searches: `BUSINESS_ROW`, `PERSON_ROW` and
+  `ADDRESS_ROW` (`ROW_KINDS`), each a `RowKind`: its places
+  (`BUSINESS_ROW_PLACES`, …), its fields by line (`BUSINESS_LINE_FIELDS`, …),
+  its lines, each naming the entity it draws and the relation it lists, the
+  segments an icon can ride on (`iconSegments`), and its defaults.
+  `resolveLayout` and `drawnLayout` resolve any kind's layout, typed by its own
+  places and fields (`BusinessRowLayoutInput`, `PersonRowLayoutInput`,
+  `AddressRowLayoutInput`; `LayoutOf` and `LayoutInputOf` for any kind).
+  `ROW_PLACES`, `ROW_FIELDS` and `RowLayout` are a business row's head, as they
+  always were.
+- `DEFAULT_LIST` and `requestFor(route, layout, list, scope)`: what any
+  search's rows list, in the host's order, and what to ask for them.
+- `groupedLines(row, list, enabledLines)` and `groupedOptions(lines)`: any row's
+  lines, and what each enabled one hands, a `GroupedOption` of kind `row` (a
+  business row's own head), `business` (a business under a person or an address)
+  or `entity` (an `EntityPick`). `DEFAULT_ENABLED_LINES` is businesses.
+- `pickableBusinesses(row)` and `businessPickFrom(row, business, at)`: the
+  businesses a person's or an address's row offers, and the pick of one.
+- `address`, `states` and `domicile_state` on a related item: a business
+  under a person or an address carries the lead address, states and domicile
+  its own row has. All three are null on a person or an address.
+  `orderedStates` takes either and puts the domicile first.
+- The session's scope: `Grant.scope` (`{ routes, maxLimit }`), read from the
+  mint's answer, `DEFAULT_SESSION_SCOPE` for a grant without one,
+  `parseSessionScope`, `offeredRoutes(scope)`, `allowedFilters(scope, route)`
+  and `scopeViolation(scope, route, request)`.
+- `scope` on `mintForOrigin` and `createMintHandler` (one scope, or a
+  function of the request): it narrows what each session may search.
+- `out_of_scope`, an error kind with `route`, `relation` and `param`: a
+  request its session's scope leaves out, refused before it is sent, or the
+  autocomplete service's 403 code 501 or 502, which is never retried.
+- `route_unserved`, an error kind with `unserved` (`reason`, `current`,
+  `required`): a deployment that has the people or addresses route but
+  cannot answer it yet, its index or its tokens too old. Never retried; the
+  hooks show `messages.routeUnserved`. `ROUTE_UNSERVED_REASONS` and
+  `RouteUnservedReason` are the reasons, pinned to the contract.
+- `ROUTE_NAMES`, `RELATIONS`, `LEGAL_RELATIONS`, `Route`, `FILTER_PARAMS`,
+  `setFilters`, and the unions `MatchGrade`, `SourceStatus`, `RelatedRole`
+  and `EntityType` with their value lists (`MATCH_GRADES`, …).
+- `expanded` on the hooks' state: the relations the shown rows expanded, those
+  their answer's `sources` mark `ok`. The components list only these under a
+  row, so a relation left out, or a grant that has changed since, never draws
+  an empty list.
+- `usage.requestsByRoute` on the snapshot and `requestsOnRoute` on each
+  request event: the requests on the current session, per route, as the
+  autocomplete service budgets them.
+- Messages for the new rows: `person`, `people`, `address`, `addresses`,
+  `relationCounts`, `moreNotShown`, `personRoles`, `addressRoles`,
+  `outOfScope` and `routeUnserved`. Slots: `group`, `groupHead`, `groupLine`,
+  `lineName`, `counts`, `role`, `more`, `icon` and `selection`.
+- The demo searches by business, person or address, offering what the session's
+  scope allows, each search keeping its own text and pick, and `DEMO_API=sample
+pnpm demo` runs it on made-up data with no network. In Styling, the row map
+  builds each search's row: a line is dragged by its grip between the Shown and
+  the Hidden drawers, and reordered in Shown, the others making way; an Enabled
+  checkbox, in a column with a guide down it, marks which shown lines can be
+  chosen, and an unticked line is drawn dimmed; the faintly striped Hidden
+  drawer holds the hidden lines and the fields the row leaves out; a field is
+  dragged into place, and a segment's icon goes on or off from its chip, frozen
+  on a hidden line; each line keeps to one row, scrolling sideways when out of
+  room. The preview draws the same row, and the export writes its props.
+  Twenty presets, in a carousel that pages sideways, each set the colors, how
+  a match is marked, the font, the corners and shadow, the line height and
+  weights, and each search's row.
+
+### Changed
+
+- **Breaking:** `RelatedItem` gains `address`, `states` and `domicile_state`,
+  required as the parser always fills them; a fixture that builds a related item
+  by hand must add them, null on a person or an address item.
+- **Breaking:** `BusinessAutocompleteProps` is a union over `enabledLines` and
+  `onPickEntity`, so that a person or an address, once enabled, has somewhere to
+  go. A wrapper that takes `Omit<BusinessAutocompleteProps, …>` and spreads the
+  rest needs an `Omit` that distributes over the union:
+  `T extends unknown ? Omit<T, K> : never`.
+- **Breaking:** `layout` on `BusinessAutocomplete` and
+  `BusinessAutocompleteView` is a `BusinessRowLayoutInput`, which also places a
+  listed line's fields, so handing it to `includeForLayout` or
+  `resolveRowLayout` no longer compiles:
+  `requestFor("businesses", resolveLayout(BUSINESS_ROW, layout))` gives what to
+  fetch.
+- **Breaking:** `ROUTES.people` and `ROUTES.addresses` are served, and their
+  filters are exactly what each serves: `{ business: { state } }` on people,
+  `{ state }` on addresses. `filterParams` and `hasFilters` take the route, and
+  they and `buildSuggestUrl` send only its own parameters.
+- **Breaking:** `match`, `type`, `role`, `structure` and a source's `status` are
+  typed unions pinned to the API's contract, and an unknown value is a
+  `contract` error. A related item must be the entity its relation holds.
+- **Breaking:** `Look` gains `disabledDim`, `AutocompleteMessages` the messages
+  for the new rows, `SlotName` the new slots and `RowField` `counts`, so a
+  complete literal of any of them, or a switch over every `RowField` or a record
+  keyed by it, needs them too.
+- **Breaking:** `AutocompleteErrorKind` gains `out_of_scope` and
+  `route_unserved`, so a switch over it that ends in `never`, or a record keyed
+  by it, needs them.
+- **Breaking:** `EntityAutocompleteState` requires `expanded`, the relations
+  the shown rows expanded, so a state built by hand needs it.
+- **Breaking:** `Grant` requires `scope`, the snapshot's `usage`
+  `requestsByRoute` and a `RequestEvent` `requestsOnRoute`, so a fixture or a
+  fake client that builds one needs them; a `mint` is unchanged.
+- **Breaking:** `AddressRole` is gone (use `RelatedRole`).
+- **Breaking:** every field of an address's `components` (`line1`, `line2`,
+  `city`, `state`, `postal_code`) is `string | null`: null, or absent, where the
+  filing did not carry it.
+- The hooks and components ask for 5 rows or the session's most, whichever
+  is fewer, and leave out an `include` member the scope does not grant.
+
 ## [0.3.0] - 2026-10-06
 
 A row says what a filter matched it on. A person, an address or a state filter

@@ -5,8 +5,6 @@
 // its answer. A search is a real, billable search on the key's organization:
 // it never runs by itself.
 
-import type { BusinessSuggestion } from "@baselayer-sdk/autocomplete";
-import type { Pick as BusinessPick } from "@baselayer-sdk/autocomplete/react";
 import { useEffect, useId, useRef, useState } from "react";
 
 import { Icon } from "../shared/icons";
@@ -21,12 +19,7 @@ import {
   runSearch,
   type Search,
 } from "./searches";
-import {
-  announcement,
-  consoleHref,
-  matchedOf,
-  type Typed,
-} from "./search-view";
+import { announcement, consoleHref, type PickToSearch } from "./search-view";
 
 type Phase =
   | { kind: "idle" }
@@ -41,14 +34,8 @@ export interface SearchStepProps {
   baseUrl: string;
   /** The API the search is for, as the request shown names it. */
   apiHost: string;
-  picked: {
-    suggestion: BusinessSuggestion;
-    pick: BusinessPick;
-    /** The state codes the visitor had filtered by when they picked. */
-    asked: readonly string[];
-    /** What else they had typed: the name, and the person and address filters. */
-    typed: Typed;
-  };
+  /** The business picked, from a business row or through a person or address. */
+  picked: PickToSearch;
   /** `fetch`, recording what it does. */
   fetchImpl: (input: string, init?: RequestInit) => Promise<Response>;
   /** Opens Debug on its network tab. */
@@ -161,7 +148,7 @@ export function SearchStep({
   useEffect(() => {
     if (running) waiting.current?.scrollIntoView({ block: "nearest" });
   }, [running]);
-  const expired = now >= picked.pick.expiresAt;
+  const expired = now >= picked.expiresAt;
   // The API refused the pick (expired, another organization's, gone): running
   // it again would only get the same refusal.
   const refused = phase.kind === "error" && phase.pickAgain;
@@ -178,7 +165,7 @@ export function SearchStep({
       const outcome = await runSearch({
         baseUrl,
         apiKey,
-        businessToken: picked.pick.businessToken,
+        businessToken: picked.businessToken,
         fetchImpl,
         signal: controller.signal,
         idempotencyKey: key,
@@ -241,11 +228,8 @@ export function SearchStep({
       </p>
 
       <div className="sr-pick" data-testid="demo-search-pick">
-        <p className="sr-pick-name">{picked.suggestion.label}</p>
-        <p className="sr-pick-meta">
-          Domiciled in {picked.suggestion.domicile_state}, registered in{" "}
-          {picked.suggestion.states.join(", ")}.
-        </p>
+        <p className="sr-pick-name">{picked.name}</p>
+        <p className="sr-pick-meta">{picked.about}</p>
         <p className="sr-pick-meta">
           {refused ? (
             <span className="sr-expired">The API refused this pick.</span>
@@ -255,7 +239,7 @@ export function SearchStep({
             <>
               Its token is good for{" "}
               <span className="mono">
-                {formatRemaining(picked.pick.expiresAt - now)}
+                {formatRemaining(picked.expiresAt - now)}
               </span>
               .
             </>
@@ -314,10 +298,10 @@ export function SearchStep({
         <div className="fold-body-inner">
           <p className="hint">
             Send the token with your search; it is good until{" "}
-            {new Date(picked.pick.expiresAt).toLocaleTimeString()}.
+            {new Date(picked.expiresAt).toLocaleTimeString()}.
           </p>
           <pre className="demo-code" data-testid="demo-search-request">
-            {searchExample(apiHost, picked.pick.businessToken)}
+            {searchExample(apiHost, picked.businessToken)}
           </pre>
         </div>
       </div>
@@ -366,11 +350,7 @@ export function SearchStep({
             <SearchResult
               search={phase.search}
               elapsedMs={phase.elapsedMs}
-              matched={matchedOf(
-                picked.pick.matchedOn,
-                picked.asked,
-                picked.typed,
-              )}
+              matched={picked.matched}
             />
           </div>
           <footer className="sr-foot">

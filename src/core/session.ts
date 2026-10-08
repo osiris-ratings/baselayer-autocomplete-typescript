@@ -6,12 +6,15 @@ import type {
   MintedGrant,
 } from "./mint";
 import type { SessionPolicy } from "./policy";
+import { DEFAULT_SESSION_SCOPE, type SessionScope } from "./scope";
 
 /**
  * A grant as the client holds it: what the mint said, plus when to refresh it
  * and when the autocomplete service stops honoring it.
  */
 export interface Grant extends MintedGrant {
+  /** What the session may search: the mint's answer, or the default. */
+  scope: SessionScope;
   /** Epoch ms of the mint. */
   mintedAt: number;
   /** Epoch ms after which the grant is refreshed before use. */
@@ -271,6 +274,7 @@ export class SessionManager {
     const ttlMs = minted.expiresIn * 1000;
     return {
       ...minted,
+      scope: minted.scope ?? DEFAULT_SESSION_SCOPE,
       mintedAt,
       refreshAt: mintedAt + ttlMs * this.policy.refreshAtFraction,
       expiresAt: mintedAt + ttlMs,

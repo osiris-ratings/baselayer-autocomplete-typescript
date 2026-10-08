@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   AutocompleteError,
+  DEFAULT_SESSION_SCOPE,
   type AutocompleteClient,
   type BusinessSuggestion,
   type ClientSnapshot,
@@ -26,6 +27,7 @@ function snapshotWith(session: SessionPhase): ClientSnapshot {
     brake: null,
     usage: {
       requestsSinceMint: 0,
+      requestsByRoute: { businesses: 0, people: 0, addresses: 0 },
       requestBudget: null,
       pivotAllowance: null,
       pivotsExceededEvents: 0,
@@ -51,7 +53,17 @@ function fakeClient() {
       suggest(query, options),
     ) as unknown as AutocompleteClient["search"],
     getSnapshot: vi.fn<AutocompleteClient["getSnapshot"]>(() => IDLE),
-    getSession: vi.fn<AutocompleteClient["getSession"]>(),
+    getSession: vi.fn<AutocompleteClient["getSession"]>(async () => ({
+      sessionToken: "grant-1",
+      expiresIn: 600,
+      requestBudget: 10,
+      pivotAllowance: 5,
+      filterMinStem: 3,
+      scope: DEFAULT_SESSION_SCOPE,
+      mintedAt: 0,
+      refreshAt: 480_000,
+      expiresAt: 600_000,
+    })),
     prewarm: vi.fn<AutocompleteClient["prewarm"]>(),
     reset: vi.fn<AutocompleteClient["reset"]>(),
     on: vi.fn<AutocompleteClient["on"]>(() => () => undefined),
@@ -694,9 +706,10 @@ describe("useBusinessAutocomplete, the SDK's own failures", () => {
         }),
     );
     rerender({ filters: { state: ["FL"] } });
-    act(() => {
-      vi.advanceTimersByTime(DEBOUNCE_MS);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(DEBOUNCE_MS);
     });
+    expect(client.suggest).toHaveBeenCalledTimes(2);
     expect(hook.current.isSearching).toBe(true);
     expect(hook.current.suggestions).toEqual([suggestion]);
     expect(hook.current.appliedFilters).toEqual({ state: ["DE"] });

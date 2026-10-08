@@ -3,13 +3,16 @@
 // domicile square and the overflow, a spread of structures (one on a name
 // that carries no suffix, and one not known), an address, officers with a +N,
 // and a registered agent, and two rows a filter reached: by an officer, and by
-// an officer's address. None of these businesses is real.
+// an officer's address. Then people and addresses, each leading to some of
+// these businesses. None of these businesses, people or addresses is real.
 
-import { queryTokens } from "@baselayer-sdk/autocomplete";
+import { leadAddressOf, queryTokens } from "@baselayer-sdk/autocomplete";
 import type {
+  AddressSuggestion,
   BusinessSuggestion,
   HighlightPart,
   Include,
+  PersonSuggestion,
   RelatedItem,
   RelatedSet,
 } from "@baselayer-sdk/autocomplete";
@@ -35,7 +38,17 @@ export function address(
   role: "principal" | "officer" | "agent" = "principal",
   matched = false,
 ): RelatedItem {
-  return { type: "address", token: null, label, role, matched };
+  return {
+    type: "address",
+    // The token the address's own row has, to pick it from under a business.
+    token: `sample-address-${slug(label)}`,
+    label,
+    role,
+    matched,
+    address: null,
+    states: null,
+    domicile_state: null,
+  };
 }
 
 export function person(
@@ -43,21 +56,43 @@ export function person(
   role: "officer" | "agent",
   matched = false,
 ): RelatedItem {
-  return { type: "person", token: null, label, role, matched };
+  return {
+    type: "person",
+    // The token the person's own row has, to pick them from under a business.
+    token: `sample-person-${slug(label)}`,
+    label,
+    role,
+    matched,
+    address: null,
+    states: null,
+    domicile_state: null,
+  };
 }
 
 /**
  * A name split as the autocomplete service splits it: each word a typed token
  * starts is one highlighted part, whole, and the text between words is another.
  */
-function highlight(name: string): HighlightPart[] {
+export function highlightFor(
+  name: string,
+  tokens: readonly string[],
+): HighlightPart[] {
   return name
     .split(/([A-Za-z0-9]+)/)
     .filter(text => text !== "")
     .map(text => ({
       text,
-      matched: TOKENS.some(token => text.toLowerCase().startsWith(token)),
+      matched: tokens.some(token => text.toLowerCase().startsWith(token)),
     }));
+}
+
+function highlight(name: string): HighlightPart[] {
+  return highlightFor(name, TOKENS);
+}
+
+/** The token a sample business carries, wherever it is offered. */
+export function sampleToken(label: string): string {
+  return `sample-${label.toLowerCase().replace(/[^a-z]+/g, "-")}`;
 }
 
 function row(
@@ -73,7 +108,7 @@ function row(
   return {
     ...rest,
     type: "business",
-    token: `sample-${label.toLowerCase().replace(/[^a-z]+/g, "-")}`,
+    token: sampleToken(label),
     label,
     matched_name: matchedName ?? null,
     match: "strong",
@@ -91,7 +126,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
         [person("Dana Whitfield", "officer"), person("Luis Ortega", "officer")],
         4,
       ),
-      addresses: set([address("1200 River Rd, Pittsburgh, PA 15212")]),
+      addresses: set([address("1200 Tallowmere Rd, Pittsburgh, PA 15212")]),
     },
   }),
   row("NORTHSHORE PUMPING, LLC", {
@@ -101,7 +136,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     structure: "LLC",
     related: {
       people: set([person("MERIDIAN REGISTERED AGENTS, LLC", "agent")]),
-      addresses: set([address("88 Canal St, Akron, OH 44308")]),
+      addresses: set([address("88 Velloway St, Akron, OH 44308")]),
     },
   }),
   row("HARBOR VIEW CONCRETE, INC.", {
@@ -111,7 +146,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     related: {
       // An officer filter reached this row: the one it matched.
       people: set([person("Priya Raman", "officer", true)], 3, 1),
-      addresses: set([address("400 Bayfront Ave, Tampa, FL 33602")]),
+      addresses: set([address("400 Marrowbay Ave, Tampa, FL 33602")]),
     },
   }),
   row("HARBOR CONCRETE SUPPLY, INC.", {
@@ -120,7 +155,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     structure: null,
     related: {
       people: set([]),
-      addresses: set([address("15 Ferry St, Newark, NJ 07105")]),
+      addresses: set([address("15 Corvel St, Newark, NJ 07105")]),
     },
   }),
   row("HARBOR CONCRETE & MASONRY", {
@@ -131,7 +166,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
       people: set([person("Grace Oduya", "officer")], 2),
       // An address filter reached this row, by an officer's address.
       addresses: set(
-        [address("2210 Key Hwy, Baltimore, MD 21230", "officer", true)],
+        [address("2210 Pellington Hwy, Baltimore, MD 21230", "officer", true)],
         2,
         1,
       ),
@@ -143,7 +178,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     structure: "LP",
     related: {
       people: set([person("Silverline Agent Services, Inc.", "agent")]),
-      addresses: set([address("700 Harborside Dr, Galveston, TX 77550")]),
+      addresses: set([address("700 Gullhaven Dr, Galveston, TX 77550")]),
     },
   }),
   row("HARBOR CONCRETE FORMING, INC.", {
@@ -152,7 +187,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     structure: "B_CORPORATION",
     related: {
       people: set([person("Tomas Lindqvist", "officer")]),
-      addresses: set([address("3100 Marine View Dr, Tacoma, WA 98422")]),
+      addresses: set([address("3100 Seavane Dr, Tacoma, WA 98422")]),
     },
   }),
   row("BAYSIDE HARBOR CONCRETE, INC.", {
@@ -161,7 +196,7 @@ export const SAMPLE_SUGGESTIONS: BusinessSuggestion[] = [
     structure: "C_CORPORATION",
     related: {
       people: set([person("Maya Castellanos", "officer")], 3),
-      addresses: set([address("55 Embarcadero W, Oakland, CA 94607")]),
+      addresses: set([address("55 Tidecaster W, Oakland, CA 94607")]),
     },
   }),
 ];
@@ -203,3 +238,238 @@ export const SAMPLE_META = {
   indexTag: "sample",
   roundTripMs: 42,
 } as const;
+
+/** What the people and address previews pretend was typed. */
+export const SAMPLE_PEOPLE_QUERY = "dana";
+export const SAMPLE_ADDRESSES_QUERY = "1200 tallowmere";
+
+/** A business offered under a person or an address: one of the rows above. */
+function business(
+  label: string,
+  role: RelatedItem["role"],
+  matched = false,
+): RelatedItem {
+  const row = SAMPLE_SUGGESTIONS.find(row => row.label === label);
+  if (row === undefined) {
+    throw new Error(`no sample business is called ${label}`);
+  }
+  // What the business's own row leads with, as the autocomplete service sends it.
+  return {
+    type: "business",
+    token: sampleToken(label),
+    label,
+    role,
+    matched,
+    address: leadAddressOf(row),
+    states: row.states,
+    domicile_state: row.domicile_state,
+  };
+}
+
+/** A slug for a sample person or address, as a token spells it. */
+function slug(label: string): string {
+  return label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+}
+
+/**
+ * A business offered under `owner`, its token pinning what it was reached
+ * through, as the autocomplete service seals it: `~officer~<person>` for an
+ * officer (an agent pins nothing), `~address~<address>` under an address.
+ */
+function pinned(set: RelatedSet, pin: (item: RelatedItem) => string | null) {
+  return {
+    ...set,
+    items: set.items.map(item => {
+      const suffix = pin(item);
+      return suffix === null
+        ? item
+        : { ...item, token: `${item.token}${suffix}` };
+    }),
+  };
+}
+
+/** A person or an address listed under a row, with the token its own row has. */
+function listed(set: RelatedSet, prefix: string): RelatedSet {
+  return {
+    ...set,
+    items: set.items.map(item => ({
+      ...item,
+      token: `${prefix}-${slug(item.label)}`,
+    })),
+  };
+}
+
+function personRow(
+  label: string,
+  businesses: RelatedSet,
+  addresses: RelatedSet,
+): PersonSuggestion {
+  return {
+    type: "person",
+    token: `sample-person-${slug(label)}`,
+    label,
+    matched_name: null,
+    match: "strong",
+    highlight: highlightFor(label, queryTokens(SAMPLE_PEOPLE_QUERY)),
+    related: {
+      businesses: pinned(businesses, item =>
+        item.role === "officer" ? `~officer~${slug(label)}` : null,
+      ),
+      addresses: listed(addresses, "sample-address"),
+    },
+  };
+}
+
+export const SAMPLE_PEOPLE: PersonSuggestion[] = [
+  personRow(
+    "Dana Whitfield",
+    set(
+      [
+        business("HARBOR CONCRETE PUMPING CO., INC.", "officer"),
+        business("HARBOR CONCRETE SUPPLY, INC.", "officer"),
+        business("BAYSIDE HARBOR CONCRETE, INC.", "officer"),
+      ],
+      7,
+    ),
+    set(
+      [
+        address("1200 Tallowmere Rd, Pittsburgh, PA 15212", "officer"),
+        address("48 Corriway St, Pittsburgh, PA 15206", "officer"),
+      ],
+      3,
+    ),
+  ),
+  personRow(
+    "Dana Okafor",
+    set(
+      [
+        business("HARBOR CONCRETE & MASONRY", "officer"),
+        business("CONCRETE HARBOR PARTNERS, LP", "officer"),
+      ],
+      2,
+    ),
+    set([address("2210 Pellington Hwy, Baltimore, MD 21230", "officer")]),
+  ),
+  personRow(
+    "Dana Kessler",
+    set([business("NORTHSHORE PUMPING, LLC", "officer")]),
+    set([address("915 Silverkell Blvd, Erie, PA 16507", "officer")]),
+  ),
+  personRow(
+    "Luis Ortega",
+    set([business("HARBOR CONCRETE PUMPING CO., INC.", "officer")]),
+    set([address("1200 Tallowmere Rd, Pittsburgh, PA 15212", "officer")]),
+  ),
+  personRow(
+    "Priya Raman",
+    set([business("HARBOR VIEW CONCRETE, INC.", "officer")], 3),
+    set([address("400 Marrowbay Ave, Tampa, FL 33602", "officer")], 2),
+  ),
+  personRow(
+    "Grace Oduya",
+    set([business("HARBOR CONCRETE & MASONRY", "officer")]),
+    set([address("2210 Pellington Hwy, Baltimore, MD 21230", "officer")]),
+  ),
+  personRow(
+    "Meridian Registered Agents, LLC",
+    set(
+      [
+        business("NORTHSHORE PUMPING, LLC", "agent"),
+        business("HARBOR CONCRETE PUMPING CO., INC.", "agent"),
+      ],
+      38,
+    ),
+    set([address("77 Quillfeather Ln Ste 300, Dover, DE 19904", "agent")]),
+  ),
+];
+
+function addressRow(
+  line1: string,
+  line2: string | null,
+  city: string,
+  state: string,
+  postalCode: string,
+  businesses: RelatedSet,
+  people: RelatedSet,
+): AddressSuggestion {
+  const first = line2 === null ? line1 : `${line1} ${line2}`;
+  const label = `${first}, ${city}, ${state} ${postalCode}`;
+  return {
+    type: "address",
+    token: `sample-address-${slug(label)}`,
+    label,
+    matched_name: null,
+    match: "strong",
+    highlight: highlightFor(label, queryTokens(SAMPLE_ADDRESSES_QUERY)),
+    components: { line1, line2, city, state, postal_code: postalCode },
+    related: {
+      businesses: pinned(businesses, () => `~address~${slug(label)}`),
+      people: listed(people, "sample-person"),
+    },
+  };
+}
+
+export const SAMPLE_ADDRESSES: AddressSuggestion[] = [
+  addressRow(
+    "1200 Tallowmere Rd",
+    null,
+    "Pittsburgh",
+    "PA",
+    "15212",
+    set(
+      [
+        business("HARBOR CONCRETE PUMPING CO., INC.", "principal"),
+        business("HARBOR CONCRETE SUPPLY, INC.", "mailing"),
+      ],
+      2,
+    ),
+    set([
+      person("Dana Whitfield", "officer"),
+      person("Luis Ortega", "officer"),
+    ]),
+  ),
+  // A registered agent's office: the one address most businesses share.
+  addressRow(
+    "77 Quillfeather Ln",
+    "Ste 300",
+    "Dover",
+    "DE",
+    "19904",
+    set(
+      [
+        business("NORTHSHORE PUMPING, LLC", "agent"),
+        business("HARBOR CONCRETE PUMPING CO., INC.", "agent"),
+        business("CONCRETE HARBOR PARTNERS, LP", "agent"),
+      ],
+      412,
+    ),
+    set([person("Meridian Registered Agents, LLC", "agent")]),
+  ),
+  addressRow(
+    "700 Gullhaven Dr",
+    null,
+    "Galveston",
+    "TX",
+    "77550",
+    set([business("CONCRETE HARBOR PARTNERS, LP", "principal")]),
+    set([]),
+  ),
+  addressRow(
+    "2210 Pellington Hwy",
+    null,
+    "Baltimore",
+    "MD",
+    "21230",
+    set([business("HARBOR CONCRETE & MASONRY", "officer")]),
+    set([person("Dana Okafor", "officer"), person("Grace Oduya", "officer")]),
+  ),
+  addressRow(
+    "400 Marrowbay Ave",
+    null,
+    "Tampa",
+    "FL",
+    "33602",
+    set([business("HARBOR VIEW CONCRETE, INC.", "principal")]),
+    set([person("Priya Raman", "officer")]),
+  ),
+];

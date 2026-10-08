@@ -3,12 +3,16 @@
 // status and size, the server's own time, and whether a newer keystroke
 // aborted it. Credentials are redacted before anything is kept.
 
+import { ROUTES, ROUTE_NAMES, type Route } from "@baselayer-sdk/autocomplete";
+
 export type NetworkKind = "mint" | "autocomplete" | "search" | "other";
 export type NetworkOutcome = "pending" | "done" | "aborted" | "failed";
 
 export interface NetworkEntry {
   id: number;
   kind: NetworkKind;
+  /** The autocomplete route it asks; null for a mint, a search or anything else. */
+  route: Route | null;
   method: string;
   url: string;
   /** The path and query as the API sees them, without the dev server's prefix. */
@@ -90,9 +94,15 @@ export function redactBody(text: string): string {
   return indentJson(redactTokens(text));
 }
 
+/** The autocomplete route a request asks, or null when it asks none. */
+export function routeOf(path: string): Route | null {
+  const pathname = path.split("?")[0];
+  return ROUTE_NAMES.find(route => pathname === ROUTES[route].path) ?? null;
+}
+
 export function kindOf(path: string): NetworkKind {
   if (path.startsWith("/autocomplete/sessions")) return "mint";
-  if (path.startsWith("/autocomplete/businesses")) return "autocomplete";
+  if (routeOf(path) !== null) return "autocomplete";
   if (path.startsWith("/searches")) return "search";
   return "other";
 }
@@ -151,6 +161,7 @@ export class NetworkLog {
     const entry: NetworkEntry = {
       id,
       kind,
+      route: routeOf(pathname),
       method: (init.method ?? "GET").toUpperCase(),
       url: url.href,
       path: `${pathname}${url.search}`,

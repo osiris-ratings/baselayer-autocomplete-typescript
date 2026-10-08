@@ -35,7 +35,11 @@ curl -s -X POST https://api.baselayer.com/autocomplete/sessions \
   "expires_at": "2026-09-23T12:03:00Z",
   "request_budget": 30,
   "pivot_allowance": 5,
-  "filter_min_stem": 5
+  "filter_min_stem": 5,
+  "scope": {
+    "routes": { "businesses": ["addresses", "people"] },
+    "max_limit": 20
+  }
 }
 ```
 
@@ -46,13 +50,48 @@ curl -s -X POST https://api.baselayer.com/autocomplete/sessions \
 | 402, code 3004      | the organization is locked                               |
 | 403, code 30        | the key lacks the `autocomplete.read` permission         |
 | 403, code 37        | autocomplete is not enabled for the organization         |
-| 422, code 483       | the key belongs to a sandbox application                 |
+| 403, code 501       | `scope` names a route the organization may not search    |
+| 403, code 502       | `scope` names a relation it may not reach on a route     |
+| 422                 | the body is malformed, `scope` included                  |
 | 429, code 429       | a session pool is spent; `Retry-After` says for how long |
 | 503, code 481       | the deployment cannot mint sessions right now            |
 
 A 429's `metadata.scope` names the pool:
 `autocomplete_session_mint:organization` is the ten-minute window,
-`autocomplete_session_mint_day:organization` the rolling day.
+`autocomplete_session_mint_day:organization` the rolling day. A sandbox
+application's key mints a session served from the sandbox index; until a
+deployment has that index available, the session's searches are answered
+503, not ready, as when no index is served.
+
+## Narrowing a session
+
+A session may search everything your organization may, unless the mint asks
+for less. The body's optional `scope` names the routes it may query and,
+per route, the relations a request may include or filter by, and the most
+suggestions a request may ask for. A session that leaks from the page can
+then do no more than that, and the page offers only what it allows.
+
+```bash
+curl -s -X POST https://api.baselayer.com/autocomplete/sessions \
+  -H "X-API-Key: $BASELAYER_API_KEY" \
+  -H "Origin: https://app.example.com" \
+  -H "Content-Type: application/json" \
+  -d '{"scope": {"routes": {"businesses": ["addresses"]}, "max_limit": 5}}'
+```
+
+A scope narrows and never widens. Either half left out narrows nothing on
+that side, and no body at all reaches everything. The answer's `scope` is
+what the session may do; the browser SDK reads it and offers nothing else.
+Each route's relations are the ones its rows carry:
+
+| Route        | Relations                 |
+| ------------ | ------------------------- |
+| `businesses` | `people`, `addresses`     |
+| `people`     | `businesses`, `addresses` |
+| `addresses`  | `businesses`, `people`    |
+
+A person or an address search leads to businesses, so give `people` and
+`addresses` the `businesses` relation, or the page cannot offer them.
 
 ## Node: `@baselayer-sdk/autocomplete/server`
 
@@ -61,12 +100,13 @@ A 429's `metadata.scope` names the pool:
 `Origin` (400), from an origin outside `allowedOrigins` (403, before calling
 Baselayer), or with a method other than POST (405). Its options:
 
-| Option           | Value                                                           |
-| ---------------- | --------------------------------------------------------------- |
-| `apiKey`         | your API key; required                                          |
-| `apiBaseUrl`     | defaults to `DEFAULT_API_BASE_URL`, `https://api.baselayer.com` |
-| `fetch`          | defaults to `globalThis.fetch`                                  |
-| `allowedOrigins` | a list, or a function handed the raw `Origin`                   |
+| Option           | Value                                                                          |
+| ---------------- | ------------------------------------------------------------------------------ |
+| `apiKey`         | your API key; required                                                         |
+| `apiBaseUrl`     | defaults to `DEFAULT_API_BASE_URL`, `https://api.baselayer.com`                |
+| `fetch`          | defaults to `globalThis.fetch`                                                 |
+| `allowedOrigins` | a list, or a function handed the raw `Origin`                                  |
+| `scope`          | a scope for every mint, or a function of the request that answers one, or none |
 
 Without `allowedOrigins`, every origin may mint. A list's entries and the
 incoming `Origin` are compared trimmed, without a trailing slash and
@@ -82,8 +122,17 @@ import { createMintHandler } from "@baselayer-sdk/autocomplete/server";
 export const POST = createMintHandler({
   apiKey: process.env.BASELAYER_API_KEY!,
   allowedOrigins: ["https://app.example.com"],
+  // Optional: what each session may search.
+  scope: {
+    routes: { businesses: ["addresses", "people"], people: ["businesses"] },
+    maxLimit: 10,
+  },
 });
 ```
+
+`scope` is `{ routes, maxLimit }`, typed so a route takes only the relations
+its rows carry. A function of the request answers a scope per caller (the
+signed-in user's plan, say), or none to mint without one.
 
 Bun (`Bun.serve({ fetch: handler })`), Deno (`Deno.serve(handler)`) and a
 Cloudflare Worker (`export default { fetch: handler }`) take the same
@@ -109,10 +158,13 @@ app.post("/api/ac-session", requireLogin, async (req, res) => {
 });
 ```
 
-`mintForOrigin` also takes `apiBaseUrl`, `fetch` and `signal`, with the
-handler's defaults, and POSTs to `SESSIONS_PATH`, `/autocomplete/sessions`,
-under `apiBaseUrl`. It throws on an empty `apiKey`, and on an empty `origin`
-rather than mint an unbound session. `headers` holds
+`mintForOrigin` also takes `apiBaseUrl`, `fetch`, `signal` and `scope`,
+with the handler's defaults, and POSTs to `SESSIONS_PATH`,
+`/autocomplete/sessions`, under `apiBaseUrl`, with the scope as its JSON body
+when there is one and no body when there is not. It throws on an empty
+`apiKey`, on an empty `origin` rather than mint an unbound session, and on a
+scope that names no route or asks for a `maxLimit` outside 1 to 20, which the
+API would refuse. `headers` holds
 `Content-Type: application/json`, plus `Retry-After` and `X-Request-ID` when
 the API sent them; `body` is the API's JSON, or null when it sent no JSON.
 `toResponse(out)` turns the result into a WHATWG `Response` marked
@@ -122,7 +174,8 @@ check.
 ## Other backends
 
 Make the curl request above from your server with the incoming request's
-`Origin` header, and write Baselayer's status, body and `Retry-After` back.
+`Origin` header, and a `scope` body if you narrow the session, and write
+Baselayer's status, body and `Retry-After` back.
 In Python:
 
 ```python

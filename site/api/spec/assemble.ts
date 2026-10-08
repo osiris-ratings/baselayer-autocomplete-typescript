@@ -339,17 +339,25 @@ function mergeRecords<T>(
   return out;
 }
 
-/** The published reference: the two routes, one document, the overlay applied. */
+/** The search routes, in the order the reference lists them. */
+const SEARCH_PATHS = [
+  "/autocomplete/businesses",
+  "/autocomplete/people",
+  "/autocomplete/addresses",
+] as const;
+
+/**
+ * The published reference: the mint and every search route the autocomplete
+ * service's spec carries, one document, the overlay applied.
+ */
 export function assembleReference({
   autocomplete,
   sessions,
   overlay,
 }: ReferenceSources): OpenApiDocument {
-  const businesses = extractOperation(
-    autocomplete,
-    "/autocomplete/businesses",
-    "get",
-  );
+  const searches = SEARCH_PATHS.filter(
+    path => autocomplete.paths[path]?.get !== undefined,
+  ).map(path => extractOperation(autocomplete, path, "get"));
   const session = extractOperation(sessions, "/autocomplete/sessions", "post");
   const merged: OpenApiDocument = {
     openapi: "3.1.0",
@@ -358,17 +366,17 @@ export function assembleReference({
       version: autocomplete.info.version,
     },
     servers: [{ url: "https://api.baselayer.com" }],
-    paths: { ...session.paths, ...businesses.paths },
+    paths: Object.assign({}, session.paths, ...searches.map(s => s.paths)),
     components: {
       schemas: mergeRecords(
         "schema",
         session.components?.schemas,
-        businesses.components?.schemas,
+        ...searches.map(s => s.components?.schemas),
       ),
       securitySchemes: mergeRecords(
         "security scheme",
         session.components?.securitySchemes,
-        businesses.components?.securitySchemes,
+        ...searches.map(s => s.components?.securitySchemes),
       ),
     },
   };

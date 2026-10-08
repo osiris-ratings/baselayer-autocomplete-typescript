@@ -1,4 +1,7 @@
-import type { SessionPhase } from "@baselayer-sdk/autocomplete";
+import {
+  DEFAULT_SESSION_SCOPE,
+  type SessionPhase,
+} from "@baselayer-sdk/autocomplete";
 import { describe, expect, it } from "vitest";
 
 import { connectionStatus, formatRemaining } from "../../site/demo/connection";
@@ -15,6 +18,7 @@ function ready(expiresAt: number): SessionPhase {
       requestBudget: 30,
       pivotAllowance: 5,
       filterMinStem: 5,
+      scope: DEFAULT_SESSION_SCOPE,
       mintedAt: NOW - 1_000,
       refreshAt: expiresAt - 36_000,
       expiresAt,
