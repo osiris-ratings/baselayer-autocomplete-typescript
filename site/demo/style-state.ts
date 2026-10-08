@@ -1253,6 +1253,8 @@ const BUSINESS_LAYOUTS = {
     addressTrailing: null,
   },
   statesBelow: { titleTrailing: null, subtitleTrailing: "states" },
+  countsRight: { subtitleTrailing: "counts" },
+  countsBeside: { titleTrailingBadge: "counts" },
 } as const satisfies Record<string, Partial<BusinessRowLayout>>;
 
 const PERSON_LAYOUTS = {
@@ -1523,7 +1525,11 @@ export const PRESETS: Preset[] = [
     },
     highlight: { matchEmphasis: "ink", matchEmphasisRegion: "token" },
     rows: {
-      businesses: { list: ["people", "addresses"], iconSegments: [] },
+      businesses: {
+        layout: BUSINESS_LAYOUTS.countsRight,
+        list: ["people", "addresses"],
+        iconSegments: [],
+      },
       people: {
         layout: PERSON_LAYOUTS.addressRight,
         list: ["businesses", "addresses"],
@@ -1930,7 +1936,11 @@ export const PRESETS: Preset[] = [
       matchEmphasisRegion: "substring",
     },
     rows: {
-      businesses: { list: ["people"], iconSegments: ["name"] },
+      businesses: {
+        layout: BUSINESS_LAYOUTS.countsBeside,
+        list: ["people"],
+        iconSegments: ["name"],
+      },
       people: { list: ["businesses", "addresses"] },
       addresses: { layout: ADDRESS_LAYOUTS.personRoleInline },
     },
@@ -1963,7 +1973,10 @@ export const PRESETS: Preset[] = [
     highlight: { matchEmphasis: "ink", matchEmphasisRegion: "token" },
     rows: {
       businesses: {
-        layout: BUSINESS_LAYOUTS.addressRight,
+        layout: {
+          ...BUSINESS_LAYOUTS.addressRight,
+          ...BUSINESS_LAYOUTS.countsBeside,
+        },
         list: ["addresses"],
         iconSegments: [],
       },

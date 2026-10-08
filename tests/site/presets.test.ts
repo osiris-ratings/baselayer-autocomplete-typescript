@@ -355,6 +355,23 @@ describe("a preset's rows", () => {
     }
   });
 
+  it("show a business row's counts in a few, in more than one place, never Light", () => {
+    const placed = PRESETS.flatMap(preset => {
+      const layout: Readonly<Record<string, string | null>> = applyPreset(
+        DEFAULT_STYLE,
+        preset,
+      ).rows.businesses.layout;
+      return Object.entries(layout)
+        .filter(([, field]) => field === "counts")
+        .map(([place]) => ({ name: preset.name, place }));
+    });
+    const names = new Set(placed.map(each => each.name));
+    expect(names.size).toBeGreaterThanOrEqual(3);
+    expect(names.size).toBeLessThanOrEqual(5);
+    expect(names).not.toContain("Light");
+    expect(new Set(placed.map(each => each.place)).size).toBeGreaterThan(1);
+  });
+
   it("differ from search to search: none listed, one, two in either order, icons on and off, fields moved, and no two neighbours alike", () => {
     const row = (preset: Preset, route: (typeof ROUTES)[number]) =>
       applyPreset(DEFAULT_STYLE, preset).rows[route];
