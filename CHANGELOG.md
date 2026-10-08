@@ -82,14 +82,15 @@ release.
 - `disabledDim` on `look`: how far a disabled line, or a head that is not a
   pick, fades, 0 to 1 and 0.6 by default, so it reads as inactive: a person's
   and an address's heads by default. It drains the colour of its squares, flag
-  and icons, fades its text toward the menu's ground and dims its state squares,
-  a match mark keeping its hue a little faded, with floors worked out from the
-  look's colours: a name keeps 4.6:1 (3:1 or more as drawn) and the rest 40% of
-  its contrast, at least 1.8:1. A head that is not a pick drops from its bold to
-  the regular weight, never above its lines' (`--bl-ac-disabled-head-weight`),
-  so it does not read as a title to click, and its name fades well past a
-  line's, up to twice as far, to 2.5:1 (about 2.3:1 as drawn); at 0 it keeps a
-  pick's weight. Nothing fades under forced colours.
+  and icons, fades its text toward the menu's ground, up to twice the dim of the
+  way, and dims its state squares, a match mark keeping its hue a little faded,
+  with floors worked out from the look's colours: a name keeps 2.5:1 (about
+  2.3:1 as drawn) and the rest 25% of its contrast, at least 1.7:1 and a role
+  1.8:1 (1.5:1 or more as drawn). A disabled name, a line's or a head's, drops
+  to the regular weight, never above the lines' (`--bl-ac-disabled-line-weight`,
+  `--bl-ac-disabled-head-weight`), so nothing disabled reads as bold or as a
+  title to click; at 0 it keeps a pick's weight. Nothing fades under forced
+  colours.
 - One row model for all three searches: `BUSINESS_ROW`, `PERSON_ROW` and
   `ADDRESS_ROW` (`ROW_KINDS`), each a `RowKind`: its places
   (`BUSINESS_ROW_PLACES`, …), its fields by line (`BUSINESS_LINE_FIELDS`, …),

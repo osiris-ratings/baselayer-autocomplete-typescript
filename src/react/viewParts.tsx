@@ -72,12 +72,13 @@ export function lookVariables(look: Look): CSSProperties {
     vars["--bl-ac-disabled-opacity"] = inks.opacity;
     vars["--bl-ac-disabled-mark"] = `${inks.markShare}%`;
   }
-  // Nothing fades at 0, so a head that is not a pick keeps a pick's weight.
+  // Nothing fades at 0, so a disabled head and line keep a pick's weights.
   if (look.disabledDim === 0) {
     vars["--bl-ac-disabled-head-weight"] =
       look.matchEmphasis === "weight"
         ? "var(--bl-ac-weight-base)"
         : "var(--bl-ac-name-weight)";
+    vars["--bl-ac-disabled-line-weight"] = "var(--bl-ac-weight-base)";
   }
   if (
     look.disabledDim !== DEFAULT_LOOK.disabledDim ||
@@ -87,8 +88,8 @@ export function lookVariables(look: Look): CSSProperties {
   ) {
     const inks = disabledInks(look);
     vars["--bl-ac-disabled-name"] = inks.name;
-    vars["--bl-ac-disabled-head-name"] = inks.headName;
     vars["--bl-ac-disabled-text"] = inks.text;
+    vars["--bl-ac-disabled-role"] = inks.role;
   }
   const set = (name: string, value: string, fallback: string) => {
     if (value !== fallback) {

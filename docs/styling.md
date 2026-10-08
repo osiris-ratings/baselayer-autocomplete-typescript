@@ -104,6 +104,7 @@ Set them on `.bl-ac` or any ancestor selector more specific than it:
 | `--bl-ac-weight-base`          | `500`                              | the name's unmatched text, under `weight`    |
 | `--bl-ac-weight-mark`          | `700`                              | every matched word, under `weight`           |
 | `--bl-ac-disabled-head-weight` | unset: `min(400, base)`            | a disabled head's name                       |
+| `--bl-ac-disabled-line-weight` | unset: `min(400, base)`            | a disabled line's name                       |
 
 A weight the font does not have is drawn in the nearest one it does, so a
 heavier `--bl-ac-weight-mark` needs the font loaded in that weight. To use a
@@ -307,26 +308,26 @@ icons lose their colour (`--bl-ac-disabled-filter`, on each of them, never on
 the line, so a match mark keeps its hue, faded a third of the way toward the
 ground: `--bl-ac-disabled-mark`), its name and its other text fade toward the
 menu's ground (`--bl-ac-disabled-name`, `--bl-ac-disabled-text`, the icon with
-the text), and its state squares dim (`--bl-ac-disabled-opacity`).
+the text, `--bl-ac-disabled-role`), and its state squares dim
+(`--bl-ac-disabled-opacity`). Its name drops to the regular weight, never above
+the lines' (`--bl-ac-disabled-line-weight`), so nothing disabled reads as bold.
 `look.disabledDim` sets how far, 0 for none, and the component works the inks
 out from the look's colours. WCAG exempts an inactive component from its
-contrast minimum, so the fade is deliberately strong, with floors that keep it
-legible on any colours: a disabled name keeps 4.6:1 by the formula, which draws
-at 3:1 or more once antialiasing has its share, and the rest keeps 40% of its
-contrast and at least 1.8:1, drawing at about half an enabled line's. A colour
-set only in CSS, not through `look`, fades by the default look's shares
-(`color-mix`), without the floors. A translucent title or subtitle is faded as
-it is drawn on the ground; a translucent background shows whatever is under the
-menu, which the component cannot know, so the floors then hold only on the
-background's own colour. A row's head that is not a pick fades as a disabled
-line does, and its name further: it drops from its bold to the regular weight,
-never above its lines' (`--bl-ac-disabled-head-weight`), so it does not read as
-a title to click, and fades up to twice as far as a line's text, to 2.5:1 by the
-formula (`--bl-ac-disabled-head-name`), drawing at about 2.3:1, faint but never
-gone. A person's and an address's head is not a pick by default, since a
-business is the pick, their businesses at full strength. A pick does not fade;
-at `disabledDim` 0 nothing does, the head's weight included; and nothing fades
-under forced colours.
+contrast minimum, so the fade is deliberately strong: the text may go twice the
+dim of the way to the ground, and floors keep it legible on any colours. A
+disabled name keeps 2.5:1 by the formula, drawing at about 2.3:1, faint but
+never gone; the rest keeps 25% of its contrast and at least 1.7:1, a role 1.8:1
+as the smallest text, so each draws at 1.5:1 or more. A colour set only in CSS,
+not through `look`, fades by the default look's shares (`color-mix`), without
+the floors. A translucent title or subtitle is faded as it is drawn on the
+ground; a translucent background shows whatever is under the menu, which the
+component cannot know, so the floors then hold only on the background's own
+colour. A row's head that is not a pick fades as a disabled line does, its name
+in the same ink and the regular weight (`--bl-ac-disabled-head-weight`), so it
+does not read as a title to click. A person's and an address's head is not a
+pick by default, since a business is the pick, their businesses at full
+strength. A pick does not fade; at `disabledDim` 0 nothing does, the weights
+included; and nothing fades under forced colours.
 
 After a pick from a line under a row, the line under the field
 (`bl-ac-selection`, `data-type` the picked line's type) names what was

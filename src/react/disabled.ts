@@ -1,5 +1,5 @@
 // A disabled line's inks: its squares, flag and icons drained of colour, its
-// text faded toward the menu's ground no further than it stays readable,
+// text faded toward the menu's ground no further than it stays legible,
 // whatever the look.
 
 import type { Look } from "@baselayer-sdk/autocomplete";
@@ -7,25 +7,29 @@ import type { Look } from "@baselayer-sdk/autocomplete";
 type Rgb = readonly [number, number, number];
 
 /**
- * The least contrast a disabled line's name keeps on the ground, by the
- * formula: 3:1 or more once antialiasing a thin stroke has had its share.
+ * The least contrast a disabled name keeps on the ground, a line's or a
+ * head's, by the formula: drawn in the regular weight, about 2.3:1, faint but
+ * never gone.
  */
-export const DISABLED_NAME_FLOOR = 4.6;
+export const DISABLED_NAME_FLOOR = 2.5;
 
 /**
- * The least a disabled head's name keeps: drawn in the regular weight, it
- * fades well past a line's name, to about 2.3:1 as drawn, and never vanishes.
+ * A disabled line's other text and its icon keep this share of their own
+ * contrast, and never less than the floors below.
  */
-export const DISABLED_HEAD_FLOOR = 2.5;
+export const DISABLED_TEXT_KEEPS = 0.25;
 
 /**
- * Its other text and its icon keep this share of their own contrast, so they
- * read as dimmed on any ground, and never less than the floor below.
+ * The least its other text and its icon keep, by the formula: 1.5:1 or more
+ * as drawn.
  */
-export const DISABLED_TEXT_KEEPS = 0.4;
+export const DISABLED_TEXT_FLOOR = 1.7;
 
-/** The least its other text and its icon keep, by the formula. */
-export const DISABLED_TEXT_FLOOR = 1.8;
+/**
+ * The least its role keeps, by the formula: the smallest text loses the most
+ * to antialiasing, so it needs more to draw at 1.5:1.
+ */
+export const DISABLED_ROLE_FLOOR = 1.8;
 
 /**
  * How far a match mark's colour moves toward the ground per unit of
@@ -107,18 +111,18 @@ export interface DisabledInks {
   filter: string;
   /** Its state squares' opacity (`--bl-ac-disabled-opacity`). */
   opacity: string;
-  /** Its names' colour (`--bl-ac-disabled-name`). */
+  /** A disabled line's or head's name's colour (`--bl-ac-disabled-name`). */
   name: string;
-  /** A disabled head's name's colour (`--bl-ac-disabled-head-name`). */
-  headName: string;
   /** Its other text's and its icon's colour (`--bl-ac-disabled-text`). */
   text: string;
+  /** Its role's colour (`--bl-ac-disabled-role`). */
+  role: string;
   /** How much of the title's colour `name` keeps against the ground, in percent. */
   nameShare: number;
-  /** How much of the title's colour `headName` keeps, in percent. */
-  headNameShare: number;
   /** How much of the subtitle's colour `text` keeps, in percent. */
   textShare: number;
+  /** How much of the subtitle's colour `role` keeps, in percent. */
+  roleShare: number;
   /**
    * How much of its own colour a match mark keeps, in percent: its hue, a
    * little faded toward the ground (`--bl-ac-disabled-mark`).
@@ -127,11 +131,11 @@ export interface DisabledInks {
 }
 
 /**
- * A disabled line under `look`: at `disabledDim` d, its squares, flag and
- * icons drained of colour by 2d, its text moved up to d of the way toward the
- * ground (a head's name up to 2d), its names no further than 4.6:1 (a head's
- * 2.5:1) and the rest than 40% of its contrast (1.8:1 at least), and its
- * squares' opacity 1 - 0.8d. At 0, nothing changes.
+ * A disabled line or head under `look`: at `disabledDim` d, its squares, flag
+ * and icons drained of colour by 2d, its text moved up to 2d of the way toward
+ * the ground, its names no further than 2.5:1 and the rest than 25% of its
+ * contrast (1.7:1 at least, a role 1.8:1), and its squares' opacity 1 - 0.8d.
+ * At 0, nothing changes.
  */
 export function disabledInks(look: Look): DisabledInks {
   const dim = look.disabledDim;
@@ -139,7 +143,9 @@ export function disabledInks(look: Look): DisabledInks {
   // here: its own colour stands in, and the floors hold only on that.
   const ground = parse(look.backgroundColor).rgb;
   const round = (value: number) => Math.round(value * 1000) / 1000;
-  const faded = (color: string, floor: number, most = dim) => {
+  // Twice the dim, so the floors are what stop the fade, on a dark ground too.
+  const most = Math.min(1, 2 * dim);
+  const faded = (color: string, floor: number) => {
     const ink = drawnOn(color, ground);
     const share = fadeShare(ink, ground, most, floor);
     return {
@@ -148,30 +154,19 @@ export function disabledInks(look: Look): DisabledInks {
     };
   };
   const name = faded(look.titleColor, DISABLED_NAME_FLOOR);
-  // Twice as far as a line's text may go, so on a dark ground too the floor
-  // is what stops it.
-  const headName = faded(
-    look.titleColor,
-    DISABLED_HEAD_FLOOR,
-    Math.min(1, 2 * dim),
-  );
-  const text = faded(
-    look.subtitleColor,
-    Math.max(
-      DISABLED_TEXT_FLOOR,
-      contrast(drawnOn(look.subtitleColor, ground), ground) *
-        DISABLED_TEXT_KEEPS,
-    ),
-  );
+  const kept =
+    contrast(drawnOn(look.subtitleColor, ground), ground) * DISABLED_TEXT_KEEPS;
+  const text = faded(look.subtitleColor, Math.max(DISABLED_TEXT_FLOOR, kept));
+  const role = faded(look.subtitleColor, Math.max(DISABLED_ROLE_FLOOR, kept));
   return {
     filter: dim === 0 ? "none" : `saturate(${round(Math.max(0, 1 - 2 * dim))})`,
     opacity: String(round(1 - 0.8 * dim)),
     name: name.hex,
-    headName: headName.hex,
     text: text.hex,
+    role: role.hex,
     nameShare: name.kept,
-    headNameShare: headName.kept,
     textShare: text.kept,
+    roleShare: role.kept,
     markShare: Math.round((1 - DISABLED_MARK_FADE * dim) * 1000) / 10,
   };
 }

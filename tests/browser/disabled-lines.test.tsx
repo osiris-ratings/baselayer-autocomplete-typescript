@@ -196,7 +196,7 @@ describe("a disabled line", () => {
   });
 
   for (const preset of PRESETS) {
-    it(`reads as inactive on ${preset.name}: its name at 3:1 or more and well below an enabled one's, its secondary text 40% or more below and still there`, async () => {
+    it(`reads as inactive on ${preset.name}: its name in the regular weight, 2:1 or more and at most a fifth of an enabled one's, its secondary text 40% or more below and 1.5:1 or more`, async () => {
       const { enabled, disabled, done } = draw(preset.look);
       try {
         const drawn = async (selector: string) => ({
@@ -204,8 +204,12 @@ describe("a disabled line", () => {
           disabled: await drawnContrast(part(disabled, selector)),
         });
         const name = await drawn(".bl-ac-line-name");
-        expect(name.disabled, "name").toBeGreaterThanOrEqual(3);
-        expect(name.disabled, "name").toBeLessThanOrEqual(0.6 * name.enabled);
+        expect(name.disabled, "name").toBeGreaterThanOrEqual(2);
+        // Sepia's title has the least contrast, so its fifth is the tightest.
+        expect(name.disabled, "name").toBeLessThanOrEqual(0.3 * name.enabled);
+        expect(
+          getComputedStyle(part(disabled, ".bl-ac-line-name")).fontWeight,
+        ).toBe("400");
         for (const selector of [".bl-ac-address", ".bl-ac-role"]) {
           const secondary = await drawn(selector);
           expect(secondary.disabled, selector).toBeLessThanOrEqual(
@@ -418,7 +422,7 @@ describe("a row's head that is not a pick", () => {
             lineWeight,
           );
           // In the head's own ink, well past a line's name.
-          const ink = disabledInks(resolveLook(preset.look)).headName;
+          const ink = disabledInks(resolveLook(preset.look)).name;
           const drawnIn = rgbOf(getComputedStyle(disabled.name).color);
           [1, 3, 5].forEach((at, channel) =>
             expect(
@@ -452,6 +456,240 @@ function unfiltered(element: Element): boolean {
   }
   return true;
 }
+
+// A row of each search listing every kind of line it can, each a possible pick.
+const lineItem = (
+  type: EntityType,
+  label: string,
+  role: RelatedItem["role"],
+): RelatedItem => ({
+  type,
+  token: `tok-${label}`,
+  label,
+  role,
+  matched: false,
+  address:
+    type === "business" ? "1200 Tallowmere Rd, Pittsburgh, PA 15212" : null,
+  states: type === "business" ? ["OH", "PA"] : null,
+  domicile_state: type === "business" ? "PA" : null,
+});
+
+const listOf = (items: RelatedItem[]) => ({
+  count: items.length,
+  matched: null,
+  truncated: false,
+  items,
+});
+
+const LISTED = {
+  person: {
+    ...DANA,
+    related: {
+      businesses: listOf([
+        lineItem("business", "HARBOR CONCRETE PUMPING, LLC", "officer"),
+      ]),
+      addresses: listOf([
+        lineItem("address", "77 Quillfeather Ln, Dover, DE 19904", "officer"),
+      ]),
+    },
+  },
+  address: {
+    ...PIER,
+    related: {
+      businesses: listOf([
+        lineItem("business", "HARBOR CONCRETE PUMPING, LLC", "principal"),
+      ]),
+      people: listOf([lineItem("person", "Dana Whitfield", "officer")]),
+    },
+  },
+  business: {
+    ...HARBOR,
+    related: {
+      people: listOf([lineItem("person", "Dana Whitfield", "officer")]),
+      addresses: listOf([
+        lineItem(
+          "address",
+          "1200 Tallowmere Rd, Pittsburgh, PA 15212",
+          "mailing",
+        ),
+      ]),
+    },
+  },
+};
+
+/** A search's row listing every line kind, `enabled` the kinds that are picks. */
+function listed(
+  search: "person" | "address" | "business",
+  enabled: EntityType[],
+  look: LookInput,
+) {
+  const host = document.createElement("div");
+  host.style.width = "760px";
+  host.style.fontFamily = "sans-serif";
+  document.body.append(host);
+  const root = createRoot(host);
+  flushSync(() =>
+    root.render(
+      search === "person" ? (
+        <PersonAutocompleteView
+          {...viewProps}
+          id="person"
+          suggestions={[LISTED.person]}
+          list={["businesses", "addresses"]}
+          enabledLines={enabled}
+          look={look}
+        />
+      ) : search === "address" ? (
+        <AddressAutocompleteView
+          {...viewProps}
+          id="address"
+          suggestions={[LISTED.address]}
+          list={["businesses", "people"]}
+          enabledLines={enabled}
+          look={look}
+        />
+      ) : (
+        <BusinessAutocompleteView
+          {...viewProps}
+          id="business"
+          suggestions={[LISTED.business]}
+          list={["people", "addresses"]}
+          enabledLines={enabled}
+          look={look}
+        />
+      ),
+    ),
+  );
+  return {
+    line: (entity: EntityType) =>
+      host.querySelector<HTMLElement>(
+        `.bl-ac-group-line[data-line="${entity}"]`,
+      )!,
+    done() {
+      root.unmount();
+      host.remove();
+    },
+  };
+}
+
+const LINE_CASES = [
+  ["person", "business"],
+  ["person", "address"],
+  ["address", "business"],
+  ["address", "person"],
+  ["business", "person"],
+  ["business", "address"],
+] as const;
+
+const EVERY_LINE: EntityType[] = ["business", "person", "address"];
+
+/**
+ * A segment's drawn contrast with its box held to its text: a role in a
+ * column as wide as the longest role would otherwise measure its own margin.
+ */
+async function drawnText(element: HTMLElement): Promise<number> {
+  const { minWidth, width } = element.style;
+  element.style.minWidth = "0";
+  element.style.width = "max-content";
+  try {
+    return await drawnContrast(element);
+  } finally {
+    element.style.minWidth = minWidth;
+    element.style.width = width;
+  }
+}
+
+describe("a disabled line's name, on every search", () => {
+  for (const preset of PRESETS.filter(
+    each => each.name === "Light" || each.name === "Midnight",
+  )) {
+    for (const [search, entity] of LINE_CASES) {
+      it(`is as faint as a disabled head's on ${search === "address" ? "an" : "a"} ${search}'s ${entity} line, on ${preset.name}, its secondary text 1.5:1 or more`, async () => {
+        const pick = listed(search, EVERY_LINE, preset.look);
+        const pickLine = pick.line(entity);
+        expect(pickLine).toHaveAttribute("data-enabled", "true");
+        const pickName = part(pickLine, ".bl-ac-line-name");
+        const pickDrawn = await drawnContrast(pickName);
+        const pickWeight = Number(getComputedStyle(pickName).fontWeight);
+        const secondary = [".bl-ac-address", ".bl-ac-role"].filter(
+          selector => pickLine.querySelector(selector) !== null,
+        );
+        pick.done();
+        const off = listed(search, [], preset.look);
+        try {
+          const line = off.line(entity);
+          expect(line).not.toHaveAttribute("data-enabled");
+          const name = part(line, ".bl-ac-line-name");
+          const weight = Number(getComputedStyle(name).fontWeight);
+          expect(weight, "weight").toBe(400);
+          expect(weight, "weight").toBeLessThan(pickWeight);
+          // The one ink every disabled name takes, a head's too.
+          const ink = disabledInks(resolveLook(preset.look)).name;
+          const drawnIn = rgbOf(getComputedStyle(name).color);
+          [1, 3, 5].forEach((at, channel) =>
+            expect(
+              Math.abs(drawnIn[channel]! - parseInt(ink.slice(at, at + 2), 16)),
+              `name ink ${ink}`,
+            ).toBeLessThanOrEqual(1),
+          );
+          const drawn = await drawnContrast(name);
+          expect(drawn, "name").toBeGreaterThanOrEqual(2);
+          // A short name draws its pick lower, so a fifth, give or take.
+          expect(drawn, "name").toBeLessThanOrEqual(0.22 * pickDrawn);
+          expect(secondary.length).toBeGreaterThan(0);
+          for (const selector of secondary) {
+            expect(
+              await drawnText(part(line, selector)),
+              selector,
+            ).toBeGreaterThanOrEqual(1.5);
+          }
+        } finally {
+          off.done();
+        }
+      });
+    }
+  }
+
+  it("keeps a pick's weight and colour at disabledDim 0, on every search", () => {
+    const look: LookInput = { disabledDim: 0 };
+    for (const [search, entity] of LINE_CASES) {
+      const pick = listed(search, EVERY_LINE, look);
+      const pickName = getComputedStyle(
+        part(pick.line(entity), ".bl-ac-line-name"),
+      );
+      const was = { weight: pickName.fontWeight, color: pickName.color };
+      pick.done();
+      const off = listed(search, [], look);
+      try {
+        const name = getComputedStyle(
+          part(off.line(entity), ".bl-ac-line-name"),
+        );
+        expect(
+          { weight: name.fontWeight, color: name.color },
+          `${search}'s ${entity} line`,
+        ).toEqual(was);
+      } finally {
+        off.done();
+      }
+    }
+  });
+
+  it("stays at the lines' weight when a host lowers it below 400", () => {
+    const style = document.createElement("style");
+    style.textContent = ".bl-ac { --bl-ac-weight-base: 300 }";
+    document.head.append(style);
+    const off = listed("person", [], {});
+    try {
+      expect(
+        getComputedStyle(part(off.line("business"), ".bl-ac-line-name"))
+          .fontWeight,
+      ).toBe("300");
+    } finally {
+      off.done();
+      style.remove();
+    }
+  });
+});
 
 describe("a disabled head's name's weight", () => {
   const weight = (element: HTMLElement) =>

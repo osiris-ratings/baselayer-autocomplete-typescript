@@ -4,8 +4,8 @@ import { DEFAULT_LOOK, resolveLook } from "@baselayer-sdk/autocomplete";
 
 import { PRESETS } from "../../site/demo/style-state";
 import {
-  DISABLED_HEAD_FLOOR,
   DISABLED_NAME_FLOOR,
+  DISABLED_ROLE_FLOOR,
   DISABLED_TEXT_FLOOR,
   DISABLED_TEXT_KEEPS,
   disabledInks,
@@ -43,41 +43,30 @@ const LOOKS = [
 
 describe("a disabled line's inks", () => {
   for (const { name, look } of LOOKS) {
-    it(`keep their floors as the hex they are drawn in, on ${name}`, () => {
+    it(`keep their floors as the hex they are drawn in, and reach them, on ${name}`, () => {
       const inks = disabledInks(look);
       const ground = look.backgroundColor;
-      expect(contrast(inks.name, ground)).toBeGreaterThanOrEqual(
-        DISABLED_NAME_FLOOR,
-      );
-      expect(contrast(inks.text, ground)).toBeGreaterThanOrEqual(
-        Math.max(
-          DISABLED_TEXT_FLOOR,
-          contrast(look.subtitleColor, ground) * DISABLED_TEXT_KEEPS,
-        ),
-      );
-      // A head's name fades well past a line's, to its own floor: it may go
-      // twice as far, so on a dark ground too the floor is what stops it.
-      expect(contrast(inks.headName, ground)).toBeGreaterThanOrEqual(
-        DISABLED_HEAD_FLOOR,
-      );
-      expect(contrast(inks.headName, ground)).toBeLessThan(
-        DISABLED_HEAD_FLOOR + 0.05,
-      );
-      expect(contrast(inks.headName, ground)).toBeLessThan(
-        contrast(inks.name, ground),
-      );
+      const kept = contrast(look.subtitleColor, ground) * DISABLED_TEXT_KEEPS;
+      // Each may go twice the dim of the way, so by default its floor is what
+      // stops it: a name's, a head's or a line's alike.
+      for (const [part, ink, floor] of [
+        ["name", inks.name, DISABLED_NAME_FLOOR],
+        ["text", inks.text, Math.max(DISABLED_TEXT_FLOOR, kept)],
+        ["role", inks.role, Math.max(DISABLED_ROLE_FLOOR, kept)],
+      ] as const) {
+        expect(contrast(ink, ground), part).toBeGreaterThanOrEqual(floor);
+        expect(contrast(ink, ground), part).toBeLessThan(floor + 0.05);
+      }
     });
   }
 
-  it("move a line's name and text dim of the way, short of their floors, and a head's name twice as far", () => {
+  it("move every text twice the dim of the way, short of its floor", () => {
     const light = PRESETS.find(preset => preset.name === "Light")!;
-    const inks = disabledInks({ ...resolveLook(light.look), disabledDim: 0.3 });
-    // 0.3 of the way leaves both well above their floors, so the dim decides.
-    expect(inks.nameShare).toBe(70);
-    expect(inks.textShare).toBe(70);
-    // A head's name may go 0.6 of the way, and its floor stops it short.
-    expect(inks.headNameShare).toBeLessThan(70);
-    expect(inks.headNameShare).toBeGreaterThan(40);
+    const inks = disabledInks({ ...resolveLook(light.look), disabledDim: 0.2 });
+    // 0.4 of the way leaves each above its floor, so the dim decides.
+    expect(inks.nameShare).toBe(60);
+    expect(inks.textShare).toBe(60);
+    expect(inks.roleShare).toBe(60);
   });
 
   it("fade a translucent title as it is drawn, over the ground", () => {

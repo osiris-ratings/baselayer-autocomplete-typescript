@@ -398,30 +398,43 @@
   filter: var(--bl-ac-disabled-filter, saturate(0));
 }
 
+/* A disabled name, a line's or a head's, drops to the regular weight, never
+   above the lines', so nothing disabled reads as bold or as a title to click,
+   and fades to one faint ink. At `disabledDim` 0 the component sets a pick's
+   weights. */
 .bl-ac-group-line:not([data-enabled]) .bl-ac-line-name {
-  color: var(
-    --bl-ac-disabled-name,
-    color-mix(in srgb, var(--bl-ac-title) 61.7%, var(--bl-ac-bg))
+  font-weight: var(
+    --bl-ac-disabled-line-weight,
+    min(400, var(--bl-ac-weight-base))
   );
 }
 
-/* A head that is not a pick drops to the regular weight, never above its
-   lines', so it no longer reads as a title to click, and fades well past a
-   line's name. At `disabledDim` 0 the component sets the weight a pick's. */
 .bl-ac-group-head:not([data-enabled]) .bl-ac-name,
 .bl-ac-group > .bl-ac-row:not([data-enabled]) .bl-ac-name {
   font-weight: var(
     --bl-ac-disabled-head-weight,
     min(400, var(--bl-ac-weight-base))
   );
+}
+
+.bl-ac-group-line:not([data-enabled]) .bl-ac-line-name,
+.bl-ac-group-head:not([data-enabled]) .bl-ac-name,
+.bl-ac-group > .bl-ac-row:not([data-enabled]) .bl-ac-name {
   color: var(
-    --bl-ac-disabled-head-name,
+    --bl-ac-disabled-name,
     color-mix(in srgb, var(--bl-ac-title) 40.8%, var(--bl-ac-bg))
   );
 }
 
-.bl-ac-group-line:not([data-enabled])
-  :is(.bl-ac-address, .bl-ac-role, .bl-ac-icon),
+/* A role is the smallest text, so it keeps a little more to stay legible. */
+.bl-ac-group-line:not([data-enabled]) .bl-ac-role {
+  color: var(
+    --bl-ac-disabled-role,
+    color-mix(in srgb, var(--bl-ac-subtitle) 48.4%, var(--bl-ac-bg))
+  );
+}
+
+.bl-ac-group-line:not([data-enabled]) :is(.bl-ac-address, .bl-ac-icon),
 .bl-ac-group-head:not([data-enabled])
   :is(.bl-ac-address, .bl-ac-group-count, .bl-ac-icon),
 .bl-ac-group
@@ -429,7 +442,7 @@
   :is(.bl-ac-address, .bl-ac-people, .bl-ac-also, .bl-ac-icon) {
   color: var(
     --bl-ac-disabled-text,
-    color-mix(in srgb, var(--bl-ac-subtitle) 48.4%, var(--bl-ac-bg))
+    color-mix(in srgb, var(--bl-ac-subtitle) 44%, var(--bl-ac-bg))
   );
 }
 
