@@ -255,7 +255,11 @@ const PIER: AddressSuggestion = {
   label: "77 Quillfeather Ln, Dover, DE 19904",
   matched_name: null,
   match: "strong",
-  highlight: [],
+  // Marked as "77 quill" is typed: much of an address's label is the mark.
+  highlight: [
+    { text: "77 Quill", matched: true },
+    { text: "feather Ln, Dover, DE 19904", matched: false },
+  ],
   components: {
     line1: "77 Quillfeather Ln",
     line2: null,
@@ -286,7 +290,20 @@ const HARBOR: BusinessSuggestion = {
       truncated: false,
       items: [{ ...business("Dana Whitfield", "tok-dana"), type: "person" }],
     },
-    addresses: { count: null, matched: null, truncated: false, items: [] },
+    addresses: {
+      count: 1,
+      matched: null,
+      truncated: false,
+      items: [
+        {
+          ...business("1200 Tallowmere Rd, Pittsburgh, PA 15212", null),
+          type: "address",
+          address: null,
+          states: null,
+          domicile_state: null,
+        },
+      ],
+    },
   },
 };
 
@@ -304,7 +321,7 @@ const viewProps = {
   open: true,
 };
 
-/** A search's row with its head enabled or not, and the head's name. */
+/** A search's row with its head enabled or not: the head, its name and its secondary text. */
 function head(
   search: "person" | "address" | "business",
   enabled: boolean,
@@ -351,9 +368,16 @@ function head(
     ),
   );
   const group = host.querySelector<HTMLElement>('[role="group"]')!;
+  const line = group.firstElementChild as HTMLElement;
   return {
-    head: group.firstElementChild as HTMLElement,
-    name: group.querySelector<HTMLElement>(".bl-ac-name")!,
+    head: line,
+    name: part(line, ".bl-ac-name"),
+    // A person's and an address's head says its counts; a business's head,
+    // its address.
+    secondary: part(
+      line,
+      search === "business" ? ".bl-ac-address" : ".bl-ac-group-count",
+    ),
     done() {
       root.unmount();
       host.remove();
@@ -367,16 +391,23 @@ describe("a row's head that is not a pick", () => {
   )) {
     for (const search of ["person", "address", "business"] as const) {
       const article = search === "address" ? "an" : "a";
-      it(`fades on ${article} ${search}'s row as a disabled line does, on ${preset.name}, and not when it is a pick`, async () => {
+      it(`fades on ${article} ${search}'s row as a disabled line does, its name and its secondary text, on ${preset.name}, and not when it is a pick`, async () => {
         const enabled = head(search, true, preset.look);
         const enabledName = await drawnContrast(enabled.name);
+        const enabledSecondary = await drawnContrast(enabled.secondary);
         enabled.done();
         const disabled = head(search, false, preset.look);
         try {
           expect(disabled.head).toHaveAttribute("aria-disabled", "true");
           const disabledName = await drawnContrast(disabled.name);
-          expect(disabledName).toBeGreaterThanOrEqual(3);
-          expect(disabledName).toBeLessThanOrEqual(0.6 * enabledName);
+          expect(disabledName, "name").toBeGreaterThanOrEqual(3);
+          expect(disabledName, "name").toBeLessThanOrEqual(0.6 * enabledName);
+          const disabledSecondary = await drawnContrast(disabled.secondary);
+          expect(disabledSecondary, "secondary").toBeLessThanOrEqual(
+            0.6 * enabledSecondary,
+          );
+          // Faded, but still there to be read.
+          expect(disabledSecondary, "secondary").toBeGreaterThanOrEqual(1.5);
         } finally {
           disabled.done();
         }
