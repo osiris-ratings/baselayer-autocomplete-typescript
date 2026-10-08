@@ -345,7 +345,7 @@ describe("a drawer that scrolls sideways", () => {
 
   // A business's hidden lines fit at this width; these two scroll.
   for (const route of ["people", "addresses"] as const) {
-    it(`never shows a hidden line's places under the Enabled column, scrolled or not, ${route} in 320px`, async () => {
+    it(`never shows a hidden line's places under the grip or the Enabled column, scrolled or not, ${route} in 320px`, async () => {
       const { host, done } = mount(noLine(route), route, 320);
       try {
         const hidden = host.querySelector<HTMLElement>(
@@ -356,31 +356,56 @@ describe("a drawer that scrolls sideways", () => {
           ...hidden.querySelectorAll<HTMLElement>(".row-map-kind"),
         ];
         expect(kinds.length).toBeGreaterThan(0);
+        let covered = 0;
         for (const left of [0, 40, hidden.scrollWidth]) {
           hidden.scrollLeft = left;
           await settle();
           for (const kind of kinds) {
-            const cell = kind.querySelector<HTMLElement>(".row-map-check-cell");
-            expect(cell, kind.dataset.relation).not.toBeNull();
-            expect(getComputedStyle(cell!).backgroundColor).not.toBe(
-              "rgba(0, 0, 0, 0)",
-            );
-            const box = cell!.getBoundingClientRect();
-            for (const x of [box.left + 1, box.right - 1]) {
-              for (const y of [
-                box.top + 2,
-                (box.top + box.bottom) / 2,
-                box.bottom - 2,
-              ]) {
-                const top = document.elementFromPoint(x, y)!;
-                expect(
-                  cell!.contains(top),
-                  `at scrollLeft ${left}, (${x}, ${y}) is ${top.className}`,
-                ).toBe(true);
+            const places = [
+              ...kind.querySelectorAll<HTMLElement>(".row-map-place"),
+            ].map(place => place.getBoundingClientRect());
+            for (const name of [".row-map-grip-cell", ".row-map-check-cell"]) {
+              const cell = kind.querySelector<HTMLElement>(name);
+              expect(cell, `${kind.dataset.relation} ${name}`).not.toBeNull();
+              const box = cell!.getBoundingClientRect();
+              // Where a place runs under the column, the column covers it;
+              // at an edge with nothing beyond it, it draws nothing.
+              const under = places.some(
+                place =>
+                  place.right > box.left + 0.5 && place.left < box.right - 0.5,
+              );
+              const opaque =
+                getComputedStyle(cell!).backgroundColor !== "rgba(0, 0, 0, 0)";
+              if (under) {
+                covered++;
+                expect(opaque, `${name} at scrollLeft ${left}`).toBe(true);
+              }
+              const end =
+                name === ".row-map-grip-cell"
+                  ? hidden.scrollLeft === 0
+                  : hidden.scrollLeft >=
+                    hidden.scrollWidth - hidden.clientWidth - 1;
+              if (end) {
+                expect(opaque, `${name} at scrollLeft ${left}`).toBe(false);
+              }
+              for (const x of [box.left + 1, box.right - 1]) {
+                for (const y of [
+                  box.top + 2,
+                  (box.top + box.bottom) / 2,
+                  box.bottom - 2,
+                ]) {
+                  const top = document.elementFromPoint(x, y)!;
+                  expect(
+                    cell!.contains(top),
+                    `${name} at scrollLeft ${left}, (${x}, ${y}) is ${top.className}`,
+                  ).toBe(true);
+                }
               }
             }
           }
         }
+        // Scrolled, each column has had places to cover.
+        expect(covered).toBeGreaterThan(0);
       } finally {
         done();
       }

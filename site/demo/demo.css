@@ -917,6 +917,7 @@
   display: flex;
   align-items: center;
   align-self: stretch;
+  justify-content: center;
   width: 100%;
   padding: 0;
   background: transparent;
@@ -939,6 +940,29 @@
       transparent 1.75px
     )
     0 0 / 6px 6px;
+}
+
+/* Over Hidden's bands, a hidden line's grip has a ground of its own, an even
+   margin round its dots, rounded as a line's box is; with no checkbox, its
+   Enabled column draws nothing. Each column covers the line only while its
+   places run under it, scrolled. */
+.row-map-hidden :is(.row-map-grip-cell, .row-map-check-cell) {
+  background: transparent;
+}
+
+.row-map-hidden > .row-map-scroll-frame[data-more-before] .row-map-grip-cell,
+.row-map-hidden > .row-map-scroll-frame[data-more-after] .row-map-check-cell {
+  background: var(--map-bg, var(--paper));
+}
+
+.row-map-hidden .row-map-grip-dots {
+  box-sizing: content-box;
+  padding: 3px;
+  background:
+    radial-gradient(circle at center, currentColor 1.25px, transparent 1.75px) 0
+      0 / 6px 6px content-box,
+    var(--map-bg, var(--paper));
+  border-radius: var(--map-line-radius);
 }
 
 .row-map-grip:is(:hover, :focus-visible) {
