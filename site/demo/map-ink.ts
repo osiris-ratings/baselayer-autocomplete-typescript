@@ -6,25 +6,27 @@ import type { StyleState } from "./style-state";
 /** An sRGB colour, each channel 0 to 255. */
 type Rgb = readonly [number, number, number];
 
-/** `#rgb` or `#rrggbb`, or null for anything else (a name, `rgb()`). */
-function parse(color: string): Rgb | null {
-  const short = /^#([0-9a-f])([0-9a-f])([0-9a-f])$/i.exec(color);
-  if (short !== null) {
-    const [, r, g, b] = short;
-    return [r!, g!, b!].map(digit => parseInt(digit + digit, 16)) as [
-      number,
-      number,
-      number,
-    ];
-  }
-  const long = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(color);
-  if (long === null) return null;
-  const [, r, g, b] = long;
-  return [r!, g!, b!].map(pair => parseInt(pair, 16)) as [
-    number,
-    number,
-    number,
-  ];
+const WHITE: Rgb = [255, 255, 255];
+
+/**
+ * `#rgb`, `#rgba`, `#rrggbb` or `#rrggbbaa` as drawn over `over` (white when
+ * left out), or null for anything else (a name, `rgb()`).
+ */
+function parse(color: string, over: Rgb = WHITE): Rgb | null {
+  const digits = /^#([0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.exec(color)?.[1];
+  if (digits === undefined) return null;
+  const pairs =
+    digits.length <= 4
+      ? [...digits].map(digit => digit + digit)
+      : (digits.match(/../g) ?? []);
+  const [r, g, b, a] = pairs.map(pair => parseInt(pair, 16));
+  const rgb: Rgb = [r!, g!, b!];
+  return a === undefined ? rgb : round(mix(over, rgb, a / 255));
+}
+
+/** A colour on whole channels, as a hex writes it. */
+function round(rgb: Rgb): Rgb {
+  return rgb.map(Math.round) as unknown as Rgb;
 }
 
 function hex(rgb: Rgb): string {
@@ -63,7 +65,8 @@ function weakest(ink: Rgb, grounds: readonly Rgb[]): number {
 
 /**
  * The furthest `ink` moves toward `to`, up to `most` of the way, and still
- * `holds`; `ink` itself when no move does.
+ * `holds` once on whole channels, as it is written; `ink` itself when no
+ * move does.
  */
 function furthest(
   ink: Rgb,
@@ -71,29 +74,33 @@ function furthest(
   most: number,
   holds: (rgb: Rgb) => boolean,
 ): Rgb {
-  if (holds(mix(ink, to, most))) return mix(ink, to, most);
+  const at = (toward: number) => round(mix(ink, to, toward));
+  if (holds(at(most))) return at(most);
   let [low, high] = [0, most];
   for (let step = 0; step < 24; step++) {
     const middle = (low + high) / 2;
-    if (holds(mix(ink, to, middle))) low = middle;
+    if (holds(at(middle))) low = middle;
     else high = middle;
   }
-  return mix(ink, to, low);
+  return at(low);
 }
 
-/** The least `ink` moves toward `to` to hold; `to` itself when none does. */
+/**
+ * The least `ink` moves toward `to` to hold once on whole channels; `to`
+ * itself when none does.
+ */
 function nearest(ink: Rgb, to: Rgb, holds: (rgb: Rgb) => boolean): Rgb {
-  if (holds(ink)) return ink;
+  const at = (toward: number) => round(mix(ink, to, toward));
+  if (holds(at(0))) return at(0);
   let [low, high] = [0, 1];
   for (let step = 0; step < 24; step++) {
     const middle = (low + high) / 2;
-    if (holds(mix(ink, to, middle))) high = middle;
+    if (holds(at(middle))) high = middle;
     else low = middle;
   }
-  return mix(ink, to, high);
+  return at(high);
 }
 
-/** The inks the row map draws in. */
 /** How much a line is dimmed, by design: a disabled line, and a hidden one. */
 const DIM = { disabled: 0.48, hidden: 0.38 };
 
@@ -135,15 +142,20 @@ export interface MapInks {
  */
 export function mapInks(state: StyleState): MapInks {
   const { look, vars } = state;
+  // Each colour as it is drawn: a ground over white, an ink over its ground.
   const ground = parse(look.backgroundColor);
-  const tint = parse(vars["--bl-ac-highlight-bg"]);
-  const title = parse(look.titleColor);
-  const subtitle = parse(look.subtitleColor);
-  const pill = [look.pillForegroundColor, look.pillBackgroundColor].map(parse);
+  const on = (color: string, under: Rgb | null) =>
+    under === null ? null : parse(color, under);
+  const tint = on(vars["--bl-ac-highlight-bg"], ground);
+  const title = on(look.titleColor, ground);
+  const subtitle = on(look.subtitleColor, ground);
+  const pillGround = on(look.pillBackgroundColor, ground);
+  const pill = [on(look.pillForegroundColor, pillGround), pillGround];
+  const structureGround = on(look.structurePillBackgroundColor, ground);
   const structure = [
-    look.structurePillForegroundColor,
-    look.structurePillBackgroundColor,
-  ].map(parse);
+    on(look.structurePillForegroundColor, structureGround),
+    structureGround,
+  ];
   if (
     ground === null ||
     tint === null ||

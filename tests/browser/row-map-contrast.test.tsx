@@ -88,7 +88,7 @@ function pixelsIn(shot: Shot, box: DOMRect): Rgb[] {
  * How what is drawn in a box reads on its ground: the box's commonest colour
  * is its ground, and its ink the pixel that stands out from it most.
  */
-function measured(shot: Shot, box: DOMRect): number {
+function measured(shot: Shot, box: DOMRect, text?: Element): number {
   const pixels = pixelsIn(shot, box);
   const counts = new Map<string, { rgb: Rgb; count: number }>();
   for (const rgb of pixels) {
@@ -98,7 +98,48 @@ function measured(shot: Shot, box: DOMRect): number {
     counts.set(key, entry);
   }
   const ground = [...counts.values()].sort((a, b) => b.count - a.count)[0]!.rgb;
-  return Math.max(...pixels.map(rgb => ratio(rgb, ground)));
+  if (text === undefined) {
+    return Math.max(...pixels.map(rgb => ratio(rgb, ground)));
+  }
+  // Text's own ink only: the pixels between its ground and its colour as
+  // drawn, its line's dim included, so no border or square nearby counts.
+  const expected = drawnColour(text, ground);
+  const own = pixels.filter(rgb => distance(rgb, ground, expected) <= 30);
+  return Math.max(1, ...own.map(rgb => ratio(rgb, ground)));
+}
+
+/** An element's text colour as drawn over `ground`, through its dims. */
+function drawnColour(element: Element, ground: Rgb): Rgb {
+  const [r, g, b] = getComputedStyle(element)
+    .color.match(/\d+(\.\d+)?/g)!
+    .map(Number);
+  let opacity = 1;
+  for (let at: Element | null = element; at !== null; at = at.parentElement) {
+    opacity *= Number(getComputedStyle(at).opacity);
+  }
+  return [r!, g!, b!].map(
+    (channel, at) => ground[at]! + (channel - ground[at]!) * opacity,
+  ) as Rgb;
+}
+
+/** How far a colour lies from the line between two others. */
+function distance(rgb: Rgb, from: Rgb, to: Rgb): number {
+  const along = to.map((channel, at) => channel - from[at]!);
+  const length = along.reduce((sum, d) => sum + d * d, 0);
+  const t =
+    length === 0
+      ? 0
+      : Math.min(
+          1,
+          Math.max(
+            0,
+            along.reduce((sum, d, at) => sum + d * (rgb[at]! - from[at]!), 0) /
+              length,
+          ),
+        );
+  return Math.hypot(
+    ...rgb.map((channel, at) => channel - (from[at]! + along[at]! * t)),
+  );
 }
 
 /** Where an element's text is drawn. */
@@ -149,8 +190,13 @@ describe("the row map in every preset", () => {
           const wrap = host.querySelector<HTMLElement>(".row-map-wrap")!;
           const shot = await capture(wrap);
           const low: string[] = [];
-          const check = (what: string, box: DOMRect, least: number) => {
-            const got = measured(shot, box);
+          const check = (
+            what: string,
+            box: DOMRect,
+            least: number,
+            text?: Element,
+          ) => {
+            const got = measured(shot, box, text);
             if (got < least) low.push(`${what}: ${got.toFixed(2)} < ${least}`);
           };
           for (const kind of wrap.querySelectorAll<HTMLElement>(
@@ -164,12 +210,12 @@ describe("the row map in every preset", () => {
             for (const face of kind.querySelectorAll<HTMLElement>(
               '.row-map-place:not([data-closed]):not([data-field="empty"]) .row-map-face',
             )) {
-              check(`${face.textContent} of ${at}`, textBox(face), label);
+              check(`${face.textContent} of ${at}`, textBox(face), label, face);
             }
             for (const name of kind.querySelectorAll<HTMLElement>(
               ".row-map-name-long",
             )) {
-              check(`${name.textContent} of ${at}`, textBox(name), label);
+              check(`${name.textContent} of ${at}`, textBox(name), label, name);
             }
             for (const glyph of kind.querySelectorAll<HTMLElement>(
               ".row-map-icon svg",
@@ -190,7 +236,7 @@ describe("the row map in every preset", () => {
           for (const chip of wrap.querySelectorAll<HTMLElement>(
             ".row-map-tray .row-map-chip",
           )) {
-            check(`${chip.textContent} in Hidden`, textBox(chip), 3);
+            check(`${chip.textContent} in Hidden`, textBox(chip), 3, chip);
           }
           expect(
             wrap.querySelectorAll(".row-map-tray .row-map-chip").length,
@@ -198,7 +244,12 @@ describe("the row map in every preset", () => {
           for (const heading of wrap.querySelectorAll<HTMLElement>(
             ".row-map-drawer-label, .row-map-check-head",
           )) {
-            check(`heading ${heading.textContent}`, textBox(heading), 4.5);
+            check(
+              `heading ${heading.textContent}`,
+              textBox(heading),
+              4.5,
+              heading,
+            );
           }
           // No band shows inside anything the Hidden drawer holds: a row of
           // pixels just inside each one's top is all one ground.
