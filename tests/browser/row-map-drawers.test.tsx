@@ -3,12 +3,14 @@ import { useState } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
-import { commands, userEvent } from "vitest/browser";
+import { commands, page, userEvent } from "vitest/browser";
 
 import { mapInks } from "../../site/demo/map-ink";
 import { RowMap } from "../../site/demo/RowMap";
 import {
   DEFAULT_STYLE,
+  PRESETS,
+  applyPreset,
   withListed,
   type StyleState,
 } from "../../site/demo/style-state";
@@ -213,6 +215,54 @@ describe("the Hidden drawer's ground", () => {
       done();
     }
   });
+
+  for (const preset of ["Light", "Midnight"]) {
+    it(`draws its bands where they can be seen, in ${preset}`, async () => {
+      await page.viewport(1280, 700);
+      const state = applyPreset(
+        DEFAULT_STYLE,
+        PRESETS.find(each => each.name === preset)!,
+      );
+      const { host, done } = mount(state);
+      try {
+        const card = host.querySelector<HTMLElement>(
+          '[data-drawer="hidden"] .row-map',
+        )!;
+        const box = card.getBoundingClientRect();
+        const base64 = await page.screenshot({ element: card, save: false });
+        const image = new Image();
+        image.src = `data:image/png;base64,${base64}`;
+        await image.decode();
+        const canvas = document.createElement("canvas");
+        canvas.width = image.width;
+        canvas.height = image.height;
+        const context = canvas.getContext("2d")!;
+        context.drawImage(image, 0, 0);
+        expect(image.width / box.width).toBe(1);
+        // Along a row just inside the bands' inset, wherever nothing the
+        // drawer holds lies over them, the bands and their gaps differ.
+        const y = box.top + 9;
+        const seen: number[] = [];
+        for (let x = box.left + 12; x < box.right - 12; x++) {
+          if (document.elementFromPoint(x, y) !== card) continue;
+          const [r, g, b] = context.getImageData(
+            Math.round(x - box.left),
+            Math.round(y - box.top),
+            1,
+            1,
+          ).data;
+          seen.push(r! + g! + b!);
+        }
+        expect(seen.length).toBeGreaterThan(40);
+        expect(Math.max(...seen) - Math.min(...seen)).toBeGreaterThanOrEqual(
+          12,
+        );
+      } finally {
+        done();
+        await page.viewport(1280, 900);
+      }
+    });
+  }
 
   it("keeps every hidden line and field on a ground of its own, ringed, with no band in it", async () => {
     const row = DEFAULT_STYLE.rows.people;

@@ -2,7 +2,7 @@ import type { Route } from "@baselayer-sdk/autocomplete";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
-import { userEvent } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 
 import { RowMap } from "../../site/demo/RowMap";
 import {
@@ -94,6 +94,45 @@ function shadow(scroller: HTMLElement, edge: "before" | "after"): boolean {
   // Every line or none: a shade is the drawer's, not one line's.
   expect([0, all.length]).toContain(drawn);
   return drawn > 0;
+}
+
+/** Every line kind hidden: the Hidden drawer holds them all. */
+function noLine(route: Route): StyleState {
+  return {
+    ...DEFAULT_STYLE,
+    rows: {
+      ...DEFAULT_STYLE.rows,
+      [route]: { ...DEFAULT_STYLE.rows[route], list: [] },
+    },
+  };
+}
+
+/** The sum of each pixel's channels in a box of `element`'s shot. */
+async function brightness(element: HTMLElement) {
+  const base64 = await page.screenshot({ element, save: false });
+  const image = new Image();
+  image.src = `data:image/png;base64,${base64}`;
+  await image.decode();
+  const canvas = document.createElement("canvas");
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const context = canvas.getContext("2d")!;
+  context.drawImage(image, 0, 0);
+  const origin = element.getBoundingClientRect();
+  expect(image.width / origin.width).toBe(1);
+  return (left: number, top: number, right: number, bottom: number) => {
+    const data = context.getImageData(
+      Math.round(left - origin.left),
+      Math.round(top - origin.top),
+      Math.round(right - left),
+      Math.round(bottom - top),
+    ).data;
+    let sum = 0;
+    for (let at = 0; at < data.length; at += 4) {
+      sum += data[at]! + data[at + 1]! + data[at + 2]!;
+    }
+    return sum / (data.length / 4);
+  };
 }
 
 describe("a drawer that scrolls sideways", () => {
@@ -261,5 +300,90 @@ describe("a drawer that scrolls sideways", () => {
         }
       });
     }
+  }
+
+  it("darkens each line's box under its shades, at both edges", async () => {
+    await page.viewport(1280, 700);
+    const { shown, done } = mount(everyLine("people"), "people", 320);
+    try {
+      shown.scrollLeft = (shown.scrollWidth - shown.clientWidth) / 2;
+      shown.dispatchEvent(new Event("scroll"));
+      await faded();
+      const frame = shown.closest<HTMLElement>(".row-map-scroll-frame")!;
+      const shaded = await brightness(frame);
+      // The same lines, the same scroll, with no edge marked.
+      frame.removeAttribute("data-more-before");
+      frame.removeAttribute("data-more-after");
+      await faded();
+      const clear = await brightness(frame);
+      for (const kind of shown.querySelectorAll<HTMLElement>(".row-map-kind")) {
+        const line = kind
+          .querySelector(".row-map-kind-lines")!
+          .getBoundingClientRect();
+        const grip = kind
+          .querySelector(".row-map-grip-cell")!
+          .getBoundingClientRect();
+        const check = kind
+          .querySelector(".row-map-check-cell")!
+          .getBoundingClientRect();
+        const [top, bottom] = [line.top + 3, line.bottom - 3];
+        for (const [edge, left, right] of [
+          ["before", grip.right + 1, grip.right + 6],
+          ["after", check.left - 6, check.left - 1],
+        ] as const) {
+          expect(
+            clear(left, top, right, bottom) - shaded(left, top, right, bottom),
+            `${kind.dataset.relation} ${edge}`,
+          ).toBeGreaterThanOrEqual(6);
+        }
+      }
+    } finally {
+      done();
+      await page.viewport(1280, 900);
+    }
+  });
+
+  // A business's hidden lines fit at this width; these two scroll.
+  for (const route of ["people", "addresses"] as const) {
+    it(`never shows a hidden line's places under the Disabled column, scrolled or not, ${route} in 320px`, async () => {
+      const { host, done } = mount(noLine(route), route, 320);
+      try {
+        const hidden = host.querySelector<HTMLElement>(
+          '[data-drawer="hidden"] .row-map-scroll',
+        )!;
+        expect(hidden.scrollWidth).toBeGreaterThan(hidden.clientWidth + 20);
+        const kinds = [
+          ...hidden.querySelectorAll<HTMLElement>(".row-map-kind"),
+        ];
+        expect(kinds.length).toBeGreaterThan(0);
+        for (const left of [0, 40, hidden.scrollWidth]) {
+          hidden.scrollLeft = left;
+          await settle();
+          for (const kind of kinds) {
+            const cell = kind.querySelector<HTMLElement>(".row-map-check-cell");
+            expect(cell, kind.dataset.relation).not.toBeNull();
+            expect(getComputedStyle(cell!).backgroundColor).not.toBe(
+              "rgba(0, 0, 0, 0)",
+            );
+            const box = cell!.getBoundingClientRect();
+            for (const x of [box.left + 1, box.right - 1]) {
+              for (const y of [
+                box.top + 2,
+                (box.top + box.bottom) / 2,
+                box.bottom - 2,
+              ]) {
+                const top = document.elementFromPoint(x, y)!;
+                expect(
+                  cell!.contains(top),
+                  `at scrollLeft ${left}, (${x}, ${y}) is ${top.className}`,
+                ).toBe(true);
+              }
+            }
+          }
+        }
+      } finally {
+        done();
+      }
+    });
   }
 });

@@ -1,6 +1,7 @@
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
+import { userEvent } from "vitest/browser";
 
 import { contrast, mapInks } from "../../site/demo/map-ink";
 import { RowMap } from "../../site/demo/RowMap";
@@ -104,6 +105,42 @@ describe("a segment's icon toggle in the row map", () => {
       expect(style.backgroundColor).toBe("rgba(0, 0, 0, 0)");
       expect(getComputedStyle(live).borderTopStyle).toBe("solid");
       expect(frozen.title).toBe("Icon: on, on a hidden line");
+    } finally {
+      root.unmount();
+      host.remove();
+    }
+  });
+
+  it("rings a live toggle in a faint blue under the pointer, and a frozen one never", async () => {
+    const host = document.createElement("div");
+    host.style.width = "560px";
+    document.body.append(host);
+    const root = createRoot(host);
+    flushSync(() =>
+      root.render(
+        <RowMap state={DEFAULT_STYLE} onChange={() => {}} route="people" />,
+      ),
+    );
+    try {
+      const live = host.querySelector<HTMLButtonElement>(
+        '.row-map-icon[data-segment="businessName"]',
+      )!;
+      const frozen = host.querySelector<HTMLButtonElement>(
+        '.row-map-icon[data-segment="addressName"]',
+      )!;
+      expect(getComputedStyle(live).boxShadow).toBe("none");
+
+      await userEvent.hover(live);
+      // A 2px ring, the demo's blue at a little under half strength.
+      const ring = getComputedStyle(live).boxShadow;
+      expect(ring).toMatch(/ 0px 0px 0px 2px$/);
+      const alpha = /\/ ([\d.]+)\)|rgba\([^)]*, ([\d.]+)\)/.exec(ring);
+      expect(alpha, ring).not.toBeNull();
+      expect(Number(alpha![1] ?? alpha![2])).toBeCloseTo(0.45, 2);
+
+      await userEvent.hover(frozen);
+      expect(getComputedStyle(frozen).boxShadow).toBe("none");
+      expect(getComputedStyle(live).boxShadow).toBe("none");
     } finally {
       root.unmount();
       host.remove();
