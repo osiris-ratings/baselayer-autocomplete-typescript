@@ -10,7 +10,6 @@ import {
   DEFAULT_ICON_SEGMENTS,
   ADDRESS_ROW,
   PERSON_ROW,
-  ROUTES,
   businessPickFrom,
   defaultMint,
   drawnLayout,
@@ -39,7 +38,6 @@ import {
   type PersonSuggestion,
   type RelatedItem,
   type RelatedRole,
-  type RelatedSet,
   type Relation,
   type SuggestionByRelation,
 } from "@baselayer-sdk/autocomplete";
@@ -58,6 +56,7 @@ import { useSuggestionCombobox } from "./useBusinessCombobox";
 import {
   StateSquares,
   classes,
+  countsText,
   roleColumn,
   lookVariables,
   marked,
@@ -591,18 +590,6 @@ function GroupedView<R extends GroupedRoute>({
       : text.personRoles[of.item.role];
   }
 
-  /** The head's counts: every relation the row answers a count for. */
-  function countsText(row: GroupedRow): string | null {
-    const related: Partial<Record<Relation, RelatedSet>> = row.related;
-    const counts = ROUTES[route].includes.flatMap(relation => {
-      const count = related[relation]?.count;
-      return count === undefined || count === null
-        ? []
-        : [text.relationCounts[relation](count)];
-    });
-    return counts.length > 0 ? counts.join(" · ") : null;
-  }
-
   /** A field as drawn in `place` on a line, or nothing where the line has no value for it. */
   function field(
     name: string | null,
@@ -635,7 +622,8 @@ function GroupedView<R extends GroupedRoute>({
         );
       }
       case "counts": {
-        const counts = of.line === "head" ? countsText(of.row) : null;
+        const counts =
+          of.line === "head" ? countsText(route, of.row.related, text) : null;
         return (
           counts !== null && (
             <span
@@ -829,7 +817,9 @@ function GroupedView<R extends GroupedRoute>({
                 row.type === "person" &&
                 drawsField("firstAddress") &&
                 row.related.addresses.items.length > 0;
-              const counted = drawsField("counts") && countsText(row) !== null;
+              const counted =
+                drawsField("counts") &&
+                countsText(route, row.related, text) !== null;
               // What no option says, as the lines are drawn: the head's first
               // address and counts, and what each list leaves out.
               const describedBy = [

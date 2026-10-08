@@ -575,6 +575,7 @@ export const FIELD_WIRE: Record<RowField, readonly string[]> = {
     "related.people.items[].matched",
     "related.people.items[].role",
   ],
+  counts: ["related.people.count", "related.addresses.count"],
 };
 
 export type DropSpot = RowPlace | typeof TRAY;
@@ -586,6 +587,7 @@ export const CHOICE_LABELS: Record<PlaceChoice, string> = {
   structure: "Structure",
   address: "Address",
   people: "People",
+  counts: "Counts",
 };
 
 /**
@@ -608,6 +610,7 @@ export const BUSINESS_EDITOR: RowEditor<BusinessRowPlace, BusinessRowField> = {
     structure: CHOICE_LABELS.structure,
     address: CHOICE_LABELS.address,
     people: CHOICE_LABELS.people,
+    counts: CHOICE_LABELS.counts,
     personRole: "Role",
     addressRole: "Held as",
   },

@@ -228,6 +228,7 @@ describe("the Components fold", () => {
       "structure",
       "address",
       "people",
+      "counts",
     ]);
     expect(lineFields("businesses", "people")).toEqual(["personRole"]);
     expect(lineFields("people", "businesses")).toEqual([
@@ -246,6 +247,7 @@ describe("the Components fold", () => {
       "structure",
       "address",
       "people",
+      "counts",
     ]);
     expect(options.find(o => o.value === "states")?.label).toBe(
       "States, swaps with Title, right",
@@ -307,16 +309,17 @@ describe("the Components fold", () => {
 
   it("loses no field while its options are browsed, as arrow keys pick each one on Windows", () => {
     // Every field but the one picked last stays on the row: each step is a
-    // swap, and stepping back undoes it.
+    // swap, and stepping back undoes it. The counts, which the default row
+    // places nowhere, stay off it throughout.
     let layout = BUSINESS;
     for (const choice of ["people", "structure", "states"] as const) {
       layout = withPlaced(layout, "subtitle", choice);
-      expect(unplacedFields(layout), choice).toEqual([]);
+      expect(unplacedFields(layout), choice).toEqual(["counts"]);
     }
     for (const choice of ["structure", "people", "address"] as const) {
       layout = withPlaced(layout, "subtitle", choice);
     }
-    expect(unplacedFields(layout)).toEqual([]);
+    expect(unplacedFields(layout)).toEqual(["counts"]);
     expect(layout.subtitle).toBe("address");
   });
 
@@ -362,7 +365,7 @@ describe("dragging a field", () => {
   it("hides a field dropped on the tray, and places one dragged out of it", () => {
     const hidden = moveField(BUSINESS, "people", TRAY);
     expect(hidden).toEqual({ ...BUSINESS, subtitleTrailing: null });
-    expect(unplacedFields(hidden)).toEqual(["people"]);
+    expect(unplacedFields(hidden)).toEqual(["people", "counts"]);
 
     // From the tray onto a taken place: what that place held goes to the tray.
     const placed = moveField(hidden, "people", "subtitle");
@@ -371,7 +374,7 @@ describe("dragging a field", () => {
       subtitle: "people",
       subtitleTrailing: null,
     });
-    expect(unplacedFields(placed)).toEqual(["address"]);
+    expect(unplacedFields(placed)).toEqual(["address", "counts"]);
   });
 
   it("takes a field only where the row would draw it, and not on its own place", () => {

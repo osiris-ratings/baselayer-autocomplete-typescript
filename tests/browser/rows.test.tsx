@@ -358,7 +358,7 @@ describe("the rows, laid out", () => {
         }
       }
       expect(wrong.slice(0, 8)).toEqual([]);
-      expect(DRAWN_LAYOUTS).toHaveLength(541);
+      expect(DRAWN_LAYOUTS).toHaveLength(2836);
     },
   );
 

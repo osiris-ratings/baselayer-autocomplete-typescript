@@ -45,6 +45,7 @@ import { useSuggestionCombobox } from "./useBusinessCombobox";
 import {
   StateSquares,
   classes,
+  countsText,
   roleColumn,
   lookVariables,
   marked,
@@ -221,6 +222,7 @@ function DefaultRow({
   const address = addressLineOf(item);
   const people = peopleLineOf(item);
   const structure = structureLabel(item.structure, text.structures);
+  const counts = countsText("businesses", item.related, text);
   const matches = matchedOn(item, { state: stateFilter });
   const matchedStates = matches.flatMap(match =>
     match.kind === "state" ? match.states : [],
@@ -299,6 +301,16 @@ function DefaultRow({
           {people.role === "agent" ? text.agentSuffix : ""}
         </span>
       ),
+    counts: place =>
+      counts !== null && (
+        <span
+          className={cx("counts", "bl-ac-group-count")}
+          data-place={place}
+          data-testid="business-suggestion-counts"
+        >
+          {counts}
+        </span>
+      ),
   };
   const draw = (place: RowPlace): ReactNode => {
     const field = layout[place];
@@ -307,7 +319,8 @@ function DefaultRow({
   /** Whether a place draws text on this row, rather than a flag or nothing. */
   const drawsText = (place: RowPlace) =>
     layout[place] === "address" ||
-    (layout[place] === "people" && people !== null);
+    (layout[place] === "people" && people !== null) ||
+    (layout[place] === "counts" && counts !== null);
   /** Whether a place draws a flag on this row. */
   const drawsFlag = (place: RowPlace) =>
     layout[place] === "states" ||

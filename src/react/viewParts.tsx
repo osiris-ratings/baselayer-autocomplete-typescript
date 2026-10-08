@@ -5,13 +5,37 @@ import { Fragment, type CSSProperties, type ReactNode } from "react";
 
 import {
   DEFAULT_LOOK,
+  ROUTES,
   orderedStates,
   type BusinessStates,
   type HighlightPart,
   type Look,
+  type RelatedSet,
+  type Relation,
+  type Route,
 } from "@baselayer-sdk/autocomplete";
 
 import { disabledInks } from "./disabled";
+import type { AutocompleteMessages } from "./messages";
+
+/**
+ * A row's counts as one segment: how many of each relation its answer counted,
+ * in the route's order, or null when it counted none. A relation that was not
+ * expanded has no count, so it is left out.
+ */
+export function countsText(
+  route: Route,
+  related: Partial<Record<Relation, RelatedSet>>,
+  text: AutocompleteMessages,
+): string | null {
+  const counts = ROUTES[route].includes.flatMap(relation => {
+    const count = related[relation]?.count;
+    return count === undefined || count === null
+      ? []
+      : [text.relationCounts[relation](count)];
+  });
+  return counts.length > 0 ? counts.join(" · ") : null;
+}
 
 /** The parts of a view a host can give its own class, through `classNames`. */
 export type SlotName =

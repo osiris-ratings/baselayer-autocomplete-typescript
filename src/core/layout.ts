@@ -27,10 +27,16 @@ export type RowPlace = (typeof ROW_PLACES)[number];
 
 /**
  * What a place can show of a business: its states (the domicile first, then
- * `+N`), its legal structure, its lead address, and its officers or its
- * registered agent.
+ * `+N`), its legal structure, its lead address, its officers or its
+ * registered agent, and how many people and addresses it has.
  */
-export const ROW_FIELDS = ["states", "structure", "address", "people"] as const;
+export const ROW_FIELDS = [
+  "states",
+  "structure",
+  "address",
+  "people",
+  "counts",
+] as const;
 export type RowField = (typeof ROW_FIELDS)[number];
 
 /** The field each place shows, or null for an empty place. */
@@ -228,10 +234,14 @@ export function drawnRowLayout(layout: RowLayout): RowLayout {
   return drawnLayout(BUSINESS_HEAD, layout);
 }
 
-/** The related entity a field is drawn from; the states and the structure come on the row. */
-const FIELD_SOURCES: Partial<Record<RowField, Include>> = {
-  address: "addresses",
-  people: "people",
+/**
+ * The related entities a field is drawn from; the states and the structure
+ * come on the row, and the counts count every relation.
+ */
+const FIELD_SOURCES: Partial<Record<RowField, readonly Include[]>> = {
+  address: ["addresses"],
+  people: ["people"],
+  counts: ["people", "addresses"],
 };
 
 /**
@@ -245,9 +255,10 @@ export function includeForLayout(
 ): Include[] {
   const layout = resolveRowLayout(staged);
   const needed = new Set(
-    ROW_PLACES.map(place => layout[place]).map(field =>
-      field === null ? undefined : FIELD_SOURCES[field],
-    ),
+    ROW_PLACES.flatMap(place => {
+      const field = layout[place];
+      return field === null ? [] : (FIELD_SOURCES[field] ?? []);
+    }),
   );
   return ROUTES.businesses.includes.filter(relation => needed.has(relation));
 }

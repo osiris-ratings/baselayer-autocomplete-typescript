@@ -83,8 +83,9 @@ describe("the Components fold's row", () => {
           ".row-map-tray .row-map-chip",
         ),
       ].map(chip => chip.dataset.field);
-    // The officers' and the addresses' lines are switched off.
-    expect(tray()).toEqual([]);
+    // The officers' and the addresses' lines are switched off; the head's
+    // counts, placed nowhere by default, wait on the tray.
+    expect(tray()).toEqual(["counts"]);
 
     // The officers' line listed, their role taken off it: on the tray.
     const listed = withListed(DEFAULT_STYLE, "businesses", "people", true);
@@ -99,16 +100,16 @@ describe("the Components fold's row", () => {
       },
     };
     view.rerender(<RowMap state={roleOut} onChange={() => {}} />);
-    expect(tray()).toEqual(["personRole"]);
+    expect(tray()).toEqual(["counts", "personRole"]);
 
-    // The line switched off again: its fields go with it.
+    // The line switched off again: its fields go with it, the head's stay.
     view.rerender(
       <RowMap
         state={withListed(roleOut, "businesses", "people", false)}
         onChange={() => {}}
       />,
     );
-    expect(tray()).toEqual([]);
+    expect(tray()).toEqual(["counts"]);
   });
 
   it("swaps a field picked from a place's dropdown with the place's own", () => {

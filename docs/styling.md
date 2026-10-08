@@ -382,12 +382,13 @@ pinned to its inner side. Any field goes in any place, a badge place
 included: `{ titleBadge: null, subtitleTrailingBadge: "structure" }` draws
 the structure's flag just before the officers.
 
-| Field       | Draws                                                 |
-| ----------- | ----------------------------------------------------- |
-| `states`    | the state squares, the domicile first, then `+N`      |
-| `structure` | the structure's flag (below)                          |
-| `address`   | the lead address, or "No address on file"             |
-| `people`    | the officers, or the registered agent, marked as such |
+| Field       | Draws                                                    |
+| ----------- | -------------------------------------------------------- |
+| `states`    | the state squares, the domicile first, then `+N`         |
+| `structure` | the structure's flag (below)                             |
+| `address`   | the lead address, or "No address on file"                |
+| `people`    | the officers, or the registered agent, marked as such    |
+| `counts`    | how many people and addresses; placed nowhere by default |
 
 ```tsx
 <BusinessAutocomplete
@@ -446,8 +447,8 @@ where it is drawn,
 `data-place="title"`.
 
 The placed fields also decide what is fetched: `address` asks for the
-addresses and `people` for the people (officers and registered agents),
-while the states and the structure come on the row itself.
+addresses, `people` for the people (officers and registered agents) and
+`counts` for both, while the states and the structure come on the row itself.
 `includeForLayout(layout)` in the core says what a layout asks for. With
 neither placed, the autocomplete service refuses an empty `include`, so none is
 sent and its default, people and addresses, stands. A form that fills an address

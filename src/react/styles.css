@@ -261,6 +261,13 @@
   color: var(--bl-ac-subtitle);
 }
 
+/* A business row's counts give way as its other text does. */
+:is(.bl-ac-corner, .bl-ac-name-group) > .bl-ac-group-count {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .bl-ac-states {
   display: flex;
   gap: 0.25rem;
@@ -439,7 +446,13 @@
   :is(.bl-ac-address, .bl-ac-group-count, .bl-ac-icon),
 .bl-ac-group
   > .bl-ac-row:not([data-enabled])
-  :is(.bl-ac-address, .bl-ac-people, .bl-ac-also, .bl-ac-icon) {
+  :is(
+    .bl-ac-address,
+    .bl-ac-people,
+    .bl-ac-also,
+    .bl-ac-group-count,
+    .bl-ac-icon
+  ) {
   color: var(
     --bl-ac-disabled-text,
     color-mix(in srgb, var(--bl-ac-subtitle) 44%, var(--bl-ac-bg))

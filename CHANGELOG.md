@@ -91,6 +91,12 @@ release.
   `--bl-ac-disabled-head-weight`), so nothing disabled reads as bold or as a
   title to click; at 0 it keeps a pick's weight. Nothing fades under forced
   colours.
+- `counts` on a business row's head: how many people and addresses it has, `·`
+  between, as a person's and an address's heads say theirs (`bl-ac-group-count`,
+  `messages.relationCounts`). Any of the head's places takes it, and none does
+  by default, so the default row draws as it did. Placed, it asks for the people
+  and the addresses, as far as the session's scope grants them, and counts only
+  the relations the answer expanded.
 - One row model for all three searches: `BUSINESS_ROW`, `PERSON_ROW` and
   `ADDRESS_ROW` (`ROW_KINDS`), each a `RowKind`: its places
   (`BUSINESS_ROW_PLACES`, …), its fields by line (`BUSINESS_LINE_FIELDS`, …),
@@ -177,8 +183,9 @@ pnpm demo` runs it on made-up data with no network. In Styling, the row map
   typed unions pinned to the API's contract, and an unknown value is a
   `contract` error. A related item must be the entity its relation holds.
 - **Breaking:** `Look` gains `disabledDim`, `AutocompleteMessages` the messages
-  for the new rows, and `SlotName` the new slots, so a complete literal of any
-  of them needs them too.
+  for the new rows, `SlotName` the new slots and `RowField` `counts`, so a
+  complete literal of any of them, or a switch over every `RowField`, needs them
+  too.
 - **Breaking:** `AutocompleteErrorKind` gains `out_of_scope` and
   `route_unserved`, so a switch over it that ends in `never`, or a record keyed
   by it, needs them.

@@ -1409,6 +1409,8 @@ describe("the row's places and fields", () => {
         return "address";
       case "business-suggestion-officers":
         return "people";
+      case "business-suggestion-counts":
+        return "counts";
       default:
         return element.classList.contains("bl-ac-states") ? "states" : "name";
     }
@@ -1480,6 +1482,7 @@ describe("the row's places and fields", () => {
     structure: "C-Corp",
     address: "412 Wrenmoor Ln, Springfield, MO 65806",
     people: "Wesley Crane +1",
+    counts: "4 people · 2 addresses",
   };
 
   // What a place needs placed for its field to be drawn there: a badge its

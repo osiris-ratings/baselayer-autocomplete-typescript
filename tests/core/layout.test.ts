@@ -38,7 +38,13 @@ describe("a row's places and fields", () => {
   });
 
   it("names the fields a business row can show", () => {
-    expect(ROW_FIELDS).toEqual(["states", "structure", "address", "people"]);
+    expect(ROW_FIELDS).toEqual([
+      "states",
+      "structure",
+      "address",
+      "people",
+      "counts",
+    ]);
   });
 
   it("puts the structure after the name, the states at the right, the address and the people below", () => {
@@ -184,9 +190,9 @@ describe("resolveRowLayout", () => {
       }
     }
     expect(wrong.slice(0, 5)).toEqual([]);
-    expect(stagings).toHaveLength(6 ** 7);
-    // Every one of 6^7 stagings: slow on a loaded machine, so it has the time.
-  }, 30_000);
+    expect(stagings).toHaveLength(7 ** 7);
+    // Every one of 7^7 stagings: slow on a loaded machine, so it has the time.
+  }, 60_000);
 
   it("pins a flag to any corner's field, on its inner side", () => {
     expect(
@@ -324,9 +330,9 @@ describe("drawnRowLayout", () => {
         wrong.push(JSON.stringify(layout));
     }
     expect(wrong.slice(0, 5)).toEqual([]);
-    expect(layouts).toHaveLength(5 ** 7);
-    // Every one of 5^7 layouts: slow on a loaded machine, so it has the time.
-  }, 30_000);
+    expect(layouts).toHaveLength(6 ** 7);
+    // Every one of 6^7 layouts: slow on a loaded machine, so it has the time.
+  }, 60_000);
 });
 
 describe("ROW_LINES", () => {
