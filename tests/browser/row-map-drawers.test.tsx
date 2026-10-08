@@ -180,14 +180,21 @@ describe("the row map's drawers", () => {
 });
 
 describe("the Hidden drawer's ground", () => {
-  it("is faintly striped, clear of its border, and the Shown drawer is not", () => {
+  it("is banded faintly, in bands as wide as the gaps between them, clear of its border, and the Shown drawer is not", () => {
     const { host, done } = mount();
     try {
       const card = (drawer: string) =>
         host.querySelector<HTMLElement>(`[data-drawer="${drawer}"] .row-map`)!;
       const stripes = getComputedStyle(card("hidden"), "::before");
-      expect(stripes.backgroundImage).toContain("repeating-linear-gradient");
-      expect(stripes.backgroundImage).toContain("45deg");
+      const image = stripes.backgroundImage;
+      expect(image).toContain("repeating-linear-gradient");
+      // Slanting down to the left, the other way to a 45° line.
+      expect(image).toMatch(/-45deg|135deg/);
+      // A band and a gap of one width: colour from 0 to 6px, clear to 12px.
+      const stops = [...image.matchAll(/(\d+(?:\.\d+)?)px/g)].map(match =>
+        Number(match[1]),
+      );
+      expect(stops).toEqual([0, 6, 6, 12]);
       for (const side of ["top", "right", "bottom", "left"] as const) {
         expect(parseFloat(stripes[side])).toBeGreaterThanOrEqual(6);
         expect(parseFloat(stripes[side])).toBeLessThanOrEqual(8);
@@ -201,6 +208,55 @@ describe("the Hidden drawer's ground", () => {
       expect(Number(getComputedStyle(lines).zIndex)).toBeGreaterThan(
         Number(stripes.zIndex),
       );
+    } finally {
+      done();
+    }
+  });
+
+  it("keeps every hidden line and field on a ground of its own, ringed, with no band in it", async () => {
+    const row = DEFAULT_STYLE.rows.people;
+    const { host, done } = mount({
+      ...DEFAULT_STYLE,
+      rows: {
+        ...DEFAULT_STYLE.rows,
+        people: {
+          ...row,
+          layout: { ...row.layout, businessTrailing: null },
+        },
+      },
+    });
+    try {
+      const hidden = host.querySelector<HTMLElement>('[data-drawer="hidden"]')!;
+      const grounds = [
+        ...hidden.querySelectorAll<HTMLElement>(
+          ".row-map-kind-ground, .row-map-chip, .row-map-drawer-label",
+        ),
+      ];
+      expect(grounds.length).toBeGreaterThanOrEqual(3);
+      for (const ground of grounds) {
+        const style = getComputedStyle(ground);
+        expect(style.backgroundColor, ground.className).toBe(
+          rgb(DEFAULT_STYLE.look.backgroundColor),
+        );
+        expect(style.boxShadow, ground.className).toContain(
+          rgb(DEFAULT_STYLE.look.backgroundColor),
+        );
+      }
+      // Each hidden line's ground lies under the whole of its line's box.
+      for (const kind of hidden.querySelectorAll<HTMLElement>(
+        ".row-map-kind",
+      )) {
+        const under = kind
+          .querySelector(".row-map-kind-ground")!
+          .getBoundingClientRect();
+        const box = kind
+          .querySelector(".row-map-kind-lines")!
+          .getBoundingClientRect();
+        expect(under.left).toBeLessThanOrEqual(box.left + 0.5);
+        expect(under.right).toBeGreaterThanOrEqual(box.right - 0.5);
+        expect(under.top).toBeLessThanOrEqual(box.top + 0.5);
+        expect(under.bottom).toBeGreaterThanOrEqual(box.bottom - 0.5);
+      }
     } finally {
       done();
     }

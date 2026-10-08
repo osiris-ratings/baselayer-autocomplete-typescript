@@ -200,6 +200,29 @@ describe("the row map in every preset", () => {
           )) {
             check(`heading ${heading.textContent}`, textBox(heading), 4.5);
           }
+          // No band shows inside anything the Hidden drawer holds: a row of
+          // pixels just inside each one's top is all one ground.
+          const banded: string[] = [];
+          for (const segment of wrap.querySelectorAll<HTMLElement>(
+            '[data-drawer="hidden"] :is(.row-map-place:not([data-closed]) .row-map-face, .row-map-name, .row-map-chip)',
+          )) {
+            const box = segment.getBoundingClientRect();
+            // Clear of the corners, however round the look draws them.
+            const inset = Math.max(4, box.height / 2);
+            const row = pixelsIn(
+              shot,
+              new DOMRect(
+                box.left + inset,
+                box.top + 3,
+                box.width - 2 * inset,
+                1,
+              ),
+            );
+            if (new Set(row.map(rgb => rgb.join())).size > 1) {
+              banded.push(segment.textContent || segment.className);
+            }
+          }
+          expect(banded).toEqual([]);
           expect(low).toEqual([]);
         } finally {
           root.unmount();

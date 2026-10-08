@@ -122,6 +122,8 @@ export interface MapInks {
   ink: string;
   /** What only has to be seen: a grip, an empty place, an icon left off. */
   soft: string;
+  /** Fainter still, but there: the Disabled column's guide. */
+  guide: string;
   /** The opacity of a disabled line, and of a hidden one. */
   dim: { disabled: number; hidden: number };
 }
@@ -152,7 +154,12 @@ export function mapInks(state: StyleState): MapInks {
     // A colour this cannot read: the stylesheet mixes, with no floor.
     const mixed = (share: number) =>
       `color-mix(in srgb, ${look.titleColor} ${share}%, ${look.backgroundColor})`;
-    return { ink: mixed(85), soft: mixed(60), dim: { ...DIM } };
+    return {
+      ink: mixed(85),
+      soft: mixed(60),
+      guide: mixed(25),
+      dim: { ...DIM },
+    };
   }
   const both = [ground, tint];
   // As little of the title's colour as reads as text: toward the title is
@@ -175,6 +182,7 @@ export function mapInks(state: StyleState): MapInks {
   return {
     ink: hex(ink),
     soft: hex(soft),
+    guide: hex(furthest(soft, ground, 0.95, rgb => ratio(rgb, ground) >= 1.5)),
     dim: { disabled: DIM.disabled, hidden },
   };
 }

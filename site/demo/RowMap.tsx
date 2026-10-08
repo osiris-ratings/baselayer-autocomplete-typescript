@@ -102,6 +102,7 @@ function rowMapColors(state: StyleState): CSSProperties {
   return {
     "--map-ink": inks.ink,
     "--map-soft": inks.soft,
+    "--map-guide": inks.guide,
     "--map-dim-disabled": String(inks.dim.disabled),
     "--map-dim-hidden": String(inks.dim.hidden),
     "--map-bg": look.backgroundColor,
@@ -839,6 +840,10 @@ function KindRowMap<P extends string, F extends string>({
             : undefined
         }
       >
+        {!isListed && (
+          // A hidden line's own ground, over the drawer's bands.
+          <span className="row-map-kind-ground" aria-hidden="true" />
+        )}
         <span className="row-map-grip-cell">
           {relation === null ? (
             // A row always shows its head: no grip, but its room.

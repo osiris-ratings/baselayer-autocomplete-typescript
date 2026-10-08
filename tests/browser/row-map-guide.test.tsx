@@ -3,7 +3,7 @@ import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
 
-import { mapInks } from "../../site/demo/map-ink";
+import { contrast, mapInks } from "../../site/demo/map-ink";
 import { RowMap } from "../../site/demo/RowMap";
 import {
   DEFAULT_STYLE,
@@ -83,7 +83,7 @@ describe("the Disabled column's guide", () => {
               const line = part.getBoundingClientRect();
               segments.push(line);
               expect(getComputedStyle(part).backgroundColor).toBe(
-                rgb(mapInks(state).soft),
+                rgb(mapInks(state).guide),
               );
               expect(line.width).toBeCloseTo(1, 0);
               // On the checkbox's centre, within the column.
@@ -104,10 +104,17 @@ describe("the Disabled column's guide", () => {
               }
             }
           });
-          // It starts just under the heading.
+          // It starts a clear gap under the heading.
           const first = segments[0]!;
-          expect(first.top).toBeGreaterThanOrEqual(heading.bottom - 0.5);
-          expect(first.top - heading.bottom).toBeLessThanOrEqual(1);
+          expect(first.top - heading.bottom).toBeGreaterThanOrEqual(7.5);
+          expect(first.top - heading.bottom).toBeLessThanOrEqual(9);
+          // Fainter than the soft ink, and still there to be seen.
+          const inks = mapInks(state);
+          const ground = state.look.backgroundColor;
+          expect(contrast(inks.guide, ground)).toBeLessThan(
+            contrast(inks.soft, ground),
+          );
+          expect(contrast(inks.guide, ground)).toBeGreaterThanOrEqual(1.3);
           // The Hidden drawer has none.
           expect(
             host.querySelectorAll('[data-drawer="hidden"] .row-map-guide')

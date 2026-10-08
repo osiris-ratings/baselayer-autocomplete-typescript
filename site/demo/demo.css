@@ -636,8 +636,9 @@
   scroll-padding-inline: var(--map-grip-cell) var(--map-check-cell);
 }
 
-/* Hidden is faintly striped, a margin clear of its border, so it reads as
-   set aside without drowning what is in it, which lies over the stripes. */
+/* Hidden's background is faint bands, each as wide as the gap after it, a
+   margin clear of its border, so it reads as set aside. What it holds lies
+   over the bands, each on a ground of its own, ringed in the card's colour. */
 .row-map-hidden {
   position: relative;
 }
@@ -648,12 +649,35 @@
   inset: 7px;
   border-radius: 4px;
   background: repeating-linear-gradient(
-    45deg,
-    color-mix(in srgb, var(--map-soft) 16%, transparent) 0 1px,
-    transparent 1px 7px
+    -45deg,
+    color-mix(in srgb, var(--map-soft) 9%, transparent) 0 6px,
+    transparent 6px 12px
   );
   content: "";
   pointer-events: none;
+}
+
+.row-map-hidden .row-map-kind {
+  position: relative;
+}
+
+.row-map-kind-ground {
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  right: var(--map-check-cell);
+  bottom: 0;
+  left: calc(var(--map-grip-cell) + var(--map-indent));
+  background: var(--map-bg, var(--paper));
+  border-radius: var(--map-line-radius);
+  box-shadow: 0 0 0 2px var(--map-bg, var(--paper));
+}
+
+.row-map-hidden .row-map-chip,
+.row-map-hidden .row-map-drawer-label,
+.row-map-hidden .row-map-drawer-hint {
+  background: var(--map-bg, var(--paper));
+  box-shadow: 0 0 0 2px var(--map-bg, var(--paper));
 }
 
 .row-map-hidden > .row-map-scroll-frame,
@@ -922,7 +946,7 @@
   position: absolute;
   left: calc(var(--map-col-gap) + (100% - var(--map-col-gap)) / 2);
   width: 1px;
-  background: var(--map-soft);
+  background: var(--map-guide);
   pointer-events: none;
 }
 
@@ -930,6 +954,11 @@
   /* Up through the gap between this line and the one above it. */
   top: calc(-1 * var(--map-row-gap));
   bottom: calc(50% + 7px + 4px);
+}
+
+/* Under the heading, a clear gap first. */
+.row-map-head + .row-map-kind .row-map-guide[data-part="above"] {
+  top: 0;
 }
 
 .row-map-guide[data-part="below"] {
