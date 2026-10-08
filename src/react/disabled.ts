@@ -21,6 +21,12 @@ export const DISABLED_TEXT_KEEPS = 0.4;
 /** The least its other text and its icon keep, by the formula. */
 export const DISABLED_TEXT_FLOOR = 1.8;
 
+/**
+ * How far a match mark's colour moves toward the ground per unit of
+ * `disabledDim`: a third of the way by default, so it keeps its hue.
+ */
+export const DISABLED_MARK_FADE = 0.55;
+
 /** A look's `#rgb`, `#rrggbb` or `#rrggbbaa`: its colour, and its alpha. */
 function parse(hex: string): { rgb: Rgb; alpha: number } {
   const digits = hex.slice(1);
@@ -103,6 +109,11 @@ export interface DisabledInks {
   nameShare: number;
   /** How much of the subtitle's colour `text` keeps, in percent. */
   textShare: number;
+  /**
+   * How much of its own colour a match mark keeps, in percent: its hue, a
+   * little faded toward the ground (`--bl-ac-disabled-mark`).
+   */
+  markShare: number;
 }
 
 /**
@@ -142,5 +153,6 @@ export function disabledInks(look: Look): DisabledInks {
     text: text.hex,
     nameShare: name.kept,
     textShare: text.kept,
+    markShare: Math.round((1 - DISABLED_MARK_FADE * dim) * 1000) / 10,
   };
 }

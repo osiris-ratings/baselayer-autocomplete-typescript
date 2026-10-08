@@ -427,6 +427,82 @@
   opacity: var(--bl-ac-disabled-opacity, 0.52);
 }
 
+/* A match mark on a disabled line or head keeps its hue, a little faded
+   toward the ground (`--bl-ac-disabled-mark`, by the look's `disabledDim`):
+   its underline, its fill or its ink, whichever the emphasis draws. */
+:is(.bl-ac-group-head, .bl-ac-group-line):not([data-enabled])
+  [data-emphasis="underline"]
+  .bl-ac-mark,
+.bl-ac-group
+  > .bl-ac-row:not([data-enabled])
+  [data-emphasis="underline"]
+  .bl-ac-mark {
+  text-decoration-color: color-mix(
+    in srgb,
+    var(--bl-ac-mark, var(--bl-ac-underline)) var(--bl-ac-disabled-mark, 67%),
+    var(--bl-ac-bg)
+  );
+}
+
+:is(.bl-ac-group-head, .bl-ac-group-line):not([data-enabled])
+  [data-emphasis="background"]
+  .bl-ac-mark,
+.bl-ac-group
+  > .bl-ac-row:not([data-enabled])
+  [data-emphasis="background"]
+  .bl-ac-mark {
+  background: color-mix(
+    in srgb,
+    var(--bl-ac-mark, var(--bl-ac-marker)) var(--bl-ac-disabled-mark, 67%),
+    var(--bl-ac-bg)
+  );
+}
+
+:is(.bl-ac-group-head, .bl-ac-group-line):not([data-enabled])
+  .bl-ac-name[data-emphasis="ink"]
+  > .bl-ac-mark,
+.bl-ac-group
+  > .bl-ac-row:not([data-enabled])
+  .bl-ac-name[data-emphasis="ink"]
+  > .bl-ac-mark {
+  color: color-mix(
+    in srgb,
+    var(--bl-ac-mark, var(--bl-ac-ink-mark, var(--bl-ac-title)))
+      var(--bl-ac-disabled-mark, 67%),
+    var(--bl-ac-bg)
+  );
+}
+
+.bl-ac[data-mark-color]
+  :is(.bl-ac-group-head, .bl-ac-group-line):not([data-enabled])
+  .bl-ac-name[data-emphasis="weight"]
+  > .bl-ac-mark,
+.bl-ac[data-mark-color]
+  .bl-ac-group
+  > .bl-ac-row:not([data-enabled])
+  .bl-ac-name[data-emphasis="weight"]
+  > .bl-ac-mark {
+  color: color-mix(
+    in srgb,
+    var(--bl-ac-mark) var(--bl-ac-disabled-mark, 67%),
+    var(--bl-ac-bg)
+  );
+}
+
+.bl-ac-group
+  > .bl-ac-row:not([data-enabled])
+  :is(.bl-ac-also, .bl-ac-address, .bl-ac-people):is(
+    [data-emphasis="ink"],
+    [data-emphasis="weight"]
+  )
+  .bl-ac-mark {
+  color: color-mix(
+    in srgb,
+    var(--bl-ac-mark, var(--bl-ac-also-mark)) var(--bl-ac-disabled-mark, 67%),
+    var(--bl-ac-bg)
+  );
+}
+
 /* Forced colours draw the text in the system's own; fading it would not. */
 @media (forced-colors: active) {
   .bl-ac-group-line:not([data-enabled]) :is(.bl-ac-states, .bl-ac-icon),

@@ -70,6 +70,7 @@ export function lookVariables(look: Look): CSSProperties {
     const inks = disabledInks(look);
     vars["--bl-ac-disabled-filter"] = inks.filter;
     vars["--bl-ac-disabled-opacity"] = inks.opacity;
+    vars["--bl-ac-disabled-mark"] = `${inks.markShare}%`;
   }
   if (
     look.disabledDim !== DEFAULT_LOOK.disabledDim ||

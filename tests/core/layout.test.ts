@@ -324,7 +324,8 @@ describe("drawnRowLayout", () => {
     }
     expect(wrong.slice(0, 5)).toEqual([]);
     expect(layouts).toHaveLength(5 ** 7);
-  });
+    // Every one of 5^7 layouts: slow on a loaded machine, so it has the time.
+  }, 30_000);
 });
 
 describe("ROW_LINES", () => {

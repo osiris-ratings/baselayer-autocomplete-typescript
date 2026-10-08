@@ -452,6 +452,9 @@ describe("a match mark on a head that is not a pick", () => {
     );
     return {
       mark: host.querySelector<HTMLElement>('[role="group"] .bl-ac-mark')!,
+      ground: rgbOf(
+        getComputedStyle(host.querySelector(".bl-ac-menu")!).backgroundColor,
+      ),
       done() {
         root.unmount();
         host.remove();
@@ -459,26 +462,89 @@ describe("a match mark on a head that is not a pick", () => {
     };
   }
 
+  /** The mark's colour that the emphasis draws in. */
+  const markColour = (mark: HTMLElement, emphasis: string) => {
+    const style = getComputedStyle(mark);
+    return rgbOf(
+      emphasis === "underline"
+        ? style.textDecorationColor
+        : emphasis === "background"
+          ? style.backgroundColor
+          : style.color,
+    );
+  };
+
+  const cases: [string, LookInput, "person" | "business"][] = [];
   for (const preset of PRESETS.filter(
     each => each.name === "Light" || each.name === "Midnight",
   )) {
     for (const search of ["person", "business"] as const) {
-      it(`keeps the look's match colour on a ${search}'s head, on ${preset.name}`, () => {
-        const enabled = drawMarked(search, true, preset.look);
-        const line = getComputedStyle(enabled.mark).textDecorationColor;
-        enabled.done();
-        const disabled = drawMarked(search, false, preset.look);
-        try {
-          expect(disabled.mark).not.toBeNull();
-          expect(getComputedStyle(disabled.mark).textDecorationColor).toBe(
-            line,
-          );
-          // Nothing between it and the menu greys what it is drawn in.
-          expect(unfiltered(disabled.mark)).toBe(true);
-        } finally {
-          disabled.done();
-        }
-      });
+      cases.push([preset.name, preset.look, search]);
     }
   }
+  const light = PRESETS.find(each => each.name === "Light")!.look;
+  for (const emphasis of ["background", "ink"] as const) {
+    cases.push([
+      `Light, ${emphasis}`,
+      { ...light, matchEmphasis: emphasis },
+      "person",
+    ]);
+  }
+
+  for (const [name, look, search] of cases) {
+    it(`keeps its hue, a little faded, on a ${search}'s head, on ${name}`, () => {
+      const emphasis = String(look.matchEmphasis ?? "underline");
+      const enabled = drawMarked(search, true, look);
+      const was = markColour(enabled.mark, emphasis);
+      const ground = enabled.ground;
+      enabled.done();
+      const disabled = drawMarked(search, false, look);
+      try {
+        const now = markColour(disabled.mark, emphasis);
+        expect(Math.abs(hueDistance(hue(now), hue(was)))).toBeLessThan(12);
+        // Lighter: at least a fifth of its contrast above the flat ground gone.
+        const lost =
+          (contrast(was, ground) - contrast(now, ground)) /
+          (contrast(was, ground) - 1);
+        expect(lost).toBeGreaterThan(0.2);
+        if (emphasis !== "background") {
+          expect(contrast(now, ground)).toBeGreaterThanOrEqual(2);
+        }
+        // Nothing between it and the menu greys what it is drawn in.
+        expect(unfiltered(disabled.mark)).toBe(true);
+      } finally {
+        disabled.done();
+      }
+    });
+  }
 });
+
+/** A computed colour, `rgb()`, `rgba()` or `color(srgb …)`, as 0–255 channels. */
+function rgbOf(color: string): Rgb {
+  const srgb = /color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)/.exec(color);
+  if (srgb !== null) {
+    return [1, 2, 3].map(at => Number(srgb[at]) * 255) as Rgb;
+  }
+  const [r, g, b] = color.match(/[\d.]+/g)!.map(Number);
+  return [r!, g!, b!];
+}
+
+/** An sRGB colour's hue, in degrees. */
+function hue([r, g, b]: Rgb): number {
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const d = max - min;
+  if (d === 0) return 0;
+  const h =
+    max === r
+      ? ((g - b) / d) % 6
+      : max === g
+        ? (b - r) / d + 2
+        : (r - g) / d + 4;
+  return (h * 60 + 360) % 360;
+}
+
+function hueDistance(a: number, b: number): number {
+  const d = Math.abs(a - b) % 360;
+  return d > 180 ? 360 - d : d;
+}

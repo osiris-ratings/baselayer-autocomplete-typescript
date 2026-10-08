@@ -204,6 +204,7 @@ describe("a disabled line", () => {
     expect(flat).toContain(
       `opacity: var(--bl-ac-disabled-opacity, ${inks.opacity});`,
     );
+    expect(flat).toContain(`var(--bl-ac-disabled-mark, ${inks.markShare}%)`);
   });
 
   it("fades nothing at 0, and the default far enough to read as inactive", () => {

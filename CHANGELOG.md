@@ -77,9 +77,9 @@ release.
   pick, fades, 0 to 1 and 0.6 by default, so it reads as inactive: a person's
   and an address's heads by default. It drains the colour of its squares, flag
   and icons, fades its text toward the menu's ground and dims its state squares,
-  a match mark keeping the look's colour, with floors worked out from the look's
-  colours: a name keeps 4.6:1 (3:1 or more as drawn) and the rest 40% of its
-  contrast, at least 1.8:1. Nothing fades under forced colours.
+  a match mark keeping its hue a little faded, with floors worked out from the
+  look's colours: a name keeps 4.6:1 (3:1 or more as drawn) and the rest 40% of
+  its contrast, at least 1.8:1. Nothing fades under forced colours.
 - One row model for all three searches: `BUSINESS_ROW`, `PERSON_ROW` and
   `ADDRESS_ROW` (`ROW_KINDS`), each a `RowKind`: its places
   (`BUSINESS_ROW_PLACES`, …), its fields by line (`BUSINESS_LINE_FIELDS`, …),
