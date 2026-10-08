@@ -142,8 +142,8 @@ describe("the row map's drawers", () => {
       }
       expect(lines("businesses").opacity).toBe("1");
       // The person is shown, and disabled by default.
-      expect(lines("head").opacity).toBe("0.58");
-      expect(Number(lines("addresses").opacity)).toBeLessThan(0.58);
+      expect(lines("head").opacity).toBe("0.48");
+      expect(Number(lines("addresses").opacity)).toBeLessThan(0.48);
       // The controls are never greyed.
       for (const [relation, controls] of [
         ["head", [".row-map-check-cell", ".row-map-grip-cell"]],

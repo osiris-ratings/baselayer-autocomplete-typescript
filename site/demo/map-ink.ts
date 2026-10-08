@@ -95,7 +95,7 @@ function nearest(ink: Rgb, to: Rgb, holds: (rgb: Rgb) => boolean): Rgb {
 
 /** The inks the row map draws in. */
 /** How much a line is dimmed, by design: a disabled line, and a hidden one. */
-const DIM = { disabled: 0.58, hidden: 0.45 };
+const DIM = { disabled: 0.48, hidden: 0.38 };
 
 /** An ink on its ground, and the least contrast it is to keep when dimmed. */
 interface Kept {
@@ -169,9 +169,9 @@ export function mapInks(state: StyleState): MapInks {
   const ink = nearest(subtitle, title, rgb => weakest(rgb, both) >= 7);
   const soft = furthest(ink, ground, 0.45, rgb => weakest(rgb, both) >= 4.5);
   const kept: Kept[] = [
-    { ink, on: ground, floor: 2.5 },
-    { ink: pill[0]!, on: pill[1]!, floor: 2.15 },
-    { ink: structure[0]!, on: structure[1]!, floor: 2.15 },
+    { ink, on: ground, floor: 2 },
+    { ink: pill[0]!, on: pill[1]!, floor: 1.75 },
+    { ink: structure[0]!, on: structure[1]!, floor: 1.75 },
   ];
   // A dimmed line may read poorly, as a disabled one does in the menu, but
   // never vanish: a look that would lose a hidden line dims it less.

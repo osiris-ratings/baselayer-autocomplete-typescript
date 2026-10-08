@@ -688,7 +688,12 @@
 
 /* Hidden holds listed lines only: its title starts where theirs do. */
 .row-map-hidden .row-map-drawer-label {
-  padding-left: calc(var(--map-indent) + var(--map-box-pad));
+  margin-left: calc(
+    var(--map-indent) + var(--map-box-pad) - var(--map-ground-pad)
+  );
+  /* As much room after the text as before it: its last letter's spacing
+     is room already. */
+  padding: 0 calc(var(--map-ground-pad) - 0.08em) 0 var(--map-ground-pad);
 }
 
 .row-map-head,
@@ -762,6 +767,10 @@
 .row-map-wrap {
   --map-grip: 12px;
   --map-row-gap: 8px;
+  /* The room each side of a heading or a note on a ground of its own. */
+  --map-ground-pad: 5px;
+  /* One gap down the Disabled column: heading, line, box, line, box. */
+  --map-guide-gap: 6px;
   /* The checkbox and a little room: its heading may run left of it. */
   --map-check: 28px;
   --map-col-gap: 6px;
@@ -838,8 +847,10 @@
 
 .row-map-drawer-hint {
   grid-column: 2;
-  margin: 0;
-  padding: 6px 0 6px calc(var(--map-indent) + var(--map-box-pad));
+  justify-self: start;
+  margin: 4px 0 4px
+    calc(var(--map-indent) + var(--map-box-pad) - var(--map-ground-pad));
+  padding: 2px var(--map-ground-pad);
   color: var(--map-ink);
   font-size: 12px;
 }
@@ -865,11 +876,11 @@
 }
 
 .row-map-kind[data-state="disabled"] .row-map-kind-lines {
-  opacity: var(--map-dim-disabled, 0.58);
+  opacity: var(--map-dim-disabled, 0.48);
 }
 
 .row-map-kind[data-state="hidden"] .row-map-kind-lines {
-  opacity: var(--map-dim-hidden, 0.45);
+  opacity: var(--map-dim-hidden, 0.38);
 }
 
 .row-map-kind[data-state="hidden"] .row-map-place :is(select, .row-map-face) {
@@ -953,7 +964,7 @@
 .row-map-guide[data-part="above"] {
   /* Up through the gap between this line and the one above it. */
   top: calc(-1 * var(--map-row-gap));
-  bottom: calc(50% + 7px + 4px);
+  bottom: calc(50% + 7px + var(--map-guide-gap));
 }
 
 /* Under the heading, a clear gap first. */
@@ -962,7 +973,7 @@
 }
 
 .row-map-guide[data-part="below"] {
-  top: calc(50% + 7px + 4px);
+  top: calc(50% + 7px + var(--map-guide-gap));
   bottom: 0;
 }
 

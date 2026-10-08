@@ -26,10 +26,10 @@ describe("the row map's inks, from the look", () => {
         expect(contrast(inks.ink, on)).toBeGreaterThanOrEqual(4.5);
         expect(contrast(inks.soft, on)).toBeGreaterThanOrEqual(3);
       }
-      // A disabled line is dimmed at 0.58 and a hidden one at 0.45, or
+      // A disabled line is dimmed at 0.48 and a hidden one at 0.38, or
       // less where a look would lose a hidden line altogether.
-      expect(inks.dim.disabled).toBe(0.58);
-      expect(inks.dim.hidden).toBeGreaterThanOrEqual(0.45);
+      expect(inks.dim.disabled).toBe(0.48);
+      expect(inks.dim.hidden).toBeGreaterThanOrEqual(0.38);
       expect(inks.dim.hidden).toBeLessThan(inks.dim.disabled);
     });
   }

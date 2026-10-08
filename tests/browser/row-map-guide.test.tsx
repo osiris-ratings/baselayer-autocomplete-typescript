@@ -104,10 +104,10 @@ describe("the Disabled column's guide", () => {
               }
             }
           });
-          // It starts a clear gap under the heading.
+          // It starts under the heading (by how much, the spacing test
+          // measures from the heading's ink).
           const first = segments[0]!;
-          expect(first.top - heading.bottom).toBeGreaterThanOrEqual(7.5);
-          expect(first.top - heading.bottom).toBeLessThanOrEqual(9);
+          expect(first.top).toBeGreaterThan(heading.bottom - 6);
           // Fainter than the soft ink, and still there to be seen.
           const inks = mapInks(state);
           const ground = state.look.backgroundColor;

@@ -77,6 +77,28 @@ function relationOf(item: string): Relation | null {
 const SHOWN = "shown";
 const HIDDEN = "hidden";
 
+/**
+ * Where a heading's ink ends, measured on its own font: its line's leading
+ * and its face both move it. Null with no canvas to measure on.
+ */
+function inkBottom(label: HTMLElement): number | null {
+  const context = document.createElement("canvas").getContext("2d");
+  if (context === null) return null;
+  const style = getComputedStyle(label);
+  context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+  const text = label.textContent ?? "";
+  const metrics = context.measureText(
+    style.textTransform === "uppercase" ? text.toUpperCase() : text,
+  );
+  const glyphs = metrics.fontBoundingBoxAscent + metrics.fontBoundingBoxDescent;
+  const line = parseFloat(style.lineHeight);
+  const top =
+    label.getBoundingClientRect().top +
+    parseFloat(style.paddingTop) +
+    ((Number.isNaN(line) ? glyphs : line) - glyphs) / 2;
+  return top + metrics.fontBoundingBoxAscent + metrics.actualBoundingBoxDescent;
+}
+
 /** Marks a scroller's frame with the edges there is more beyond. */
 function markEdges(scroller: HTMLElement) {
   const frame = scroller.parentElement!;
@@ -806,6 +828,42 @@ function KindRowMap<P extends string, F extends string>({
       lifted.style.transform = `translateY(${(at - from) * step}px)`;
     }
   }, [carried, over, pointerY]);
+  // The Disabled column's guide starts one gap under its heading's ink,
+  // wherever the heading's font puts that; it is measured again once the
+  // page's fonts have come.
+  const [, fontsCame] = useState(0);
+  useEffect(() => {
+    void document.fonts?.ready.then(() => fontsCame(count => count + 1));
+  }, []);
+  // Each segment ends one gap from its box's painted edges, which a box
+  // drawn on whole pixels puts where its stylesheet's halves would not.
+  useLayoutEffect(() => {
+    const scroller = shownScroller.current;
+    const label = scroller?.querySelector<HTMLElement>(".row-map-check-head");
+    if (scroller == null || label == null) return;
+    const parts = [...scroller.querySelectorAll<HTMLElement>(".row-map-guide")];
+    for (const part of parts) {
+      part.style.top = "";
+      part.style.bottom = "";
+    }
+    const ink = inkBottom(label);
+    if (ink === null || parts.length === 0) return;
+    const gap = parseFloat(
+      getComputedStyle(parts[0]!).getPropertyValue("--map-guide-gap"),
+    );
+    parts.forEach((part, at) => {
+      const cell = part.parentElement!.getBoundingClientRect();
+      const box = part
+        .parentElement!.querySelector(".row-map-check")!
+        .getBoundingClientRect();
+      if (part.dataset.part === "above") {
+        if (at === 0) part.style.top = `${ink + gap - cell.top}px`;
+        part.style.bottom = `${cell.bottom - (Math.round(box.top) - gap)}px`;
+      } else {
+        part.style.top = `${Math.round(box.bottom) + gap - cell.top}px`;
+      }
+    });
+  });
   const edges = (scroller: RefObject<HTMLDivElement | null>) => ({
     ref: scroller,
     onScroll: (event: ReactUIEvent<HTMLDivElement>) =>
