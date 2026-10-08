@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import { contrast, mapInks } from "../../site/demo/map-ink";
@@ -6,6 +8,16 @@ import {
   PRESETS,
   applyPreset,
 } from "../../site/demo/style-state";
+
+/** The demo's blue, as its stylesheet writes it. */
+const BLUE = /--blue:\s*(#[0-9a-f]{6});/i
+  .exec(
+    readFileSync(
+      new URL("../../site/shared/brand.css", import.meta.url),
+      "utf8",
+    ),
+  )![1]!
+  .toLowerCase();
 
 /** How far `at` lies along the way from `from` to `to`, 0 to 1, by channel. */
 function toward(from: string, to: string, at: string): number {
@@ -50,7 +62,7 @@ describe("the row map's inks, from the look", () => {
     it(`draws the Disabled column's checkbox quiet but seen in ${preset.name}`, () => {
       const state = applyPreset(DEFAULT_STYLE, preset);
       const ground = state.look.backgroundColor.toLowerCase();
-      const accent = state.vars["--bl-ac-underline"].toLowerCase();
+
       const { check } = mapInks(state);
 
       // An empty box's edge is about WCAG's 3:1 for a control's boundary,
@@ -60,12 +72,13 @@ describe("the row map's inks, from the look", () => {
       expect(contrast(check.hover, ground)).toBeGreaterThanOrEqual(
         contrast(check.edge, ground) + 0.5,
       );
-      // A checked box is the look's accent taken toward the card, its mark
-      // readable on it; focus rings it in the accent itself.
-      expect(toward(accent, ground, check.fill)).toBeGreaterThanOrEqual(0.35);
-      expect(toward(accent, ground, check.fill)).toBeLessThanOrEqual(0.45);
+      // A checked box is the demo's blue, as the native box was, taken
+      // toward the card, its mark readable on it; focus rings it in the blue
+      // itself.
+      expect(toward(BLUE, ground, check.fill)).toBeGreaterThanOrEqual(0.35);
+      expect(toward(BLUE, ground, check.fill)).toBeLessThanOrEqual(0.45);
       expect(contrast(check.mark, check.fill)).toBeGreaterThanOrEqual(3);
-      expect(check.ring).toBe(accent);
+      expect(check.ring).toBe(BLUE);
     });
   }
 
