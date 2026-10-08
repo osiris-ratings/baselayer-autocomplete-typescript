@@ -172,11 +172,13 @@ export function PresetCarousel({
               onKeyDown={onKeyDown}
             >
               <PresetSwatch preset={preset} route={route} />
-              <span
-                className="preset-name"
-                style={{ fontFamily: preset.vars["--bl-ac-font"] }}
-              >
-                {preset.name}
+              <span className="preset-name">
+                <span
+                  className="preset-name-text"
+                  style={{ fontFamily: preset.vars["--bl-ac-font"] }}
+                >
+                  {preset.name}
+                </span>
               </span>
             </button>
           ))}

@@ -2777,6 +2777,9 @@
   line-height: 13px;
 }
 
+/* The line is the mono's, so every name shares its baseline; the name, in its
+   preset's face, adds no height to the line, so that face's ascent and descent
+   cannot move it. */
 .preset-name {
   overflow: hidden;
   font-family: var(--mono);
@@ -2786,6 +2789,10 @@
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.preset-name-text {
+  line-height: 0;
 }
 
 .preset[aria-checked="true"] .preset-name {
