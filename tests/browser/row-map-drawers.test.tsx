@@ -112,10 +112,11 @@ describe("the row map's drawers", () => {
         .getBoundingClientRect();
       expect(grip.right).toBeLessThanOrEqual(box.left);
       expect(check.left).toBeGreaterThanOrEqual(box.right);
+      // The page draws the box, in the look's inks (row-map-check).
       expect(
         getComputedStyle(kind("businesses").querySelector(".row-map-check")!)
-          .accentColor,
-      ).toBe(rgb("#384ce3"));
+          .appearance,
+      ).toBe("none");
 
       const label = host.querySelector(".row-map-check-head")!;
       expect(label.textContent).toBe("Disabled");

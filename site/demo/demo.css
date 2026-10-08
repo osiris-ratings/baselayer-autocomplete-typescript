@@ -992,12 +992,53 @@
   display: none;
 }
 
+/* Drawn quieter than the drags around it, at the native box's size: a thin
+   edge as faint as a control's boundary may be, and a muted fill when it is
+   checked. Forced colours draw the system's own. */
 .row-map-check {
+  --check-edge: var(--map-check-edge);
+  box-sizing: border-box;
   width: 14px;
   height: 14px;
   margin: 0;
-  accent-color: var(--blue);
+  appearance: none;
+  background: var(--map-bg, var(--paper)) center / 100% no-repeat;
+  border: 1px solid var(--check-edge);
+  border-radius: 3px;
   cursor: pointer;
+}
+
+.row-map-check:hover {
+  --check-edge: var(--map-check-hover);
+}
+
+.row-map-check:checked {
+  --check-edge: var(--map-check-fill);
+  background-color: var(--map-check-fill);
+  background-image: var(--map-check-mark);
+}
+
+.row-map-check:checked:hover {
+  --check-edge: var(--map-check-ring);
+}
+
+/* The demo's fields take a blue edge and ring on any focus, by a rule this
+   one follows and matches: a box keeps its own edge, and rings only for the
+   keyboard. */
+.demo input.row-map-check:focus {
+  border-color: var(--check-edge);
+  outline: none;
+}
+
+.demo input.row-map-check:focus-visible {
+  outline: 2px solid var(--map-check-ring);
+  outline-offset: 2px;
+}
+
+@media (forced-colors: active) {
+  .row-map-check {
+    appearance: auto;
+  }
 }
 
 .row-map-check:disabled {

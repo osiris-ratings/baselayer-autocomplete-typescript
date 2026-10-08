@@ -1,7 +1,7 @@
 import type { Route } from "@baselayer-sdk/autocomplete";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { page } from "vitest/browser";
 
 import { RowMap } from "../../site/demo/RowMap";
@@ -172,6 +172,15 @@ function oneHidden(state: StyleState, route: Route): StyleState {
 }
 
 describe("the row map in every preset", () => {
+  // A viewport the runner draws whole, so a pixel of the shot is a pixel of
+  // the page: a scaled shot blurs a 1px edge into its ground.
+  beforeAll(async () => {
+    await page.viewport(1280, 700);
+  });
+  afterAll(async () => {
+    await page.viewport(1280, 900);
+  });
+
   for (const preset of PRESETS) {
     for (const route of ["businesses", "people", "addresses"] as const) {
       it(`reads in ${preset.name}, on a ${route} row`, async () => {
@@ -189,6 +198,7 @@ describe("the row map in every preset", () => {
         try {
           const wrap = host.querySelector<HTMLElement>(".row-map-wrap")!;
           const shot = await capture(wrap);
+          expect(shot.scale).toBe(1);
           const low: string[] = [];
           const check = (
             what: string,
@@ -232,6 +242,19 @@ describe("the row map in every preset", () => {
             if (grip !== null) {
               check(`grip of ${at}`, grip.getBoundingClientRect(), 3);
             }
+          }
+          // The Disabled column's boxes: an empty one's edge on the card, a
+          // checked one's mark on its fill, each at a control's 3:1.
+          for (const box of wrap.querySelectorAll<HTMLInputElement>(
+            ".row-map-check",
+          )) {
+            const at =
+              box.closest<HTMLElement>(".row-map-kind")!.dataset.relation;
+            check(
+              `${box.checked ? "checked" : "empty"} box of ${at}`,
+              box.getBoundingClientRect(),
+              3,
+            );
           }
           for (const chip of wrap.querySelectorAll<HTMLElement>(
             ".row-map-tray .row-map-chip",

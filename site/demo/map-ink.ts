@@ -104,6 +104,9 @@ function nearest(ink: Rgb, to: Rgb, holds: (rgb: Rgb) => boolean): Rgb {
 /** How much a line is dimmed, by design: a disabled line, and a hidden one. */
 const DIM = { disabled: 0.48, hidden: 0.38 };
 
+/** How far a checked box's fill is taken from the accent toward the card. */
+const CHECK_FILL_TOWARD_CARD = 0.4;
+
 /** An ink on its ground, and the least contrast it is to keep when dimmed. */
 interface Kept {
   ink: Rgb;
@@ -133,6 +136,20 @@ export interface MapInks {
   guide: string;
   /** The opacity of a disabled line, and of a hidden one. */
   dim: { disabled: number; hidden: number };
+  /** The Disabled column's checkbox, quieter than the drags around it. */
+  check: CheckInks;
+}
+
+/** A checkbox drawn in the look's colours. */
+export interface CheckInks {
+  /** An empty box's edge, and that edge under the pointer. */
+  edge: string;
+  hover: string;
+  /** A checked box's fill and edge, and its mark. */
+  fill: string;
+  mark: string;
+  /** The focus ring: the look's accent. */
+  ring: string;
 }
 
 /**
@@ -147,6 +164,9 @@ export function mapInks(state: StyleState): MapInks {
   const on = (color: string, under: Rgb | null) =>
     under === null ? null : parse(color, under);
   const tint = on(vars["--bl-ac-highlight-bg"], ground);
+  // The look's accent: the colour its matches are marked in.
+  const accentColor = vars["--bl-ac-underline"];
+  const accent = on(accentColor, ground);
   const title = on(look.titleColor, ground);
   const subtitle = on(look.subtitleColor, ground);
   const pillGround = on(look.pillBackgroundColor, ground);
@@ -161,6 +181,7 @@ export function mapInks(state: StyleState): MapInks {
     tint === null ||
     title === null ||
     subtitle === null ||
+    accent === null ||
     [...pill, ...structure].includes(null)
   ) {
     // A colour this cannot read: the stylesheet mixes, with no floor.
@@ -171,6 +192,13 @@ export function mapInks(state: StyleState): MapInks {
       soft: mixed(60),
       guide: mixed(25),
       dim: { ...DIM },
+      check: {
+        edge: mixed(45),
+        hover: mixed(60),
+        fill: `color-mix(in srgb, ${accentColor} 60%, ${look.backgroundColor})`,
+        mark: look.titleColor,
+        ring: accentColor,
+      },
     };
   }
   const both = [ground, tint];
@@ -191,10 +219,29 @@ export function mapInks(state: StyleState): MapInks {
   while (hidden < DIM.disabled && !keeps(kept, ground, hidden)) {
     hidden = Math.round((hidden + 0.01) * 100) / 100;
   }
+  // The checkbox stays out of the way: an empty box's edge as faint as a
+  // control's boundary may be, and a checked one's fill the accent taken well
+  // toward the card, its mark white where that reads on it, else the look's
+  // strongest text or its card, whichever reads better.
+  const edge = (least: number) =>
+    hex(furthest(ink, ground, 1, rgb => ratio(rgb, ground) >= least));
+  const fill = round(mix(accent, ground, CHECK_FILL_TOWARD_CARD));
+  const mark = [WHITE, title, ground].reduce((best, rgb) =>
+    ratio(best, fill) >= 3 || ratio(best, fill) >= ratio(rgb, fill)
+      ? best
+      : rgb,
+  );
   return {
     ink: hex(ink),
     soft: hex(soft),
     guide: hex(furthest(soft, ground, 0.95, rgb => ratio(rgb, ground) >= 1.5)),
     dim: { disabled: DIM.disabled, hidden },
+    check: {
+      edge: edge(3),
+      hover: edge(4),
+      fill: hex(fill),
+      mark: hex(mark),
+      ring: hex(accent),
+    },
   };
 }

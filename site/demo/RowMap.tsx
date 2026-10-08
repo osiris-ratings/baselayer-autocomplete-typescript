@@ -147,6 +147,12 @@ function capitalized(name: string): string {
  * The look's colors and corners, as the drawn row paints its places, its inks,
  * and how much it dims a disabled line and a hidden one.
  */
+/** A checked box's mark, drawn in `color`. */
+function checkMark(color: string): string {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12"><path d="M2.6 6.2 5 8.6 9.4 3.6" fill="none" stroke="${color}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+}
+
 function rowMapColors(state: StyleState): CSSProperties {
   const { look, vars } = state;
   const inks = mapInks(state);
@@ -156,6 +162,11 @@ function rowMapColors(state: StyleState): CSSProperties {
     "--map-guide": inks.guide,
     "--map-dim-disabled": String(inks.dim.disabled),
     "--map-dim-hidden": String(inks.dim.hidden),
+    "--map-check-edge": inks.check.edge,
+    "--map-check-hover": inks.check.hover,
+    "--map-check-fill": inks.check.fill,
+    "--map-check-mark": checkMark(inks.check.mark),
+    "--map-check-ring": inks.check.ring,
     "--map-bg": look.backgroundColor,
     "--map-border": vars["--bl-ac-border"],
     "--map-radius": vars["--bl-ac-radius"],

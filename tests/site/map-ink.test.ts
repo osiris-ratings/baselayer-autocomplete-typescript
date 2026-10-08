@@ -7,6 +7,18 @@ import {
   applyPreset,
 } from "../../site/demo/style-state";
 
+/** How far `at` lies along the way from `from` to `to`, 0 to 1, by channel. */
+function toward(from: string, to: string, at: string): number {
+  const rgb = (hex: string) =>
+    [1, 3, 5].map(start => parseInt(hex.slice(start, start + 2), 16));
+  const [a, b, c] = [rgb(from), rgb(to), rgb(at)];
+  const along = b.map((channel, i) => channel - a[i]!);
+  return (
+    along.reduce((sum, d, i) => sum + d * (c[i]! - a[i]!), 0) /
+    along.reduce((sum, d) => sum + d * d, 0)
+  );
+}
+
 describe("the row map's inks, from the look", () => {
   it("measures contrast as WCAG does", () => {
     expect(contrast("#000000", "#ffffff")).toBeCloseTo(21, 5);
@@ -33,6 +45,27 @@ describe("the row map's inks, from the look", () => {
       expect(inks.dim.disabled).toBe(0.48);
       expect(inks.dim.hidden).toBeGreaterThanOrEqual(0.38);
       expect(inks.dim.hidden).toBeLessThan(inks.dim.disabled);
+    });
+
+    it(`draws the Disabled column's checkbox quiet but seen in ${preset.name}`, () => {
+      const state = applyPreset(DEFAULT_STYLE, preset);
+      const ground = state.look.backgroundColor.toLowerCase();
+      const accent = state.vars["--bl-ac-underline"].toLowerCase();
+      const { check } = mapInks(state);
+
+      // An empty box's edge is about WCAG's 3:1 for a control's boundary,
+      // and never less; under the pointer it is a little stronger.
+      expect(contrast(check.edge, ground)).toBeGreaterThanOrEqual(3);
+      expect(contrast(check.edge, ground)).toBeLessThan(3.3);
+      expect(contrast(check.hover, ground)).toBeGreaterThanOrEqual(
+        contrast(check.edge, ground) + 0.5,
+      );
+      // A checked box is the look's accent taken toward the card, its mark
+      // readable on it; focus rings it in the accent itself.
+      expect(toward(accent, ground, check.fill)).toBeGreaterThanOrEqual(0.35);
+      expect(toward(accent, ground, check.fill)).toBeLessThanOrEqual(0.45);
+      expect(contrast(check.mark, check.fill)).toBeGreaterThanOrEqual(3);
+      expect(check.ring).toBe(accent);
     });
   }
 
@@ -69,5 +102,7 @@ describe("the row map's inks, from the look", () => {
       look: { ...DEFAULT_STYLE.look, backgroundColor: "rebeccapurple" },
     };
     expect(mapInks(odd).ink).toContain("color-mix(");
+    expect(mapInks(odd).check.edge).toContain("color-mix(");
+    expect(mapInks(odd).check.fill).toContain("color-mix(");
   });
 });
