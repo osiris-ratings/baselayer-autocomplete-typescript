@@ -1,10 +1,10 @@
 # Live demo
 
 The demo is the styled components against your own Baselayer account. You
-connect, find a business by its name, through a person or through an
-address, run the search a pick leads to, and restyle the component. Beside it, folded away until you want it, is
-what the SDK did about it: the session, every request on a network timeline
-with its timing and size, and the SDK's own log.
+connect, find a business by its name, through a person or through an address,
+run the search a pick leads to, and restyle the component. Beside it, folded
+away until you want it, is what the SDK did about it: the session, every request
+on a network timeline with its timing and size, and the SDK's own log.
 
 ![The demo with its debug panel open, typing "harbor concrete pum"](images/demo-split.png)
 
@@ -328,17 +328,17 @@ The panel is one card, down to the foot of the page, with three tabs:
 dot; and **SDK log**, counting its entries. What a tab holds scrolls inside
 the card.
 
-Network is the timeline of every request the page made: when it started,
-whether it was a mint (`mint`), a query (named by its route, `businesses`,
-`people` or `addresses`, with the query and any filters), a call of the search step (`search`: its `POST /searches` and the
-questions after it) or another call (`http`), its status, the size of the
-body, and how long it took. It draws the last 60, under a line that counts
-the requests, the mints, the aborted ones and the bytes, beside a **Clear**.
-The waterfall puts them on one time axis, with the autocomplete service's own
-time (`Server-Timing`) drawn inside each round trip, and a request a newer
-keystroke aborted drawn hatched. Click a row for its URL, timings, headers and
-the bodies it sent and got; credentials and tokens are cut short before anything
-is shown.
+Network is the timeline of every request the page made: when it started, whether
+it was a mint (`mint`), a query (named by its route, `businesses`, `people` or
+`addresses`, with the query and any filters), a call of the search step
+(`search`: its `POST /searches` and the questions after it) or another call
+(`http`), its status, the size of the body, and how long it took. It draws the
+last 60, under a line that counts the requests, the mints, the aborted ones and
+the bytes, beside a **Clear**. The waterfall puts them on one time axis, with
+the autocomplete service's own time (`Server-Timing`) drawn inside each round
+trip, and a request a newer keystroke aborted drawn hatched. Click a row for its
+URL, timings, headers and the bodies it sent and got; credentials and tokens are
+cut short before anything is shown.
 
 ![A request's details](images/demo-network.png)
 

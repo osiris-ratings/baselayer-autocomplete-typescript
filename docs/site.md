@@ -10,15 +10,15 @@
 
 ![The overview](images/site-overview.png)
 
-The overview leads with what the autocomplete searches (businesses, people
-and addresses; an entity not served yet runs past beside them, in a lane of
-its own) and the component itself, playing: the real `BusinessAutocompleteView`, fed made-up
-rows (`site/home/reel.ts`), types three business names a letter at a time
-and picks the first row of each. It plays only while on screen, holds still
-with reduced motion, and a toggle beside each moving part stops both. Then
-come how each result links to the rest, and the integration in two
-diagrams: where each piece runs, and every request from focus to submit in
-three swim lanes, for the browser, your backend and Baselayer.
+The overview leads with what the autocomplete searches (businesses, people and
+addresses; an entity not served yet runs past beside them, in a lane of its own)
+and the component itself, playing: the real `BusinessAutocompleteView`, fed
+made-up rows (`site/home/reel.ts`), types three business names a letter at a
+time and picks the first row of each. It plays only while on screen, holds still
+with reduced motion, and a toggle beside each moving part stops both. Then come
+how each result links to the rest, and the integration in two diagrams: where
+each piece runs, and every request from focus to submit in three swim lanes, for
+the browser, your backend and Baselayer.
 
 ![How it works](images/site-how-it-works.png)
 
