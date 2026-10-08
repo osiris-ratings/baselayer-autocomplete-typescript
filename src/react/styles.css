@@ -405,11 +405,15 @@
   );
 }
 
-/* A head that is not a pick drops to the regular weight, below its lines', so
-   it no longer reads as a title to click, and fades well past a line's name. */
+/* A head that is not a pick drops to the regular weight, never above its
+   lines', so it no longer reads as a title to click, and fades well past a
+   line's name. At `disabledDim` 0 the component sets the weight a pick's. */
 .bl-ac-group-head:not([data-enabled]) .bl-ac-name,
 .bl-ac-group > .bl-ac-row:not([data-enabled]) .bl-ac-name {
-  font-weight: 400;
+  font-weight: var(
+    --bl-ac-disabled-head-weight,
+    min(400, var(--bl-ac-weight-base))
+  );
   color: var(
     --bl-ac-disabled-head-name,
     color-mix(in srgb, var(--bl-ac-title) 40.8%, var(--bl-ac-bg))

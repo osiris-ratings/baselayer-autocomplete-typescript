@@ -453,6 +453,53 @@ function unfiltered(element: Element): boolean {
   return true;
 }
 
+describe("a disabled head's name's weight", () => {
+  const weight = (element: HTMLElement) =>
+    Number(getComputedStyle(element).fontWeight);
+
+  for (const search of ["person", "address", "business"] as const) {
+    it(`is 400 by default on ${search === "address" ? "an" : "a"} ${search}'s row, below the lines'`, () => {
+      const drawn = head(search, false, {});
+      try {
+        expect(weight(drawn.name)).toBe(400);
+        expect(weight(drawn.name)).toBeLessThan(weight(drawn.lineName));
+      } finally {
+        drawn.done();
+      }
+    });
+  }
+
+  for (const matchEmphasis of ["underline", "weight"] as const) {
+    it(`is a pick's at disabledDim 0, under the ${matchEmphasis} emphasis`, () => {
+      const look: LookInput = { disabledDim: 0, matchEmphasis };
+      const pick = head("person", true, look);
+      const pickWeight = weight(pick.name);
+      pick.done();
+      const disabled = head("person", false, look);
+      try {
+        expect(disabled.head).toHaveAttribute("aria-disabled", "true");
+        expect(weight(disabled.name)).toBe(pickWeight);
+      } finally {
+        disabled.done();
+      }
+    });
+  }
+
+  it("stays at or below the lines' weight when a host lowers it", () => {
+    const style = document.createElement("style");
+    style.textContent = ".bl-ac { --bl-ac-weight-base: 300 }";
+    document.head.append(style);
+    const drawn = head("person", false, {});
+    try {
+      expect(weight(drawn.lineName)).toBe(300);
+      expect(weight(drawn.name)).toBe(300);
+    } finally {
+      drawn.done();
+      style.remove();
+    }
+  });
+});
+
 describe("a match mark on a head that is not a pick", () => {
   const marked = {
     person: {

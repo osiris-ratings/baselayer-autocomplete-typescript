@@ -69,6 +69,17 @@ describe("a disabled line's inks", () => {
     });
   }
 
+  it("move a line's name and text dim of the way, short of their floors, and a head's name twice as far", () => {
+    const light = PRESETS.find(preset => preset.name === "Light")!;
+    const inks = disabledInks({ ...resolveLook(light.look), disabledDim: 0.3 });
+    // 0.3 of the way leaves both well above their floors, so the dim decides.
+    expect(inks.nameShare).toBe(70);
+    expect(inks.textShare).toBe(70);
+    // A head's name may go 0.6 of the way, and its floor stops it short.
+    expect(inks.headNameShare).toBeLessThan(70);
+    expect(inks.headNameShare).toBeGreaterThan(40);
+  });
+
   it("fade a translucent title as it is drawn, over the ground", () => {
     // #1a202c at half alpha over white is drawn as this.
     const composite = `#${[0x1a, 0x20, 0x2c]

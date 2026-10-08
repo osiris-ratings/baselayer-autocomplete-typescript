@@ -86,9 +86,10 @@ release.
   a match mark keeping its hue a little faded, with floors worked out from the
   look's colours: a name keeps 4.6:1 (3:1 or more as drawn) and the rest 40% of
   its contrast, at least 1.8:1. A head that is not a pick drops from its bold to
-  the regular weight, below its lines', so it does not read as a title to click,
-  and its name fades well past a line's, up to twice as far, to 2.5:1 (about
-  2.3:1 as drawn). Nothing fades under forced colours.
+  the regular weight, never above its lines' (`--bl-ac-disabled-head-weight`),
+  so it does not read as a title to click, and its name fades well past a
+  line's, up to twice as far, to 2.5:1 (about 2.3:1 as drawn); at 0 it keeps a
+  pick's weight. Nothing fades under forced colours.
 - One row model for all three searches: `BUSINESS_ROW`, `PERSON_ROW` and
   `ADDRESS_ROW` (`ROW_KINDS`), each a `RowKind`: its places
   (`BUSINESS_ROW_PLACES`, …), its fields by line (`BUSINESS_LINE_FIELDS`, …),

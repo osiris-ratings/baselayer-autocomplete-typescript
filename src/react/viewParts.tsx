@@ -72,6 +72,13 @@ export function lookVariables(look: Look): CSSProperties {
     vars["--bl-ac-disabled-opacity"] = inks.opacity;
     vars["--bl-ac-disabled-mark"] = `${inks.markShare}%`;
   }
+  // Nothing fades at 0, so a head that is not a pick keeps a pick's weight.
+  if (look.disabledDim === 0) {
+    vars["--bl-ac-disabled-head-weight"] =
+      look.matchEmphasis === "weight"
+        ? "var(--bl-ac-weight-base)"
+        : "var(--bl-ac-name-weight)";
+  }
   if (
     look.disabledDim !== DEFAULT_LOOK.disabledDim ||
     look.titleColor !== DEFAULT_LOOK.titleColor ||
