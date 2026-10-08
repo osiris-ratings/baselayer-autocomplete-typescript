@@ -855,14 +855,28 @@
   white-space: nowrap;
 }
 
-.row-map-drawer-hint {
-  grid-column: 2;
+/* The note wraps inside the drawer rather than widening it, and its ground
+   is an inline box's, so each line's hugs that line, the same room each
+   side, whatever the face. */
+.row-map-hint-row {
+  width: auto;
+}
+
+/* No checkbox on the note's row: it takes the Enabled column's room too. */
+.row-map-drawer-note {
+  grid-column: 2 / -1;
   justify-self: start;
+  min-width: 0;
   margin: 4px 0 4px
     calc(var(--map-indent) + var(--map-box-pad) - var(--map-ground-pad));
-  padding: 2px var(--map-ground-pad);
   color: var(--map-ink);
   font-size: 12px;
+}
+
+.row-map-drawer-hint {
+  padding: 2px var(--map-ground-pad);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 /* The box of a line kind's lines, a listed one indented under the head as

@@ -12,6 +12,8 @@ import {
   type StyleState,
 } from "../../site/demo/style-state";
 
+// The site's own faces, the same on every machine: a fallback face differs.
+import "../../site/shared/fonts";
 import "../../site/shared/brand.css";
 import "../../site/demo/demo.css";
 
@@ -72,7 +74,9 @@ describe("the Hidden drawer's heading and note", () => {
     ["Light", DEFAULT_STYLE],
     ["Midnight", MIDNIGHT],
   ] as const) {
-    for (const width of [560, 320]) {
+    // At 280px, a phone's panel, the note is wider than the drawer: it
+    // wraps inside it, never runs past its edge.
+    for (const width of [560, 320, 280]) {
       it(`sit on grounds that hug their text, the same room each side, in ${look} at ${width}px`, async () => {
         // Every line shown: the drawer says how to hide one.
         const state: StyleState = withListed(base, "people", "addresses", true);
@@ -86,6 +90,7 @@ describe("the Hidden drawer's heading and note", () => {
             <RowMap state={state} onChange={() => {}} route="people" />,
           ),
         );
+        await document.fonts.ready;
         try {
           const hidden = host.querySelector('[data-drawer="hidden"]')!;
           const ground = [1, 3, 5].map(at =>

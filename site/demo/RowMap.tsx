@@ -1106,8 +1106,10 @@ function KindRowMap<P extends string, F extends string>({
               </div>
               {hidden.length === 0 && unplaced.length === 0 && (
                 <div className="row-map-hint-row">
-                  <p className="row-map-drawer-hint">
-                    Drag a line by its grip, or a field, here to hide it
+                  <p className="row-map-drawer-note">
+                    <span className="row-map-drawer-hint">
+                      Drag a line by its grip, or a field, here to hide it
+                    </span>
                   </p>
                 </div>
               )}
