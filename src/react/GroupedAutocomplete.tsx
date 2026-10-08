@@ -1,6 +1,7 @@
 import {
   useEffect,
   useRef,
+  useState,
   type ReactElement,
   type ReactNode,
   type Ref,
@@ -51,7 +52,7 @@ import {
   type PickTargets,
 } from "./selection";
 import { resolveMessages, type AutocompleteMessages } from "./messages";
-import { useEntityAutocomplete } from "./useBusinessAutocomplete";
+import { filtersKeyOf, useEntityAutocomplete } from "./useBusinessAutocomplete";
 import { useSuggestionCombobox } from "./useBusinessCombobox";
 import {
   StateSquares,
@@ -282,6 +283,19 @@ function Connected<R extends GroupedRoute>({
 }: ConnectedProps<R> & { client: AutocompleteClient }) {
   const client = useResolvedClient(given);
   const { selection, pick } = usePickedSelection(value, showSelection);
+  // A pick puts its row's name in the field, which is not to be searched: it
+  // holds until the field is typed in or the filters change, as a business
+  // pick does. Released during the render, so no frame holds it under new
+  // filters.
+  const filtersKey = filtersKeyOf(filters);
+  const [held, setHeld] = useState<{ name: string; filtersKey: string } | null>(
+    null,
+  );
+  if (held !== null && held.filtersKey !== filtersKey) {
+    setHeld(null);
+  }
+  const justPicked =
+    held !== null && held.name === value && held.filtersKey === filtersKey;
   // What the rows draw decides what is asked for, and the hook drops what the
   // session's scope does not grant as it asks.
   const request = requestOf(route, drawnFor(route, layout), list);
@@ -289,7 +303,7 @@ function Connected<R extends GroupedRoute>({
     relation: route,
     client,
     query: value,
-    enabled,
+    enabled: enabled && !justPicked,
     include: (include ?? request.include) as IncludeOf<R>[],
     ...(filters !== undefined ? { filters } : {}),
     ...(limit !== undefined ? { limit } : {}),
@@ -328,6 +342,7 @@ function Connected<R extends GroupedRoute>({
       error={state.error}
       selection={selection}
       onInputChange={next => {
+        setHeld(null);
         if (mintOn === "keystroke" && enabled && next !== "") {
           client.prewarm();
         }
@@ -354,6 +369,7 @@ function Connected<R extends GroupedRoute>({
             // A business row's own head: no person's or address's row has one.
             return;
         }
+        setHeld({ name: field, filtersKey });
         onChange(field);
         if (option.kind === "business") {
           onPick(businessPickFrom(option.row, option.business, Date.now()));

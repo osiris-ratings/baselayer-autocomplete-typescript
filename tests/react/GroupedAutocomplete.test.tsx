@@ -14,12 +14,14 @@ import {
   BUSINESS_TOKEN_TTL_SECONDS,
   DEFAULT_ENABLED_LINES,
   createAutocompleteClient,
+  type AddressesFilters,
   type BusinessPick,
   type EntityPick,
   type EntityType,
   type FetchLike,
   type MintFunction,
   type MintOutcome,
+  type PeopleFilters,
   type PersonIconSegment,
   type PersonRowLayoutInput,
   type ResponseLike,
@@ -288,6 +290,7 @@ function PersonHost({
   showSelection,
   icons,
   iconSegments,
+  filters,
 }: {
   client: Client;
   onPick?: (pick: BusinessPick) => void;
@@ -298,6 +301,7 @@ function PersonHost({
   showSelection?: boolean;
   icons?: IconSet;
   iconSegments?: PersonIconSegment[];
+  filters?: PeopleFilters;
 }) {
   const [value, setValue] = useState("");
   return (
@@ -326,6 +330,7 @@ function PersonHost({
         {...(showSelection !== undefined ? { showSelection } : {})}
         {...(icons !== undefined ? { icons } : {})}
         {...(iconSegments !== undefined ? { iconSegments } : {})}
+        {...(filters !== undefined ? { filters } : {})}
       />
     </>
   );
@@ -337,12 +342,14 @@ function AddressHost({
   onPickEntity = () => {},
   list,
   enabledLines,
+  filters,
 }: {
   client: Client;
   onPick?: (pick: BusinessPick) => void;
   onPickEntity?: (pick: EntityPick) => void;
   list?: ("businesses" | "people")[];
   enabledLines?: EntityType[];
+  filters?: AddressesFilters;
 }) {
   const [value, setValue] = useState("");
   return (
@@ -357,6 +364,7 @@ function AddressHost({
       onPickEntity={onPickEntity}
       {...(list !== undefined ? { list } : {})}
       enabledLines={enabledLines ?? DEFAULT_ENABLED_LINES}
+      {...(filters !== undefined ? { filters } : {})}
     />
   );
 }
@@ -640,7 +648,10 @@ describe("PersonAutocomplete", () => {
     ]);
 
     await user.keyboard("{ArrowDown}{Enter}");
-    await user.click(screen.getByRole("combobox"));
+    // The pick holds the search for the name it put in the field; typing
+    // brings the rows back.
+    await user.clear(screen.getByRole("combobox"));
+    await user.type(screen.getByRole("combobox"), "dana");
     // The head names the first address too; the address's own line is the pick.
     const [oak] = await screen.findAllByTestId("address-line");
     await user.click(oak!);
@@ -816,6 +827,109 @@ describe("AddressAutocomplete", () => {
       token: "tok-p-ada",
       label: "Ada Fox",
     });
+  });
+});
+
+describe("a pick", () => {
+  const input = () => screen.getByRole<HTMLInputElement>("combobox");
+  const asked = (fetch: ReturnType<typeof setup>["fetch"]) =>
+    fetch.mock.calls.map(([url]) => new URL(url).searchParams.get("q"));
+
+  it("puts the person's name in the field without searching it", async () => {
+    const { client, fetch } = setup();
+    const { user } = await typeDana(client);
+
+    await user.click(
+      screen.getByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+    await aMoment();
+
+    expect(input().value).toBe("Dana Whitfield");
+    expect(asked(fetch)).not.toContain("Dana Whitfield");
+    expect(screen.queryAllByRole("group")).toHaveLength(0);
+  });
+
+  it("puts the address in the field without searching it", async () => {
+    const { client, fetch } = setup();
+    const user = userEvent.setup();
+    render(<AddressHost client={client} />);
+    await user.type(screen.getByRole("combobox"), "45 corvel");
+    const [business] = enabledOptions(
+      await screen.findByRole("group", {
+        name: "45 Corvel Landing Ste 200, Erie, PA 16507",
+      }),
+    );
+
+    await user.click(business!);
+    await aMoment();
+
+    expect(input().value).toBe("45 Corvel Landing Ste 200, Erie, PA 16507");
+    expect(asked(fetch)).not.toContain(
+      "45 Corvel Landing Ste 200, Erie, PA 16507",
+    );
+    expect(screen.queryAllByRole("group")).toHaveLength(0);
+  });
+
+  it("lets typing search again", async () => {
+    const { client, fetch } = setup();
+    const { user } = await typeDana(client);
+    await user.click(
+      screen.getByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+
+    await user.clear(input());
+    await user.type(input(), "dana");
+
+    expect(
+      await screen.findByRole("group", { name: "Dana Whitfield" }),
+    ).toBeTruthy();
+    expect(asked(fetch).at(-1)).toBe("dana");
+  });
+
+  it("searches the picked name once the filters change, and not for the same filters in a new object", async () => {
+    const { client, fetch } = setup();
+    const user = userEvent.setup();
+    const { rerender } = render(
+      <PersonHost client={client} filters={{ business: { state: ["PA"] } }} />,
+    );
+    await user.type(input(), "dana");
+    await user.click(
+      await screen.findByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+    await aMoment();
+    const before = fetch.mock.calls.length;
+
+    rerender(
+      <PersonHost client={client} filters={{ business: { state: ["PA"] } }} />,
+    );
+    await aMoment();
+    expect(fetch.mock.calls.length).toBe(before);
+
+    rerender(
+      <PersonHost client={client} filters={{ business: { state: ["DE"] } }} />,
+    );
+    await waitFor(() =>
+      expect(fetch.mock.calls.length).toBeGreaterThan(before),
+    );
+    const url = new URL(fetch.mock.calls.at(-1)![0]);
+    expect(url.searchParams.get("q")).toBe("Dana Whitfield");
+    expect(url.searchParams.get("business.state")).toBe("DE");
+  });
+});
+
+describe("a scope that grants none of a route's relations", () => {
+  it("asks with no include, which the service narrows to the scope, and refuses nothing itself", async () => {
+    const { client, fetch } = setup({ routes: { people: [] }, maxLimit: 20 });
+
+    const { dana } = await typeDana(client);
+
+    // The service refuses an empty include, so none is sent: it then expands
+    // only what the session's scope allows, which here is nothing.
+    expect(dana).toBeTruthy();
+    expect(fetch).toHaveBeenCalled();
+    for (const [url] of fetch.mock.calls) {
+      expect(new URL(url).searchParams.has("include")).toBe(false);
+    }
   });
 });
 
