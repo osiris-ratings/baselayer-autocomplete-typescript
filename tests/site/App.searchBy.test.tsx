@@ -57,6 +57,69 @@ const field = (id: string): HTMLInputElement =>
 const checked = (word: string) =>
   screen.getByRole("tab", { name: word }).getAttribute("aria-selected");
 
+describe("the search the session's scope offers", () => {
+  const FIELDS = ["demo-business", "demo-person", "demo-address"] as const;
+  const CASES = [
+    {
+      routes: ["businesses"],
+      field: "demo-business",
+      title: "Autocomplete a business",
+      tabs: [],
+    },
+    {
+      routes: ["people"],
+      field: "demo-person",
+      title: "Autocomplete a person",
+      tabs: [],
+    },
+    {
+      routes: ["addresses"],
+      field: "demo-address",
+      title: "Autocomplete an address",
+      tabs: [],
+    },
+    {
+      routes: ["people", "addresses"],
+      field: "demo-person",
+      title: "Autocomplete a person",
+      tabs: ["a person", "an address"],
+    },
+    {
+      routes: ["businesses", "people", "addresses"],
+      field: "demo-business",
+      title: "Autocomplete a business",
+      tabs: ["a business", "a person", "an address"],
+    },
+  ] as const;
+
+  for (const { routes, field: shown, title, tabs } of CASES) {
+    it(`is the first it offers, ${shown}'s, titled and selected, under a grant of ${routes.join(" and ")}`, async () => {
+      await connect(routes);
+
+      for (const id of FIELDS) {
+        expect(field(id) !== null, id).toBe(id === shown);
+      }
+      expect(screen.getByRole("heading", { name: title })).toBeTruthy();
+      if (tabs.length === 0) {
+        expect(screen.queryByRole("tablist", { name: "Search by" })).toBeNull();
+        return;
+      }
+      const all = within(
+        screen.getByRole("tablist", { name: "Search by" }),
+      ).getAllByRole("tab");
+      expect(all.map(tab => tab.textContent)).toEqual([...tabs]);
+      const selected = all.filter(
+        tab => tab.getAttribute("aria-selected") === "true",
+      );
+      expect(selected.map(tab => tab.textContent)).toEqual([tabs[0]]);
+      // One stop for the keyboard: the selected word, and no other.
+      expect(all.map(tab => tab.tabIndex)).toEqual(
+        all.map(tab => (tab === selected[0] ? 0 : -1)),
+      );
+    });
+  }
+});
+
 describe("searching by person or address", () => {
   it("offers only the searches the session's scope allows", async () => {
     await connect(["businesses"]);

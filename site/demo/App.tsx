@@ -490,7 +490,10 @@ export function App() {
   // offers every search, so Styling can preview each one's rows.
   const offered: Route[] =
     client === null ? [...ROUTE_NAMES] : offeredRoutes(scope);
-  const mode: Route = offered.includes(searchBy) ? searchBy : "businesses";
+  // The search asked for, if the session offers it, or else the first it does.
+  const mode: Route = offered.includes(searchBy)
+    ? searchBy
+    : (offered[0] ?? searchBy);
   const name = names[mode];
   const picked = picks[mode];
   const setName = (value: string) =>
