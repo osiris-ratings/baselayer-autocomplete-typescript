@@ -633,7 +633,9 @@
   display: grid;
   gap: var(--map-row-gap);
   overflow-x: auto;
-  scroll-padding-inline: var(--map-grip-cell) var(--map-check-cell);
+  /* Room for a focus ring too. */
+  scroll-padding-inline: calc(var(--map-grip-cell) + 4px)
+    calc(var(--map-check-cell) + 4px);
 }
 
 /* Hidden's background is faint bands, each as wide as the gap after it, a
@@ -901,18 +903,15 @@
   background: var(--map-bg, var(--paper));
 }
 
-/* Two columns of three dots, each whole in its tile. */
+/* The grip takes a press anywhere in its cell; its dots, two columns of
+   three, each whole in its tile, sit at the cell's middle. */
 .row-map-grip {
-  flex: none;
-  width: var(--map-grip);
-  height: 18px;
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  width: 100%;
   padding: 0;
-  background: radial-gradient(
-      circle at center,
-      currentColor 1.25px,
-      transparent 1.75px
-    )
-    0 0 / 6px 6px;
+  background: transparent;
   border: 0;
   border-radius: 3px;
   color: var(--map-soft);
@@ -920,6 +919,18 @@
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+}
+
+.row-map-grip-dots {
+  flex: none;
+  width: var(--map-grip);
+  height: 18px;
+  background: radial-gradient(
+      circle at center,
+      currentColor 1.25px,
+      transparent 1.75px
+    )
+    0 0 / 6px 6px;
 }
 
 .row-map-grip:is(:hover, :focus-visible) {

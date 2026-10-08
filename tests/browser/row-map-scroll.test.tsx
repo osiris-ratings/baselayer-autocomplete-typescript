@@ -234,6 +234,15 @@ describe("a drawer that scrolls sideways", () => {
                 `${place.dataset.drop} at ${x}`,
               ).toBe(place);
             }
+            // Its ring, just outside the face, is clear of the grip's cell.
+            const beside = document.elementFromPoint(
+              face.left - 1,
+              (face.top + face.bottom) / 2,
+            )!;
+            expect(
+              beside.closest(".row-map-grip-cell"),
+              `${place.dataset.drop}'s ring`,
+            ).toBeNull();
           };
           document.body.focus();
           for (let stops = 0; stops < 80; stops++) {

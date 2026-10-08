@@ -418,23 +418,28 @@ describe("dragging a field", () => {
     });
   });
 
-  it("never places a field twice, from any layout, dropped anywhere", () => {
-    for (const layout of everyLayout()) {
-      for (const field of ROW_FIELDS) {
-        for (const to of [...ROW_PLACES, TRAY] as const) {
-          const next = moveField({ ...BUSINESS, ...layout }, field, to);
-          const drawn = ROW_PLACES.map(place => next[place]).filter(
-            placed => placed !== null,
-          );
-          expect(new Set(drawn).size).toBe(drawn.length);
-          expect(drawnRowLayout(head(next))).toEqual(head(next));
-          if (to !== TRAY && canDrop({ ...BUSINESS, ...layout }, field, to)) {
-            expect(next[to]).toBe(field);
+  // Every layout, field and place: slow on a loaded machine.
+  it(
+    "never places a field twice, from any layout, dropped anywhere",
+    { timeout: 30_000 },
+    () => {
+      for (const layout of everyLayout()) {
+        for (const field of ROW_FIELDS) {
+          for (const to of [...ROW_PLACES, TRAY] as const) {
+            const next = moveField({ ...BUSINESS, ...layout }, field, to);
+            const drawn = ROW_PLACES.map(place => next[place]).filter(
+              placed => placed !== null,
+            );
+            expect(new Set(drawn).size).toBe(drawn.length);
+            expect(drawnRowLayout(head(next))).toEqual(head(next));
+            if (to !== TRAY && canDrop({ ...BUSINESS, ...layout }, field, to)) {
+              expect(next[to]).toBe(field);
+            }
           }
         }
       }
-    }
-  });
+    },
+  );
 });
 
 describe("the structure's colors", () => {

@@ -868,12 +868,13 @@ function KindRowMap<P extends string, F extends string>({
     ref: scroller,
     onScroll: (event: ReactUIEvent<HTMLDivElement>) =>
       markEdges(event.currentTarget),
-    // What the keyboard reaches is brought clear of the sticky grips and the
-    // Disabled column; a press that starts a drag is not.
+    // What is focused is brought clear of the sticky grips and the Disabled
+    // column. A press that starts a drag focuses nothing.
     onFocus: (event: ReactFocusEvent<HTMLDivElement>) => {
-      const target = event.target as HTMLElement;
-      if (!target.matches(":focus-visible")) return;
-      target.scrollIntoView({ block: "nearest", inline: "nearest" });
+      (event.target as HTMLElement).scrollIntoView({
+        block: "nearest",
+        inline: "nearest",
+      });
     },
   });
 
@@ -939,7 +940,9 @@ function KindRowMap<P extends string, F extends string>({
                   `${capitalized(name)} moved to position ${to + 1} of ${list.length}`,
                 );
               }}
-            />
+            >
+              <span className="row-map-grip-dots" aria-hidden="true" />
+            </button>
           )}
         </span>
         <div className="row-map-kind-lines">

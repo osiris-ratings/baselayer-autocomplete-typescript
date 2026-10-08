@@ -163,9 +163,29 @@ describe("the row map on a narrow screen", () => {
           const card = grip.closest(".row-map")!.getBoundingClientRect();
           expect(box.left).toBeGreaterThanOrEqual(card.left);
           expect(box.right).toBeLessThanOrEqual(card.right);
-          // Every dot whole: the box is a whole number of dot tiles.
-          expect(box.width % 6).toBe(0);
-          expect(box.height % 6).toBe(0);
+          // Every dot whole: the dots are a whole number of tiles, centred
+          // on the line.
+          const dots = grip
+            .querySelector(".row-map-grip-dots")!
+            .getBoundingClientRect();
+          expect(dots.width % 6).toBe(0);
+          expect(dots.height % 6).toBe(0);
+          expect(
+            Math.abs(
+              (dots.top + dots.bottom) / 2 - (line.top + line.bottom) / 2,
+            ),
+          ).toBeLessThanOrEqual(1);
+          // The whole of the grip's cell takes a press, top to bottom.
+          const cell = grip
+            .closest(".row-map-grip-cell")!
+            .getBoundingClientRect();
+          for (const y of [cell.top + 1, cell.bottom - 1]) {
+            const top = document.elementFromPoint(
+              (cell.left + cell.right) / 2,
+              y,
+            )!;
+            expect(grip.contains(top), `at ${y}`).toBe(true);
+          }
         }
       } finally {
         done();
