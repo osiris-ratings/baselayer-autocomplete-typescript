@@ -2451,8 +2451,9 @@
 }
 
 /* One row that scrolls sideways, snapping to a preset, with the row map's
-   shade at each edge there is more beyond, in the page's ink. Its padding is
-   room for the chosen preset's ring. */
+   shade at each edge there is more beyond, in the page's ink. The shade
+   spans the whole item, swatch and name, and the row's padding past both,
+   which is also room for the chosen preset's ring. */
 .presets-frame {
   position: relative;
 }
@@ -2461,8 +2462,8 @@
 .presets-frame::after {
   position: absolute;
   z-index: 1;
-  top: 4px;
-  height: 58px;
+  top: 0;
+  bottom: 0;
   width: var(--shade-depth);
   content: "";
   opacity: 0;

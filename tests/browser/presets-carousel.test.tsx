@@ -155,6 +155,21 @@ describe("the presets' carousel", () => {
         expect(style.width, pseudo).toBe("12px");
         expect(style.backgroundImage, pseudo).toContain("linear-gradient");
       }
+      // Over the whole item, swatch and name, and a little past each.
+      const swatch = scroller
+        .querySelector(".preset-swatch")!
+        .getBoundingClientRect();
+      const name = scroller
+        .querySelector(".preset-name")!
+        .getBoundingClientRect();
+      const box = edges.getBoundingClientRect();
+      for (const pseudo of ["::before", "::after"] as const) {
+        const style = getComputedStyle(edges, pseudo);
+        const top = box.top + parseFloat(style.top);
+        const bottom = top + parseFloat(style.height);
+        expect(top, pseudo).toBeLessThan(swatch.top - 1);
+        expect(bottom, pseudo).toBeGreaterThan(name.bottom + 1);
+      }
       expect(getComputedStyle(edges, "::before").borderTopLeftRadius).toBe(
         "8px",
       );
