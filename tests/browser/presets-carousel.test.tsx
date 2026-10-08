@@ -250,4 +250,90 @@ describe("the presets' carousel", () => {
       }
     });
   }
+
+  /** The scroll positions the Later button stops at, from the start. */
+  async function stops(scroller: HTMLElement, later: () => HTMLButtonElement) {
+    scroller.scrollLeft = 0;
+    scroller.dispatchEvent(new Event("scroll"));
+    await frame();
+    const found = [scroller.scrollLeft];
+    for (let turns = 0; turns < 30 && !later().disabled; turns++) {
+      await userEvent.click(later());
+      await frame();
+      found.push(scroller.scrollLeft);
+    }
+    return found;
+  }
+
+  it("puts the page buttons at its far sides, a dot for each page between them, the current one marked", async () => {
+    const { host, scroller, earlier, later, done } = mount(560);
+    try {
+      const dots = () => [
+        ...host.querySelectorAll<HTMLButtonElement>(".presets-dots button"),
+      ];
+      const pages = await stops(scroller, later);
+      expect(dots()).toHaveLength(pages.length);
+      const nav = host.querySelector(".presets-nav")!.getBoundingClientRect();
+      expect(earlier().getBoundingClientRect().left).toBeCloseTo(nav.left, 0);
+      expect(later().getBoundingClientRect().right).toBeCloseTo(nav.right, 0);
+      for (const dot of dots()) {
+        const box = dot.getBoundingClientRect();
+        expect(box.left).toBeGreaterThan(
+          earlier().getBoundingClientRect().right,
+        );
+        expect(box.right).toBeLessThan(later().getBoundingClientRect().left);
+        // Small to the eye, but a target a finger can hit.
+        expect(box.width).toBeGreaterThanOrEqual(20);
+        expect(box.height).toBeGreaterThanOrEqual(20);
+      }
+      const current = () =>
+        dots().findIndex(dot => dot.getAttribute("aria-current") === "true");
+      // The Later button left it on the last page.
+      expect(current()).toBe(pages.length - 1);
+      expect(dots()[1]!.getAttribute("aria-label")).toBe(
+        `Page 2 of ${pages.length}`,
+      );
+      await userEvent.click(dots()[1]!);
+      await frame();
+      expect(scroller.scrollLeft).toBeCloseTo(pages[1]!, 0);
+      expect(current()).toBe(1);
+      // A swipe or a wheel moves the current dot as well.
+      scroller.scrollLeft = 0;
+      scroller.dispatchEvent(new Event("scroll"));
+      await frame();
+      expect(current()).toBe(0);
+      expect(earlier().disabled).toBe(true);
+    } finally {
+      done();
+    }
+  });
+
+  it("counts its pages again when the panel is resized", async () => {
+    const { host, scroller, later, done } = mount(400);
+    try {
+      const count = () => host.querySelectorAll(".presets-dots button").length;
+      const narrow = count();
+      expect(narrow).toBe((await stops(scroller, later)).length);
+      host.style.width = "900px";
+      await frame();
+      await frame();
+      expect(count()).toBeLessThan(narrow);
+      expect(count()).toBe((await stops(scroller, later)).length);
+    } finally {
+      done();
+    }
+  });
+
+  it("shows the page as text where its dots would not fit between the buttons", async () => {
+    const { host, scroller, later, done } = mount(200);
+    try {
+      expect(host.querySelectorAll(".presets-dots button")).toHaveLength(0);
+      const pages = (await stops(scroller, later)).length;
+      expect(host.querySelector(".presets-page")!.textContent).toBe(
+        `${pages} / ${pages}`,
+      );
+    } finally {
+      done();
+    }
+  });
 });
