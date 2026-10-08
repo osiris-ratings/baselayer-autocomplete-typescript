@@ -1252,6 +1252,26 @@ describe("a listed relation the session's scope leaves out", () => {
     release();
   });
 
+  it("is not drawn where the service could not look, though it was asked for", async () => {
+    const { client, fetch } = setup();
+    const answer = fetch.getMockImplementation()!;
+    fetch.mockImplementation(async (...args) => {
+      const reply = await answer(...args);
+      const body = (await reply.json()) as typeof PEOPLE;
+      // Asked for, but not looked at: the source says so.
+      const unlooked = {
+        ...body,
+        sources: { ...body.sources, addresses: { status: "unavailable" } },
+      };
+      return { ...reply, json: async () => unlooked };
+    });
+    const { dana } = await typeDana(client, {
+      list: ["addresses", "businesses"],
+    });
+
+    expect(listsOf(dana)).toEqual(["businesses"]);
+  });
+
   it("is not drawn under an address, though the host lists it", async () => {
     const { client } = setup({
       routes: { addresses: ["businesses"] },

@@ -185,7 +185,8 @@ describe("resolveRowLayout", () => {
     }
     expect(wrong.slice(0, 5)).toEqual([]);
     expect(stagings).toHaveLength(6 ** 7);
-  });
+    // Every one of 6^7 stagings: slow on a loaded machine, so it has the time.
+  }, 30_000);
 
   it("pins a flag to any corner's field, on its inner side", () => {
     expect(

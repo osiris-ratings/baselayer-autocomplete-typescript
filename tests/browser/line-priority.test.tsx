@@ -231,4 +231,69 @@ describe("a line's segments, when the line runs out of room", () => {
       done();
     }
   });
+
+  it("cut a name longer than 60% of the line at that cap, and leave short text after it whole", () => {
+    const longest = {
+      ...DANA,
+      related: {
+        ...DANA.related,
+        businesses: {
+          count: 1,
+          matched: null,
+          truncated: false,
+          items: [
+            business(
+              "THE VERY LONG NAME OF A MADE-UP CONCRETE PUMPING AND HAULING COMPANY OF PENNSYLVANIA, INC.",
+              ["PA"],
+              "1 Elm St",
+            ),
+          ],
+        },
+      },
+    };
+    const host = document.createElement("div");
+    host.style.width = "560px";
+    host.style.fontFamily = "sans-serif";
+    document.body.append(host);
+    const root = createRoot(host);
+    flushSync(() =>
+      root.render(
+        <PersonAutocompleteView
+          id="people"
+          value="dana"
+          onInputChange={() => {}}
+          onSelect={() => {}}
+          suggestions={[longest]}
+          found={1}
+          foundCapped={false}
+          truncated={false}
+          indexTag={null}
+          roundTripMs={null}
+          isSearching={false}
+          error={null}
+          open
+          // The name and the address alone, so only the cap decides.
+          layout={{ businessTrailingBadge: null, businessTrailing: null }}
+        />,
+      ),
+    );
+    try {
+      const line = host.querySelector<HTMLElement>(".bl-ac-group-line")!;
+      const name = line.querySelector<HTMLElement>(".bl-ac-line-name")!;
+      const address = line.querySelector<HTMLElement>(".bl-ac-address")!;
+      const style = getComputedStyle(line);
+      const room =
+        line.clientWidth -
+        parseFloat(style.paddingLeft) -
+        parseFloat(style.paddingRight);
+      expect(cut(name)).toBe(true);
+      expect(name.getBoundingClientRect().width).toBeLessThanOrEqual(
+        0.6 * room + 0.5,
+      );
+      expect(cut(address)).toBe(false);
+    } finally {
+      root.unmount();
+      host.remove();
+    }
+  });
 });
