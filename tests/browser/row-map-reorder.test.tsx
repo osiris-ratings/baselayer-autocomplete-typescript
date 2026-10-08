@@ -109,11 +109,17 @@ describe("lines reordered by their grips", () => {
       ]);
       const below = kind("addresses").getBoundingClientRect();
       let slid = "none";
+      let toward = "";
       await carry(grip("people"), below.left + 40, below.bottom - 2, () => {
         slid = getComputedStyle(kind("addresses")).transform;
+        toward = kind("addresses").style.transform;
       });
-      // While carried, the line below slid up to make way.
+      // While carried, the line below slid UP to make way: by a line's
+      // height, toward the place the carried line left.
       expect(slid).not.toBe("none");
+      const by = /^translateY\((-?[\d.]+)px\)$/.exec(toward);
+      expect(by, toward).not.toBeNull();
+      expect(Number(by![1])).toBeLessThan(0);
       expect(latest.state.rows.businesses.list).toEqual([
         "addresses",
         "people",

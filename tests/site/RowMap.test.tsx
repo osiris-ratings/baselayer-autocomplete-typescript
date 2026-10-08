@@ -725,6 +725,27 @@ describe("the row map as the row's configuration", () => {
     expect(order()).toEqual(["head", "businesses", "addresses"]);
   });
 
+  it("moves nothing, and says nothing, when a line is already at the end it is moved toward", () => {
+    const onChange = vi.fn<(state: StyleState) => void>();
+    const view = render(
+      <RowMap
+        state={withListed(DEFAULT_STYLE, "people", "addresses", true)}
+        onChange={onChange}
+        route="people"
+      />,
+    );
+    const said = () =>
+      view.container.querySelector('[role="status"]')!.textContent;
+    const first = screen.getByRole("button", { name: "Hide businesses" });
+    const last = screen.getByRole("button", { name: "Hide their addresses" });
+
+    fireEvent.keyDown(first, { key: "ArrowUp", altKey: true });
+    fireEvent.keyDown(last, { key: "ArrowDown", altKey: true });
+
+    expect(onChange).not.toHaveBeenCalled();
+    expect(said()).toBe("");
+  });
+
   it("says when a line is shown or hidden", () => {
     function Kept() {
       const [state, setState] = useState(DEFAULT_STYLE);
