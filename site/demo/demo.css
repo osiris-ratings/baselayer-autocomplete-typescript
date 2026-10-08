@@ -1091,19 +1091,50 @@
   cursor: not-allowed;
 }
 
-/* A line in flight is its name, on a card. */
-.row-map-line-ghost {
-  display: inline-flex;
-  align-items: center;
-  height: 26px;
-  padding: 0 10px;
-  background: var(--map-bg, var(--paper));
-  border: 1px solid var(--blue);
-  border-radius: var(--map-pill-radius, 3px);
-  color: var(--map-ink);
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
+/* A line in hand is its whole row, on a card of the map's own, lifted and
+   tilted about where it was grabbed. Let go, it settles flat into its place,
+   where the live row waits unseen until it has. */
+.row-map-row-ghost {
+  position: fixed;
+  z-index: 1000;
+  margin: 0;
+  pointer-events: none;
+}
+
+.row-map-row-ghost > .row-map {
+  display: block;
+  padding: 0;
+  border: 0;
+  box-shadow:
+    0 0 0 1px var(--map-border, var(--line-soft)),
+    0 10px 24px rgba(9, 35, 79, 0.18);
+  transform: rotate(-2deg);
+}
+
+.row-map-row-ghost[data-settling] {
+  transition:
+    left 180ms ease-out,
+    top 180ms ease-out;
+}
+
+.row-map-row-ghost[data-settling] > .row-map {
+  box-shadow:
+    0 0 0 1px var(--map-border, var(--line-soft)),
+    0 2px 6px rgba(9, 35, 79, 0.06);
+  transform: none;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out;
+}
+
+.row-map-kind[data-landing] {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-map-row-ghost > .row-map {
+    transform: none;
+  }
 }
 
 /* While a line is carried, the drawer it would go to says so. */
