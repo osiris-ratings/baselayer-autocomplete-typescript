@@ -952,7 +952,10 @@ function KindRowMap<P extends string, F extends string>({
               className="row-map-grip"
               data-relation={relation}
               aria-label={`${isListed ? "Hide" : "Show"} ${name}`}
-              title={`${capitalized(name)}: drag to ${isListed ? "Hidden" : "Shown"}, or press, to ${isListed ? "hide" : "show"} them (list)`}
+              aria-keyshortcuts={
+                isListed ? "Alt+ArrowUp Alt+ArrowDown" : undefined
+              }
+              title={`${capitalized(name)}: drag to ${isListed ? "Hidden" : "Shown"}, or press, to ${isListed ? "hide" : "show"} them (list)${isListed ? " · Alt+↑/↓ to move" : ""}`}
               {...handle(lineItem(relation))}
               onClick={() => {
                 if (!clicked()) return;

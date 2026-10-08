@@ -746,6 +746,27 @@ describe("the row map as the row's configuration", () => {
     expect(said()).toBe("");
   });
 
+  it("tells a shown line's grip, and only a shown one's, that Alt and an arrow move it", () => {
+    render(
+      <RowMap
+        state={withListed(DEFAULT_STYLE, "people", "addresses", true)}
+        onChange={() => {}}
+        route="people"
+      />,
+    );
+    const shown = screen.getByRole("button", { name: "Hide businesses" });
+    expect(shown.getAttribute("aria-keyshortcuts")).toBe(
+      "Alt+ArrowUp Alt+ArrowDown",
+    );
+    expect(shown.title).toMatch(/ · Alt\+↑\/↓ to move$/);
+
+    cleanup();
+    render(<RowMap state={DEFAULT_STYLE} onChange={() => {}} route="people" />);
+    const hidden = screen.getByRole("button", { name: "Show their addresses" });
+    expect(hidden.hasAttribute("aria-keyshortcuts")).toBe(false);
+    expect(hidden.title).not.toContain("Alt");
+  });
+
   it("says when a line is shown or hidden", () => {
     function Kept() {
       const [state, setState] = useState(DEFAULT_STYLE);
