@@ -86,7 +86,7 @@ release.
   way, and dims its state squares, a match mark keeping its hue a little faded,
   with floors worked out from the look's colours: a name keeps 2.5:1 (about
   2.3:1 as drawn) and the rest 25% of its contrast, at least 1.7:1 and a role
-  1.8:1 (1.5:1 or more as drawn). A disabled name, a line's or a head's, drops
+  1.8:1 (about 1.5:1 as drawn). A disabled name, a line's or a head's, drops
   to the regular weight, never above the lines' (`--bl-ac-disabled-line-weight`,
   `--bl-ac-disabled-head-weight`), so nothing disabled reads as bold or as a
   title to click; at 0 it keeps a pick's weight. Nothing fades under forced

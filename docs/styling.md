@@ -317,7 +317,7 @@ contrast minimum, so the fade is deliberately strong: the text may go twice the
 dim of the way to the ground, and floors keep it legible on any colours. A
 disabled name keeps 2.5:1 by the formula, drawing at about 2.3:1, faint but
 never gone; the rest keeps 25% of its contrast and at least 1.7:1, a role 1.8:1
-as the smallest text, so each draws at 1.5:1 or more. A colour set only in CSS,
+as the smallest text, so each draws at about 1.5:1. A colour set only in CSS,
 not through `look`, fades by the default look's shares (`color-mix`), without
 the floors. A translucent title or subtitle is faded as it is drawn on the
 ground; a translucent background shows whatever is under the menu, which the
