@@ -7,7 +7,6 @@ import type { StyleState } from "./style-state";
 type Rgb = readonly [number, number, number];
 
 const WHITE: Rgb = [255, 255, 255];
-const BLACK: Rgb = [0, 0, 0];
 
 /**
  * `#rgb`, `#rgba`, `#rrggbb` or `#rrggbbaa` as drawn over `over` (white when
@@ -87,11 +86,14 @@ function furthest(
 }
 
 /**
- * The least `ink` moves toward `to` to hold once on whole channels; `to`
- * itself when none does.
+ * The first colour along a way, from `along(0)` to `along(1)`, that holds
+ * once on whole channels; the way's end when none does.
  */
-function nearest(ink: Rgb, to: Rgb, holds: (rgb: Rgb) => boolean): Rgb {
-  const at = (toward: number) => round(mix(ink, to, toward));
+function nearest(
+  along: (share: number) => Rgb,
+  holds: (rgb: Rgb) => boolean,
+): Rgb {
+  const at = (share: number) => round(along(share));
   if (holds(at(0))) return at(0);
   let [low, high] = [0, 1];
   for (let step = 0; step < 24; step++) {
@@ -153,12 +155,12 @@ function fromHsl([hue, saturation, lightness]: [number, number, number]): Rgb {
 /** The ring made calmer for a checked box's fill, a white mark legible on it. */
 function calmFill(ring: Rgb): Rgb {
   const [hue, saturation, lightness] = hsl(ring);
-  const calm = fromHsl([
-    hue,
-    saturation * CALM.colour,
-    Math.max(0, lightness - CALM.darker),
-  ]);
-  return nearest(calm, BLACK, rgb => ratio(WHITE, rgb) >= CALM.markOn);
+  const most = Math.max(0, lightness - CALM.darker);
+  // Darkened in lightness alone, so a pale ring's fill keeps its colour.
+  return nearest(
+    share => fromHsl([hue, saturation * CALM.colour, most * (1 - share)]),
+    rgb => ratio(WHITE, rgb) >= CALM.markOn,
+  );
 }
 
 /** An ink on its ground, and the least contrast it is to keep when dimmed. */
@@ -257,7 +259,10 @@ export function mapInks(state: StyleState): MapInks {
   // stronger whichever way the look runs, light or dark.
   // The floors are above WCAG's 4.5 and 3 by what antialiasing costs a thin
   // stroke on screen.
-  const ink = nearest(subtitle, title, rgb => weakest(rgb, both) >= 7);
+  const ink = nearest(
+    share => mix(subtitle, title, share),
+    rgb => weakest(rgb, both) >= 7,
+  );
   const soft = furthest(ink, ground, 0.45, rgb => weakest(rgb, both) >= 4.5);
   const kept: Kept[] = [
     { ink, on: ground, floor: 2 },
@@ -272,7 +277,10 @@ export function mapInks(state: StyleState): MapInks {
   }
   // A focus ring holds WCAG's 3:1 on the card: the blue, raised toward the
   // title only where the card is too dark for it.
-  const ring = nearest(parse(BLUE)!, title, rgb => ratio(rgb, ground) >= 3);
+  const ring = nearest(
+    share => mix(parse(BLUE)!, title, share),
+    rgb => ratio(rgb, ground) >= 3,
+  );
   // The checkbox stays out of the way: an empty box's edge faint, about 2:1
   // on the card and a step stronger under the pointer, and a checked one's
   // fill the ring made calmer under a white mark.

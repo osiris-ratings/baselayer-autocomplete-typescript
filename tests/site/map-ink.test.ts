@@ -32,6 +32,26 @@ function toward(from: string, to: string, at: string): number {
   );
 }
 
+/** WCAG's contrast between two colours, both laid over `card` at `opacity`. */
+function dimmed(
+  ink: string,
+  on: string,
+  card: string,
+  opacity: number,
+): number {
+  const under = channels(card);
+  const luminance = (hex: string) =>
+    channels(hex)
+      .map((channel, i) => under[i]! + (channel - under[i]!) * opacity)
+      .map(value => {
+        const v = value / 255;
+        return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+      })
+      .reduce((sum, v, i) => sum + v * [0.2126, 0.7152, 0.0722][i]!, 0);
+  const [light, dark] = [luminance(ink), luminance(on)].sort((a, b) => b - a);
+  return (light! + 0.05) / (dark! + 0.05);
+}
+
 /** A colour's chroma, 0 to 1: how far its channels spread. */
 function chroma(hex: string): number {
   const rgb = channels(hex);
@@ -42,6 +62,12 @@ function chroma(hex: string): number {
 function light(hex: string): number {
   const rgb = channels(hex);
   return (Math.max(...rgb) + Math.min(...rgb)) / 2 / 255;
+}
+
+/** A colour's saturation, 0 to 1, as HSL measures it. */
+function saturation(hex: string): number {
+  const spread = chroma(hex);
+  return spread === 0 ? 0 : spread / (1 - Math.abs(2 * light(hex) - 1));
 }
 
 /** A colour's hue, in degrees. */
@@ -82,6 +108,27 @@ describe("the row map's inks, from the look", () => {
       expect(inks.dim.disabled).toBe(0.48);
       expect(inks.dim.hidden).toBeGreaterThanOrEqual(0.38);
       expect(inks.dim.hidden).toBeLessThan(inks.dim.disabled);
+      // Less by no more than it takes for its labels to keep 2:1 and its
+      // badges 1.75:1 on the card, a step at a time.
+      const { look } = state;
+      const keeps = (opacity: number) =>
+        dimmed(inks.ink, ground, ground, opacity) >= 2 &&
+        dimmed(
+          look.pillForegroundColor,
+          look.pillBackgroundColor,
+          ground,
+          opacity,
+        ) >= 1.75 &&
+        dimmed(
+          look.structurePillForegroundColor,
+          look.structurePillBackgroundColor,
+          ground,
+          opacity,
+        ) >= 1.75;
+      expect(keeps(inks.dim.hidden)).toBe(true);
+      if (inks.dim.hidden > 0.38) {
+        expect(keeps(inks.dim.hidden - 0.01)).toBe(false);
+      }
     });
 
     it(`rings what the map focuses in the demo's blue, raised where the card would lose it, in ${preset.name}`, () => {
@@ -142,6 +189,24 @@ describe("the row map's inks, from the look", () => {
     expect(contrast("#ffffff", check.fill)).toBeGreaterThanOrEqual(4);
     expect(contrast("#ffffff", check.fill)).toBeLessThan(4.2);
     expect(hue(check.fill)).toBeCloseTo(hue(ring), -1);
+  });
+
+  it("keeps a checked box's fill a calm colour, not a grey, on a card that raises the ring near white", () => {
+    // A mid-grey card and a white title: the ring is raised to a pale tint.
+    const card = "#777777";
+    const state = {
+      ...DEFAULT_STYLE,
+      look: {
+        ...DEFAULT_STYLE.look,
+        backgroundColor: card,
+        titleColor: "#ffffff",
+      },
+      vars: { ...DEFAULT_STYLE.vars, "--bl-ac-highlight-bg": card },
+    };
+    const { check, ring } = mapInks(state);
+    expect(saturation(check.fill)).toBeGreaterThanOrEqual(0.3);
+    expect(hue(check.fill)).toBeCloseTo(hue(ring), -1);
+    expect(contrast("#ffffff", check.fill)).toBeGreaterThanOrEqual(4);
   });
 
   it("reads a colour with an alpha, laid over the card, and floors its inks as any other", () => {
