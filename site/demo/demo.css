@@ -2612,11 +2612,8 @@
 
 .preset-swatch {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-  height: 64px;
-  padding: 9px 7px;
+  display: block;
+  height: 68px;
   overflow: hidden;
   border: 1px solid #d6d9e0;
   box-shadow: 0 2px 6px rgba(9, 35, 79, 0.08);
@@ -2631,88 +2628,70 @@
   outline-offset: 2px;
 }
 
-/* A line of the row, as the preset lays it out: a listed line indented as
-   the row's lower lines are. */
-.preset-line {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  min-height: 7px;
-}
-
-.preset-line[data-indent] {
-  padding-left: 7px;
-}
-
-.preset-gap {
-  flex: 1;
-}
-
-.preset-icon {
-  flex: none;
-  width: 5px;
+.preset-icon,
+.preset-title,
+.preset-mark,
+.preset-sub {
+  position: absolute;
+  left: 9px;
   height: 5px;
   border-radius: 1px;
+}
+
+/* An icon on the name: a square before the title, the title moved over. */
+.preset-icon {
+  top: 12px;
+  width: 7px;
+  height: 7px;
 }
 
 .preset-title {
-  display: flex;
-  gap: 2px;
+  top: 13px;
+  width: 52%;
 }
 
-.preset-mark,
-.preset-title-rest,
-.preset-bar {
-  flex: none;
-  height: 5px;
-  border-radius: 1px;
+.preset-icon ~ .preset-title,
+.preset-icon ~ .preset-mark {
+  left: 19px;
+}
+
+.preset-icon ~ .preset-title {
+  width: calc(52% - 10px);
 }
 
 .preset-mark {
-  width: 12px;
+  top: 20px;
+  width: 26%;
+  height: 2px;
 }
 
-.preset-mark[data-emphasis="weight"] {
-  height: 7px;
-}
-
-.preset-title-rest {
-  width: 20px;
-}
-
-.preset-name-bar {
-  width: 22px;
+/* A bar for each line below the title, a little unlike the one above it. */
+.preset-sub {
+  top: 34px;
+  width: 40%;
   height: 4px;
-}
-
-.preset-bar {
-  width: 8px;
-  height: 3px;
   opacity: 0.8;
 }
 
-.preset-bar[data-long] {
-  width: 18px;
+.preset-sub + .preset-sub {
+  top: 43px;
+  width: 31%;
 }
 
-.preset-square {
-  flex: none;
-  box-sizing: border-box;
-  width: 6px;
-  height: 6px;
-  border: 1px solid;
+.preset-sub + .preset-sub + .preset-sub {
+  top: 52px;
+  width: 36%;
 }
 
 .preset-pill {
-  flex: none;
-  box-sizing: border-box;
-  min-width: 6px;
-  height: 7px;
-  padding: 0 2px;
+  position: absolute;
+  top: 9px;
+  right: 8px;
+  padding: 0 3px;
   border: 1px solid;
-  font-size: 6px;
+  font-size: 9px;
   font-weight: 600;
-  line-height: 5px;
+  line-height: 13px;
 }
 
 .preset-name {

@@ -41,57 +41,175 @@ function swatches(route: (typeof ROUTES)[number]) {
   };
 }
 
+/**
+ * The lines a preset's row draws below its title on a search: the head's
+ * other lines that have something in their places, then every listed line.
+ */
+function linesBelow(
+  preset: (typeof PRESETS)[number],
+  route: (typeof ROUTES)[number],
+): number {
+  const row = applyPreset(DEFAULT_STYLE, preset).rows[route];
+  const layout: Readonly<Record<string, string | null>> = row.layout;
+  const kinds = lineKinds(route);
+  const head = kinds
+    .filter(kind => kind.relation === null)
+    .flatMap(kind => kind.lines)
+    .filter(
+      line =>
+        line.lead.field !== null &&
+        [
+          line.lead.field,
+          line.lead.badge,
+          line.trailing.badge,
+          line.trailing.field,
+        ].some(place => layout[place] != null),
+    );
+  const listed = row.list.flatMap(
+    relation => kinds.find(kind => kind.relation === relation)!.lines,
+  );
+  return head.length + listed.length;
+}
+
 describe("a preset's swatch", () => {
+  it("draws Light as it always has: a title, its mark, a flag and one subtitle", () => {
+    const { all, done } = swatches("businesses");
+    try {
+      const light = all[PRESETS.findIndex(preset => preset.name === "Light")]!;
+      expect([...light.children].map(child => child.className)).toEqual([
+        "preset-title",
+        "preset-mark",
+        "preset-pill",
+        "preset-sub",
+      ]);
+      expect(light.querySelector(".preset-pill")!.textContent).toBe("PA");
+      const width = light.clientWidth;
+      const at = (name: string) => {
+        const bone = light.querySelector<HTMLElement>(`.${name}`)!;
+        return {
+          left: bone.offsetLeft,
+          top: bone.offsetTop,
+          width: Math.round(bone.offsetWidth),
+          height: bone.offsetHeight,
+        };
+      };
+      expect(at("preset-title")).toEqual({
+        left: 9,
+        top: 13,
+        width: Math.round(width * 0.52),
+        height: 5,
+      });
+      expect(at("preset-mark")).toEqual({
+        left: 9,
+        top: 20,
+        width: Math.round(width * 0.26),
+        height: 2,
+      });
+      expect(at("preset-sub")).toEqual({
+        left: 9,
+        top: 34,
+        width: Math.round(width * 0.4),
+        height: 4,
+      });
+      const flag = light.querySelector<HTMLElement>(".preset-pill")!;
+      expect(flag.offsetTop).toBe(9);
+      expect(width - flag.offsetLeft - flag.offsetWidth).toBe(8);
+    } finally {
+      done();
+    }
+  });
+
   for (const route of ROUTES) {
-    it(`draws a bar for each line the preset lists and a square for each iconed name, on ${route}`, () => {
+    it(`draws a subtitle bar for each line the row draws below its title, at most three, on ${route}`, () => {
       const { all, done } = swatches(route);
       try {
         PRESETS.forEach((preset, at) => {
           const swatch = all[at]!;
-          const row = applyPreset(DEFAULT_STYLE, preset).rows[route];
-          const drawn = [
-            ...swatch.querySelectorAll<HTMLElement>(".preset-line"),
-          ];
-          const head = drawn.filter(line => line.dataset.relation === "head");
-          const listed = drawn
-            .filter(line => line.dataset.relation !== "head")
-            .map(line => line.dataset.relation);
-          expect(listed, preset.name).toEqual(
-            row.list.slice(0, Math.max(0, 4 - head.length)),
+          const subs = [...swatch.querySelectorAll<HTMLElement>(".preset-sub")];
+          expect(subs.length, preset.name).toBe(
+            Math.min(3, linesBelow(preset, route)),
           );
-          // A square before each drawn name whose segment carries an icon.
-          const kinds = lineKinds(route);
-          const iconed = drawn.filter(line => {
-            const relation =
-              line.dataset.relation === "head" ? null : line.dataset.relation!;
-            const kind = kinds.find(
-              each => (each.relation ?? null) === relation,
-            )!;
-            const named = kind.lines.find(each => each.lead.field === null)!;
-            const segment = nameSegment(route, kind.relation, named.line);
-            // Only the line that draws the name carries its square.
-            return (
-              segment !== null &&
-              (row.iconSegments as readonly string[]).includes(segment) &&
-              (relation !== null || line === head[0])
+          // Evenly spaced, inside the swatch, and not all one length.
+          const tops = subs.map(sub => sub.offsetTop);
+          for (let next = 2; next < tops.length; next++) {
+            expect(tops[next]! - tops[next - 1]!, preset.name).toBe(
+              tops[1]! - tops[0]!,
             );
-          });
-          expect(
-            swatch.querySelectorAll(".preset-icon").length,
-            preset.name,
-          ).toBe(iconed.length);
-          for (const line of drawn) {
+          }
+          const last = subs.at(-1);
+          if (last !== undefined) {
             expect(
-              line.querySelectorAll(".preset-icon").length,
-              `${preset.name} ${line.dataset.relation}`,
-            ).toBe(iconed.includes(line) ? 1 : 0);
+              last.offsetTop + last.offsetHeight,
+              preset.name,
+            ).toBeLessThanOrEqual(swatch.clientHeight - 6);
+          }
+          if (subs.length > 1) {
+            expect(
+              new Set(subs.map(sub => sub.offsetWidth)).size,
+              preset.name,
+            ).toBe(subs.length);
           }
         });
       } finally {
         done();
       }
     });
+
+    it(`puts a square in the title's ink before the title only where the name carries an icon, on ${route}`, () => {
+      const { all, done } = swatches(route);
+      try {
+        const head = lineKinds(route).find(kind => kind.relation === null)!;
+        const named = head.lines.find(line => line.lead.field === null)!;
+        const segment = nameSegment(route, null, named.line);
+        PRESETS.forEach((preset, at) => {
+          const swatch = all[at]!;
+          const icons: readonly string[] = applyPreset(DEFAULT_STYLE, preset)
+            .rows[route].iconSegments;
+          const squares = [
+            ...swatch.querySelectorAll<HTMLElement>(".preset-icon"),
+          ];
+          const iconed = segment !== null && icons.includes(segment);
+          expect(squares.length, preset.name).toBe(iconed ? 1 : 0);
+          const title = swatch.querySelector<HTMLElement>(".preset-title")!;
+          const flag = swatch.querySelector<HTMLElement>(".preset-pill")!;
+          // The title never runs under the flag.
+          expect(
+            title.getBoundingClientRect().right,
+            preset.name,
+          ).toBeLessThanOrEqual(flag.getBoundingClientRect().left - 2);
+          if (!iconed) return;
+          const square = squares[0]!.getBoundingClientRect();
+          const bar = title.getBoundingClientRect();
+          expect(square.width, preset.name).toBe(square.height);
+          expect(
+            Math.abs(square.height - bar.height),
+            preset.name,
+          ).toBeLessThanOrEqual(2);
+          expect(square.right, preset.name).toBeLessThanOrEqual(bar.left - 2);
+          expect(bar.left - square.right, preset.name).toBeLessThanOrEqual(4);
+          expect(
+            Math.abs(
+              square.top + square.height / 2 - (bar.top + bar.height / 2),
+            ),
+            preset.name,
+          ).toBeLessThanOrEqual(0.5);
+          expect(
+            getComputedStyle(squares[0]!).backgroundColor,
+            preset.name,
+          ).toBe(getComputedStyle(title).backgroundColor);
+        });
+      } finally {
+        done();
+      }
+    });
   }
+
+  it("varies how many bars the presets draw, none for a head-only row", () => {
+    const counts = ROUTES.flatMap(route =>
+      PRESETS.map(preset => Math.min(3, linesBelow(preset, route))),
+    );
+    expect(new Set(counts)).toEqual(new Set([0, 1, 2, 3]));
+  });
 
   it("marks the match in every preset, never in a transparent ink, and keeps every swatch one height", () => {
     const { all, done } = swatches("businesses");
