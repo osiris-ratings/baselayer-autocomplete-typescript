@@ -235,14 +235,14 @@ Address) that moves the form with it. Its row map draws each line of that row,
 the head first, in two drawers. Shown holds the lines the row lists, in the
 order it lists them: a line is dragged by its grip to another spot in Shown,
 the other lines making way, or into Hidden to leave it out, and back again as
-it was. A shown line's Disabled checkbox, in a column with a faint guide down
-it, keeps it from being chosen, and the line is drawn dimmed, as the menu draws
-it. Hidden, faintly striped, holds the hidden lines and the fields the row
-leaves out. A field moves only within its own line, and a segment's icon goes
-on or off from its chip: on, off with a slash, or frozen on a hidden line. Each
-line keeps to one row, scrolling sideways when it runs out of room. The rows
-pretend "harbor concr" was typed, one word in full and the next only begun, so
-the region shows its difference: whole word highlights CONCRETE, typed
+it was. A shown line's Enabled checkbox, in a column with a faint guide down it,
+marks it as one that can be chosen; an unticked line is drawn dimmed, as the
+menu draws it. Hidden, faintly striped, holds the hidden lines and the fields
+the row leaves out. A field moves only within its own line, and a segment's icon
+goes on or off from its chip: on, off with a slash, or frozen on a hidden line.
+Each line keeps to one row, scrolling sideways when it runs out of room. The
+rows pretend "harbor concr" was typed, one word in full and the next only begun,
+so the region shows its difference: whole word highlights CONCRETE, typed
 characters only its CONCR.
 
 Behavior acts on the sample rows as it would on real ones: Rows sets how many
@@ -296,7 +296,7 @@ names only the places that differ from the SDK's), for the search the form is
 on, and the CSS variables to set. Its **Reset** puts the whole panel back as it
 opened: the Light preset and every default.
 
-![The styling panel](images/demo-styling.png)
+![The styling panel on Person: the row map's grips, Enabled column and Hidden drawer](images/demo-styling.png)
 
 ![The component in the Midnight preset](images/demo-styled.png)
 

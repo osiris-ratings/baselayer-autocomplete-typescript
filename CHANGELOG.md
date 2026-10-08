@@ -143,13 +143,13 @@ release.
   scope allows, each search keeping its own text and pick, and `DEMO_API=sample
 pnpm demo` runs it on made-up data with no network. In Styling, the row map
   builds each search's row: a line is dragged by its grip between the Shown and
-  the Hidden drawers, and reordered in Shown, the others making way; a Disabled
-  checkbox, in a column with a guide down it, keeps a shown line from being
-  chosen and draws it dimmed; the faintly striped Hidden drawer holds the hidden
-  lines and the fields the row leaves out; a field is dragged into place, and a
-  segment's icon goes on or off from its chip, frozen on a hidden line; each
-  line keeps to one row, scrolling sideways when out of room. The preview draws
-  the same row, and the export writes its props.
+  the Hidden drawers, and reordered in Shown, the others making way; an Enabled
+  checkbox, in a column with a guide down it, marks which shown lines can be
+  chosen, and an unticked line is drawn dimmed; the faintly striped Hidden
+  drawer holds the hidden lines and the fields the row leaves out; a field is
+  dragged into place, and a segment's icon goes on or off from its chip, frozen
+  on a hidden line; each line keeps to one row, scrolling sideways when out of
+  room. The preview draws the same row, and the export writes its props.
 
 ### Changed
 
