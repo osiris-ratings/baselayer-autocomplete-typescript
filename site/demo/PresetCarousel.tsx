@@ -170,11 +170,7 @@ function PresetSwatch({ preset, route }: { preset: Preset; route: Route }) {
   const row = shown.rows[route];
   const layout: Readonly<Record<string, string | null>> = row.layout;
   const icons: readonly string[] = row.iconSegments;
-  const kinds = lineKinds(route).filter(
-    kind =>
-      kind.relation === null ||
-      (row.list as readonly string[]).includes(kind.relation),
-  );
+  const kinds = lineKinds(route);
   // The head, then the lines in the order the row lists them.
   const ordered = [
     ...kinds.filter(kind => kind.relation === null),
