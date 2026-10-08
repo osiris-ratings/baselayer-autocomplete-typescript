@@ -80,6 +80,7 @@ export function lookVariables(look: Look): CSSProperties {
   ) {
     const inks = disabledInks(look);
     vars["--bl-ac-disabled-name"] = inks.name;
+    vars["--bl-ac-disabled-head-name"] = inks.headName;
     vars["--bl-ac-disabled-text"] = inks.text;
   }
   const set = (name: string, value: string, fallback: string) => {

@@ -13,6 +13,12 @@ type Rgb = readonly [number, number, number];
 export const DISABLED_NAME_FLOOR = 4.6;
 
 /**
+ * The least a disabled head's name keeps: drawn at the lines' weight, it
+ * fades a step further than a line's name and still draws at 3:1 or more.
+ */
+export const DISABLED_HEAD_FLOOR = 3.5;
+
+/**
  * Its other text and its icon keep this share of their own contrast, so they
  * read as dimmed on any ground, and never less than the floor below.
  */
@@ -103,10 +109,14 @@ export interface DisabledInks {
   opacity: string;
   /** Its names' colour (`--bl-ac-disabled-name`). */
   name: string;
+  /** A disabled head's name's colour (`--bl-ac-disabled-head-name`). */
+  headName: string;
   /** Its other text's and its icon's colour (`--bl-ac-disabled-text`). */
   text: string;
   /** How much of the title's colour `name` keeps against the ground, in percent. */
   nameShare: number;
+  /** How much of the title's colour `headName` keeps, in percent. */
+  headNameShare: number;
   /** How much of the subtitle's colour `text` keeps, in percent. */
   textShare: number;
   /**
@@ -119,9 +129,9 @@ export interface DisabledInks {
 /**
  * A disabled line under `look`: at `disabledDim` d, its squares, flag and
  * icons drained of colour by 2d, its text moved up to d of the way toward the
- * ground, its names no further than 4.6:1 and the rest than 40% of its
- * contrast (1.8:1 at least), and its squares' opacity 1 - 0.8d. At 0, nothing
- * changes.
+ * ground, its names no further than 4.6:1 (a head's 3.5:1) and the rest than
+ * 40% of its contrast (1.8:1 at least), and its squares' opacity 1 - 0.8d. At
+ * 0, nothing changes.
  */
 export function disabledInks(look: Look): DisabledInks {
   const dim = look.disabledDim;
@@ -138,6 +148,7 @@ export function disabledInks(look: Look): DisabledInks {
     };
   };
   const name = faded(look.titleColor, DISABLED_NAME_FLOOR);
+  const headName = faded(look.titleColor, DISABLED_HEAD_FLOOR);
   const text = faded(
     look.subtitleColor,
     Math.max(
@@ -150,8 +161,10 @@ export function disabledInks(look: Look): DisabledInks {
     filter: dim === 0 ? "none" : `saturate(${round(Math.max(0, 1 - 2 * dim))})`,
     opacity: String(round(1 - 0.8 * dim)),
     name: name.hex,
+    headName: headName.hex,
     text: text.hex,
     nameShare: name.kept,
+    headNameShare: headName.kept,
     textShare: text.kept,
     markShare: Math.round((1 - DISABLED_MARK_FADE * dim) * 1000) / 10,
   };

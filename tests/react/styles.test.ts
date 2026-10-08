@@ -199,6 +199,9 @@ describe("a disabled line", () => {
       `color: var( --bl-ac-disabled-name, color-mix(in srgb, var(--bl-ac-title) ${inks.nameShare}%, var(--bl-ac-bg)) );`,
     );
     expect(flat).toContain(
+      `color: var( --bl-ac-disabled-head-name, color-mix(in srgb, var(--bl-ac-title) ${inks.headNameShare}%, var(--bl-ac-bg)) );`,
+    );
+    expect(flat).toContain(
       `color: var( --bl-ac-disabled-text, color-mix(in srgb, var(--bl-ac-subtitle) ${inks.textShare}%, var(--bl-ac-bg)) );`,
     );
     expect(flat).toContain(
@@ -212,8 +215,10 @@ describe("a disabled line", () => {
       filter: "none",
       opacity: "1",
       name: DEFAULT_LOOK.titleColor.toLowerCase(),
+      headName: DEFAULT_LOOK.titleColor.toLowerCase(),
       text: DEFAULT_LOOK.subtitleColor.toLowerCase(),
       nameShare: 100,
+      headNameShare: 100,
       textShare: 100,
     });
     expect(disabledInks(DEFAULT_LOOK)).toMatchObject({

@@ -3,13 +3,14 @@ import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
 import { commands, page } from "vitest/browser";
 
-import type {
-  AddressSuggestion,
-  BusinessSuggestion,
-  EntityType,
-  LookInput,
-  PersonSuggestion,
-  RelatedItem,
+import {
+  resolveLook,
+  type AddressSuggestion,
+  type BusinessSuggestion,
+  type EntityType,
+  type LookInput,
+  type PersonSuggestion,
+  type RelatedItem,
 } from "@baselayer-sdk/autocomplete";
 import {
   AddressAutocompleteView,
@@ -18,6 +19,7 @@ import {
 } from "@baselayer-sdk/autocomplete/react";
 
 import { PRESETS } from "../../site/demo/style-state";
+import { disabledInks } from "../../src/react/disabled";
 import "../../src/react/styles.css";
 
 declare module "vitest/browser" {
@@ -321,7 +323,10 @@ const viewProps = {
   open: true,
 };
 
-/** A search's row with its head enabled or not: the head, its name and its secondary text. */
+/**
+ * A search's row with its head enabled or not: the head, its name and its
+ * secondary text, and a listed line's name.
+ */
 function head(
   search: "person" | "address" | "business",
   enabled: boolean,
@@ -378,6 +383,7 @@ function head(
       line,
       search === "business" ? ".bl-ac-address" : ".bl-ac-group-count",
     ),
+    lineName: part(group, ".bl-ac-line-name"),
     done() {
       root.unmount();
       host.remove();
@@ -391,17 +397,33 @@ describe("a row's head that is not a pick", () => {
   )) {
     for (const search of ["person", "address", "business"] as const) {
       const article = search === "address" ? "an" : "a";
-      it(`fades on ${article} ${search}'s row as a disabled line does, its name and its secondary text, on ${preset.name}, and not when it is a pick`, async () => {
+      it(`fades on ${article} ${search}'s row, its name at the lines' weight and further than a line's, its secondary text as a line's, on ${preset.name}, and not when it is a pick`, async () => {
         const enabled = head(search, true, preset.look);
         const enabledName = await drawnContrast(enabled.name);
+        const enabledWeight = getComputedStyle(enabled.name).fontWeight;
         const enabledSecondary = await drawnContrast(enabled.secondary);
         enabled.done();
         const disabled = head(search, false, preset.look);
         try {
           expect(disabled.head).toHaveAttribute("aria-disabled", "true");
+          // Not bold, so it no longer reads as a title to click; a pick is.
+          const lineWeight = getComputedStyle(disabled.lineName).fontWeight;
+          expect(getComputedStyle(disabled.name).fontWeight, "weight").toBe(
+            lineWeight,
+          );
+          expect(enabledWeight, "a pick's weight").not.toBe(lineWeight);
+          // In the head's own ink, a step quieter than a line's name.
+          const ink = disabledInks(resolveLook(preset.look)).headName;
+          const drawnIn = rgbOf(getComputedStyle(disabled.name).color);
+          [1, 3, 5].forEach((at, channel) =>
+            expect(
+              Math.abs(drawnIn[channel]! - parseInt(ink.slice(at, at + 2), 16)),
+              `name ink ${ink}`,
+            ).toBeLessThanOrEqual(1),
+          );
           const disabledName = await drawnContrast(disabled.name);
           expect(disabledName, "name").toBeGreaterThanOrEqual(3);
-          expect(disabledName, "name").toBeLessThanOrEqual(0.6 * enabledName);
+          expect(disabledName, "name").toBeLessThanOrEqual(0.45 * enabledName);
           const disabledSecondary = await drawnContrast(disabled.secondary);
           expect(disabledSecondary, "secondary").toBeLessThanOrEqual(
             0.6 * enabledSecondary,

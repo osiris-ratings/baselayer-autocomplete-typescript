@@ -4,6 +4,7 @@ import { DEFAULT_LOOK, resolveLook } from "@baselayer-sdk/autocomplete";
 
 import { PRESETS } from "../../site/demo/style-state";
 import {
+  DISABLED_HEAD_FLOOR,
   DISABLED_NAME_FLOOR,
   DISABLED_TEXT_FLOOR,
   DISABLED_TEXT_KEEPS,
@@ -54,8 +55,23 @@ describe("a disabled line's inks", () => {
           contrast(look.subtitleColor, ground) * DISABLED_TEXT_KEEPS,
         ),
       );
+      // A head's name, drawn at the lines' weight, fades further, never
+      // louder than a line's.
+      expect(contrast(inks.headName, ground)).toBeGreaterThanOrEqual(
+        DISABLED_HEAD_FLOOR,
+      );
+      expect(contrast(inks.headName, ground)).toBeLessThanOrEqual(
+        contrast(inks.name, ground),
+      );
     });
   }
+
+  it("fade a head's name to its own floor by default, below a line's", () => {
+    const { headName, name } = disabledInks(DEFAULT_LOOK);
+    const ground = DEFAULT_LOOK.backgroundColor;
+    expect(contrast(headName, ground)).toBeLessThan(DISABLED_HEAD_FLOOR + 0.05);
+    expect(contrast(name, ground)).toBeGreaterThanOrEqual(DISABLED_NAME_FLOOR);
+  });
 
   it("fade a translucent title as it is drawn, over the ground", () => {
     // #1a202c at half alpha over white is drawn as this.

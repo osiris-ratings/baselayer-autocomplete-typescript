@@ -398,12 +398,21 @@
   filter: var(--bl-ac-disabled-filter, saturate(0));
 }
 
-.bl-ac-group-line:not([data-enabled]) .bl-ac-line-name,
-.bl-ac-group-head:not([data-enabled]) .bl-ac-name,
-.bl-ac-group > .bl-ac-row:not([data-enabled]) .bl-ac-name {
+.bl-ac-group-line:not([data-enabled]) .bl-ac-line-name {
   color: var(
     --bl-ac-disabled-name,
     color-mix(in srgb, var(--bl-ac-title) 61.7%, var(--bl-ac-bg))
+  );
+}
+
+/* A head that is not a pick drops to the lines' weight, so it no longer reads
+   as a title to click, and fades a step further than a line's name. */
+.bl-ac-group-head:not([data-enabled]) .bl-ac-name,
+.bl-ac-group > .bl-ac-row:not([data-enabled]) .bl-ac-name {
+  font-weight: var(--bl-ac-weight-base);
+  color: var(
+    --bl-ac-disabled-head-name,
+    color-mix(in srgb, var(--bl-ac-title) 52.7%, var(--bl-ac-bg))
   );
 }
 
