@@ -145,7 +145,7 @@ export function StylingPanel({
           Custom
         </p>
       </div>
-      <PresetCarousel state={state} onChange={onChange} />
+      <PresetCarousel state={state} onChange={onChange} route={route} />
 
       <Fold title="Components" summary={count(componentChanges(state))}>
         <p className="hint fold-note">

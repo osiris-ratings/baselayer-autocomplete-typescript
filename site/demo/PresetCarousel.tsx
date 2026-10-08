@@ -6,12 +6,16 @@ import {
   type KeyboardEvent,
 } from "react";
 
+import type { Route } from "@baselayer-sdk/autocomplete";
+
 import { markEdges } from "./scroll-edges";
 import {
   DEFAULT_STYLE,
   PRESETS,
   activePreset,
   applyPreset,
+  lineKinds,
+  nameSegment,
   type Preset,
   type StyleState,
 } from "./style-state";
@@ -31,9 +35,12 @@ const STEPS: Readonly<Record<string, 1 | -1>> = {
 export function PresetCarousel({
   state,
   onChange,
+  route = "businesses",
 }: {
   state: StyleState;
   onChange(state: StyleState): void;
+  /** The search the form is on, whose row each swatch draws. */
+  route?: Route;
 }) {
   const active = activePreset(state);
   const scroller = useRef<HTMLDivElement | null>(null);
@@ -115,8 +122,13 @@ export function PresetCarousel({
               onClick={() => onChange(applyPreset(state, preset))}
               onKeyDown={onKeyDown}
             >
-              <PresetSwatch preset={preset} />
-              <span className="preset-name">{preset.name}</span>
+              <PresetSwatch preset={preset} route={route} />
+              <span
+                className="preset-name"
+                style={{ fontFamily: preset.vars["--bl-ac-font"] }}
+              >
+                {preset.name}
+              </span>
             </button>
           ))}
         </div>
@@ -143,40 +155,190 @@ export function PresetCarousel({
   );
 }
 
-/** A preset drawn small: its card, title, mark, flag and subtitle. */
-function PresetSwatch({ preset }: { preset: Preset }) {
+/** The most lines a swatch draws, head included, so every swatch is one height. */
+const SWATCH_LINES = 4;
+
+/**
+ * A preset drawn small, as its row draws on the search the form is on: each
+ * line where the row puts it, a listed line indented, a square before any
+ * name that carries an icon, and the title's first segment marked as matches
+ * are.
+ */
+function PresetSwatch({ preset, route }: { preset: Preset; route: Route }) {
   const shown = applyPreset(DEFAULT_STYLE, preset);
+  const { look, vars } = shown;
+  const row = shown.rows[route];
+  const layout: Readonly<Record<string, string | null>> = row.layout;
+  const icons: readonly string[] = row.iconSegments;
+  const kinds = lineKinds(route).filter(
+    kind =>
+      kind.relation === null ||
+      (row.list as readonly string[]).includes(kind.relation),
+  );
+  // The head, then the lines in the order the row lists them.
+  const ordered = [
+    ...kinds.filter(kind => kind.relation === null),
+    ...row.list.flatMap(relation =>
+      kinds.filter(kind => kind.relation === relation),
+    ),
+  ];
+  const lines = ordered
+    .flatMap(kind =>
+      kind.lines.map(line => ({ kind, line, head: kind.relation === null })),
+    )
+    // A line with no name and nothing in its places is not drawn.
+    .filter(
+      ({ line }) =>
+        line.lead.field === null ||
+        [
+          line.lead.field,
+          line.lead.badge,
+          line.trailing.badge,
+          line.trailing.field,
+        ].some(place => layout[place] != null),
+    )
+    .slice(0, SWATCH_LINES);
+  const step = 9 * (parseFloat(vars["--bl-ac-line-height"]) / 1.5 || 1);
+  const glyph = (field: string | null, head: boolean, key: string) => {
+    switch (field) {
+      case null:
+        return null;
+      case "states":
+        return (
+          <span
+            key={key}
+            className="preset-pill"
+            data-field="states"
+            style={{
+              background: look.pillBackgroundColor,
+              color: look.pillForegroundColor,
+              borderColor: look.primaryPillBorderColor,
+              borderRadius: vars["--bl-ac-pill-radius"],
+              fontFamily: vars["--bl-ac-font"] || undefined,
+            }}
+          >
+            {head ? "PA" : ""}
+          </span>
+        );
+      case "structure":
+        return (
+          <span
+            key={key}
+            className="preset-square"
+            data-field="structure"
+            style={{
+              background: look.structurePillBackgroundColor,
+              borderColor: look.structurePillForegroundColor,
+              borderRadius: vars["--bl-ac-pill-radius"],
+            }}
+          />
+        );
+      default:
+        return (
+          <span
+            key={key}
+            className="preset-bar"
+            data-field={field}
+            data-long={
+              field === "address" || field === "firstAddress" || undefined
+            }
+            style={{ background: look.subtitleColor }}
+          />
+        );
+    }
+  };
   return (
     <span
       className="preset-swatch"
       aria-hidden="true"
       style={{
-        background: shown.look.backgroundColor,
-        borderRadius: shown.vars["--bl-ac-radius"],
+        background: look.backgroundColor,
+        borderRadius: vars["--bl-ac-radius"],
+        gap: `${Math.max(4, step - 5)}px`,
       }}
     >
-      <span
-        className="preset-title"
-        style={{ background: shown.look.titleColor }}
-      />
+      {lines.map(({ kind, line, head }, at) => {
+        const named = line.lead.field === null;
+        const segment = named
+          ? nameSegment(route, kind.relation, line.line)
+          : null;
+        const iconed = segment !== null && icons.includes(segment);
+        return (
+          <span
+            key={at}
+            className="preset-line"
+            data-relation={kind.relation ?? "head"}
+            data-indent={!head || undefined}
+          >
+            {iconed && (
+              <span
+                className="preset-icon"
+                style={{ background: look.titleColor }}
+              />
+            )}
+            {named ? (
+              head && at === 0 ? (
+                <Title look={look} vars={vars} />
+              ) : (
+                <span
+                  className="preset-bar preset-name-bar"
+                  style={{
+                    background: head ? look.titleColor : look.subtitleColor,
+                  }}
+                />
+              )
+            ) : (
+              glyph(layout[line.lead.field!] ?? null, head, "lead")
+            )}
+            {glyph(layout[line.lead.badge] ?? null, head, "badge")}
+            <span className="preset-gap" />
+            {glyph(layout[line.trailing.badge] ?? null, head, "trailing-badge")}
+            {glyph(layout[line.trailing.field] ?? null, head, "trailing")}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+/**
+ * The row's name, its first segment marked as the preset marks a match: a bar
+ * under it, a block behind it, or in the mark's ink, heavier for weight.
+ */
+function Title({
+  look,
+  vars,
+}: {
+  look: StyleState["look"];
+  vars: StyleState["vars"];
+}) {
+  const emphasis = look.matchEmphasis;
+  const color =
+    look.matchEmphasisColor ??
+    (emphasis === "underline"
+      ? vars["--bl-ac-underline"]
+      : emphasis === "background"
+        ? vars["--bl-ac-marker"]
+        : vars["--bl-ac-ink-mark"] || look.titleColor);
+  const inked = emphasis === "ink" || emphasis === "weight";
+  return (
+    <span className="preset-title">
       <span
         className="preset-mark"
-        style={{ background: shown.vars["--bl-ac-underline"] }}
+        data-emphasis={emphasis}
+        style={{
+          background: inked ? color : look.titleColor,
+          ...(emphasis === "background"
+            ? { boxShadow: `0 0 0 2px ${color}` }
+            : {}),
+          ...(emphasis === "underline"
+            ? { boxShadow: `0 3px 0 -1px ${color}` }
+            : {}),
+        }}
       />
       <span
-        className="preset-pill"
-        style={{
-          background: shown.look.pillBackgroundColor,
-          color: shown.look.pillForegroundColor,
-          borderColor: shown.look.primaryPillBorderColor,
-          borderRadius: shown.vars["--bl-ac-pill-radius"],
-        }}
-      >
-        PA
-      </span>
-      <span
-        className="preset-sub"
-        style={{ background: shown.look.subtitleColor }}
+        className="preset-title-rest"
+        style={{ background: look.titleColor }}
       />
     </span>
   );
