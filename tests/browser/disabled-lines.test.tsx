@@ -157,6 +157,14 @@ async function drawnContrast(element: Element): Promise<number> {
 const part = (line: HTMLElement, selector: string) =>
   line.querySelector<HTMLElement>(selector)!;
 
+/**
+ * The least a disabled segment draws at: about 1.5:1 for text and counts on a
+ * 1.7 floor, 1.5:1 for a role on its 1.8. Linux and macOS draw sans-serif
+ * differently, so the drawn bounds keep a margin; each ink is pinned exactly.
+ */
+const drawnFloor = (selector: string) =>
+  selector === ".bl-ac-role" ? 1.5 : 1.45;
+
 describe("a disabled line", () => {
   it("has its squares and icons drained of colour, its text faded toward the ground and its squares dimmed; an enabled line has not", () => {
     const { head, enabled, disabled, done } = draw();
@@ -196,7 +204,7 @@ describe("a disabled line", () => {
   });
 
   for (const preset of PRESETS) {
-    it(`reads as inactive on ${preset.name}: its name in the regular weight, 2:1 or more and at most a fifth of an enabled one's, its secondary text 40% or more below and 1.5:1 or more`, async () => {
+    it(`reads as inactive on ${preset.name}: its name in the regular weight, 2:1 or more and well below an enabled one's, its secondary text 40% or more below and still there, each in its ink`, async () => {
       const { enabled, disabled, done } = draw(preset.look);
       try {
         const drawn = async (selector: string) => ({
@@ -210,13 +218,22 @@ describe("a disabled line", () => {
         expect(
           getComputedStyle(part(disabled, ".bl-ac-line-name")).fontWeight,
         ).toBe("400");
+        const inks = disabledInks(resolveLook(preset.look));
+        expectInk(part(disabled, ".bl-ac-line-name"), inks.name, "name");
         for (const selector of [".bl-ac-address", ".bl-ac-role"]) {
+          expectInk(
+            part(disabled, selector),
+            selector === ".bl-ac-role" ? inks.role : inks.text,
+            selector,
+          );
           const secondary = await drawn(selector);
           expect(secondary.disabled, selector).toBeLessThanOrEqual(
             0.6 * secondary.enabled,
           );
           // Faded, but still there to be read.
-          expect(secondary.disabled, selector).toBeGreaterThanOrEqual(1.5);
+          expect(secondary.disabled, selector).toBeGreaterThanOrEqual(
+            drawnFloor(selector),
+          );
         }
       } finally {
         done();
@@ -421,15 +438,10 @@ describe("a row's head that is not a pick", () => {
           expect(Number(enabledWeight), "a pick's weight").toBeGreaterThan(
             lineWeight,
           );
-          // In the head's own ink, well past a line's name.
-          const ink = disabledInks(resolveLook(preset.look)).name;
-          const drawnIn = rgbOf(getComputedStyle(disabled.name).color);
-          [1, 3, 5].forEach((at, channel) =>
-            expect(
-              Math.abs(drawnIn[channel]! - parseInt(ink.slice(at, at + 2), 16)),
-              `name ink ${ink}`,
-            ).toBeLessThanOrEqual(1),
-          );
+          // In the disabled inks: the name's, and the text's for the rest.
+          const inks = disabledInks(resolveLook(preset.look));
+          expectInk(disabled.name, inks.name, "name");
+          expectInk(disabled.secondary, inks.text, "secondary");
           // Faint, about 2.3:1 as drawn, but never gone.
           const disabledName = await drawnContrast(disabled.name);
           expect(disabledName, "name").toBeGreaterThanOrEqual(2);
@@ -439,7 +451,9 @@ describe("a row's head that is not a pick", () => {
             0.6 * enabledSecondary,
           );
           // Faded, but still there to be read.
-          expect(disabledSecondary, "secondary").toBeGreaterThanOrEqual(1.5);
+          expect(disabledSecondary, "secondary").toBeGreaterThanOrEqual(
+            drawnFloor(".bl-ac-group-count"),
+          );
         } finally {
           disabled.done();
         }
@@ -615,7 +629,7 @@ describe("a disabled line's name, on every search", () => {
     each => each.name === "Light" || each.name === "Midnight",
   )) {
     for (const [search, entity] of LINE_CASES) {
-      it(`is as faint as a disabled head's on ${search === "address" ? "an" : "a"} ${search}'s ${entity} line, on ${preset.name}, its secondary text 1.5:1 or more`, async () => {
+      it(`is as faint as a disabled head's on ${search === "address" ? "an" : "a"} ${search}'s ${entity} line, on ${preset.name}, its secondary text still there`, async () => {
         const pick = listed(search, EVERY_LINE, preset.look);
         const pickLine = pick.line(entity);
         expect(pickLine).toHaveAttribute("data-enabled", "true");
@@ -647,14 +661,14 @@ describe("a disabled line's name, on every search", () => {
           }
           const drawn = await drawnContrast(name);
           expect(drawn, "name").toBeGreaterThanOrEqual(2);
-          // A short name draws its pick lower, so a fifth, give or take.
-          expect(drawn, "name").toBeLessThanOrEqual(0.22 * pickDrawn);
+          // A short name draws its pick lower, more so on Linux: a quarter.
+          expect(drawn, "name").toBeLessThanOrEqual(0.25 * pickDrawn);
           expect(secondary.length).toBeGreaterThan(0);
           for (const selector of secondary) {
             expect(
               await drawnText(part(line, selector)),
               selector,
-            ).toBeGreaterThanOrEqual(1.5);
+            ).toBeGreaterThanOrEqual(drawnFloor(selector));
           }
         } finally {
           off.done();
