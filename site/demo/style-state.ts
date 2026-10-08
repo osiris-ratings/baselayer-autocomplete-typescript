@@ -1185,11 +1185,32 @@ export function exportCode(
   return { tsx, css };
 }
 
-/** A color theme: the colors, corners and shadow, over the defaults. */
+/** How matched words are marked: the part of the look a preset sets. */
+export type Highlight = Pick<
+  Look,
+  "matchEmphasis" | "matchEmphasisRegion" | "matchEmphasisColor"
+>;
+const HIGHLIGHT_KEYS = [
+  "matchEmphasis",
+  "matchEmphasisRegion",
+  "matchEmphasisColor",
+] as const satisfies readonly (keyof Highlight)[];
+
+/** A search's row as a preset sets it: the lines, their order, and what they draw. */
+export type PresetRow<R extends Route> = Partial<
+  Pick<RowStates[R], "list" | "enabled" | "iconSegments">
+>;
+
+/**
+ * A look: the colors, corners and shadow, how matched words are marked, and
+ * each search's lines, all over the defaults. The reader's own layout stays.
+ */
 export interface Preset {
   name: string;
   look: Partial<Pick<Look, LookColor>>;
   vars: Partial<Record<CssVariable, string>>;
+  highlight?: Partial<Highlight>;
+  rows?: { [R in Route]?: PresetRow<R> };
 }
 
 /** What a preset owns; sizes, behavior and text stay the reader's. */
@@ -1259,6 +1280,13 @@ export const PRESETS: Preset[] = [
       "--bl-ac-underline": "#818cf8",
       "--bl-ac-marker": "#312e81",
       "--bl-ac-shadow": "0 12px 32px rgba(0, 0, 0, 0.45)",
+    },
+    highlight: { matchEmphasis: "background", matchEmphasisRegion: "token" },
+    rows: {
+      people: {
+        list: ["businesses", "addresses"],
+        iconSegments: ["name", "businessName", "addressName"],
+      },
     },
   },
   {
@@ -1338,17 +1366,45 @@ export const PRESETS: Preset[] = [
   },
 ];
 
-/** The state with a preset's colors and corners, everything else kept. */
+/** A search's row with a preset's lines, Enabled boxes and icons; its layout kept. */
+function presetRow<R extends Route>(
+  state: StyleState,
+  preset: Preset,
+  route: R,
+): RowStates[R] {
+  const row: PresetRow<R> = preset.rows?.[route] ?? {};
+  const base: RowStates[R] = DEFAULT_STYLE.rows[route];
+  return {
+    ...state.rows[route],
+    list: [...(row.list ?? base.list)],
+    enabled: [...(row.enabled ?? base.enabled)],
+    iconSegments: [...(row.iconSegments ?? base.iconSegments)],
+  };
+}
+
+/**
+ * The state with all a preset sets: its colors and corners, its highlight, and
+ * each search's lines; everything else kept.
+ */
 export function applyPreset(state: StyleState, preset: Preset): StyleState {
   const look = { ...state.look };
   for (const { key } of LOOK_COLORS) {
     look[key] = preset.look[key] ?? DEFAULT_STYLE.look[key];
   }
+  for (const key of HIGHLIGHT_KEYS) {
+    (look as Record<keyof Highlight, unknown>)[key] =
+      preset.highlight?.[key] ?? DEFAULT_STYLE.look[key];
+  }
   const vars = { ...state.vars };
   for (const name of PRESET_VARS) {
     vars[name] = preset.vars[name] ?? CSS_VARIABLES[name].value;
   }
-  return { ...state, look, vars, preset: preset.name };
+  const rows: RowStates = {
+    businesses: presetRow(state, preset, "businesses"),
+    people: presetRow(state, preset, "people"),
+    addresses: presetRow(state, preset, "addresses"),
+  };
+  return { ...state, look, vars, rows, preset: preset.name };
 }
 
 function lastPreset(state: StyleState): Preset | undefined {
@@ -1406,8 +1462,20 @@ export function presetChanges(state: StyleState): {
 
 /** The preset the state is in, or null once anything it owns was changed. */
 export function activePreset(state: StyleState): Preset | null {
-  const same = (a: string, b: string) =>
-    a.trim().toLowerCase() === b.trim().toLowerCase();
+  const same = (a: string | null, b: string | null) =>
+    (a ?? "").trim().toLowerCase() === (b ?? "").trim().toLowerCase();
+  // The Enabled boxes and the icons are sets; the lines are listed in order.
+  const sameSet = (a: readonly string[], b: readonly string[]) =>
+    [...a].sort().join() === [...b].sort().join();
+  const sameRows = (applied: RowStates) =>
+    (Object.keys(applied) as Route[]).every(route => {
+      const [now, then] = [state.rows[route], applied[route]];
+      return (
+        now.list.join() === then.list.join() &&
+        sameSet(now.enabled, then.enabled) &&
+        sameSet(now.iconSegments, then.iconSegments)
+      );
+    });
   return (
     PRESETS.find(preset => {
       const applied = applyPreset(state, preset);
@@ -1415,7 +1483,9 @@ export function activePreset(state: StyleState): Preset | null {
         LOOK_COLORS.every(({ key }) =>
           same(state.look[key], applied.look[key]),
         ) &&
-        PRESET_VARS.every(name => same(state.vars[name], applied.vars[name]))
+        HIGHLIGHT_KEYS.every(key => same(state.look[key], applied.look[key])) &&
+        PRESET_VARS.every(name => same(state.vars[name], applied.vars[name])) &&
+        sameRows(applied.rows)
       );
     }) ?? null
   );

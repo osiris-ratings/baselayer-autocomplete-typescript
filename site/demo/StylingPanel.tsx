@@ -137,7 +137,7 @@ export function StylingPanel({
     <div className="styling-panel">
       <div className="presets-head">
         <p className="mono-label">Presets</p>
-        {active === null && <p className="hint">Custom colors</p>}
+        {active === null && <p className="hint">Custom</p>}
       </div>
       <div className="presets" role="radiogroup" aria-label="Presets">
         {PRESETS.map(preset => {
