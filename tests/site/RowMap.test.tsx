@@ -640,11 +640,14 @@ describe("the row map as the row's configuration", () => {
     expect(addresses.querySelector(".row-map-handle")).toBeNull();
   });
 
-  it("disables a line by its checkbox, the head's too", () => {
+  it("enables a line by its checkbox, the head's too: ticked is enabled", () => {
     const { onChange, check } = mountOn("people");
-    expect(check("head").checked).toBe(true);
-    expect(check("head").getAttribute("aria-label")).toBe("Disable the person");
-    expect(check("businesses").checked).toBe(false);
+    expect(check("head").checked).toBe(false);
+    expect(check("head").getAttribute("aria-label")).toBe("Enable the person");
+    expect(check("head").title).toBe(
+      "The person: disabled, drawn greyed in the menu · tick to make it a choice (enabledLines)",
+    );
+    expect(check("businesses").checked).toBe(true);
 
     fireEvent.click(check("head"));
     expect(onChange.mock.calls[0]![0].rows.people.enabled).toEqual([
@@ -655,7 +658,7 @@ describe("the row map as the row's configuration", () => {
     expect(onChange.mock.calls[1]![0].rows.people.enabled).toEqual([]);
   });
 
-  it("gives a hidden line no Disabled checkbox, and a shown one back its own", () => {
+  it("gives a hidden line no Enabled checkbox, and a shown one back its own", () => {
     const hidden = mountOn(
       "people",
       withListed(DEFAULT_STYLE, "people", "businesses", false),
@@ -667,9 +670,9 @@ describe("the row map as the row's configuration", () => {
     cleanup();
     // Shown again, as it was: enabled.
     const { check } = mountOn("people");
-    expect(check("businesses").checked).toBe(false);
+    expect(check("businesses").checked).toBe(true);
     expect(check("businesses").title).toBe(
-      "Businesses: enabled, a choice in the menu (enabledLines)",
+      "Businesses: enabled, a choice in the menu · untick to draw it greyed (enabledLines)",
     );
   });
 
@@ -1094,7 +1097,7 @@ describe("a segment's icon in the row map", () => {
   });
 });
 
-describe("the Disabled column's guide with no canvas to measure on", () => {
+describe("the Enabled column's guide with no canvas to measure on", () => {
   afterEach(() => {
     // jsdom has no offscreen canvas of its own.
     Reflect.deleteProperty(globalThis, "OffscreenCanvas");

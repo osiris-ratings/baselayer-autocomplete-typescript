@@ -83,7 +83,7 @@ describe("the row map's drawers", () => {
     }
   });
 
-  it("disables a line from the keyboard by its checkbox", async () => {
+  it("unticks a line's Enabled box from the keyboard, which disables it", async () => {
     const { kind, done } = mount();
     try {
       const check =
@@ -93,7 +93,7 @@ describe("the row map's drawers", () => {
       expect(
         kind("businesses").querySelector<HTMLInputElement>(".row-map-check")!
           .checked,
-      ).toBe(true);
+      ).toBe(false);
       expect(kind("businesses").dataset.state).toBe("disabled");
     } finally {
       done();
@@ -121,7 +121,7 @@ describe("the row map's drawers", () => {
       ).toBe("none");
 
       const label = host.querySelector(".row-map-check-head")!;
-      expect(label.textContent).toBe("Disabled");
+      expect(label.textContent).toBe("Enabled");
       const heading = label.getBoundingClientRect();
       expect(heading.bottom).toBeLessThanOrEqual(check.top);
       expect(heading.left).toBeLessThanOrEqual(check.left);

@@ -69,7 +69,7 @@ async function mounted(
   }
 }
 
-describe("the Disabled column's checkbox", () => {
+describe("the Enabled column's checkbox", () => {
   // A viewport the runner draws whole: a scaled one snaps a 2px ring to 1px.
   beforeAll(async () => {
     await page.viewport(1280, 700);

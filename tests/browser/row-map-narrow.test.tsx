@@ -74,7 +74,7 @@ describe("the row map on a narrow screen", () => {
         }
       });
 
-      it(`keeps the grips at the left and the Disabled column at the right of a ${route} row in ${width}px, scrolled or not`, () => {
+      it(`keeps the grips at the left and the Enabled column at the right of a ${route} row in ${width}px, scrolled or not`, () => {
         const { host, done } = mount(route, width);
         try {
           for (const scroller of host.querySelectorAll<HTMLElement>(
@@ -112,7 +112,7 @@ describe("the row map on a narrow screen", () => {
                 );
               }
             }
-            // Scrolled to its end, every place is clear of the Disabled
+            // Scrolled to its end, every place is clear of the Enabled
             // column: nothing is left under it.
             scroller.scrollLeft = scroller.scrollWidth;
             for (const kind of scroller.querySelectorAll<HTMLElement>(
@@ -192,7 +192,7 @@ describe("the row map on a narrow screen", () => {
       }
     });
 
-    it(`keeps the Disabled column to the checkbox, its heading at the drawer's right, in ${width}px`, () => {
+    it(`keeps the Enabled column to the checkbox, its heading at the drawer's right, in ${width}px`, () => {
       const { host, done } = mount("people", width);
       try {
         const scroller = host.querySelector<HTMLElement>(
@@ -205,7 +205,7 @@ describe("the row map on a narrow screen", () => {
         const heading = scroller.querySelector<HTMLElement>(
           ".row-map-check-head",
         )!;
-        expect(heading.textContent).toBe("Disabled");
+        expect(heading.textContent).toBe("Enabled");
         expect(
           Math.abs(heading.getBoundingClientRect().right - view.right),
         ).toBeLessThanOrEqual(1);

@@ -619,14 +619,14 @@
 
 /* A drawer of lines: Shown, the row as the menu draws it, and Hidden below
    it, a line in each that the row leaves out. Each line kind is its grip at
-   the left, its lines in their box, and its Disabled checkbox at the right,
+   the left, its lines in their box, and its Enabled checkbox at the right,
    the grip and the checkbox outside the box. */
 .row-map-drawer + .row-map-drawer {
   margin-top: 8px;
 }
 
 /* A drawer's lines, each on one row: out of room, they scroll sideways here,
-   and the grips, the Disabled column and its heading stay put at its edges,
+   and the grips, the Enabled column and its heading stay put at its edges,
    each cell taking its gutter with it, so what scrolls goes under them and
    shows only between them. What the keyboard reaches stops clear of them. */
 .row-map-scroll {
@@ -718,7 +718,7 @@
   min-width: 0;
 }
 
-/* Where a line's places go under the grip or the Disabled column, while
+/* Where a line's places go under the grip or the Enabled column, while
    there is more of them beyond that edge, its box takes a soft shade there,
    rounded as the box is, in the look's ink: on the line alone, never on a
    heading or between lines. */
@@ -771,7 +771,7 @@
   --map-row-gap: 8px;
   /* The room each side of a heading or a note on a ground of its own. */
   --map-ground-pad: 5px;
-  /* One gap down the Disabled column: heading, line, box, line, box. */
+  /* One gap down the Enabled column: heading, line, box, line, box. */
   --map-guide-gap: 6px;
   /* The checkbox and a little room: its heading may run left of it. */
   --map-check: 28px;
@@ -947,7 +947,7 @@
   outline-offset: 1px;
 }
 
-/* Whether the line is disabled, a plain checkbox in its own column. */
+/* Whether the line is enabled, a plain checkbox in its own column. */
 .row-map-check-cell {
   position: sticky;
   z-index: 3;
@@ -961,7 +961,7 @@
   background: var(--map-bg, var(--paper));
 }
 
-/* A faint guide down the Disabled column, from just under its heading to
+/* A faint guide down the Enabled column, from just under its heading to
    the last checkbox, broken clear of each box, so the heading and its
    boxes read as one column. */
 .row-map-guide {

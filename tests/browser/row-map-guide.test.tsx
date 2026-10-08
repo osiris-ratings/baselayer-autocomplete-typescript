@@ -45,7 +45,7 @@ const MIDNIGHT = applyPreset(
   PRESETS.find(preset => preset.name === "Midnight")!,
 );
 
-describe("the Disabled column's guide", () => {
+describe("the Enabled column's guide", () => {
   for (const [look, base] of [
     ["Light", DEFAULT_STYLE],
     ["Midnight", MIDNIGHT],

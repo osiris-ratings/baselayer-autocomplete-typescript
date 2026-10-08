@@ -222,7 +222,7 @@ describe("a business's row, as Styling sets it", () => {
       screen.getByRole("button", { name: "Show officers and agents" }),
     );
     await user.click(
-      screen.getByRole("checkbox", { name: "Disable officers and agents" }),
+      screen.getByRole("checkbox", { name: "Enable officers and agents" }),
     );
 
     await user.type(field("demo-business"), "harbor concrete pumping");
@@ -252,7 +252,7 @@ describe("a person's or an address's row, as Styling sets it", () => {
       screen.getByRole("button", { name: "Show their addresses" }),
     );
     await user.click(
-      screen.getByRole("checkbox", { name: "Disable their addresses" }),
+      screen.getByRole("checkbox", { name: "Enable their addresses" }),
     );
 
     await user.type(field("demo-person"), "dana");

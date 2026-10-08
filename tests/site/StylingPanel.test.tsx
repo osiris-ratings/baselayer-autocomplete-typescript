@@ -128,9 +128,9 @@ describe("the Components fold's searches", () => {
   /** Move a line to the other drawer by its grip. */
   const grip = (label: string) =>
     fireEvent.click(screen.getByRole("button", { name: label }));
-  /** Tick or untick a line's Disabled checkbox. */
-  const disable = (name: string) =>
-    fireEvent.click(screen.getByRole("checkbox", { name: `Disable ${name}` }));
+  /** Tick or untick a line's Enabled checkbox. */
+  const enable = (name: string) =>
+    fireEvent.click(screen.getByRole("checkbox", { name: `Enable ${name}` }));
   const exported = () =>
     document.querySelector(".styling-export")!.textContent ?? "";
 
@@ -138,7 +138,7 @@ describe("the Components fold's searches", () => {
     render(<RoutedPanel start="people" />);
 
     grip("Show their addresses");
-    disable("the person");
+    enable("the person");
 
     expect(lists()).toEqual([
       ["businesses", "addresses"],
@@ -152,8 +152,8 @@ describe("the Components fold's searches", () => {
     render(<RoutedPanel start="addresses" />);
 
     grip("Show people there");
-    disable("people there");
-    disable("businesses");
+    enable("people there");
+    enable("businesses");
 
     expect(lists().slice(2)).toEqual([["businesses", "people"], ["person"]]);
   });
@@ -170,12 +170,12 @@ describe("the Components fold's searches", () => {
   it("exports each line as the map has it: shown and enabled, disabled, then hidden", () => {
     render(<RoutedPanel start="people" />);
     grip("Show their addresses");
-    disable("their addresses");
+    enable("their addresses");
     expect(exported()).toContain('list={["businesses", "addresses"]}');
     expect(exported()).toContain('enabledLines={["business", "address"]}');
     expect(exported()).toContain("onPickEntity");
 
-    disable("their addresses");
+    enable("their addresses");
     expect(exported()).toContain('list={["businesses", "addresses"]}');
     expect(exported()).not.toContain("enabledLines");
     expect(exported()).not.toContain("onPickEntity");
@@ -191,7 +191,7 @@ describe("the Components fold's searches", () => {
     ).toBeTruthy();
   });
 
-  it("explains the row map in one sentence, and calls its lines disabled, never unpickable", () => {
+  it("explains the row map in one sentence, naming its Enabled column, never unpickable", () => {
     render(<RoutedPanel start="people" />);
     grip("Show their addresses");
 
@@ -199,7 +199,7 @@ describe("the Components fold's searches", () => {
       selector: "p.fold-note",
     });
     expect(note.textContent!.trim().split(/(?<=\.)\s+/)).toHaveLength(1);
-    expect(note.textContent).toMatch(/disabled/i);
+    expect(note.textContent).toMatch(/\buntick Enabled\b/);
     const said = [note, document.querySelector(".row-map-wrap")!].flatMap(
       element => [
         element.textContent,
@@ -221,7 +221,7 @@ describe("the Components fold's searches", () => {
 
     expect(document.querySelector('[data-drop="titleBadge"]')).not.toBeNull();
     grip("Show officers and agents");
-    disable("officers and agents");
+    enable("officers and agents");
 
     expect(exported()).toContain('list={["people"]}');
     expect(exported()).toContain('enabledLines={["business", "person"]}');

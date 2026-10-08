@@ -188,7 +188,7 @@ export interface MapInks {
   ink: string;
   /** What only has to be seen: a grip, an empty place, an icon left off. */
   soft: string;
-  /** Fainter still, but there: the Disabled column's guide. */
+  /** Fainter still, but there: the Enabled column's guide. */
   guide: string;
   /** The opacity of a disabled line, and of a hidden one. */
   dim: { disabled: number; hidden: number };
@@ -197,7 +197,7 @@ export interface MapInks {
    * raised toward the title on a card it would not stand out on.
    */
   ring: string;
-  /** The Disabled column's checkbox, quieter than the drags around it. */
+  /** The Enabled column's checkbox, quieter than the drags around it. */
   check: CheckInks;
 }
 

@@ -123,7 +123,7 @@ describe("a row's listed lines", () => {
             0,
           );
         }
-        // The grips and the Disabled column stay where they are.
+        // The grips and the Enabled column stay where they are.
         const grips = [...host.querySelectorAll(".row-map-grip-cell")].map(
           cell => Math.round(cell.getBoundingClientRect().left),
         );

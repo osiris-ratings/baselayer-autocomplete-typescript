@@ -248,7 +248,7 @@ describe("the row map in every preset", () => {
               check(`grip of ${at}`, grip.getBoundingClientRect(), 3);
             }
           }
-          // The Disabled column's boxes: an empty one's faint edge on the
+          // The Enabled column's boxes: an empty one's faint edge on the
           // card, never under 1.8:1, and a checked one's white mark on its
           // fill at a control's 3:1.
           for (const box of wrap.querySelectorAll<HTMLInputElement>(

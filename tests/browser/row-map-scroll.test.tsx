@@ -59,7 +59,7 @@ const faded = () => new Promise(resolve => setTimeout(resolve, 200));
 
 /**
  * The shade each line's box takes at an edge where its places are cut off:
- * at the grip's side, or at the Disabled column's.
+ * at the grip's side, or at the Enabled column's.
  */
 function shades(scroller: HTMLElement, edge: "before" | "after") {
   return [...scroller.querySelectorAll<HTMLElement>(".row-map-kind")].map(
@@ -345,7 +345,7 @@ describe("a drawer that scrolls sideways", () => {
 
   // A business's hidden lines fit at this width; these two scroll.
   for (const route of ["people", "addresses"] as const) {
-    it(`never shows a hidden line's places under the Disabled column, scrolled or not, ${route} in 320px`, async () => {
+    it(`never shows a hidden line's places under the Enabled column, scrolled or not, ${route} in 320px`, async () => {
       const { host, done } = mount(noLine(route), route, 320);
       try {
         const hidden = host.querySelector<HTMLElement>(

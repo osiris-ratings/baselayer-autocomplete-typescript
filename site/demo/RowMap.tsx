@@ -867,7 +867,7 @@ function KindRowMap<P extends string, F extends string>({
       lifted.style.transform = `translateY(${(at - from) * step}px)`;
     }
   }, [carried, over, pointerY]);
-  // The Disabled column's guide starts one gap under its heading's ink,
+  // The Enabled column's guide starts one gap under its heading's ink,
   // wherever the heading's font puts that; it is measured again once the
   // page's fonts have come.
   const [, fontsCame] = useState(0);
@@ -907,7 +907,7 @@ function KindRowMap<P extends string, F extends string>({
     ref: scroller,
     onScroll: (event: ReactUIEvent<HTMLDivElement>) =>
       markEdges(event.currentTarget),
-    // What is focused is brought clear of the sticky grips and the Disabled
+    // What is focused is brought clear of the sticky grips and the Enabled
     // column. A press that starts a drag focuses nothing.
     onFocus: (event: ReactFocusEvent<HTMLDivElement>) => {
       (event.target as HTMLElement).scrollIntoView({
@@ -919,7 +919,7 @@ function KindRowMap<P extends string, F extends string>({
 
   /**
    * A line kind: its grip at the left, its lines in their box, and the
-   * checkbox that disables it at the right.
+   * checkbox that enables it at the right.
    */
   const kindRow = (kind: (typeof kinds)[number]) => {
     const name = kindName(kind.relation);
@@ -1040,10 +1040,10 @@ function KindRowMap<P extends string, F extends string>({
             <input
               type="checkbox"
               className="row-map-check"
-              aria-label={`Disable ${name}`}
-              title={`${capitalized(name)}: ${on ? "enabled, a choice in the menu" : "disabled, drawn greyed in the menu"} (enabledLines)`}
-              checked={!on}
-              onChange={event => onEnable(kind.entity, !event.target.checked)}
+              aria-label={`Enable ${name}`}
+              title={`${capitalized(name)}: ${on ? "enabled, a choice in the menu · untick to draw it greyed" : "disabled, drawn greyed in the menu · tick to make it a choice"} (enabledLines)`}
+              checked={on}
+              onChange={event => onEnable(kind.entity, event.target.checked)}
             />
             {/* The column's guide from its heading, broken around the box. */}
             <span
@@ -1089,7 +1089,7 @@ function KindRowMap<P extends string, F extends string>({
             <div className="row-map-scroll" {...edges(shownScroller)}>
               <div className="row-map-head" aria-hidden="true">
                 <span className="row-map-drawer-label">Shown</span>
-                <span className="row-map-check-head">Disabled</span>
+                <span className="row-map-check-head">Enabled</span>
               </div>
               {shown.map(kindRow)}
             </div>

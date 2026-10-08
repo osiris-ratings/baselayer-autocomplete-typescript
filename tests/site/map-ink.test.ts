@@ -149,7 +149,7 @@ describe("the row map's inks, from the look", () => {
       }
     });
 
-    it(`draws the Disabled column's checkbox quiet but seen in ${preset.name}`, () => {
+    it(`draws the Enabled column's checkbox quiet but seen in ${preset.name}`, () => {
       const state = applyPreset(DEFAULT_STYLE, preset);
       const ground = state.look.backgroundColor.toLowerCase();
       const { check, ring } = mapInks(state);

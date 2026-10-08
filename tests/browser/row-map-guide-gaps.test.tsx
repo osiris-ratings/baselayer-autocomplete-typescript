@@ -89,7 +89,7 @@ const looks: [string, StyleState][] = [
 ];
 
 /**
- * The Disabled column's gaps down the shown drawer, in screen pixels: label to
+ * The Enabled column's gaps down the shown drawer, in screen pixels: label to
  * line, line to box, box to line and so on, and the ink under the last box.
  */
 async function gapsIn(
@@ -194,7 +194,7 @@ function listedIn(look: string, base: StyleState): [StyleState, Route] {
     : [withListed(base, "people", "addresses", true), "people"];
 }
 
-describe("the Disabled column's guide, spaced", () => {
+describe("the Enabled column's guide, spaced", () => {
   // A viewport the runner draws whole, so a pixel of the shot is a pixel of
   // the page: a scaled shot blurs a 1px line.
   beforeAll(async () => {
