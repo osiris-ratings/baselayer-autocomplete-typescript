@@ -60,6 +60,45 @@ describe("a disabled line's inks", () => {
     });
   }
 
+  it("keep a quarter of a strong subtitle's contrast, above the floors", () => {
+    // Black on white is 21:1, and a quarter of it is past every floor.
+    const inks = disabledInks({ ...DEFAULT_LOOK, subtitleColor: "#000000" });
+    for (const [part, ink] of [
+      ["text", inks.text],
+      ["role", inks.role],
+    ] as const) {
+      expect(contrast(ink, "#ffffff"), part).toBeGreaterThanOrEqual(5.25);
+      expect(contrast(ink, "#ffffff"), part).toBeLessThan(5.3);
+      expect(ink, part).toBe("#6c6c6c");
+    }
+  });
+
+  for (const { name, look } of LOOKS) {
+    it(`draw a real colour on the ground's side at disabledDim 1, every share a share, on ${name}`, () => {
+      const at = { ...look, disabledDim: 1 };
+      const inks = disabledInks(at);
+      const ground = look.backgroundColor;
+      const kept = contrast(look.subtitleColor, ground) * DISABLED_TEXT_KEEPS;
+      for (const [part, ink, floor] of [
+        ["name", inks.name, DISABLED_NAME_FLOOR],
+        ["text", inks.text, Math.max(DISABLED_TEXT_FLOOR, kept)],
+        ["role", inks.role, Math.max(DISABLED_ROLE_FLOOR, kept)],
+      ] as const) {
+        expect(ink, part).toMatch(/^#[0-9a-f]{6}$/);
+        expect(contrast(ink, ground), part).toBeGreaterThanOrEqual(floor);
+      }
+      for (const share of [
+        inks.nameShare,
+        inks.textShare,
+        inks.roleShare,
+        inks.markShare,
+      ]) {
+        expect(share).toBeGreaterThanOrEqual(0);
+        expect(share).toBeLessThanOrEqual(100);
+      }
+    });
+  }
+
   it("move every text twice the dim of the way, short of its floor", () => {
     const light = PRESETS.find(preset => preset.name === "Light")!;
     const inks = disabledInks({ ...resolveLook(light.look), disabledDim: 0.2 });

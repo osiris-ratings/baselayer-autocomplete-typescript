@@ -583,6 +583,17 @@ const LINE_CASES = [
 
 const EVERY_LINE: EntityType[] = ["business", "person", "address"];
 
+/** `element` is drawn in `ink`, a `#rrggbb`, within one step a channel. */
+function expectInk(element: HTMLElement, ink: string, what: string): void {
+  const drawnIn = rgbOf(getComputedStyle(element).color);
+  [1, 3, 5].forEach((at, channel) =>
+    expect(
+      Math.abs(drawnIn[channel]! - parseInt(ink.slice(at, at + 2), 16)),
+      `${what} ink ${ink}`,
+    ).toBeLessThanOrEqual(1),
+  );
+}
+
 /**
  * A segment's drawn contrast with its box held to its text: a role in a
  * column as wide as the longest role would otherwise measure its own margin.
@@ -623,15 +634,17 @@ describe("a disabled line's name, on every search", () => {
           const weight = Number(getComputedStyle(name).fontWeight);
           expect(weight, "weight").toBe(400);
           expect(weight, "weight").toBeLessThan(pickWeight);
-          // The one ink every disabled name takes, a head's too.
-          const ink = disabledInks(resolveLook(preset.look)).name;
-          const drawnIn = rgbOf(getComputedStyle(name).color);
-          [1, 3, 5].forEach((at, channel) =>
-            expect(
-              Math.abs(drawnIn[channel]! - parseInt(ink.slice(at, at + 2), 16)),
-              `name ink ${ink}`,
-            ).toBeLessThanOrEqual(1),
-          );
+          // The one ink every disabled name takes, a head's too; a role's and
+          // the other text's are their own.
+          const inks = disabledInks(resolveLook(preset.look));
+          expectInk(name, inks.name, "name");
+          for (const selector of secondary) {
+            expectInk(
+              part(line, selector),
+              selector === ".bl-ac-role" ? inks.role : inks.text,
+              selector,
+            );
+          }
           const drawn = await drawnContrast(name);
           expect(drawn, "name").toBeGreaterThanOrEqual(2);
           // A short name draws its pick lower, so a fifth, give or take.
