@@ -2560,14 +2560,14 @@
   display: none;
 }
 
-/* The page buttons at the far sides, and between them a page control: a
-   small round dot for each page in a faint capsule, each dot a finger's
-   height to press. */
+/* A page control, a small round dot for each page in a faint capsule, with
+   the page buttons right beside it, the three centred as one: each button
+   its arrow alone, faint at its end, in a finger's target. */
 .presets-nav {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  justify-content: center;
+  gap: 2px;
   margin: 6px 0 18px;
 }
 
@@ -2575,23 +2575,27 @@
   display: grid;
   flex: none;
   place-items: center;
-  width: 32px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   padding: 0;
-  background: var(--paper);
-  border: 1px solid #d6d9e0;
-  border-radius: 6px;
+  background: none;
+  border: 0;
+  border-radius: 50%;
   color: var(--ink);
   cursor: pointer;
 }
 
-.presets-nav > button:hover:not(:disabled) {
-  border-color: var(--ink-soft);
+.presets-nav > button:disabled {
+  color: color-mix(in srgb, var(--ink) 30%, transparent);
+  cursor: default;
 }
 
-.presets-nav > button:disabled {
-  color: #b8bcc6;
-  cursor: default;
+.presets-nav > button:focus {
+  outline: none;
+}
+
+.presets-nav > button:focus-visible {
+  outline: 2px solid var(--blue);
 }
 
 /* Drawn rather than typed, so no font can leave it out. */

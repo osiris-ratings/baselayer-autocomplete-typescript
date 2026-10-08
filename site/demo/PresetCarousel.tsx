@@ -27,7 +27,7 @@ import {
  */
 const DOT_PITCH = 7 + 9;
 const CAPSULE = 2 * 9 - 9;
-const ARROWS = 2 * 32 + 16;
+const ARROWS = 2 * 24 + 2 * 2;
 
 /**
  * Where each page of the row starts: the first page at the start, each next

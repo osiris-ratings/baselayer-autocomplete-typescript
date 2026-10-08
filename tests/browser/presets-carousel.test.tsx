@@ -290,7 +290,7 @@ describe("the presets' carousel", () => {
     return found;
   }
 
-  it("puts the page buttons at its far sides, a dot for each page between them, the current one marked", async () => {
+  it("puts the page buttons right beside its dots, the three centred as one, a dot for each page, the current one marked", async () => {
     const { host, scroller, earlier, later, done } = mount(560);
     try {
       const dots = () => [
@@ -299,8 +299,22 @@ describe("the presets' carousel", () => {
       const pages = await stops(scroller, later);
       expect(dots()).toHaveLength(pages.length);
       const nav = host.querySelector(".presets-nav")!.getBoundingClientRect();
-      expect(earlier().getBoundingClientRect().left).toBeCloseTo(nav.left, 0);
-      expect(later().getBoundingClientRect().right).toBeCloseTo(nav.right, 0);
+      const capsule = host
+        .querySelector(".presets-dots")!
+        .getBoundingClientRect();
+      const back = earlier().getBoundingClientRect();
+      const on = later().getBoundingClientRect();
+      expect((back.left + on.right) / 2).toBeCloseTo(
+        (nav.left + nav.right) / 2,
+        0,
+      );
+      // Each arrow about a dot's gap from the capsule: 9px between dots.
+      const arrow = (button: HTMLButtonElement) =>
+        button.querySelector(".presets-chevron")!.getBoundingClientRect();
+      expect(capsule.left - arrow(earlier()).right).toBeGreaterThanOrEqual(6);
+      expect(capsule.left - arrow(earlier()).right).toBeLessThanOrEqual(12);
+      expect(arrow(later()).left - capsule.right).toBeGreaterThanOrEqual(6);
+      expect(arrow(later()).left - capsule.right).toBeLessThanOrEqual(12);
       for (const dot of dots()) {
         const box = dot.getBoundingClientRect();
         expect(box.left).toBeGreaterThan(
@@ -409,11 +423,19 @@ describe("the presets' carousel", () => {
     }
   });
 
-  it("draws each page button's arrow in the button's ink, whatever the font has", () => {
-    const { earlier, later, done } = mount(560);
+  it("draws each page button as its arrow alone, in the button's ink, faint at its end, whatever the font has", async () => {
+    const { host, earlier, later, done } = mount(560);
     try {
       for (const button of [earlier(), later()]) {
         expect(button.textContent).toBe("");
+        // No box: no border, fill or shadow, but a finger's target.
+        const chrome = getComputedStyle(button);
+        expect(chrome.borderTopWidth).toBe("0px");
+        expect(chrome.backgroundColor).toBe("rgba(0, 0, 0, 0)");
+        expect(chrome.boxShadow).toBe("none");
+        const target = button.getBoundingClientRect();
+        expect(target.width).toBeGreaterThanOrEqual(24);
+        expect(target.height).toBeGreaterThanOrEqual(24);
         const arrow = button.querySelector<HTMLElement>(".presets-chevron")!;
         const box = arrow.getBoundingClientRect();
         expect(box.width).toBeGreaterThanOrEqual(6);
@@ -438,12 +460,31 @@ describe("the presets' carousel", () => {
           getComputedStyle(button.querySelector(".presets-chevron")!).transform,
         );
       expect(turn(earlier()).a).toBeCloseTo(-turn(later()).a, 3);
+      // At the start, Earlier is disabled and faint, Later in full ink.
+      const alpha = (button: HTMLButtonElement) => {
+        const color = getComputedStyle(button).color;
+        const parts = color.match(/[\d.]+/g)!.map(Number);
+        return parts.length > 3 ? parts.at(-1)! : 1;
+      };
+      expect(earlier().disabled).toBe(true);
+      expect(alpha(earlier())).toBeLessThanOrEqual(0.4);
+      expect(alpha(later())).toBe(1);
+      // A ring from the keyboard only.
+      await userEvent.click(later());
+      expect(getComputedStyle(later()).outlineStyle).toBe("none");
+      const dots = host.querySelectorAll<HTMLButtonElement>(
+        ".presets-dots button",
+      );
+      dots[dots.length - 1]!.focus();
+      await userEvent.keyboard("{Tab}");
+      expect(document.activeElement).toBe(later());
+      expect(getComputedStyle(later()).outlineStyle).toBe("solid");
     } finally {
       done();
     }
   });
 
-  it("fits its dots between the page buttons at every width it draws them", async () => {
+  it("keeps the page buttons beside its dots or its page, the three centred, at every width", async () => {
     let dotted = 0;
     for (let width = 200; width <= 600; width += 10) {
       const { host, earlier, later, done } = mount(width);
@@ -454,18 +495,21 @@ describe("the presets' carousel", () => {
         )!;
         if (between.matches(".presets-dots")) dotted++;
         const box = between.getBoundingClientRect();
-        expect(box.left, `${width}px`).toBeGreaterThanOrEqual(
-          earlier().getBoundingClientRect().right,
-        );
-        expect(box.right, `${width}px`).toBeLessThanOrEqual(
-          later().getBoundingClientRect().left,
-        );
-        // And nothing pushed out past the row's end.
+        const back = earlier().getBoundingClientRect();
+        const on = later().getBoundingClientRect();
+        // Beside it on each side, with no more than the group's gap.
+        expect(box.left - back.right, `${width}px`).toBeGreaterThanOrEqual(0);
+        expect(box.left - back.right, `${width}px`).toBeLessThanOrEqual(4);
+        expect(on.left - box.right, `${width}px`).toBeGreaterThanOrEqual(0);
+        expect(on.left - box.right, `${width}px`).toBeLessThanOrEqual(4);
+        // Centred, and nothing pushed out past the row's ends.
         const nav = host.querySelector(".presets-nav")!.getBoundingClientRect();
         expect(
-          later().getBoundingClientRect().right,
+          Math.abs((back.left + on.right) / 2 - (nav.left + nav.right) / 2),
           `${width}px`,
-        ).toBeLessThanOrEqual(nav.right + 0.5);
+        ).toBeLessThanOrEqual(1);
+        expect(back.left, `${width}px`).toBeGreaterThanOrEqual(nav.left - 0.5);
+        expect(on.right, `${width}px`).toBeLessThanOrEqual(nav.right + 0.5);
       } finally {
         done();
       }
