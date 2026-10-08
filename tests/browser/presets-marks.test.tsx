@@ -11,8 +11,10 @@ import {
   PersonAutocompleteView,
 } from "@baselayer-sdk/autocomplete/react";
 
+import { PresetCarousel } from "../../site/demo/PresetCarousel";
 import {
   DEFAULT_STYLE,
+  INITIAL_STYLE,
   PRESETS,
   applyPreset,
   componentProps,
@@ -54,6 +56,20 @@ const FLOOR = {
   weight: 200,
   text: 4.5,
 };
+
+/** The colour the first matched name's mark is drawn in, by its emphasis. */
+function markColor(): string {
+  const mark = host.querySelector<HTMLElement>(".bl-ac-name .bl-ac-mark")!;
+  const own = getComputedStyle(mark);
+  switch (mark.closest<HTMLElement>(".bl-ac-name")!.dataset.emphasis) {
+    case "underline":
+      return own.textDecorationColor;
+    case "background":
+      return own.backgroundColor;
+    default:
+      return own.color;
+  }
+}
 
 /** What is wrong with the first matched name drawn: one entry a fault. */
 function faults(): string[] {
@@ -223,6 +239,50 @@ describe("every preset's matched words", () => {
       expect(found).toEqual([]);
     });
   }
+
+  it("are marked in each swatch in the colour the menu marks them in", () => {
+    const swatches = document.createElement("div");
+    document.body.append(swatches);
+    const shelf = createRoot(swatches);
+    flushSync(() =>
+      shelf.render(
+        <PresetCarousel
+          state={INITIAL_STYLE}
+          onChange={() => {}}
+          route="businesses"
+        />,
+      ),
+    );
+    try {
+      const marks = [...swatches.querySelectorAll<HTMLElement>(".preset-mark")];
+      PRESETS.forEach((preset, at) => {
+        const style = applyPreset(DEFAULT_STYLE, preset);
+        sheet.textContent = previewCss(style);
+        flushSync(() =>
+          root.render(
+            <BusinessAutocompleteView
+              id="businesses"
+              label="Business name"
+              value="cinder"
+              onInputChange={() => {}}
+              onSelect={() => {}}
+              suggestions={[BUSINESS]}
+              look={style.look}
+              {...componentProps(style, "businesses")}
+              {...SHOWN}
+            />,
+          ),
+        );
+        expect(
+          rgb(getComputedStyle(marks[at]!).backgroundColor).map(Math.round),
+          preset.name,
+        ).toEqual(rgb(markColor()).map(Math.round));
+      });
+    } finally {
+      shelf.unmount();
+      swatches.remove();
+    }
+  });
 
   it("are measured by a CIEDE2000 that matches the published worked pairs", () => {
     // Sharma, Wu and Dalal (2005), table 1: pairs 1, 9, 7 and 19.
