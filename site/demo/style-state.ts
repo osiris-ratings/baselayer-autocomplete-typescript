@@ -1216,7 +1216,13 @@ export interface Preset {
   rows?: { [R in Route]?: PresetRow<R> };
 }
 
-/** What a preset owns; sizes, behavior and text stay the reader's. */
+/**
+ * The variables a preset owns, beside its look's colors and highlight: the
+ * colors only the stylesheet sets, the corners and the shadow, the font, the
+ * line height and the three weights. The menu's width, the list's height and
+ * the stacking (`--bl-ac-menu-width`, `--bl-ac-list-max-height`, `--bl-ac-z`)
+ * are the host's layout and stay the reader's, as do behavior and text.
+ */
 const PRESET_VARS: CssVariable[] = [
   "--bl-ac-highlight-bg",
   "--bl-ac-border",

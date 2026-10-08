@@ -254,19 +254,21 @@ is sent, since the autocomplete service refuses an empty one, so its default,
 people and addresses, comes back all the same, only not drawn.
 
 First come the presets, twenty looks in a carousel that scrolls sideways:
-swipe, scroll or use the arrow keys, or turn a page with the buttons at its
-ends or the dots between them, and a shade at an edge says there is more.
-Light comes first, the default with matched ink in green, then Baselayer,
-Midnight, Monokai, Sepia and Rosé, then fourteen more. Each is drawn as a sign
-of itself in its colors and corners: a title with its match marked under it,
-a flag, a bar for each line its row draws below the title on the search the
-form is on, and a square before the title where the name carries an icon. A
-preset sets the colors, how a match is marked, the font, the shape and the
-sizes, and each search's row: where its fields sit, the lines it lists and
-which can be chosen, and its icons. It leaves behavior and text alone, and
-while anything it sets is changed, the presets read **Custom**. Then every
-knob the styled
-component has, in sections that start folded: the components a row shows, drawn
+swipe or scroll to browse it, or turn a page with the buttons at its ends or
+the dots between them, and a shade at an edge says there is more; the arrow
+keys pick the next preset or the one before. Light comes first, the default
+with matched ink in green, then Baselayer, Midnight, Monokai, Sepia and Rosé,
+then fourteen more. Each is drawn as a sign of itself in its colors and
+corners: a title with its match marked under it, a flag, a bar for each line
+its row draws below the title on the search the form is on, and a square
+before the title where the name carries an icon. A preset sets the colors,
+how a match is marked, the font, the corners and the shadow, the line height
+and the weights, and each search's row: where its fields sit, the lines it
+lists and which can be chosen, and its icons. The menu's width, the list's
+height and its stacking are the host's layout, and with behavior and text
+they stay as you set them; while anything a preset sets is changed, the
+presets read **Custom**. Then every knob the styled component has,
+in sections that start folded: the components a row shows, drawn
 as the row itself (the name, which always shows, then each line's two corners,
 a field and the badge pinned to its inner side; each place drawn as the field
 it holds, and as wide as where it sits, whatever it holds, so the two lines'
