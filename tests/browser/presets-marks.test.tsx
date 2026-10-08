@@ -225,7 +225,7 @@ describe("every preset's matched words", () => {
   }
 
   it("are measured by a CIEDE2000 that matches the published worked pairs", () => {
-    // Sharma, Wu and Dalal (2005), table 1: pairs 1, 3, 7 and 17.
+    // Sharma, Wu and Dalal (2005), table 1: pairs 1, 9, 7 and 19.
     for (const [a, b, want] of [
       [[50, 2.6772, -79.7751], [50, 0, -82.7485], 2.0425],
       [[50, 2.49, -0.001], [50, -2.49, 0.0009], 7.1792],

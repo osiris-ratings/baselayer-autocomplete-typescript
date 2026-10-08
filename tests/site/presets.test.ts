@@ -176,9 +176,13 @@ describe("a preset", () => {
   });
 
   it("counts the Enabled boxes and icons as sets: the order they were ticked in does not matter", () => {
-    const preset = withRows();
+    // One that enables two kinds and names more than one icon, so reversing
+    // either changes its order.
+    const preset = PRESETS.find(each => each.name === "Plum")!;
     const state = applyPreset(DEFAULT_STYLE, preset);
     const row = state.rows.people;
+    expect(row.enabled.length).toBeGreaterThan(1);
+    expect(row.iconSegments.length).toBeGreaterThan(1);
     const reordered = {
       ...state,
       rows: {
@@ -260,20 +264,39 @@ describe("the presets", () => {
     expect(varied.length).toBeGreaterThan(PRESETS.length / 2);
   });
 
+  it("put every variable they set on, each as it is set", () => {
+    for (const preset of PRESETS) {
+      const applied = applyPreset(DEFAULT_STYLE, preset).vars;
+      for (const [name, value] of Object.entries(preset.vars)) {
+        expect(
+          applied[name as keyof typeof applied],
+          `${preset.name} ${name}`,
+        ).toBe(value);
+      }
+    }
+  });
+
   it("put its font, shape and size on, and take them back off for a preset that leaves them", () => {
     const fonted = PRESETS.find(preset => preset.vars["--bl-ac-font"])!;
+    const weighted = PRESETS.find(preset => preset.name === "Ember")!;
+    expect(weighted.vars["--bl-ac-weight-mark"]).toBeDefined();
+    for (const preset of [fonted, weighted]) {
+      const state = applyPreset(DEFAULT_STYLE, preset);
+      const back = applyPreset(state, PRESETS[0]!);
+      for (const name of [
+        "--bl-ac-font",
+        "--bl-ac-line-height",
+        "--bl-ac-name-weight",
+        "--bl-ac-weight-base",
+        "--bl-ac-weight-mark",
+      ] as const) {
+        expect(back.vars[name], `${preset.name} ${name}`).toBe(
+          CSS_VARIABLES[name].value,
+        );
+      }
+    }
     const state = applyPreset(DEFAULT_STYLE, fonted);
     expect(state.vars["--bl-ac-font"]).toBe(fonted.vars["--bl-ac-font"]);
-    const back = applyPreset(state, PRESETS[0]!);
-    for (const name of [
-      "--bl-ac-font",
-      "--bl-ac-line-height",
-      "--bl-ac-name-weight",
-      "--bl-ac-weight-base",
-      "--bl-ac-weight-mark",
-    ] as const) {
-      expect(back.vars[name], name).toBe(CSS_VARIABLES[name].value);
-    }
     expect(
       activePreset({
         ...state,

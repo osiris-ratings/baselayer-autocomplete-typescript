@@ -213,6 +213,31 @@ describe("the presets' carousel", () => {
     }
   });
 
+  it("wraps the arrow keys round at both ends", async () => {
+    const { scroller, latest, done } = mount(560);
+    try {
+      const radios = () => [
+        ...scroller.querySelectorAll<HTMLButtonElement>('[role="radio"]'),
+      ];
+      const first = PRESETS[0]!.name;
+      const last = PRESETS.at(-1)!.name;
+      radios()[0]!.focus();
+      for (const [key, chosen] of [
+        ["{ArrowLeft}", last],
+        ["{ArrowRight}", first],
+        ["{ArrowUp}", last],
+        ["{ArrowDown}", first],
+      ] as const) {
+        await userEvent.keyboard(key);
+        await frame();
+        expect(activePreset(latest.state)?.name, key).toBe(chosen);
+        expect(document.activeElement?.textContent, key).toContain(chosen);
+      }
+    } finally {
+      done();
+    }
+  });
+
   for (const width of [560, 320]) {
     it(`never moves the form when the Custom label comes and goes, at ${width}px`, async () => {
       const { scroller, frame: carousel, latest, done } = mount(width);
@@ -416,6 +441,38 @@ describe("the presets' carousel", () => {
     } finally {
       done();
     }
+  });
+
+  it("fits its dots between the page buttons at every width it draws them", async () => {
+    let dotted = 0;
+    for (let width = 200; width <= 600; width += 10) {
+      const { host, earlier, later, done } = mount(width);
+      try {
+        await frame();
+        const between = host.querySelector<HTMLElement>(
+          ".presets-dots, .presets-page",
+        )!;
+        if (between.matches(".presets-dots")) dotted++;
+        const box = between.getBoundingClientRect();
+        expect(box.left, `${width}px`).toBeGreaterThanOrEqual(
+          earlier().getBoundingClientRect().right,
+        );
+        expect(box.right, `${width}px`).toBeLessThanOrEqual(
+          later().getBoundingClientRect().left,
+        );
+        // And nothing pushed out past the row's end.
+        const nav = host.querySelector(".presets-nav")!.getBoundingClientRect();
+        expect(
+          later().getBoundingClientRect().right,
+          `${width}px`,
+        ).toBeLessThanOrEqual(nav.right + 0.5);
+      } finally {
+        done();
+      }
+    }
+    // Both draw somewhere in the sweep, the dots and the text.
+    expect(dotted).toBeGreaterThan(0);
+    expect(dotted).toBeLessThan(41);
   });
 
   it("counts its pages again when the panel is resized", async () => {
