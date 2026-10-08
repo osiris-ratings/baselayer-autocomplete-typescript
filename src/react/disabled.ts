@@ -13,10 +13,10 @@ type Rgb = readonly [number, number, number];
 export const DISABLED_NAME_FLOOR = 4.6;
 
 /**
- * The least a disabled head's name keeps: drawn at the lines' weight, it
- * fades a step further than a line's name and still draws at 3:1 or more.
+ * The least a disabled head's name keeps: drawn in the regular weight, it
+ * fades well past a line's name, to about 2.3:1 as drawn, and never vanishes.
  */
-export const DISABLED_HEAD_FLOOR = 3.5;
+export const DISABLED_HEAD_FLOOR = 2.5;
 
 /**
  * Its other text and its icon keep this share of their own contrast, so they
@@ -129,9 +129,9 @@ export interface DisabledInks {
 /**
  * A disabled line under `look`: at `disabledDim` d, its squares, flag and
  * icons drained of colour by 2d, its text moved up to d of the way toward the
- * ground, its names no further than 4.6:1 (a head's 3.5:1) and the rest than
- * 40% of its contrast (1.8:1 at least), and its squares' opacity 1 - 0.8d. At
- * 0, nothing changes.
+ * ground (a head's name up to 2d), its names no further than 4.6:1 (a head's
+ * 2.5:1) and the rest than 40% of its contrast (1.8:1 at least), and its
+ * squares' opacity 1 - 0.8d. At 0, nothing changes.
  */
 export function disabledInks(look: Look): DisabledInks {
   const dim = look.disabledDim;
@@ -139,16 +139,22 @@ export function disabledInks(look: Look): DisabledInks {
   // here: its own colour stands in, and the floors hold only on that.
   const ground = parse(look.backgroundColor).rgb;
   const round = (value: number) => Math.round(value * 1000) / 1000;
-  const faded = (color: string, floor: number) => {
+  const faded = (color: string, floor: number, most = dim) => {
     const ink = drawnOn(color, ground);
-    const share = fadeShare(ink, ground, dim, floor);
+    const share = fadeShare(ink, ground, most, floor);
     return {
       hex: hexOf(mix(ink, ground, share)),
       kept: Math.round((1 - share) * 1000) / 10,
     };
   };
   const name = faded(look.titleColor, DISABLED_NAME_FLOOR);
-  const headName = faded(look.titleColor, DISABLED_HEAD_FLOOR);
+  // Twice as far as a line's text may go, so on a dark ground too the floor
+  // is what stops it.
+  const headName = faded(
+    look.titleColor,
+    DISABLED_HEAD_FLOOR,
+    Math.min(1, 2 * dim),
+  );
   const text = faded(
     look.subtitleColor,
     Math.max(

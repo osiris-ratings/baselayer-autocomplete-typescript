@@ -55,23 +55,19 @@ describe("a disabled line's inks", () => {
           contrast(look.subtitleColor, ground) * DISABLED_TEXT_KEEPS,
         ),
       );
-      // A head's name, drawn at the lines' weight, fades further, never
-      // louder than a line's.
+      // A head's name fades well past a line's, to its own floor: it may go
+      // twice as far, so on a dark ground too the floor is what stops it.
       expect(contrast(inks.headName, ground)).toBeGreaterThanOrEqual(
         DISABLED_HEAD_FLOOR,
       );
-      expect(contrast(inks.headName, ground)).toBeLessThanOrEqual(
+      expect(contrast(inks.headName, ground)).toBeLessThan(
+        DISABLED_HEAD_FLOOR + 0.05,
+      );
+      expect(contrast(inks.headName, ground)).toBeLessThan(
         contrast(inks.name, ground),
       );
     });
   }
-
-  it("fade a head's name to its own floor by default, below a line's", () => {
-    const { headName, name } = disabledInks(DEFAULT_LOOK);
-    const ground = DEFAULT_LOOK.backgroundColor;
-    expect(contrast(headName, ground)).toBeLessThan(DISABLED_HEAD_FLOOR + 0.05);
-    expect(contrast(name, ground)).toBeGreaterThanOrEqual(DISABLED_NAME_FLOOR);
-  });
 
   it("fade a translucent title as it is drawn, over the ground", () => {
     // #1a202c at half alpha over white is drawn as this.

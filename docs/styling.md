@@ -318,12 +318,12 @@ set only in CSS, not through `look`, fades by the default look's shares
 it is drawn on the ground; a translucent background shows whatever is under the
 menu, which the component cannot know, so the floors then hold only on the
 background's own colour. A row's head that is not a pick fades as a disabled
-line does, and its name further: it drops from its bold to the lines' weight, so
-it does not read as a title to click, and keeps 3.5:1 by the formula
-(`--bl-ac-disabled-head-name`), drawing at 3:1 or more. A person's and an
-address's head is not a pick by default, since a business is the pick, their
-businesses at full strength. A pick does not fade, and nothing fades under
-forced colours.
+line does, and its name further: it drops from its bold to the regular weight,
+below its lines', so it does not read as a title to click, and fades up to twice
+as far as a line's text, to 2.5:1 by the formula (`--bl-ac-disabled-head-name`),
+drawing at about 2.3:1, faint but never gone. A person's and an address's head
+is not a pick by default, since a business is the pick, their businesses at full
+strength. A pick does not fade, and nothing fades under forced colours.
 
 After a pick from a line under a row, the line under the field
 (`bl-ac-selection`, `data-type` the picked line's type) names what was

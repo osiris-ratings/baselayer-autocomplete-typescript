@@ -397,7 +397,7 @@ describe("a row's head that is not a pick", () => {
   )) {
     for (const search of ["person", "address", "business"] as const) {
       const article = search === "address" ? "an" : "a";
-      it(`fades on ${article} ${search}'s row, its name at the lines' weight and further than a line's, its secondary text as a line's, on ${preset.name}, and not when it is a pick`, async () => {
+      it(`fades on ${article} ${search}'s row, its name in the regular weight and well past a line's, its secondary text as a line's, on ${preset.name}, and not when it is a pick`, async () => {
         const enabled = head(search, true, preset.look);
         const enabledName = await drawnContrast(enabled.name);
         const enabledWeight = getComputedStyle(enabled.name).fontWeight;
@@ -406,13 +406,18 @@ describe("a row's head that is not a pick", () => {
         const disabled = head(search, false, preset.look);
         try {
           expect(disabled.head).toHaveAttribute("aria-disabled", "true");
-          // Not bold, so it no longer reads as a title to click; a pick is.
-          const lineWeight = getComputedStyle(disabled.lineName).fontWeight;
-          expect(getComputedStyle(disabled.name).fontWeight, "weight").toBe(
+          // Regular, below its lines', so it no longer reads as a title to
+          // click; a pick keeps its bold.
+          const weight = Number(getComputedStyle(disabled.name).fontWeight);
+          const lineWeight = Number(
+            getComputedStyle(disabled.lineName).fontWeight,
+          );
+          expect(weight, "weight").toBe(400);
+          expect(weight, "weight").toBeLessThan(lineWeight);
+          expect(Number(enabledWeight), "a pick's weight").toBeGreaterThan(
             lineWeight,
           );
-          expect(enabledWeight, "a pick's weight").not.toBe(lineWeight);
-          // In the head's own ink, a step quieter than a line's name.
+          // In the head's own ink, well past a line's name.
           const ink = disabledInks(resolveLook(preset.look)).headName;
           const drawnIn = rgbOf(getComputedStyle(disabled.name).color);
           [1, 3, 5].forEach((at, channel) =>
@@ -421,9 +426,10 @@ describe("a row's head that is not a pick", () => {
               `name ink ${ink}`,
             ).toBeLessThanOrEqual(1),
           );
+          // Faint, about 2.3:1 as drawn, but never gone.
           const disabledName = await drawnContrast(disabled.name);
-          expect(disabledName, "name").toBeGreaterThanOrEqual(3);
-          expect(disabledName, "name").toBeLessThanOrEqual(0.45 * enabledName);
+          expect(disabledName, "name").toBeGreaterThanOrEqual(2);
+          expect(disabledName, "name").toBeLessThanOrEqual(0.2 * enabledName);
           const disabledSecondary = await drawnContrast(disabled.secondary);
           expect(disabledSecondary, "secondary").toBeLessThanOrEqual(
             0.6 * enabledSecondary,

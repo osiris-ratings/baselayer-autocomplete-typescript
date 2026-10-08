@@ -247,8 +247,8 @@ interface EntityPick {
 The props are typed so that a person or an address, once enabled, has somewhere
 to go: with `enabledLines={["business", "person"]}`, leaving out `onPickEntity`
 is a type error. A row's head that is not a pick is disabled too, an option
-still naming its group: by default a person's or an address's head, drawn faded
-and at the lines' weight rather than bold, above its businesses. On a business
+still naming its group: by default a person's or an address's head, drawn faint
+and in the regular weight rather than bold, above its businesses. On a business
 search, a row whose business is not named in `enabledLines` is a group whose
 head is disabled, though it lists nothing.
 
