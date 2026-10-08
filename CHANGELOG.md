@@ -6,6 +6,8 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-08
+
 Find a business through a person or through an address. The people and addresses
 routes are served, each with a component of its own: a person's row shows their
 first address, their counts and a line for each business with its address,
