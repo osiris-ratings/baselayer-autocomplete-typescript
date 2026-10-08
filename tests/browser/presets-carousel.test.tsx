@@ -282,9 +282,20 @@ describe("the presets' carousel", () => {
           earlier().getBoundingClientRect().right,
         );
         expect(box.right).toBeLessThan(later().getBoundingClientRect().left);
-        // Small to the eye, but a target a finger can hit.
-        expect(box.width).toBeGreaterThanOrEqual(20);
-        expect(box.height).toBeGreaterThanOrEqual(20);
+        // Small to the eye, but a target a finger can hit: about 24px tall,
+        // and as wide as the space between it and its neighbours.
+        const middle = {
+          x: box.left + box.width / 2,
+          y: box.top + box.height / 2,
+        };
+        for (const [x, y] of [
+          [middle.x, middle.y - 11],
+          [middle.x, middle.y + 11],
+          [middle.x - 7, middle.y],
+          [middle.x + 7, middle.y],
+        ] as const) {
+          expect(document.elementFromPoint(x, y)).toBe(dot);
+        }
       }
       const current = () =>
         dots().findIndex(dot => dot.getAttribute("aria-current") === "true");
@@ -303,6 +314,105 @@ describe("the presets' carousel", () => {
       await frame();
       expect(current()).toBe(0);
       expect(earlier().disabled).toBe(true);
+    } finally {
+      done();
+    }
+  });
+
+  it("draws its dots as a page control: small round dots, no button chrome, in one faint capsule", async () => {
+    const { host, earlier, later, done } = mount(560);
+    try {
+      const capsule = host.querySelector<HTMLElement>(".presets-dots")!;
+      const dots = [...capsule.querySelectorAll<HTMLButtonElement>("button")];
+      expect(dots.length).toBeGreaterThan(1);
+      const ground = getComputedStyle(capsule);
+      // A faint fill, rounded at its ends, a few px round the dots.
+      expect(ground.backgroundColor).toMatch(
+        /^(rgba|color)\(.*(0\.0\d|0\.1\d?)\)$/,
+      );
+      const wrap = capsule.getBoundingClientRect();
+      expect(parseFloat(ground.borderTopLeftRadius)).toBeGreaterThanOrEqual(
+        wrap.height / 2,
+      );
+      expect(parseFloat(ground.paddingTop)).toBeGreaterThanOrEqual(3);
+      expect(parseFloat(ground.paddingLeft)).toBeGreaterThanOrEqual(3);
+      // Centred between the page buttons.
+      const between =
+        (earlier().getBoundingClientRect().right +
+          later().getBoundingClientRect().left) /
+        2;
+      expect(wrap.left + wrap.width / 2).toBeCloseTo(between, 0);
+      const boxes = dots.map(dot => dot.getBoundingClientRect());
+      boxes.forEach((box, at) => {
+        const style = getComputedStyle(dots[at]!);
+        expect(Math.abs(box.width - box.height)).toBeLessThanOrEqual(0.5);
+        expect(box.width).toBeLessThan(10);
+        expect(box.width).toBeGreaterThanOrEqual(6);
+        expect(style.borderTopWidth).toBe("0px");
+        expect(style.borderTopLeftRadius).toBe("50%");
+        expect(style.boxShadow).toBe("none");
+        if (at > 0) {
+          const gap = box.left - boxes[at - 1]!.right;
+          expect(gap).toBeGreaterThanOrEqual(8);
+          expect(gap).toBeLessThanOrEqual(10);
+        }
+      });
+      // The current dot in the text's ink, the others in it at about 30%.
+      const alpha = (dot: HTMLElement) => {
+        const color = getComputedStyle(dot).backgroundColor;
+        const parts = color.match(/[\d.]+/g)!.map(Number);
+        return color.startsWith("rgba") || parts.length > 3 ? parts.at(-1)! : 1;
+      };
+      const current = dots.find(dot => dot.getAttribute("aria-current"))!;
+      expect(alpha(current)).toBe(1);
+      for (const dot of dots.filter(each => each !== current)) {
+        expect(alpha(dot)).toBeGreaterThanOrEqual(0.25);
+        expect(alpha(dot)).toBeLessThanOrEqual(0.35);
+      }
+      // A ring that hugs the dot, from the keyboard only.
+      await userEvent.click(dots[1]!);
+      expect(getComputedStyle(dots[1]!).outlineStyle).toBe("none");
+      later().focus();
+      await userEvent.keyboard("{Shift>}{Tab}{/Shift}");
+      const focused = document.activeElement as HTMLElement;
+      expect(dots).toContain(focused);
+      const ring = getComputedStyle(focused);
+      expect(ring.outlineStyle).toBe("solid");
+      expect(parseFloat(ring.outlineOffset)).toBeLessThanOrEqual(3);
+    } finally {
+      done();
+    }
+  });
+
+  it("draws each page button's arrow in the button's ink, whatever the font has", () => {
+    const { earlier, later, done } = mount(560);
+    try {
+      for (const button of [earlier(), later()]) {
+        expect(button.textContent).toBe("");
+        const arrow = button.querySelector<HTMLElement>(".presets-chevron")!;
+        const box = arrow.getBoundingClientRect();
+        expect(box.width).toBeGreaterThanOrEqual(6);
+        expect(box.height).toBeGreaterThanOrEqual(6);
+        const style = getComputedStyle(arrow);
+        const ink = getComputedStyle(button).color;
+        expect(style.borderRightColor).toBe(ink);
+        expect(style.borderBottomColor).toBe(ink);
+        // 1.5px, which a 1x screen rounds down to a whole pixel.
+        expect(parseFloat(style.borderRightWidth)).toBeGreaterThanOrEqual(1);
+        // Inside its button, across its middle.
+        const own = button.getBoundingClientRect();
+        expect(box.left).toBeGreaterThan(own.left);
+        expect(box.right).toBeLessThan(own.right);
+        expect(
+          Math.abs(box.top + box.height / 2 - (own.top + own.height / 2)),
+        ).toBeLessThanOrEqual(1);
+      }
+      // One points back and the other on.
+      const turn = (button: HTMLButtonElement) =>
+        new DOMMatrix(
+          getComputedStyle(button.querySelector(".presets-chevron")!).transform,
+        );
+      expect(turn(earlier()).a).toBeCloseTo(-turn(later()).a, 3);
     } finally {
       done();
     }

@@ -20,8 +20,13 @@ import {
   type StyleState,
 } from "./style-state";
 
-/** A page dot's room, and what the arrows and their gaps take from the row. */
-const DOT = 22;
+/**
+ * The page control's measures, as demo.css draws them: a dot and the space
+ * after it, the capsule's padding at both ends, and what the page buttons
+ * and their gaps take from the row.
+ */
+const DOT_PITCH = 7 + 9;
+const CAPSULE = 2 * 9 - 9;
 const ARROWS = 2 * 32 + 16;
 
 /**
@@ -99,7 +104,7 @@ export function PresetCarousel({
             0,
           );
     const room = (nav.current?.clientWidth ?? Infinity) - ARROWS;
-    const fit = starts.length * DOT <= room;
+    const fit = starts.length * DOT_PITCH + CAPSULE <= room;
     setPages(was =>
       was.current === current &&
       was.fit === fit &&
@@ -184,7 +189,7 @@ export function PresetCarousel({
           disabled={!edges.before}
           onClick={() => go(pages.current - 1)}
         >
-          ‹
+          <span className="presets-chevron" data-way="back" />
         </button>
         {pages.fit ? (
           <div className="presets-dots">
@@ -209,7 +214,7 @@ export function PresetCarousel({
           disabled={!edges.after}
           onClick={() => go(pages.current + 1)}
         >
-          ›
+          <span className="presets-chevron" />
         </button>
       </div>
     </>
