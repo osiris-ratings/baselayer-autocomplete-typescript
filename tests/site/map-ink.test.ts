@@ -19,16 +19,41 @@ const BLUE = /--blue:\s*(#[0-9a-f]{6});/i
   )![1]!
   .toLowerCase();
 
+const channels = (hex: string) =>
+  [1, 3, 5].map(start => parseInt(hex.slice(start, start + 2), 16));
+
 /** How far `at` lies along the way from `from` to `to`, 0 to 1, by channel. */
 function toward(from: string, to: string, at: string): number {
-  const rgb = (hex: string) =>
-    [1, 3, 5].map(start => parseInt(hex.slice(start, start + 2), 16));
-  const [a, b, c] = [rgb(from), rgb(to), rgb(at)];
+  const [a, b, c] = [channels(from), channels(to), channels(at)];
   const along = b.map((channel, i) => channel - a[i]!);
   return (
     along.reduce((sum, d, i) => sum + d * (c[i]! - a[i]!), 0) /
     along.reduce((sum, d) => sum + d * d, 0)
   );
+}
+
+/** A colour's chroma, 0 to 1: how far its channels spread. */
+function chroma(hex: string): number {
+  const rgb = channels(hex);
+  return (Math.max(...rgb) - Math.min(...rgb)) / 255;
+}
+
+/** A colour's lightness, 0 to 1, as HSL measures it. */
+function light(hex: string): number {
+  const rgb = channels(hex);
+  return (Math.max(...rgb) + Math.min(...rgb)) / 2 / 255;
+}
+
+/** A colour's hue, in degrees. */
+function hue(hex: string): number {
+  const [r, g, b] = channels(hex).map(channel => channel / 255) as [
+    number,
+    number,
+    number,
+  ];
+  const degrees =
+    (Math.atan2(Math.sqrt(3) * (g - b), 2 * r - g - b) * 180) / Math.PI;
+  return (degrees + 360) % 360;
 }
 
 describe("the row map's inks, from the look", () => {
@@ -59,28 +84,65 @@ describe("the row map's inks, from the look", () => {
       expect(inks.dim.hidden).toBeLessThan(inks.dim.disabled);
     });
 
+    it(`rings what the map focuses in the demo's blue, raised where the card would lose it, in ${preset.name}`, () => {
+      const state = applyPreset(DEFAULT_STYLE, preset);
+      const ground = state.look.backgroundColor.toLowerCase();
+      const title = state.look.titleColor.toLowerCase();
+      const { ring } = mapInks(state);
+
+      // WCAG's 3:1 for a focus indicator, on the card it is drawn on.
+      expect(contrast(ring, ground)).toBeGreaterThanOrEqual(3);
+      if (contrast(BLUE, ground) >= 3) {
+        expect(ring).toBe(BLUE);
+      } else {
+        // Raised toward the look's title, and no further than it has to be.
+        expect(toward(BLUE, title, ring)).toBeGreaterThan(0);
+        expect(toward(BLUE, title, ring)).toBeLessThanOrEqual(1);
+        expect(contrast(ring, ground)).toBeLessThan(3.2);
+      }
+    });
+
     it(`draws the Disabled column's checkbox quiet but seen in ${preset.name}`, () => {
       const state = applyPreset(DEFAULT_STYLE, preset);
       const ground = state.look.backgroundColor.toLowerCase();
+      const { check, ring } = mapInks(state);
 
-      const { check } = mapInks(state);
-
-      // An empty box's edge is about WCAG's 3:1 for a control's boundary,
-      // and never less; under the pointer it is a little stronger.
-      expect(contrast(check.edge, ground)).toBeGreaterThanOrEqual(3);
-      expect(contrast(check.edge, ground)).toBeLessThan(3.3);
-      expect(contrast(check.hover, ground)).toBeGreaterThanOrEqual(
-        contrast(check.edge, ground) + 0.5,
-      );
-      // A checked box is the demo's blue, as the native box was, taken
-      // toward the card, its mark readable on it; focus rings it in the blue
-      // itself.
-      expect(toward(BLUE, ground, check.fill)).toBeGreaterThanOrEqual(0.35);
-      expect(toward(BLUE, ground, check.fill)).toBeLessThanOrEqual(0.45);
-      expect(contrast(check.mark, check.fill)).toBeGreaterThanOrEqual(3);
-      expect(check.ring).toBe(BLUE);
+      // An empty box's edge is faint, about 2:1 on the card and never under
+      // 1.8; under the pointer it is a step stronger, about 3:1.
+      expect(contrast(check.edge, ground)).toBeGreaterThanOrEqual(1.8);
+      expect(contrast(check.edge, ground)).toBeLessThan(2.2);
+      expect(contrast(check.hover, ground)).toBeGreaterThanOrEqual(3);
+      expect(contrast(check.hover, ground)).toBeLessThan(3.3);
+      // A checked box is the ring's blue, calmer: its hue kept, its colour
+      // halved or less and its light no greater, so a white mark reads on it
+      // at 4:1 or more.
+      expect(hue(check.fill)).toBeCloseTo(hue(ring), -1);
+      expect(chroma(check.fill)).toBeLessThanOrEqual(0.6 * chroma(ring));
+      expect(light(check.fill)).toBeLessThanOrEqual(light(ring));
+      expect(contrast("#ffffff", check.fill)).toBeGreaterThanOrEqual(4);
     });
   }
+
+  it("darkens a checked box's fill until its white mark reads, where the ring is raised far", () => {
+    // A mid-grey card: the ring is raised a long way toward the white title,
+    // and calmed as on any look, it would carry a white mark at under 3:1.
+    const card = "#474747";
+    const state = {
+      ...DEFAULT_STYLE,
+      look: {
+        ...DEFAULT_STYLE.look,
+        backgroundColor: card,
+        titleColor: "#ffffff",
+        subtitleColor: "#dddddd",
+      },
+      vars: { ...DEFAULT_STYLE.vars, "--bl-ac-highlight-bg": card },
+    };
+    const { check, ring } = mapInks(state);
+    expect(contrast(ring, card)).toBeGreaterThanOrEqual(3);
+    expect(contrast("#ffffff", check.fill)).toBeGreaterThanOrEqual(4);
+    expect(contrast("#ffffff", check.fill)).toBeLessThan(4.2);
+    expect(hue(check.fill)).toBeCloseTo(hue(ring), -1);
+  });
 
   it("reads a colour with an alpha, laid over the card, and floors its inks as any other", () => {
     const state = {
@@ -116,6 +178,6 @@ describe("the row map's inks, from the look", () => {
     };
     expect(mapInks(odd).ink).toContain("color-mix(");
     expect(mapInks(odd).check.edge).toContain("color-mix(");
-    expect(mapInks(odd).check.fill).toContain("color-mix(");
+    expect(mapInks(odd).check.fill).toMatch(/^#[0-9a-f]{6}$/);
   });
 });

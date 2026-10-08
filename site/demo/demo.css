@@ -943,7 +943,7 @@
 }
 
 .row-map-grip:focus-visible {
-  outline: 2px solid var(--blue);
+  outline: 2px solid var(--map-ring);
   outline-offset: 1px;
 }
 
@@ -1019,7 +1019,7 @@
 }
 
 .row-map-check:checked:hover {
-  --check-edge: var(--map-check-ring);
+  --check-edge: var(--map-ring);
 }
 
 /* The demo's fields take a blue edge and ring on any focus, by a rule this
@@ -1031,7 +1031,7 @@
 }
 
 .demo input.row-map-check:focus-visible {
-  outline: 2px solid var(--map-check-ring);
+  outline: 2px solid var(--map-ring);
   outline-offset: 2px;
 }
 
@@ -1164,7 +1164,7 @@
 }
 
 .row-map-icon:focus-visible {
-  outline: 2px solid var(--blue);
+  outline: 2px solid var(--map-ring);
   outline-offset: 1px;
 }
 
@@ -1288,7 +1288,7 @@
 
 /* One ring, over the cell's own border rather than around it. */
 .row-map-place:has(select:focus-visible) .row-map-face {
-  outline: 2px solid var(--blue);
+  outline: 2px solid var(--map-ring);
   outline-offset: -1px;
 }
 

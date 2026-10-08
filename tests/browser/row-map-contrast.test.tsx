@@ -84,12 +84,8 @@ function pixelsIn(shot: Shot, box: DOMRect): Rgb[] {
   return pixels;
 }
 
-/**
- * How what is drawn in a box reads on its ground: the box's commonest colour
- * is its ground, and its ink the pixel that stands out from it most.
- */
-function measured(shot: Shot, box: DOMRect, text?: Element): number {
-  const pixels = pixelsIn(shot, box);
+/** The colour most of `pixels` are. */
+function commonest(pixels: Rgb[]): Rgb {
   const counts = new Map<string, { rgb: Rgb; count: number }>();
   for (const rgb of pixels) {
     const key = rgb.join();
@@ -97,7 +93,16 @@ function measured(shot: Shot, box: DOMRect, text?: Element): number {
     entry.count++;
     counts.set(key, entry);
   }
-  const ground = [...counts.values()].sort((a, b) => b.count - a.count)[0]!.rgb;
+  return [...counts.values()].sort((a, b) => b.count - a.count)[0]!.rgb;
+}
+
+/**
+ * How what is drawn in a box reads on its ground: the box's commonest colour
+ * is its ground, and its ink the pixel that stands out from it most.
+ */
+function measured(shot: Shot, box: DOMRect, text?: Element): number {
+  const pixels = pixelsIn(shot, box);
+  const ground = commonest(pixels);
   if (text === undefined) {
     return Math.max(...pixels.map(rgb => ratio(rgb, ground)));
   }
@@ -243,8 +248,9 @@ describe("the row map in every preset", () => {
               check(`grip of ${at}`, grip.getBoundingClientRect(), 3);
             }
           }
-          // The Disabled column's boxes: an empty one's edge on the card, a
-          // checked one's mark on its fill, each at a control's 3:1.
+          // The Disabled column's boxes: an empty one's faint edge on the
+          // card, never under 1.8:1, and a checked one's white mark on its
+          // fill at a control's 3:1.
           for (const box of wrap.querySelectorAll<HTMLInputElement>(
             ".row-map-check",
           )) {
@@ -253,8 +259,22 @@ describe("the row map in every preset", () => {
             check(
               `${box.checked ? "checked" : "empty"} box of ${at}`,
               box.getBoundingClientRect(),
-              3,
+              box.checked ? 3 : 1.8,
             );
+            if (box.checked) {
+              // The mark is white: the lightest of its pixels reads on the
+              // fill, the box's commonest colour.
+              const pixels = pixelsIn(shot, box.getBoundingClientRect());
+              const fill = commonest(pixels);
+              const lightest = pixels.reduce((most, rgb) =>
+                luminance(rgb) > luminance(most) ? rgb : most,
+              );
+              if (ratio(lightest, fill) < 3) {
+                low.push(
+                  `white mark of ${at}: ${ratio(lightest, fill).toFixed(2)} < 3`,
+                );
+              }
+            }
           }
           for (const chip of wrap.querySelectorAll<HTMLElement>(
             ".row-map-tray .row-map-chip",

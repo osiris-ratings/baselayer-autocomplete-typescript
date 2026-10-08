@@ -7,6 +7,7 @@ import type { StyleState } from "./style-state";
 type Rgb = readonly [number, number, number];
 
 const WHITE: Rgb = [255, 255, 255];
+const BLACK: Rgb = [0, 0, 0];
 
 /**
  * `#rgb`, `#rgba`, `#rrggbb` or `#rrggbbaa` as drawn over `over` (white when
@@ -104,11 +105,61 @@ function nearest(ink: Rgb, to: Rgb, holds: (rgb: Rgb) => boolean): Rgb {
 /** How much a line is dimmed, by design: a disabled line, and a hidden one. */
 const DIM = { disabled: 0.48, hidden: 0.38 };
 
-/** The demo's blue (brand.css `--blue`): the checkbox's, whatever the look. */
+/** The demo's blue (brand.css `--blue`): the map's rings and checkbox. */
 const BLUE = "#384ce3";
 
-/** How far a checked box's fill is taken from the blue toward the card. */
-const CHECK_FILL_TOWARD_CARD = 0.4;
+/**
+ * A checked box's fill: the ring with this share of its colour and a little
+ * less light, darkened further only until its white mark reads at `markOn`.
+ */
+const CALM = { colour: 0.5, darker: 0.04, markOn: 4 };
+
+/** A colour's hue in turns, and its saturation and lightness, 0 to 1. */
+function hsl(rgb: Rgb): [number, number, number] {
+  const [r, g, b] = rgb.map(channel => channel / 255) as [
+    number,
+    number,
+    number,
+  ];
+  const [high, low] = [Math.max(r, g, b), Math.min(r, g, b)];
+  const lightness = (high + low) / 2;
+  const spread = high - low;
+  if (spread === 0) return [0, 0, lightness];
+  const saturation = spread / (1 - Math.abs(2 * lightness - 1));
+  const sector =
+    high === r
+      ? (g - b) / spread
+      : high === g
+        ? (b - r) / spread + 2
+        : (r - g) / spread + 4;
+  return [(((sector / 6) % 1) + 1) % 1, saturation, lightness];
+}
+
+function fromHsl([hue, saturation, lightness]: [number, number, number]): Rgb {
+  const spread = (1 - Math.abs(2 * lightness - 1)) * saturation;
+  const channel = (offset: number) => {
+    const at = (hue * 6 + offset) % 6;
+    return (
+      lightness -
+      spread / 2 +
+      spread * Math.max(0, Math.min(1, Math.abs(at - 3) - 1))
+    );
+  };
+  return [channel(0), channel(4), channel(2)].map(
+    value => value * 255,
+  ) as unknown as Rgb;
+}
+
+/** The ring made calmer for a checked box's fill, a white mark legible on it. */
+function calmFill(ring: Rgb): Rgb {
+  const [hue, saturation, lightness] = hsl(ring);
+  const calm = fromHsl([
+    hue,
+    saturation * CALM.colour,
+    Math.max(0, lightness - CALM.darker),
+  ]);
+  return nearest(calm, BLACK, rgb => ratio(WHITE, rgb) >= CALM.markOn);
+}
 
 /** An ink on its ground, and the least contrast it is to keep when dimmed. */
 interface Kept {
@@ -139,6 +190,11 @@ export interface MapInks {
   guide: string;
   /** The opacity of a disabled line, and of a hidden one. */
   dim: { disabled: number; hidden: number };
+  /**
+   * What rings a focused grip, checkbox, icon or place: the demo's blue,
+   * raised toward the title on a card it would not stand out on.
+   */
+  ring: string;
   /** The Disabled column's checkbox, quieter than the drags around it. */
   check: CheckInks;
 }
@@ -148,11 +204,8 @@ export interface CheckInks {
   /** An empty box's edge, and that edge under the pointer. */
   edge: string;
   hover: string;
-  /** A checked box's fill and edge, and its mark. */
+  /** A checked box's fill and edge, under its white mark. */
   fill: string;
-  mark: string;
-  /** The focus ring: the demo's blue. */
-  ring: string;
 }
 
 /**
@@ -191,12 +244,11 @@ export function mapInks(state: StyleState): MapInks {
       soft: mixed(60),
       guide: mixed(25),
       dim: { ...DIM },
+      ring: BLUE,
       check: {
         edge: mixed(45),
         hover: mixed(60),
-        fill: `color-mix(in srgb, ${BLUE} 60%, ${look.backgroundColor})`,
-        mark: look.titleColor,
-        ring: BLUE,
+        fill: hex(calmFill(parse(BLUE)!)),
       },
     };
   }
@@ -218,29 +270,24 @@ export function mapInks(state: StyleState): MapInks {
   while (hidden < DIM.disabled && !keeps(kept, ground, hidden)) {
     hidden = Math.round((hidden + 0.01) * 100) / 100;
   }
-  // The checkbox stays out of the way: an empty box's edge as faint as a
-  // control's boundary may be, and a checked one's fill the blue taken well
-  // toward the card, its mark white where that reads on it, else the look's
-  // strongest text or its card, whichever reads better.
+  // A focus ring holds WCAG's 3:1 on the card: the blue, raised toward the
+  // title only where the card is too dark for it.
+  const ring = nearest(parse(BLUE)!, title, rgb => ratio(rgb, ground) >= 3);
+  // The checkbox stays out of the way: an empty box's edge faint, about 2:1
+  // on the card and a step stronger under the pointer, and a checked one's
+  // fill the ring made calmer under a white mark.
   const edge = (least: number) =>
     hex(furthest(ink, ground, 1, rgb => ratio(rgb, ground) >= least));
-  const fill = round(mix(parse(BLUE)!, ground, CHECK_FILL_TOWARD_CARD));
-  const mark = [WHITE, title, ground].reduce((best, rgb) =>
-    ratio(best, fill) >= 3 || ratio(best, fill) >= ratio(rgb, fill)
-      ? best
-      : rgb,
-  );
   return {
     ink: hex(ink),
     soft: hex(soft),
     guide: hex(furthest(soft, ground, 0.95, rgb => ratio(rgb, ground) >= 1.5)),
     dim: { disabled: DIM.disabled, hidden },
+    ring: hex(ring),
     check: {
-      edge: edge(3),
-      hover: edge(4),
-      fill: hex(fill),
-      mark: hex(mark),
-      ring: BLUE,
+      edge: edge(2),
+      hover: edge(3),
+      fill: hex(calmFill(ring)),
     },
   };
 }
