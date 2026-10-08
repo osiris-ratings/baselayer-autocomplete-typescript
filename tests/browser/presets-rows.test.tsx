@@ -20,6 +20,7 @@ import {
   applyPreset,
   changedVars,
   componentProps,
+  previewCss,
 } from "../../site/demo/style-state";
 
 import "../../src/react/styles.css";
@@ -173,9 +174,14 @@ const SHOWN = {
 
 let host: HTMLDivElement;
 let root: Root;
+const sheet = document.createElement("style");
 
 beforeAll(() => {
+  // The preview's own way in: its stylesheet over `.demo-preview .bl-ac`,
+  // which a variable set on an ancestor would lose to `.bl-ac`'s defaults.
+  document.head.append(sheet);
   host = document.createElement("div");
+  host.className = "demo-preview";
   document.body.append(host);
   root = createRoot(host);
 });
@@ -183,6 +189,7 @@ beforeAll(() => {
 afterAll(() => {
   root.unmount();
   host.remove();
+  sheet.remove();
 });
 
 /** Whether `inner` lies within `outer`, give or take a subpixel. */
@@ -264,11 +271,8 @@ describe("every preset's rows", () => {
     const style = applyPreset(DEFAULT_STYLE, preset);
     for (const width of WIDTHS) {
       it(`hold their places on every search in ${preset.name} at ${width}px`, () => {
-        host.removeAttribute("style");
         host.style.width = `${width}px`;
-        for (const [name, value] of changedVars(style)) {
-          host.style.setProperty(name, value);
-        }
+        sheet.textContent = previewCss(style);
         const found: string[] = [];
         const look = style.look;
         flushSync(() =>
@@ -289,6 +293,11 @@ describe("every preset's rows", () => {
         found.push(
           ...faults(width <= 360).map(fault => `businesses: ${fault}`),
         );
+        // The preset's variables reached the component, fonts and sizes too.
+        const drawn = getComputedStyle(host.querySelector(".bl-ac")!);
+        for (const [name, value] of changedVars(style)) {
+          expect(drawn.getPropertyValue(name).trim(), name).toBe(value);
+        }
         flushSync(() =>
           root.render(
             <PersonAutocompleteView
