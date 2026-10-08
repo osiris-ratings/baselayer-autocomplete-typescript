@@ -155,14 +155,23 @@ function textBox(element: Element): DOMRect {
 }
 
 /**
- * Every line shown but the row's last, which is hidden, and the head's last
- * field left out, so the Hidden drawer holds a line and a field.
+ * Every line shown but the row's last, which is hidden, and a field of the
+ * head's left out, so the Hidden drawer holds a line and a field.
  */
 function oneHidden(state: StyleState, route: Route): StyleState {
   const [head, ...lines] = lineKinds(route);
   const relations = lines.map(kind => kind.relation!);
-  const left = head!.lines.at(-1)!.trailing.field;
   const row = state.rows[route];
+  const layout: Readonly<Record<string, string | null>> = row.layout;
+  // The first of the head's places that holds a field, which a preset may
+  // have moved; a head that holds none has its fields in Hidden already.
+  const left = head!.lines
+    .flatMap(line => [
+      line.lead.badge,
+      line.trailing.badge,
+      line.trailing.field,
+    ])
+    .find(place => layout[place] != null);
   return {
     ...state,
     rows: {
@@ -170,7 +179,8 @@ function oneHidden(state: StyleState, route: Route): StyleState {
       [route]: {
         ...row,
         list: relations.slice(0, -1),
-        layout: { ...row.layout, [left]: null },
+        layout:
+          left === undefined ? row.layout : { ...row.layout, [left]: null },
       },
     },
   };

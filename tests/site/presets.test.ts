@@ -2,6 +2,8 @@ import {
   MATCH_EMPHASES,
   MATCH_REGIONS,
   ROW_KINDS,
+  resolveLayout,
+  type RowKind,
 } from "@baselayer-sdk/autocomplete";
 import { describe, expect, it } from "vitest";
 
@@ -13,6 +15,8 @@ import {
   PRESETS,
   activePreset,
   applyPreset,
+  componentProps,
+  exportCode,
   lineKinds,
   withEnabled,
   withIconSegment,
@@ -76,8 +80,8 @@ describe("a preset", () => {
     }
   });
 
-  it("keeps the fields the reader has placed in each row", () => {
-    const placed = {
+  it("sets each search's layout, staged over the defaults as a host's is, and Light puts the defaults back", () => {
+    const moved = {
       ...DEFAULT_STYLE,
       rows: {
         ...DEFAULT_STYLE.rows,
@@ -87,9 +91,36 @@ describe("a preset", () => {
         },
       },
     };
-    expect(applyPreset(placed, withRows()).rows.people.layout).toEqual(
-      placed.rows.people.layout,
-    );
+    for (const preset of PRESETS) {
+      const state = applyPreset(moved, preset);
+      for (const route of ROUTES) {
+        expect(state.rows[route].layout, `${preset.name} ${route}`).toEqual(
+          resolveLayout(
+            ROW_KINDS[route] as RowKind<string, string>,
+            preset.rows?.[route]?.layout ?? {},
+          ),
+        );
+      }
+    }
+    expect(applyPreset(moved, PRESETS[0]!).rows).toEqual(DEFAULT_STYLE.rows);
+  });
+
+  it("stages only layouts the row model takes: every place a preset sets keeps its field", () => {
+    for (const preset of PRESETS) {
+      for (const route of ROUTES) {
+        const staged: Readonly<Record<string, string | null>> =
+          preset.rows?.[route]?.layout ?? {};
+        const resolved: Readonly<Record<string, string | null>> = resolveLayout(
+          ROW_KINDS[route] as RowKind<string, string>,
+          staged,
+        );
+        for (const [place, field] of Object.entries(staged)) {
+          expect(resolved[place], `${preset.name} ${route} ${place}`).toBe(
+            field,
+          );
+        }
+      }
+    }
   });
 
   it("is active only while all of it matches: a line, an Enabled box, an icon or the highlight changed is Custom", () => {
@@ -121,6 +152,20 @@ describe("a preset", () => {
         ),
       ),
     ).toBeNull();
+    const moved = {
+      ...state,
+      rows: {
+        ...state.rows,
+        people: {
+          ...people,
+          layout: {
+            ...people.layout,
+            headTrailing: people.layout.headTrailing === null ? "counts" : null,
+          },
+        },
+      },
+    } as typeof state;
+    expect(activePreset(moved), "a field moved").toBeNull();
     const emphasis = state.look.matchEmphasis === "plain" ? "weight" : "plain";
     expect(
       activePreset({
@@ -255,5 +300,105 @@ describe("the presets", () => {
     }
     expect(more).toBeGreaterThanOrEqual(3);
     expect(icons).toBeGreaterThanOrEqual(3);
+  });
+});
+
+/** What an export says of a search's row: its layout, and its lists. */
+function exported(tsx: string) {
+  const layout: Record<string, string | null> = {};
+  const block = /layout=\{\{\n([\s\S]*?)\n\s*\}\}/.exec(tsx)?.[1] ?? "";
+  for (const [, place, value] of block.matchAll(
+    /^\s*(\w+): (null|"[^"]*"),$/gm,
+  )) {
+    layout[place!] = value === "null" ? null : (JSON.parse(value!) as string);
+  }
+  const array = (prop: string): string[] | undefined => {
+    const found = new RegExp(`${prop}=\\{(\\[[^\\]]*\\])\\}`).exec(tsx);
+    return found === null ? undefined : (JSON.parse(found[1]!) as string[]);
+  };
+  return { layout, list: array("list"), icons: array("iconSegments") };
+}
+
+describe("a preset's rows", () => {
+  it("export as they are laid out, and read back as the same rows", () => {
+    for (const preset of PRESETS) {
+      const state = applyPreset(DEFAULT_STYLE, preset);
+      for (const route of ROUTES) {
+        const at = `${preset.name} ${route}`;
+        const { layout, list, icons } = exported(exportCode(state, route).tsx);
+        const row = state.rows[route];
+        const back: Readonly<Record<string, string | null>> = resolveLayout(
+          ROW_KINDS[route] as RowKind<string, string>,
+          layout,
+        );
+        const drawn = lineKinds(route)
+          .filter(
+            kind =>
+              kind.relation === null ||
+              (row.list as readonly string[]).includes(kind.relation),
+          )
+          .flatMap(kind => kind.lines)
+          .flatMap(({ lead, trailing }) => [
+            lead.badge,
+            trailing.badge,
+            trailing.field,
+          ]);
+        const now: Readonly<Record<string, string | null>> = row.layout;
+        for (const place of drawn)
+          expect(back[place], `${at} ${place}`).toBe(now[place]);
+        expect(list ?? DEFAULT_STYLE.rows[route].list, at).toEqual(row.list);
+        expect(
+          sorted(icons ?? componentProps(DEFAULT_STYLE, route).iconSegments),
+          at,
+        ).toEqual(sorted(componentProps(state, route).iconSegments));
+      }
+    }
+  });
+
+  it("differ from search to search: none listed, one, two in either order, icons on and off, fields moved, and no two neighbours alike", () => {
+    const row = (preset: Preset, route: (typeof ROUTES)[number]) =>
+      applyPreset(DEFAULT_STYLE, preset).rows[route];
+    const read = (preset: Preset, route: (typeof ROUTES)[number]) => {
+      const each = row(preset, route);
+      return JSON.stringify([
+        each.layout,
+        each.list,
+        sorted(each.iconSegments),
+      ]);
+    };
+    // A compact row: nothing listed on any search.
+    expect(
+      PRESETS.some(preset =>
+        ROUTES.every(route => row(preset, route).list.length === 0),
+      ),
+    ).toBe(true);
+    for (const route of ROUTES) {
+      const lengths = new Set(
+        PRESETS.map(preset => row(preset, route).list.length),
+      );
+      for (const n of [0, 1, 2])
+        expect(lengths, `${route} lists ${n}`).toContain(n);
+      const twos = new Set(
+        PRESETS.map(preset => row(preset, route).list)
+          .filter(list => list.length === 2)
+          .map(list => list.join()),
+      );
+      expect(twos.size, `${route}: two lines, in both orders`).toBe(2);
+      const layouts = new Set(
+        PRESETS.map(preset => JSON.stringify(row(preset, route).layout)),
+      );
+      expect(layouts.size, `${route} layouts`).toBeGreaterThanOrEqual(4);
+      const iconed = PRESETS.map(
+        preset => row(preset, route).iconSegments.length > 0,
+      );
+      expect(iconed, `${route} icons`).toContain(true);
+      expect(iconed, `${route} no icons`).toContain(false);
+      for (let at = 1; at < PRESETS.length; at++) {
+        expect(
+          read(PRESETS[at]!, route),
+          `${PRESETS[at - 1]!.name} and ${PRESETS[at]!.name} on ${route}`,
+        ).not.toBe(read(PRESETS[at - 1]!, route));
+      }
+    }
   });
 });

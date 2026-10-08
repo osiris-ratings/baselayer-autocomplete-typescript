@@ -1196,14 +1196,17 @@ const HIGHLIGHT_KEYS = [
   "matchEmphasisColor",
 ] as const satisfies readonly (keyof Highlight)[];
 
-/** A search's row as a preset sets it: the lines, their order, and what they draw. */
+/**
+ * A search's row as a preset sets it: where each field sits, staged over the
+ * defaults as a host's layout is, and the lines, their order, and what they draw.
+ */
 export type PresetRow<R extends Route> = Partial<
   Pick<RowStates[R], "list" | "enabled" | "iconSegments">
->;
+> & { layout?: Partial<RowStates[R]["layout"]> };
 
 /**
- * A look: the colors, corners and shadow, how matched words are marked, and
- * each search's lines, all over the defaults. The reader's own layout stays.
+ * A look: the colors, corners and shadow, the font and its sizes, how matched
+ * words are marked, and each search's whole row, all over the defaults.
  */
 export interface Preset {
   name: string;
@@ -1238,6 +1241,36 @@ const SYSTEM_UI = FONT_CHOICES[1].value;
 const SERIF = FONT_CHOICES[2].value;
 const MONO = FONT_CHOICES[3].value;
 
+// Where a preset puts the fields of each search's row, staged over the defaults.
+const BUSINESS_LAYOUTS = {
+  statesBeside: { titleBadge: "states", titleTrailing: "structure" },
+  compact: { subtitle: null, subtitleTrailing: null },
+  addressRight: { subtitle: "people", subtitleTrailing: "address" },
+  rolesInline: {
+    personBadge: "personRole",
+    personTrailing: null,
+    addressBadge: "addressRole",
+    addressTrailing: null,
+  },
+  statesBelow: { titleTrailing: null, subtitleTrailing: "states" },
+} as const satisfies Record<string, Partial<BusinessRowLayout>>;
+
+const PERSON_LAYOUTS = {
+  noCounts: { headTrailing: null },
+  countsBeside: { headBadge: "counts", headTrailing: "firstAddress" },
+  addressRight: { businessBadge: null, businessTrailingBadge: "address" },
+  noStates: { businessTrailingBadge: null },
+  addressRoleInline: { addressBadge: "addressRole", addressTrailing: null },
+} as const satisfies Record<string, Partial<PersonRowLayout>>;
+
+const ADDRESS_LAYOUTS = {
+  noCounts: { headTrailing: null },
+  countsBeside: { headBadge: "counts", headTrailing: null },
+  noStates: { businessTrailingBadge: null },
+  personRoleInline: { personBadge: "personRole", personTrailing: null },
+  noAddress: { businessBadge: null },
+} as const satisfies Record<string, Partial<AddressRowLayout>>;
+
 export const PRESETS: Preset[] = [
   // The default colors, and matched ink in the green of the highlights.
   { name: "Light", look: {}, vars: { "--bl-ac-ink-mark": "#2f855a" } },
@@ -1268,7 +1301,13 @@ export const PRESETS: Preset[] = [
     },
     highlight: { matchEmphasis: "ink", matchEmphasisRegion: "token" },
     rows: {
-      businesses: { list: ["people"], iconSegments: ["name", "personName"] },
+      businesses: {
+        layout: BUSINESS_LAYOUTS.statesBeside,
+        list: ["people"],
+        iconSegments: ["name", "personName"],
+      },
+      people: { layout: PERSON_LAYOUTS.noCounts },
+      addresses: { layout: ADDRESS_LAYOUTS.noCounts },
     },
   },
   {
@@ -1299,10 +1338,8 @@ export const PRESETS: Preset[] = [
     },
     highlight: { matchEmphasis: "background", matchEmphasisRegion: "token" },
     rows: {
-      people: {
-        list: ["businesses", "addresses"],
-        iconSegments: ["name", "businessName", "addressName"],
-      },
+      people: { list: ["businesses", "addresses"] },
+      addresses: { layout: ADDRESS_LAYOUTS.countsBeside },
     },
   },
   {
@@ -1333,6 +1370,11 @@ export const PRESETS: Preset[] = [
       "--bl-ac-font": MONO,
     },
     highlight: { matchEmphasis: "weight", matchEmphasisRegion: "substring" },
+    rows: {
+      businesses: { layout: BUSINESS_LAYOUTS.compact, iconSegments: [] },
+      people: { layout: PERSON_LAYOUTS.countsBeside, iconSegments: [] },
+      addresses: { layout: ADDRESS_LAYOUTS.noStates, iconSegments: [] },
+    },
   },
   {
     name: "Sepia",
@@ -1361,6 +1403,15 @@ export const PRESETS: Preset[] = [
       "--bl-ac-font": SERIF,
     },
     highlight: { matchEmphasis: "underline", matchEmphasisRegion: "token" },
+    rows: {
+      businesses: {
+        layout: BUSINESS_LAYOUTS.statesBelow,
+        list: ["addresses"],
+        iconSegments: ["addressName"],
+      },
+      people: { list: ["addresses"] },
+      addresses: { list: ["people"] },
+    },
   },
   {
     name: "Rosé",
@@ -1391,6 +1442,12 @@ export const PRESETS: Preset[] = [
       matchEmphasisRegion: "substring",
     },
     rows: {
+      businesses: {
+        layout: BUSINESS_LAYOUTS.rolesInline,
+        list: ["people"],
+        iconSegments: [],
+      },
+      people: { layout: PERSON_LAYOUTS.addressRight },
       addresses: {
         list: ["businesses", "people"],
         enabled: ["business", "person"],
@@ -1427,6 +1484,15 @@ export const PRESETS: Preset[] = [
       "--bl-ac-font": SYSTEM_UI,
     },
     highlight: { matchEmphasis: "ink", matchEmphasisRegion: "substring" },
+    rows: {
+      businesses: { layout: BUSINESS_LAYOUTS.compact, iconSegments: [] },
+      people: { layout: PERSON_LAYOUTS.noCounts, list: [], iconSegments: [] },
+      addresses: {
+        layout: ADDRESS_LAYOUTS.noCounts,
+        list: [],
+        iconSegments: [],
+      },
+    },
   },
   {
     name: "Graphite",
@@ -1457,9 +1523,13 @@ export const PRESETS: Preset[] = [
     },
     highlight: { matchEmphasis: "ink", matchEmphasisRegion: "token" },
     rows: {
-      businesses: { iconSegments: [] },
-      people: { iconSegments: [] },
-      addresses: { iconSegments: [] },
+      businesses: { list: ["people", "addresses"], iconSegments: [] },
+      people: {
+        layout: PERSON_LAYOUTS.addressRight,
+        list: ["businesses", "addresses"],
+        iconSegments: [],
+      },
+      addresses: { layout: ADDRESS_LAYOUTS.noStates, iconSegments: [] },
     },
   },
   {
@@ -1490,6 +1560,10 @@ export const PRESETS: Preset[] = [
     },
     highlight: { matchEmphasis: "background", matchEmphasisRegion: "token" },
     rows: {
+      businesses: {
+        layout: BUSINESS_LAYOUTS.addressRight,
+        iconSegments: ["name"],
+      },
       addresses: {
         list: ["businesses", "people"],
         enabled: ["business", "person"],
@@ -1528,6 +1602,12 @@ export const PRESETS: Preset[] = [
         list: ["people", "addresses"],
         iconSegments: ["name", "address", "personName", "addressName"],
       },
+      people: { layout: PERSON_LAYOUTS.countsBeside, iconSegments: ["name"] },
+      addresses: {
+        layout: ADDRESS_LAYOUTS.personRoleInline,
+        list: ["businesses", "people"],
+        iconSegments: ["name"],
+      },
     },
   },
   {
@@ -1560,7 +1640,13 @@ export const PRESETS: Preset[] = [
     },
     highlight: { matchEmphasis: "weight", matchEmphasisRegion: "substring" },
     rows: {
-      businesses: { list: ["addresses"], iconSegments: ["addressName"] },
+      businesses: {
+        layout: BUSINESS_LAYOUTS.statesBelow,
+        list: ["addresses"],
+        iconSegments: ["addressName"],
+      },
+      people: { layout: PERSON_LAYOUTS.noStates },
+      addresses: { iconSegments: [] },
     },
   },
   {
@@ -1597,9 +1683,18 @@ export const PRESETS: Preset[] = [
       matchEmphasisColor: "#f0abfc",
     },
     rows: {
+      businesses: {
+        layout: BUSINESS_LAYOUTS.rolesInline,
+        list: ["addresses", "people"],
+        iconSegments: ["name"],
+      },
       people: {
         list: ["addresses", "businesses"],
         enabled: ["business", "address"],
+      },
+      addresses: {
+        layout: ADDRESS_LAYOUTS.noAddress,
+        list: ["people", "businesses"],
       },
     },
   },
@@ -1631,10 +1726,13 @@ export const PRESETS: Preset[] = [
     },
     highlight: { matchEmphasis: "underline", matchEmphasisRegion: "token" },
     rows: {
+      businesses: { layout: BUSINESS_LAYOUTS.statesBeside, iconSegments: [] },
       people: {
+        layout: PERSON_LAYOUTS.addressRoleInline,
         list: ["businesses", "addresses"],
         enabled: ["business", "person"],
       },
+      addresses: { layout: ADDRESS_LAYOUTS.noCounts, iconSegments: ["name"] },
     },
   },
   {
@@ -1667,6 +1765,15 @@ export const PRESETS: Preset[] = [
       "--bl-ac-weight-mark": "800",
     },
     highlight: { matchEmphasis: "weight", matchEmphasisRegion: "substring" },
+    rows: {
+      businesses: {
+        layout: BUSINESS_LAYOUTS.addressRight,
+        list: ["people"],
+        iconSegments: ["name", "personName"],
+      },
+      people: { layout: PERSON_LAYOUTS.noCounts, iconSegments: ["name"] },
+      addresses: { layout: ADDRESS_LAYOUTS.countsBeside, list: ["people"] },
+    },
   },
   {
     name: "Paper",
@@ -1703,6 +1810,19 @@ export const PRESETS: Preset[] = [
       matchEmphasisRegion: "substring",
       matchEmphasisColor: "#fff3a3",
     },
+    rows: {
+      businesses: { layout: BUSINESS_LAYOUTS.compact, iconSegments: [] },
+      people: {
+        layout: PERSON_LAYOUTS.countsBeside,
+        list: [],
+        iconSegments: [],
+      },
+      addresses: {
+        layout: ADDRESS_LAYOUTS.countsBeside,
+        list: [],
+        iconSegments: [],
+      },
+    },
   },
   {
     name: "Dusk",
@@ -1732,6 +1852,15 @@ export const PRESETS: Preset[] = [
       "--bl-ac-line-height": "1.7",
     },
     highlight: { matchEmphasis: "plain", matchEmphasisRegion: "token" },
+    rows: {
+      businesses: { layout: BUSINESS_LAYOUTS.statesBelow, iconSegments: [] },
+      people: { layout: PERSON_LAYOUTS.noStates, list: [], iconSegments: [] },
+      addresses: {
+        layout: ADDRESS_LAYOUTS.noStates,
+        list: [],
+        iconSegments: [],
+      },
+    },
   },
   {
     name: "Frost",
@@ -1761,6 +1890,14 @@ export const PRESETS: Preset[] = [
       "--bl-ac-line-height": "1.45",
     },
     highlight: { matchEmphasis: "ink", matchEmphasisRegion: "substring" },
+    rows: {
+      businesses: {
+        layout: BUSINESS_LAYOUTS.statesBeside,
+        list: ["people"],
+        iconSegments: ["name"],
+      },
+      people: { layout: PERSON_LAYOUTS.addressRight },
+    },
   },
   {
     name: "Moss",
@@ -1795,6 +1932,7 @@ export const PRESETS: Preset[] = [
     rows: {
       businesses: { list: ["people"], iconSegments: ["name"] },
       people: { list: ["businesses", "addresses"] },
+      addresses: { layout: ADDRESS_LAYOUTS.personRoleInline },
     },
   },
   {
@@ -1823,7 +1961,18 @@ export const PRESETS: Preset[] = [
       "--bl-ac-pill-radius": "999px",
     },
     highlight: { matchEmphasis: "ink", matchEmphasisRegion: "token" },
-    rows: { addresses: { list: ["people", "businesses"] } },
+    rows: {
+      businesses: {
+        layout: BUSINESS_LAYOUTS.addressRight,
+        list: ["addresses"],
+        iconSegments: [],
+      },
+      people: {
+        layout: PERSON_LAYOUTS.addressRoleInline,
+        list: ["businesses", "addresses"],
+      },
+      addresses: { list: ["people", "businesses"] },
+    },
   },
   {
     name: "Citrus",
@@ -1854,10 +2003,22 @@ export const PRESETS: Preset[] = [
       "--bl-ac-weight-mark": "800",
     },
     highlight: { matchEmphasis: "weight", matchEmphasisRegion: "token" },
+    rows: {
+      businesses: {
+        layout: BUSINESS_LAYOUTS.compact,
+        list: ["people"],
+        iconSegments: ["name"],
+      },
+      people: { layout: PERSON_LAYOUTS.countsBeside, list: ["addresses"] },
+      addresses: {
+        layout: ADDRESS_LAYOUTS.noCounts,
+        list: ["businesses", "people"],
+      },
+    },
   },
 ];
 
-/** A search's row with a preset's lines, Enabled boxes and icons; its layout kept. */
+/** A search's row as a preset lays it out, the defaults where it says nothing. */
 function presetRow<R extends Route>(
   state: StyleState,
   preset: Preset,
@@ -1865,8 +2026,13 @@ function presetRow<R extends Route>(
 ): RowStates[R] {
   const row: PresetRow<R> = preset.rows?.[route] ?? {};
   const base: RowStates[R] = DEFAULT_STYLE.rows[route];
+  const kind = ROW_KINDS[route] as RowKind<string, string>;
   return {
     ...state.rows[route],
+    layout: resolveLayout(
+      kind,
+      (row.layout ?? {}) as Readonly<Record<string, string | null>>,
+    ) as RowStates[R]["layout"],
     list: [...(row.list ?? base.list)],
     enabled: [...(row.enabled ?? base.enabled)],
     iconSegments: [...(row.iconSegments ?? base.iconSegments)],
@@ -1961,7 +2127,12 @@ export function activePreset(state: StyleState): Preset | null {
   const sameRows = (applied: RowStates) =>
     (Object.keys(applied) as Route[]).every(route => {
       const [now, then] = [state.rows[route], applied[route]];
+      const nowLayout: Readonly<Record<string, unknown>> = now.layout;
+      const thenLayout: Readonly<Record<string, unknown>> = then.layout;
       return (
+        ROW_KINDS[route].places.every(
+          place => nowLayout[place] === thenLayout[place],
+        ) &&
         now.list.join() === then.list.join() &&
         sameSet(now.enabled, then.enabled) &&
         sameSet(now.iconSegments, then.iconSegments)

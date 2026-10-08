@@ -10,6 +10,7 @@ import {
   DEFAULT_STYLE,
   PRESETS,
   applyPreset,
+  withEnabled,
   withListed,
   type StyleState,
 } from "../../site/demo/style-state";
@@ -51,7 +52,19 @@ async function mounted(
   const root = createRoot(host);
   flushSync(() =>
     root.render(
-      <Kept initial={withListed(base, "people", "addresses", true)} />,
+      <Kept
+        initial={withEnabled(
+          withListed(
+            withListed(base, "people", "businesses", true),
+            "people",
+            "addresses",
+            true,
+          ),
+          "people",
+          "business",
+          true,
+        )}
+      />,
     ),
   );
   try {
