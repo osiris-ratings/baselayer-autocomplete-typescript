@@ -13,6 +13,11 @@ breaking change bumps the minor version.
   group, one gap before the role, as a business row's do, where they started
   at the column's left and left a ragged gap; the +N stays last. At the left
   they start one gap after the field before them, as before.
+- The role column on those lines is as wide as the longest role the menu
+  draws, measured once per answer, where it was that role's count of
+  characters at `1ch` each, a good deal wider than "officer" draws. The states
+  now end one gap before the longest role, and every role still starts at one
+  x down the menu.
 
 ## [0.4.0] - 2026-10-08
 

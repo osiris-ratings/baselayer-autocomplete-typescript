@@ -291,9 +291,10 @@ highlighted line on `--bl-ac-highlight-bg`.
 On the lines under a row, a name is a step smaller than the row's own, and the
 role a step quieter. At the right of a line the states and the role are
 columns: the states as wide as three squares and a `+N`, the role as wide as
-the menu's longest (`--bl-ac-role-chars`), so the squares start at one edge
-down the group. Placed beside the name, any field is as wide as it is and sits
-one gap after the name.
+the longest role the menu draws (`--bl-ac-role-width`, measured once per
+answer; the longest in `ch`, `--bl-ac-role-chars`, until it is), so the squares
+end one gap before it and every role starts at one x. Placed beside the name,
+any field is as wide as it is and sits one gap after the name.
 
 A line that runs out of room, the head's too, gives way in reading order,
 whatever the layout: the name keeps its own width, up to 60% of the line, and

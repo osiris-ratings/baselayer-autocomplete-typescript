@@ -58,7 +58,7 @@ import {
   StateSquares,
   classes,
   countsText,
-  roleColumn,
+  useRoleColumn,
   lookVariables,
   marked,
   type SlotName,
@@ -782,6 +782,17 @@ function GroupedView<R extends GroupedRoute>({
     );
   }
 
+  const menu = useRef<HTMLDivElement>(null);
+  const roleColumnStyle = useRoleColumn(
+    menu,
+    drawn.flatMap(({ lines }) =>
+      lines.lists.flatMap(list =>
+        list.lines.map(({ item }) => roleText({ line: list.line, item })),
+      ),
+    ),
+    combobox.menuVisible,
+  );
+
   return (
     <div
       className={cx("root", "bl-ac")}
@@ -808,18 +819,11 @@ function GroupedView<R extends GroupedRoute>({
         data-open={combobox.menuVisible ? "true" : "false"}
         data-width={menuFollowsInputWidth ? undefined : "fixed"}
         hidden={!combobox.menuVisible}
+        ref={menu}
       >
         <div
           className={cx("list", "bl-ac-list")}
-          style={roleColumn(
-            drawn.flatMap(({ lines }) =>
-              lines.lists.flatMap(list =>
-                list.lines.map(({ item }) =>
-                  roleText({ line: list.line, item }),
-                ),
-              ),
-            ),
-          )}
+          style={roleColumnStyle}
           {...combobox.getMenuProps()}
         >
           {hasRows &&

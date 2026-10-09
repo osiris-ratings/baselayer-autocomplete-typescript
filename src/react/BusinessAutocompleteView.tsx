@@ -1,4 +1,4 @@
-import { type ReactElement, type ReactNode, type Ref } from "react";
+import { useRef, type ReactElement, type ReactNode, type Ref } from "react";
 
 import {
   BUSINESS_ROW,
@@ -46,7 +46,7 @@ import {
   StateSquares,
   classes,
   countsText,
-  roleColumn,
+  useRoleColumn,
   lookVariables,
   marked,
   type ClassFor,
@@ -637,6 +637,23 @@ export function BusinessAutocompleteView({
     );
   };
 
+  const menu = useRef<HTMLDivElement>(null);
+  const roleColumnStyle = useRoleColumn(
+    menu,
+    rowLines.flatMap(lines =>
+      lines.lists.flatMap(list =>
+        list.lines.map(({ item: related }) =>
+          related.role === null
+            ? null
+            : list.relation === "addresses"
+              ? text.addressRoles[related.role]
+              : text.personRoles[related.role],
+        ),
+      ),
+    ),
+    menuVisible,
+  );
+
   const region = look.matchEmphasisRegion;
 
   return (
@@ -665,28 +682,13 @@ export function BusinessAutocompleteView({
         data-open={menuVisible ? "true" : "false"}
         data-width={menuFollowsInputWidth ? undefined : "fixed"}
         hidden={!menuVisible}
+        ref={menu}
       >
         {/* The listbox holds the options and nothing else; the count row sits
             below it. Always mounted, as downshift requires of its menu. */}
         <div
           className={cx("list", "bl-ac-list")}
-          style={
-            grouped
-              ? roleColumn(
-                  rowLines.flatMap(lines =>
-                    lines.lists.flatMap(list =>
-                      list.lines.map(({ item: related }) =>
-                        related.role === null
-                          ? null
-                          : list.relation === "addresses"
-                            ? text.addressRoles[related.role]
-                            : text.personRoles[related.role],
-                      ),
-                    ),
-                  ),
-                )
-              : undefined
-          }
+          style={roleColumnStyle}
           {...combobox.getMenuProps()}
         >
           {hasRows &&
