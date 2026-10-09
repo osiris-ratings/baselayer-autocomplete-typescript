@@ -76,10 +76,33 @@ describe("the Hidden drawer's heading and note", () => {
   ] as const) {
     // At 280px, a phone's panel, the note is wider than the drawer: it
     // wraps inside it, never runs past its edge.
-    for (const width of [560, 320, 280]) {
-      it(`sit on grounds that hug their text, the same room each side, in ${look} at ${width}px`, async () => {
-        // Every line shown: the drawer says how to hide one.
-        const state: StyleState = withListed(base, "people", "addresses", true);
+    for (const [held, width] of [
+      ["nothing", 560],
+      ["nothing", 320],
+      ["nothing", 280],
+      ["a line and a field", 560],
+      ["a line and a field", 320],
+    ] as const) {
+      it(`sit on grounds that hug their text, the same room each side, holding ${held}, in ${look} at ${width}px`, async () => {
+        // Every line shown, the drawer says how to hide one; or a hidden line
+        // and a hidden field, each under its own title.
+        const state: StyleState =
+          held === "nothing"
+            ? withListed(base, "people", "addresses", true)
+            : {
+                ...withListed(base, "people", "addresses", false),
+                rows: {
+                  ...withListed(base, "people", "addresses", false).rows,
+                  people: {
+                    ...withListed(base, "people", "addresses", false).rows
+                      .people,
+                    layout: {
+                      ...base.rows.people.layout,
+                      businessTrailing: null,
+                    },
+                  },
+                },
+              };
         const host = document.createElement("div");
         host.className = "demo";
         host.style.width = `${width}px`;
@@ -96,9 +119,11 @@ describe("the Hidden drawer's heading and note", () => {
           const ground = [1, 3, 5].map(at =>
             parseInt(state.look.backgroundColor.slice(at, at + 2), 16),
           ) as Rgb;
-          for (const element of hidden.querySelectorAll<HTMLElement>(
+          const grounded = hidden.querySelectorAll<HTMLElement>(
             ".row-map-drawer-label, .row-map-drawer-hint",
-          )) {
+          );
+          expect(grounded.length).toBe(2);
+          for (const element of grounded) {
             const text = await ink(element, ground);
             expect(text.width).toBeGreaterThan(0);
             const before = text.left;

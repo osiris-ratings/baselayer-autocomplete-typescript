@@ -1467,8 +1467,14 @@
 }
 
 /* The fields the row leaves out, in the Hidden drawer under its hidden
-   lines, ruled off from them, and starting where the lines' chips do. */
+   lines, ruled off from them, under a title of their own, and starting
+   where the lines' chips do. */
 .row-map-tray {
+  display: grid;
+  gap: var(--map-row-gap);
+}
+
+.row-map-tray-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -1479,14 +1485,12 @@
   font-size: 12px;
 }
 
-.row-map-tray:empty {
-  display: none;
-}
-
+/* In the drawer's own ink, plain to see; the rule's extra pixel comes out of
+   the room under it, so nothing after it moves. */
 .row-map-tray[data-ruled] {
   margin-top: 4px;
-  padding-top: 10px;
-  border-top: 1px solid var(--map-border, var(--line-soft));
+  padding-top: 9px;
+  border-top: 2px solid var(--map-soft);
 }
 
 .row-map-chip {

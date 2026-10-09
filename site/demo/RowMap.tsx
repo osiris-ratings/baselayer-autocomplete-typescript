@@ -970,6 +970,13 @@ function KindRowMap<P extends string, F extends string>({
   const unplaced = unplacedFields(layout).filter(field =>
     shownFields.has(field),
   );
+  // Hidden titles each of its two parts only while it holds something, as it
+  // draws them; empty, it keeps the first title over its note. A line carried
+  // over it opens its slot under that title.
+  const linesTitled =
+    hidden.length > 0 ||
+    unplaced.length === 0 ||
+    (moving?.lifted.line === true && over === HIDDEN);
   // A drawer out of room scrolls its lines sideways: its frame shadows each
   // edge there is more beyond, as it scrolls and as its lines change.
   const shownScroller = useRef<HTMLDivElement | null>(null);
@@ -1350,9 +1357,11 @@ function KindRowMap<P extends string, F extends string>({
         >
           <div className="row-map-scroll-frame">
             <div className="row-map-scroll" {...edges(hiddenScroller)}>
-              <div className="row-map-head" aria-hidden="true">
-                <span className="row-map-drawer-label">Hidden</span>
-              </div>
+              {linesTitled && (
+                <div className="row-map-head" aria-hidden="true">
+                  <span className="row-map-drawer-label">Hidden lines</span>
+                </div>
+              )}
               {hidden.length === 0 && unplaced.length === 0 && (
                 <div className="row-map-hint-row">
                   <p className="row-map-drawer-note">
@@ -1366,24 +1375,31 @@ function KindRowMap<P extends string, F extends string>({
             </div>
           </div>
           {/* The fields the row leaves out, under its hidden lines. */}
-          <div
-            className="row-map-tray"
-            data-drop={TRAY}
-            data-ruled={(hidden.length > 0 && unplaced.length > 0) || undefined}
-          >
-            {unplaced.map(field => (
-              <span
-                key={field}
-                className="row-map-chip"
-                data-field={field}
-                title={`Drag ${editor.fieldLabels[field]} onto a place · reads ${editor.fieldWire[field].join(", ")}`}
-                {...handle(field)}
-                data-dragged={moving?.field === field || undefined}
-              >
-                {editor.fieldLabels[field]}
-              </span>
-            ))}
-          </div>
+          {unplaced.length > 0 && (
+            <div
+              className="row-map-tray"
+              data-drop={TRAY}
+              data-ruled={linesTitled || undefined}
+            >
+              <div className="row-map-head" aria-hidden="true">
+                <span className="row-map-drawer-label">Hidden fields</span>
+              </div>
+              <div className="row-map-tray-chips">
+                {unplaced.map(field => (
+                  <span
+                    key={field}
+                    className="row-map-chip"
+                    data-field={field}
+                    title={`Drag ${editor.fieldLabels[field]} onto a place · reads ${editor.fieldWire[field].join(", ")}`}
+                    {...handle(field)}
+                    data-dragged={moving?.field === field || undefined}
+                  >
+                    {editor.fieldLabels[field]}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
       <details className="row-map-reads-fold">
