@@ -14,6 +14,7 @@ import {
 } from "@baselayer-sdk/autocomplete/react";
 
 import { Code } from "../shared/Code";
+import { Icon } from "../shared/icons";
 import { ColorInput, Field, Fold, Select, Toggle } from "./controls";
 import { PresetCarousel } from "./PresetCarousel";
 import { RowMap } from "./RowMap";
@@ -150,9 +151,18 @@ export function StylingPanel({
 
       <Fold title="Components" summary={count(componentChanges(state))}>
         <p className="hint fold-note">
-          Drag a line by its grip between Shown and Hidden, untick Enabled to
-          keep it from being chosen, and drag a field into place, or into Hidden
-          to leave it out.
+          <span className="fold-note-hold">
+            Drag <Icon name="hand" /> a
+          </span>{" "}
+          line by its grip between <span className="fold-note-term">Shown</span>{" "}
+          and <span className="fold-note-term">Hidden</span> drawers below,
+          untick <span className="fold-note-term">Enabled</span> to keep it from
+          being chosen, and{" "}
+          <span className="fold-note-hold">
+            drag <Icon name="hand" /> a
+          </span>{" "}
+          field into place, or into{" "}
+          <span className="fold-note-term">Hidden</span> to leave it out.
         </p>
         {routes.length > 1 && (
           <div

@@ -585,6 +585,27 @@
   font-size: 13px;
 }
 
+/* A hand at each drag, as tall as the capitals and standing on the line,
+   kept on one line with the words either side of it. */
+.fold-note .icon {
+  width: auto;
+  height: 0.72em;
+  stroke-width: 2;
+  vertical-align: baseline;
+}
+
+.fold-note-hold {
+  white-space: nowrap;
+}
+
+/* The drawers' and the column's names, as their titles read: underlined in
+   the note's own ink, so they never read as links. */
+.fold-note-term {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
 .fold-subhead {
   margin: 8px 0 6px;
 }

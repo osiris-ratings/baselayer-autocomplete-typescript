@@ -195,11 +195,15 @@ describe("the Components fold's searches", () => {
     render(<RoutedPanel start="people" />);
     grip("Show their addresses");
 
-    const note = screen.getByText(/Shown and Hidden/, {
-      selector: "p.fold-note",
-    });
+    // Its drawers' and column's names are words of their own, underlined.
+    const note = [
+      ...document.querySelectorAll<HTMLElement>("p.fold-note"),
+    ].find(each => /Shown and Hidden/.test(each.textContent ?? ""))!;
+    expect(note).toBeDefined();
     expect(note.textContent!.trim().split(/(?<=\.)\s+/)).toHaveLength(1);
-    expect(note.textContent).toMatch(/\buntick Enabled\b/);
+    expect(note.textContent!.replace(/\s+/g, " ")).toMatch(
+      /\buntick Enabled\b/,
+    );
     const said = [note, document.querySelector(".row-map-wrap")!].flatMap(
       element => [
         element.textContent,
