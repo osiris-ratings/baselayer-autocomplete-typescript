@@ -254,6 +254,25 @@ describe("a line carried by its grip", () => {
     }
   });
 
+  it("lets a dropped line be seen again when another is lifted before it has settled", async () => {
+    const { kind, grip, done } = mount(BOTH);
+    try {
+      const below = kind("addresses").getBoundingClientRect();
+      let drag = await press(grip("people"));
+      await drag.move(below.left + 40, below.bottom - 2);
+      await drag.up(below.left + 40, below.bottom - 2);
+      // Lifted again at once, while the first copy is still settling.
+      drag = await press(grip("addresses"));
+      await drag.move(drag.x0 + 20, drag.y0 + 6);
+      expect(getComputedStyle(kind("people")).opacity).toBe("1");
+      expect(kind("people").dataset.landing).toBeUndefined();
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      await settled();
+    } finally {
+      done();
+    }
+  });
+
   it("is never copied when Alt and an arrow move it", async () => {
     const { grip, latest, done } = mount(BOTH);
     try {

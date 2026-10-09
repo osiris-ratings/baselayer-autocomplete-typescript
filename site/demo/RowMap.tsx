@@ -866,6 +866,12 @@ function KindRowMap<P extends string, F extends string>({
     refocus.current = null;
   });
   const moving = drag?.moving === true ? drag : null;
+  // A line lifted while another still settles: the one let go is shown at
+  // once, rather than kept out of sight until a copy no longer drawn settles.
+  const liftsLine = moving?.lifted.line === true;
+  useLayoutEffect(() => {
+    if (liftsLine) setLanding(null);
+  }, [liftsLine]);
   const inHand: Landing | null =
     moving?.lifted.line === true
       ? {
