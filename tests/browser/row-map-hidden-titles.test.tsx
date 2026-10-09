@@ -93,11 +93,11 @@ describe("the Hidden drawer's two titles", () => {
         expect(fields!.getBoundingClientRect().bottom).toBeLessThanOrEqual(
           chip.getBoundingClientRect().top,
         );
-        // The rule: under the lines, over the second title; 2px of the
+        // The rule: under the lines, over the second title; 4px of the
         // drawer's faintest stroke, its ends rounded.
         const rule = getComputedStyle(tray, "::before");
         const thick = parseFloat(rule.height);
-        expect(thick).toBeGreaterThanOrEqual(2);
+        expect(thick).toBeGreaterThanOrEqual(4);
         expect(tray.getBoundingClientRect().top).toBeGreaterThanOrEqual(
           line.getBoundingClientRect().bottom,
         );
