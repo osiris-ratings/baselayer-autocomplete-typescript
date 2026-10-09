@@ -99,6 +99,42 @@ describe("the row map when its search changes", () => {
     }
   });
 
+  it("ends a drag a switch between a person's and an address's map comes in the middle of", async () => {
+    const { host, latest, done } = mount(BOTH);
+    try {
+      flushSync(() => latest.setRoute("people"));
+      await frame();
+      const before = latest.state.rows.addresses.list;
+      const grip = host.querySelector<HTMLElement>(
+        'button.row-map-grip[data-relation="businesses"]',
+      )!;
+      const g = grip.getBoundingClientRect();
+      grip.dispatchEvent(pointer("pointerdown", g.left + 8, g.top + 8, 1));
+      await frame();
+      window.dispatchEvent(pointer("pointermove", g.left + 30, g.top + 40, 1));
+      await frame();
+      flushSync(() => latest.setRoute("addresses"));
+      await frame();
+      const hidden = host
+        .querySelector<HTMLElement>('[data-drawer="hidden"]')!
+        .getBoundingClientRect();
+      const y = hidden.top + hidden.height / 2;
+      window.dispatchEvent(pointer("pointermove", g.left + 30, y, 1));
+      await frame();
+      window.dispatchEvent(pointer("pointerup", g.left + 30, y, 0));
+      await frame();
+      expect(latest.state.rows.addresses.list).toEqual(before);
+      expect(document.documentElement.hasAttribute("data-dragging")).toBe(
+        false,
+      );
+      expect(
+        document.querySelectorAll(".row-map-row-ghost, .row-map-ghost"),
+      ).toHaveLength(0);
+    } finally {
+      done();
+    }
+  });
+
   it("leaves no copy, and no line out of sight, in the next search's map when it changes before a drop settles", async () => {
     const { host, latest, done } = mount(BOTH);
     try {
