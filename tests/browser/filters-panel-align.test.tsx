@@ -90,6 +90,52 @@ function lines(): HTMLElement[][] {
 const top = (element: Element | null) => element!.getBoundingClientRect().top;
 
 describe("the Add filters panel", () => {
+  for (const width of [1280, 800]) {
+    it(`stands every label on its own input, a one-line label beside a wrapped one too, at ${width}px`, async () => {
+      await page.viewport(width, 900);
+      await connected();
+      const panel = document.getElementById("demo-filters")!;
+      let uneven = 0;
+      for (const search of ["a business", "a person", "an address"]) {
+        await userEvent.click(tab(search));
+        await expect
+          .poll(() => panel.querySelectorAll(".field-row").length)
+          .toBe(3);
+        const fields = [
+          ...panel.querySelectorAll<HTMLElement>(":scope > .field-row"),
+        ];
+        const heights = new Set(
+          fields.map(field =>
+            Math.round(
+              field.querySelector(".field-label")!.getBoundingClientRect()
+                .height,
+            ),
+          ),
+        );
+        if (heights.size > 1) uneven += 1;
+        const feet: number[] = [];
+        for (const field of fields) {
+          const label = field.querySelector(".field-label")!;
+          const input = top(field.querySelector("input"));
+          const gap = input - label.getBoundingClientRect().bottom;
+          expect(gap, `${search}: ${label.textContent}`).toBeCloseTo(6, 0);
+          // Its words' last line, not only its box, stands on the input.
+          const words = document.createRange();
+          words.selectNodeContents(label.firstChild!);
+          feet.push(
+            input - Math.max(...[...words.getClientRects()].map(r => r.bottom)),
+          );
+        }
+        expect(
+          Math.max(...feet) - Math.min(...feet),
+          `${search}: words above their inputs by ${feet.join(", ")}`,
+        ).toBeLessThanOrEqual(0.5);
+      }
+      // The case it is for: a label that wraps beside one that does not.
+      expect(uneven).toBeGreaterThan(0);
+    });
+  }
+
   for (const width of [1280, 1024, 800]) {
     it(`starts every input side by side on one line, and every hint on the next, in each search's panel at ${width}px`, async () => {
       await page.viewport(width, 900);
