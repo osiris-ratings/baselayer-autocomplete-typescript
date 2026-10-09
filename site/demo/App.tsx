@@ -502,10 +502,6 @@ export function App() {
       document.removeEventListener("click", forget);
     };
   }, []);
-  const switchSearch = (route: Route) => {
-    carryTo.current = fieldWasActive.current ? route : null;
-    setSearchBy(route);
-  };
   const [person, setPerson] = useState("");
   const [states, setStates] = useState("");
   const [address, setAddress] = useState("");
@@ -536,6 +532,12 @@ export function App() {
     ? searchBy
     : (offered[0] ?? searchBy);
   const name = names[mode];
+  // Only a switch carries: the search already in sight, chosen again, would
+  // leave a carry armed for whichever switch next comes back to it.
+  const switchSearch = (route: Route) => {
+    carryTo.current = fieldWasActive.current && route !== mode ? route : null;
+    setSearchBy(route);
+  };
   useEffect(() => {
     if (carryTo.current !== mode) return;
     carryTo.current = null;

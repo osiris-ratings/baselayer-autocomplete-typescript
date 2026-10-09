@@ -61,6 +61,12 @@ async function connect() {
 const field = (id: string): HTMLInputElement =>
   document.getElementById(`${id}-input`) as HTMLInputElement;
 const tab = (word: string) => screen.getByRole("tab", { name: word });
+/** The button that opens Styling, wherever the page puts it. */
+const styleButton = () =>
+  screen
+    .queryAllByRole("button")
+    .find(button => /Style here/.test(button.textContent ?? "")) ??
+  screen.getByTestId("demo-switch-styling");
 /** The options a field's open menu shows. */
 const rows = (id: string) => {
   const list = document.getElementById(
@@ -163,6 +169,29 @@ describe("switching the search with its menu open", () => {
     expect(tab("a person").getAttribute("aria-selected")).toBe("true");
     expect(document.activeElement).toBe(tab("a person"));
     expect(field("demo-person").getAttribute("aria-expanded")).not.toBe("true");
+  });
+
+  it("carries nothing from a click on the search already in sight to a later switch in Styling", async () => {
+    const { user } = await connect();
+    await user.click(field("demo-business"));
+    await user.type(field("demo-business"), "harbor");
+    // The search in sight, chosen again from its field: nothing switches.
+    await user.click(tab("a business"));
+
+    await user.click(styleButton());
+    const components = screen
+      .getAllByRole("button")
+      .find(button => /Components/.test(button.textContent ?? ""))!;
+    if (components.getAttribute("aria-expanded") === "false") {
+      await user.click(components);
+    }
+    const rowOf = within(screen.getByRole("tablist", { name: "Row of" }));
+    await user.click(rowOf.getByRole("tab", { name: "Person" }));
+    const business = rowOf.getByRole("tab", { name: "Business" });
+    await user.click(business);
+
+    expect(business.getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(business);
   });
 
   it("switches from the keyboard as before, the focus kept on the words", async () => {
