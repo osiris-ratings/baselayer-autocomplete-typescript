@@ -381,6 +381,12 @@ export const SAMPLE_PEOPLE: PersonSuggestion[] = [
     ),
     set([address("77 Quillfeather Ln Ste 300, Dover, DE 19904", "agent")]),
   ),
+  // A registered agent who files from another business's office.
+  personRow(
+    "Corwin Ashby",
+    set([business("HARBOR CONCRETE SUPPLY, INC.", "agent")]),
+    set([address("1200 Tallowmere Rd, Pittsburgh, PA 15212", "agent")]),
+  ),
 ];
 
 function addressRow(
@@ -426,6 +432,7 @@ export const SAMPLE_ADDRESSES: AddressSuggestion[] = [
     set([
       person("Dana Whitfield", "officer"),
       person("Luis Ortega", "officer"),
+      person("Corwin Ashby", "agent"),
     ]),
   ),
   // A registered agent's office: the one address most businesses share.

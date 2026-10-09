@@ -162,18 +162,21 @@ function pinOf(token: string): { officer?: string; address?: string } {
 function ownOffices(item: RelatedItem): string[] {
   const business = businessOf(item.token ?? "");
   if (business === undefined) return [];
-  const own = (role: RelatedItem["role"]) =>
-    role === "principal" || role === "mailing";
   return [
     ...business.related.addresses.items
-      .filter(address => own(address.role))
+      .filter(address => ownOffice(address.role))
       .map(address => address.label),
     ...SAMPLE_ADDRESSES.filter(address =>
       address.related.businesses.items.some(
-        at => businessOf(at.token ?? "") === business && own(at.role),
+        at => businessOf(at.token ?? "") === business && ownOffice(at.role),
       ),
     ).map(address => address.label),
   ];
+}
+
+/** Whether a business holds an address as its own office, not an agent's or an officer's. */
+function ownOffice(role: RelatedItem["role"]): boolean {
+  return role === "principal" || role === "mailing";
 }
 
 /** A set's items, those `matches` holds marked, and how many matched. */
@@ -224,42 +227,41 @@ function rowsFor(
       const states = list(params.get("business.state"));
       const firm = queryTokens(params.get("business.name") ?? "");
       const place = queryTokens(params.get("address.text") ?? "");
-      // Each filter keeps a person by something of theirs; whatever any of
-      // them keeps is marked.
+      // A person's business filters hold together: one business meets them
+      // all. A registered agent never matches an address, filed from as one
+      // or reached through a business it is agent of.
+      const ofBusiness = states.length > 0 || firm.length > 0;
       const inStates = (item: RelatedItem) =>
-        states.length > 0 &&
+        states.length === 0 ||
         (businessOf(item.token ?? "")?.states ?? []).some(s =>
           states.includes(s),
         );
       const named = (item: RelatedItem) =>
-        firm.length > 0 && fits(item.label, firm);
+        firm.length === 0 || fits(item.label, firm);
       const filedFrom = (item: RelatedItem) =>
-        place.length > 0 && fits(item.label, place);
+        place.length > 0 && item.role !== "agent" && fits(item.label, place);
       const officedAt = (item: RelatedItem) =>
-        place.length > 0 && ownOffices(item).some(label => fits(label, place));
+        place.length > 0 &&
+        item.role !== "agent" &&
+        ownOffices(item).some(label => fits(label, place));
       return SAMPLE_PEOPLE.filter(row => fits(row.label, tokens)).flatMap(
         row => {
+          if (!ofBusiness && place.length === 0) return [row];
           const { businesses, addresses } = row.related;
-          if (states.length === 0 && firm.length === 0 && place.length === 0) {
-            return [row];
-          }
-          if (states.length > 0 && !businesses.items.some(inStates)) return [];
-          if (firm.length > 0 && !businesses.items.some(named)) return [];
-          if (
-            place.length > 0 &&
-            !addresses.items.some(filedFrom) &&
-            !businesses.items.some(officedAt)
-          ) {
-            return [];
-          }
+          const filed = addresses.items.some(filedFrom);
+          const meets = (item: RelatedItem) =>
+            inStates(item) &&
+            named(item) &&
+            (place.length === 0 || filed || officedAt(item));
+          const kept = ofBusiness
+            ? businesses.items.some(meets)
+            : filed || businesses.items.some(officedAt);
+          if (!kept) return [];
           return [
             {
               ...row,
               related: {
-                businesses: marked(
-                  businesses,
-                  item => inStates(item) || named(item) || officedAt(item),
-                ),
+                businesses: marked(businesses, ofBusiness ? meets : officedAt),
                 addresses:
                   place.length > 0 ? marked(addresses, filedFrom) : addresses,
               },
@@ -285,7 +287,10 @@ function rowsFor(
           if (people.matched === 0) return [];
         }
         if (firm.length > 0) {
-          businesses = marked(businesses, item => fits(item.label, firm));
+          businesses = marked(
+            businesses,
+            item => ownOffice(item.role) && fits(item.label, firm),
+          );
           if (businesses.matched === 0) return [];
         }
         return [{ ...row, related: { ...row.related, people, businesses } }];

@@ -111,7 +111,7 @@ describe("the filters each search takes", () => {
     ]);
   });
 
-  it("narrows a person search to those on a business whose name fits, and by an address", async () => {
+  it("narrows a person search to those on a business whose name fits", async () => {
     const { user, last } = await connect();
     await user.click(screen.getByRole("tab", { name: "a person" }));
     await openFilters(user);
@@ -122,18 +122,23 @@ describe("the filters each search takes", () => {
     await screen.findByRole("group", { name: "Dana Kessler" });
     expect(screen.queryByRole("group", { name: "Dana Whitfield" })).toBeNull();
     expect(last("people")).toMatchObject({ "business.name": "northshore" });
+  });
 
-    await user.clear(screen.getByLabelText(/Business name/));
+  it("narrows a person search to those who filed from an address", async () => {
+    const { user, last } = await connect();
+    await user.click(screen.getByRole("tab", { name: "a person" }));
+    await openFilters(user);
     await user.type(screen.getByLabelText(/^Address/), "48 corriway");
+    await user.click(field("demo-person"));
+    await user.type(field("demo-person"), "dana");
+
     await screen.findByRole("group", { name: "Dana Whitfield" });
-    await waitFor(() =>
-      expect(screen.queryByRole("group", { name: "Dana Kessler" })).toBeNull(),
-    );
+    expect(screen.queryByRole("group", { name: "Dana Kessler" })).toBeNull();
     expect(last("people")).toMatchObject({ "address.text": "48 corriway" });
     expect(last("people")).not.toHaveProperty("business.name");
   });
 
-  it("narrows an address search to where a person whose name fits filed from, and a business's name", async () => {
+  it("narrows an address search to where a person whose name fits filed from", async () => {
     const { user, last } = await connect();
     await user.click(screen.getByRole("tab", { name: "an address" }));
     await openFilters(user);
@@ -145,17 +150,26 @@ describe("the filters each search takes", () => {
       name: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
     });
     expect(last("addresses")).toMatchObject({ "person.name": "luis" });
+  });
 
+  it("narrows an address search to a business's own office, dropping one no business named so has there", async () => {
+    const { user, last } = await connect();
+    await user.click(screen.getByRole("tab", { name: "an address" }));
+    await user.click(field("demo-address"));
+    await user.type(field("demo-address"), "1200");
+    const tallowmere = {
+      name: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
+    };
+    await screen.findByRole("group", tallowmere);
+
+    await openFilters(user);
     await user.type(screen.getByLabelText(/Business name/), "bayside");
+
     await waitFor(() =>
-      expect(
-        screen.queryByRole("group", {
-          name: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
-        }),
-      ).toBeNull(),
+      expect(screen.queryByRole("group", tallowmere)).toBeNull(),
     );
     expect(last("addresses")).toMatchObject({
-      "person.name": "luis",
+      q: "1200",
       "business.name": "bayside",
     });
   });

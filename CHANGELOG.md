@@ -10,12 +10,13 @@ breaking change bumps the minor version.
 
 - The people search filters by a business's name (`business.name`) and by an
   address (`address.text`): the people who hold a role on a business whose
-  name fits, and those who filed from an address that fits or hold a role on
-  a business whose own office it is. The addresses search filters by a
-  person's name (`person.name`) and a business's name (`business.name`): the
-  addresses either filed from or at. Each touches a relation, which the
-  session's scope must grant, and the demo's Add filters offers each search
-  its own.
+  name fits (the same business as `business.state`), and those who filed from
+  an address that fits or hold a role on a business whose own office it is; a
+  registered agent never matches an address. The addresses search filters by
+  a person's name (`person.name`), the addresses they filed from, and a
+  business's name (`business.name`), the addresses that are its own office.
+  Each touches a relation, which the session's scope must grant, and the
+  demo's Add filters offers each search its own.
 
 ### Fixed
 

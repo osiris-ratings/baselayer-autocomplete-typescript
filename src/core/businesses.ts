@@ -24,7 +24,8 @@ export interface Filters {
 
 /**
  * Narrowing filters on `GET /autocomplete/people`. A name or an address is
- * free text of at most 256 characters; an empty one filters nothing.
+ * free text of at most 256 characters; an empty one filters nothing. The
+ * business filters hold together: one business meets them all.
  */
 export interface PeopleFilters {
   business?: {
@@ -39,8 +40,8 @@ export interface PeopleFilters {
   address?: {
     /**
      * Keeps the people who filed from an address that fits, or hold a role on
-     * a business whose own principal or mailing address fits (never its
-     * registered agent's), matched as `q` is on the addresses route.
+     * a business whose own principal or mailing office fits, matched as `q` is
+     * on the addresses route. A registered agent never matches, either way.
      */
     text?: string;
   };
@@ -56,8 +57,9 @@ export interface AddressesFilters {
   /** Keeps the addresses a person whose name fits filed from. */
   person?: { name?: string };
   /**
-   * Keeps the addresses a business whose name fits filed at, matched as on
-   * the businesses route.
+   * Keeps the addresses a business whose name fits has as its own principal
+   * or mailing office (never its registered agent's), matched as on the
+   * businesses route.
    */
   business?: { name?: string };
 }

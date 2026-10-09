@@ -978,7 +978,7 @@ export function App() {
                   hint={
                     mode === "people"
                       ? "A business they hold a role on."
-                      : "A business that filed there."
+                      : "A business whose own office it is."
                   }
                 >
                   <input
@@ -999,7 +999,7 @@ export function App() {
                   optional
                   {...(mode === "people"
                     ? {
-                        hint: "One they filed from, or a business of theirs has its office at.",
+                        hint: "One they filed from, or a business of theirs has its office at; never as an agent.",
                       }
                     : {})}
                 >
