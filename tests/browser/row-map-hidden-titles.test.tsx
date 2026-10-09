@@ -94,7 +94,7 @@ describe("the Hidden drawer's two titles", () => {
           chip.getBoundingClientRect().top,
         );
         // The rule: under the lines, over the second title; 2px of the
-        // drawer's faintest stroke, on a rounded outline of its ground.
+        // drawer's faintest stroke, its ends rounded.
         const rule = getComputedStyle(tray, "::before");
         const thick = parseFloat(rule.height);
         expect(thick).toBeGreaterThanOrEqual(2);
@@ -115,12 +115,8 @@ describe("the Hidden drawer's two titles", () => {
         expect(faint).toBeGreaterThanOrEqual(1.2);
         expect(faint).toBeLessThanOrEqual(1.6);
         expect(parseFloat(rule.borderTopLeftRadius)).toBeGreaterThan(0);
-        const outline = /^(rgba?\([^)]*\)) 0px 0px 0px (\d+)px$/.exec(
-          rule.boxShadow,
-        );
-        expect(outline, rule.boxShadow).not.toBeNull();
-        expect(Number(outline![2])).toBeGreaterThanOrEqual(2);
-        expect(rgb(outline![1]!)).toEqual(ground);
+        // The line alone: no outline around it.
+        expect(rule.boxShadow).toBe("none");
         // Each title's text starts where its section's chips do.
         const text = (element: Element) => {
           const range = document.createRange();

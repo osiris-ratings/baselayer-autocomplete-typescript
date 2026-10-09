@@ -1518,8 +1518,8 @@ html[data-dragging] * {
   font-size: 12px;
 }
 
-/* The rule: 2px of the drawer's faintest stroke on a rounded outline of its
-   ground, in the room a border took, so nothing after it moves. */
+/* The rule: 2px of the drawer's faintest stroke, its ends rounded, in the
+   room a border took, so nothing after it moves. */
 .row-map-tray[data-ruled] {
   margin-top: 4px;
   padding-top: 11px;
@@ -1533,7 +1533,6 @@ html[data-dragging] * {
   height: 2px;
   border-radius: 999px;
   background: var(--map-guide);
-  box-shadow: 0 0 0 2px var(--map-bg, var(--paper));
   content: "";
 }
 
