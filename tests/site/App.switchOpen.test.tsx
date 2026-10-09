@@ -139,6 +139,32 @@ describe("switching the search with its menu open", () => {
     expect(document.activeElement).toBe(person);
   });
 
+  it("keeps a hidden search on the filters it last searched with, so a filter set for the search in sight asks it nothing", async () => {
+    const { user, asked } = await connect();
+    await user.click(tab("a person"));
+    await user.click(field("demo-person"));
+    await user.type(field("demo-person"), "dana");
+    await waitFor(() => expect(rows("demo-person").length).toBeGreaterThan(0));
+    await user.click(tab("a business"));
+    const before = asked("people");
+    await user.click(screen.getByRole("button", { name: /Add filters/ }));
+    await user.type(screen.getByPlaceholderText("PA, OH"), "PA");
+    await new Promise(resolve => setTimeout(resolve, 400));
+    expect(asked("people")).toBe(before);
+  });
+
+  it("forgets a focused field once a click lands elsewhere, so a later switch from the keyboard carries nothing", async () => {
+    const { user } = await connect();
+    await user.click(field("demo-business"));
+    await user.type(field("demo-business"), "harbor");
+    await user.click(document.body);
+    tab("a business").focus();
+    await user.keyboard("{ArrowRight}");
+    expect(tab("a person").getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(tab("a person"));
+    expect(field("demo-person").getAttribute("aria-expanded")).not.toBe("true");
+  });
+
   it("switches from the keyboard as before, the focus kept on the words", async () => {
     const { user } = await connect();
     tab("a business").focus();
