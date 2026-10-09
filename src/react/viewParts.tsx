@@ -281,9 +281,19 @@ export function useRoleColumn(
   });
   useEffect(() => {
     if (!("fonts" in document)) return;
-    const redrawn = () => setFonts(count => count + 1);
+    let live = true;
+    const redrawn = () => {
+      if (live) setFonts(count => count + 1);
+    };
+    // WebKit fires `loading` but never `loadingdone`; `ready` settles in both.
+    const loading = () => void document.fonts.ready.then(redrawn);
+    document.fonts.addEventListener("loading", loading);
     document.fonts.addEventListener("loadingdone", redrawn);
-    return () => document.fonts.removeEventListener("loadingdone", redrawn);
+    return () => {
+      live = false;
+      document.fonts.removeEventListener("loading", loading);
+      document.fonts.removeEventListener("loadingdone", redrawn);
+    };
   }, []);
   useDrawnEffect(() => {
     if (!shown || menu.current === null) return;
