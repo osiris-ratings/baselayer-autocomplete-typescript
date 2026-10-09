@@ -1,6 +1,7 @@
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
+import { commands } from "vitest/browser";
 
 import { RowMap } from "../../site/demo/RowMap";
 import {
@@ -11,6 +12,13 @@ import {
 
 import "../../site/shared/brand.css";
 import "../../site/demo/demo.css";
+
+declare module "vitest/browser" {
+  interface BrowserCommands {
+    /** Emulates `forced-colors: active`, or lifts it. */
+    forcedColors: (active: boolean) => Promise<void>;
+  }
+}
 
 function mount(state: StyleState, width: number) {
   const host = document.createElement("div");
@@ -151,6 +159,22 @@ describe("the Hidden drawer's two titles", () => {
       }
     });
   }
+
+  it("draws the rule in the text's own colour when the system forces colours", async () => {
+    await commands.forcedColors(true);
+    const { host, hidden, done } = mount(ROLE_OUT, 560);
+    try {
+      const probe = document.createElement("span");
+      probe.style.color = "CanvasText";
+      host.append(probe);
+      const text = getComputedStyle(probe).color;
+      const tray = hidden.querySelector<HTMLElement>(".row-map-tray")!;
+      expect(getComputedStyle(tray, "::before").backgroundColor).toBe(text);
+    } finally {
+      done();
+      await commands.forcedColors(false);
+    }
+  });
 
   it("keeps both titles from assistive tech, which the drawer's own name speaks for", () => {
     const { hidden, done } = mount(ROLE_OUT, 560);

@@ -1536,6 +1536,15 @@ html[data-dragging] * {
   content: "";
 }
 
+/* Forced colours paint a background as the canvas, which would hide the rule:
+   it takes the text's colour there. */
+@media (forced-colors: active) {
+  .row-map-tray[data-ruled]::before {
+    background: CanvasText;
+    forced-color-adjust: none;
+  }
+}
+
 .row-map-chip {
   position: relative;
   display: inline-flex;
