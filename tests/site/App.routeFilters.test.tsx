@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -65,6 +65,13 @@ async function connect() {
 const field = (id: string): HTMLInputElement =>
   document.getElementById(`${id}-input`) as HTMLInputElement;
 
+/**
+ * A filter's field by its label, in the Add filters panel: every search
+ * stays mounted, so the page has a business search's own "Business name" too.
+ */
+const filter = (label: RegExp): HTMLInputElement =>
+  within(document.getElementById("demo-filters")!).getByLabelText(label);
+
 /** The filter fields the panel shows, by their labels. */
 const filterLabels = () =>
   [...document.querySelectorAll<HTMLElement>("#demo-filters .field-label")].map(
@@ -115,7 +122,7 @@ describe("the filters each search takes", () => {
     const { user, last } = await connect();
     await user.click(screen.getByRole("tab", { name: "a person" }));
     await openFilters(user);
-    await user.type(screen.getByLabelText(/Business name/), "northshore");
+    await user.type(filter(/Business name/), "northshore");
     await user.click(field("demo-person"));
     await user.type(field("demo-person"), "dana");
 
@@ -128,7 +135,7 @@ describe("the filters each search takes", () => {
     const { user, last } = await connect();
     await user.click(screen.getByRole("tab", { name: "a person" }));
     await openFilters(user);
-    await user.type(screen.getByLabelText(/^Address/), "48 corriway");
+    await user.type(filter(/^Address/), "48 corriway");
     await user.click(field("demo-person"));
     await user.type(field("demo-person"), "dana");
 
@@ -142,7 +149,7 @@ describe("the filters each search takes", () => {
     const { user, last } = await connect();
     await user.click(screen.getByRole("tab", { name: "an address" }));
     await openFilters(user);
-    await user.type(screen.getByLabelText(/Person's name/), "luis");
+    await user.type(filter(/Person's name/), "luis");
     await user.click(field("demo-address"));
     await user.type(field("demo-address"), "1200");
 
@@ -163,7 +170,7 @@ describe("the filters each search takes", () => {
     await screen.findByRole("group", tallowmere);
 
     await openFilters(user);
-    await user.type(screen.getByLabelText(/Business name/), "bayside");
+    await user.type(filter(/Business name/), "bayside");
 
     await waitFor(() =>
       expect(screen.queryByRole("group", tallowmere)).toBeNull(),
@@ -180,9 +187,7 @@ describe("the filters each search takes", () => {
     await openFilters(user);
 
     for (const label of [/Business name/, /^Address/]) {
-      expect((screen.getByLabelText(label) as HTMLInputElement).maxLength).toBe(
-        256,
-      );
+      expect(filter(label).maxLength).toBe(256);
     }
   });
 });
