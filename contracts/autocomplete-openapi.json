@@ -836,6 +836,26 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "description": "A person's name, every word the start of a word of theirs; keeps the addresses\na person it fits filed from. At most 256 characters.",
+            "in": "query",
+            "name": "person.name",
+            "required": false,
+            "schema": {
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "description": "A business name, matched as on the businesses route; keeps the addresses a\nbusiness it fits filed at. At most 256 characters.",
+            "in": "query",
+            "name": "business.name",
+            "required": false,
+            "schema": {
+              "maxLength": 256,
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -881,7 +901,7 @@
                 }
               }
             },
-            "description": "The session's scope does not reach this route (code 501), or `include` names a relation it leaves out (code 502, `metadata.param`)"
+            "description": "The session's scope does not reach this route (code 501), or a parameter touches a relation it leaves out (code 502, `metadata.param`)"
           },
           "422": {
             "content": {
@@ -891,7 +911,7 @@
                 }
               }
             },
-            "description": "A parameter is unknown, repeated or invalid, `limit` is past the session's most, or `state` was sent with a query too short to narrow"
+            "description": "A parameter is unknown, repeated or invalid, `limit` is past the session's most, or a filter (`state`, `person.name`, `business.name`) was sent with a query too short to narrow"
           },
           "429": {
             "content": {
@@ -1178,6 +1198,26 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "description": "A business name, matched as on the businesses route; keeps the people who hold\na role on a business it fits. At most 256 characters.",
+            "in": "query",
+            "name": "business.name",
+            "required": false,
+            "schema": {
+              "maxLength": 256,
+              "type": "string"
+            }
+          },
+          {
+            "description": "An address as it is written, matched as `q` is on the addresses route; keeps\nthe people who filed from an address it fits, or hold a role on a business\nwhose own principal or mailing address it fits (never its registered agent's).\nAt most 256 characters.",
+            "in": "query",
+            "name": "address.text",
+            "required": false,
+            "schema": {
+              "maxLength": 256,
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -1233,7 +1273,7 @@
                 }
               }
             },
-            "description": "A parameter is unknown, repeated or invalid, `limit` is past the session's most, or `business.state` was sent with a query too short to narrow"
+            "description": "A parameter is unknown, repeated or invalid, `limit` is past the session's most, or a filter (`business.state`, `business.name`, `address.text`) was sent with a query too short to narrow"
           },
           "429": {
             "content": {

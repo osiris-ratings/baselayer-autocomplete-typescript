@@ -52,7 +52,7 @@ describe("allowedFilters", () => {
       ),
     ).toEqual(["state", "domicile_state"]);
     expect(
-      allowedFilters(scope({ addresses: ["businesses"] }), "addresses").map(
+      allowedFilters(scope({ addresses: [] }), "addresses").map(
         ({ param }) => param,
       ),
     ).toEqual(["state"]);
@@ -75,10 +75,17 @@ describe("allowedFilters", () => {
       allowedFilters(scope({ people: ["businesses"] }), "people").map(
         ({ param }) => param,
       ),
-    ).toEqual(["business.state"]);
-    expect(allowedFilters(scope({ people: ["addresses"] }), "people")).toEqual(
-      [],
-    );
+    ).toEqual(["business.state", "business.name"]);
+    expect(
+      allowedFilters(scope({ people: ["addresses"] }), "people").map(
+        ({ param }) => param,
+      ),
+    ).toEqual(["address.text"]);
+    expect(
+      allowedFilters(scope({ addresses: ["people"] }), "addresses").map(
+        ({ param }) => param,
+      ),
+    ).toEqual(["state", "person.name"]);
   });
 
   it("allows nothing on a route the scope leaves out", () => {

@@ -1,7 +1,15 @@
 // What the styled views share: their slots, their classes, the look's
 // variables and the marks on a highlighted name.
 
-import { Fragment, type CSSProperties, type ReactNode } from "react";
+import {
+  Fragment,
+  useEffect,
+  useLayoutEffect,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+  type RefObject,
+} from "react";
 
 import {
   DEFAULT_LOOK,
@@ -235,15 +243,86 @@ export function StateSquares({
   );
 }
 
+/** A layout effect in the browser; on a server, which draws nothing, none. */
+const useDrawnEffect =
+  typeof window === "undefined" ? useEffect : useLayoutEffect;
+
 /**
- * The role column's width for a menu's lines under rows: its longest role, so
- * the roles line up and the squares before them start at one edge.
+ * The role column's width for a menu's lines under rows: the widest role the
+ * menu draws, so the roles line up and the squares before them end one gap
+ * before it. Measured once per answer, and again when the menu is `shown` or a
+ * font comes in, it holds still while the text changes over one answer; until
+ * it is measured it is the longest role in `ch`.
  */
-export function roleColumn(
+export function useRoleColumn(
+  menu: RefObject<HTMLElement | null>,
   roles: readonly (string | null)[],
+  shown: boolean,
 ): CSSProperties | undefined {
+  const answer = roles.join("\n");
+  const [measured, setMeasured] = useState<{
+    answer: string;
+    width: number;
+  } | null>(null);
+  // A web font coming in redraws the roles at another width, and so does
+  // the page setting another font on them, which loads nothing.
+  const [fonts, setFonts] = useState(0);
+  const [font, setFont] = useState("");
+  useDrawnEffect(() => {
+    if (menu.current === null) return;
+    const style = getComputedStyle(menu.current);
+    const now = [
+      style.fontStyle,
+      style.fontWeight,
+      style.fontSize,
+      style.fontFamily,
+    ].join(" ");
+    if (now !== font) setFont(now);
+  });
+  useEffect(() => {
+    if (!("fonts" in document)) return;
+    let live = true;
+    const redrawn = () => {
+      if (live) setFonts(count => count + 1);
+    };
+    // WebKit fires `loading` but never `loadingdone`; `ready` settles in both.
+    const loading = () => void document.fonts.ready.then(redrawn);
+    document.fonts.addEventListener("loading", loading);
+    document.fonts.addEventListener("loadingdone", redrawn);
+    // A load already under way, or one that ended before these listeners
+    // were in place, said so to nobody: measure again once fonts settle.
+    loading();
+    return () => {
+      live = false;
+      document.fonts.removeEventListener("loading", loading);
+      document.fonts.removeEventListener("loadingdone", redrawn);
+    };
+  }, []);
+  useDrawnEffect(() => {
+    if (!shown || menu.current === null) return;
+    // A DOM with no layout (jsdom) measures nothing: the column stays in `ch`.
+    if (typeof Range.prototype.getBoundingClientRect !== "function") return;
+    let widest = 0;
+    for (const role of menu.current.querySelectorAll(
+      ".bl-ac-group-trailing > .bl-ac-role",
+    )) {
+      const words = document.createRange();
+      words.selectNodeContents(role);
+      widest = Math.max(widest, words.getBoundingClientRect().width);
+    }
+    // Drawn pixels, which a zoomed or scaled ancestor makes more or fewer
+    // than the CSS pixels the column is set in.
+    const drawn = menu.current.getBoundingClientRect().width;
+    const scale =
+      menu.current.offsetWidth > 0 ? drawn / menu.current.offsetWidth : 1;
+    if (widest > 0) setMeasured({ answer, width: widest / (scale || 1) });
+  }, [answer, shown, fonts, font, menu]);
   const longest = Math.max(0, ...roles.map(role => role?.length ?? 0));
-  return longest === 0
-    ? undefined
-    : ({ "--bl-ac-role-chars": String(longest) } as CSSProperties);
+  if (longest === 0) return undefined;
+  return {
+    "--bl-ac-role-chars": String(longest),
+    ...(measured?.answer === answer && {
+      "--bl-ac-role-width": `${measured.width}px`,
+    }),
+  } as CSSProperties;
 }

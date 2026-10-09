@@ -6,6 +6,18 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+### Added
+
+- The people search filters by a business's name (`business.name`) and by an
+  address (`address.text`): the people who hold a role on a business whose
+  name fits (the same business as `business.state`), and those who filed from
+  an address that fits or hold a role on a business whose own office it is; a
+  registered agent never matches an address. The addresses search filters by
+  a person's name (`person.name`), the addresses they filed from, and a
+  business's name (`business.name`), the addresses that are its own office.
+  Each touches a relation, which the session's scope must grant, and the
+  demo's Add filters offers each search its own.
+
 ### Fixed
 
 - A person's or an address's business lines draw their states at the side
@@ -13,6 +25,18 @@ breaking change bumps the minor version.
   group, one gap before the role, as a business row's do, where they started
   at the column's left and left a ragged gap; the +N stays last. At the left
   they start one gap after the field before them, as before.
+- The role column on those lines is as wide as the longest role the menu
+  draws, measured once per answer, where it was that role's count of
+  characters at `1ch` each, a good deal wider than "officer" draws. The states
+  now end one gap before the longest role, and every role still starts at one
+  x down the menu.
+- That column is measured again when the page sets another font on the menu,
+  which loads nothing, and under a zoomed or scaled ancestor it is set as wide
+  as the roles are drawn, where under a zoom of 2 it was twice that.
+- A build under load could leave out the React and server entry points' type
+  declarations and still exit cleanly: its three builds ran at once, and the
+  first one's clean could wipe what the others had written. The build now
+  empties `dist` once, before them.
 
 ## [0.4.0] - 2026-10-08
 

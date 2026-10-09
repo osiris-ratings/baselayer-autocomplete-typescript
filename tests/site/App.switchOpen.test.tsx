@@ -180,6 +180,25 @@ describe("switching the search with its menu open", () => {
     expect(asked("people")).toBe(before);
   });
 
+  it("keeps a hidden search on its filters when a business's name the two share is typed for the search in sight", async () => {
+    const { user, asked } = await connect();
+    await user.click(tab("a person"));
+    await user.click(field("demo-person"));
+    await user.type(field("demo-person"), "dana");
+    await waitFor(() => expect(rows("demo-person").length).toBeGreaterThan(0));
+    await user.click(tab("an address"));
+    const before = asked("people");
+    await user.click(screen.getByRole("button", { name: /Add filters/ }));
+    await user.type(
+      within(document.getElementById("demo-filters")!).getByLabelText(
+        /Business name/,
+      ),
+      "harbor",
+    );
+    await new Promise(resolve => setTimeout(resolve, 400));
+    expect(asked("people")).toBe(before);
+  });
+
   it("forgets a focused field once a click lands elsewhere, so a later switch from the keyboard carries nothing", async () => {
     const { user } = await connect();
     await user.click(field("demo-business"));

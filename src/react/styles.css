@@ -617,7 +617,7 @@
 /* A column only at the right; beside the name, a role is as wide as it is,
    one gap after it. */
 .bl-ac-group-trailing > .bl-ac-role {
-  min-width: calc(var(--bl-ac-role-chars, 0) * 1ch);
+  min-width: var(--bl-ac-role-width, calc(var(--bl-ac-role-chars, 0) * 1ch));
   text-align: right;
 }
 
