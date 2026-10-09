@@ -22,16 +22,44 @@ export interface Filters {
   };
 }
 
-/** Narrowing filters on `GET /autocomplete/people`: the one it serves. */
+/**
+ * Narrowing filters on `GET /autocomplete/people`. A name or an address is
+ * free text of at most 256 characters; an empty one filters nothing.
+ */
 export interface PeopleFilters {
-  /** Keeps the people who hold a role on a business in any of these states. */
-  business?: { state?: string[] };
+  business?: {
+    /** Keeps the people who hold a role on a business in any of these states. */
+    state?: string[];
+    /**
+     * Keeps the people who hold a role on a business whose name fits, matched
+     * as on the businesses route.
+     */
+    name?: string;
+  };
+  address?: {
+    /**
+     * Keeps the people who filed from an address that fits, or hold a role on
+     * a business whose own principal or mailing address fits (never its
+     * registered agent's), matched as `q` is on the addresses route.
+     */
+    text?: string;
+  };
 }
 
-/** Narrowing filters on `GET /autocomplete/addresses`: the one it serves. */
+/**
+ * Narrowing filters on `GET /autocomplete/addresses`. A name is free text of
+ * at most 256 characters; an empty one filters nothing.
+ */
 export interface AddressesFilters {
   /** The address's own state, any of these. */
   state?: string[];
+  /** Keeps the addresses a person whose name fits filed from. */
+  person?: { name?: string };
+  /**
+   * Keeps the addresses a business whose name fits filed at, matched as on
+   * the businesses route.
+   */
+  business?: { name?: string };
 }
 
 export interface FiltersByRelation {
@@ -163,8 +191,22 @@ export const FILTER_PARAMS = {
       path: ["business", "state"],
       relation: "businesses",
     },
+    {
+      param: "business.name",
+      path: ["business", "name"],
+      relation: "businesses",
+    },
+    { param: "address.text", path: ["address", "text"], relation: "addresses" },
   ],
-  addresses: [{ param: "state", path: ["state"], relation: null }],
+  addresses: [
+    { param: "state", path: ["state"], relation: null },
+    { param: "person.name", path: ["person", "name"], relation: "people" },
+    {
+      param: "business.name",
+      path: ["business", "name"],
+      relation: "businesses",
+    },
+  ],
 } as const satisfies Record<Route, readonly FilterParam[]>;
 
 /** The value a parameter carries: trimmed text, or a non-empty comma list. */

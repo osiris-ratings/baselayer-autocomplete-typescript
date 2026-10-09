@@ -53,13 +53,13 @@ describe("the filters each route takes", () => {
     }
   });
 
-  it("takes exactly the people route's one filter", () => {
+  it("takes exactly the people route's filters, in the contract's order", () => {
     expect(FILTER_PARAMS.people.map(({ param }) => param)).toEqual(
       contractFilters("/autocomplete/people"),
     );
   });
 
-  it("takes exactly the addresses route's one filter, its own state", () => {
+  it("takes exactly the addresses route's filters, its own state first", () => {
     expect(FILTER_PARAMS.addresses.map(({ param }) => param)).toEqual(
       contractFilters("/autocomplete/addresses"),
     );
@@ -95,12 +95,55 @@ describe("filterParams", () => {
     ]);
   });
 
+  it("sends a person row's business name and address text after its business state, in the contract's order", () => {
+    expect(
+      filterParams("people", {
+        address: { text: "77 quillback ln" },
+        business: { name: "harbor concrete", state: ["PA"] },
+      }),
+    ).toEqual([
+      ["business.state", "PA"],
+      ["business.name", "harbor concrete"],
+      ["address.text", "77 quillback ln"],
+    ]);
+  });
+
+  it("sends an address row's person and business names after its state, in the contract's order", () => {
+    expect(
+      filterParams("addresses", {
+        business: { name: "quillback holdings" },
+        person: { name: "dana" },
+        state: ["OR"],
+      }),
+    ).toEqual([
+      ["state", "OR"],
+      ["person.name", "dana"],
+      ["business.name", "quillback holdings"],
+    ]);
+  });
+
+  it("sends no filter for an empty or blank name", () => {
+    expect(
+      filterParams("people", {
+        business: { name: "  " },
+        address: { text: "" },
+      }),
+    ).toEqual([]);
+    expect(
+      filterParams("addresses", {
+        person: { name: "" },
+        business: { name: " " },
+      }),
+    ).toEqual([]);
+  });
+
   it("never sends a filter its route does not take, even from untyped data", () => {
     const stray = {
       state: ["CA"],
-      business: { name: "apple", state: ["CA"] },
+      domicileState: "DE",
+      business: { state: ["CA"], city: "Erie" },
       address: { city: "Austin" },
-      person: { name: "dana" },
+      person: { role: "officer" },
     } as unknown as RouteQuery<"people">["filters"];
 
     expect(filterParams("people", stray)).toEqual([["business.state", "CA"]]);
@@ -121,6 +164,10 @@ describe("filterParams", () => {
       } as unknown as RouteQuery<"people">["filters"]),
     ).toBe(false);
     expect(hasFilters("businesses", { person: { name: "dana" } })).toBe(true);
+    expect(hasFilters("people", { address: { text: "77 quillback" } })).toBe(
+      true,
+    );
+    expect(hasFilters("addresses", { person: { name: " " } })).toBe(false);
   });
 });
 
@@ -142,6 +189,45 @@ describe("buildSuggestUrl on the people and addresses routes", () => {
     ]);
   });
 
+  it("asks the people route with every filter it takes, once each, in order", () => {
+    const url = new URL(
+      buildSuggestUrl("https://api.test", "people", {
+        q: "dana",
+        filters: {
+          address: { text: "77 quillback ln" },
+          business: { name: "harbor", state: ["PA", "OH"] },
+        },
+      }),
+    );
+
+    expect([...url.searchParams]).toEqual([
+      ["q", "dana"],
+      ["business.state", "PA,OH"],
+      ["business.name", "harbor"],
+      ["address.text", "77 quillback ln"],
+    ]);
+  });
+
+  it("asks the addresses route with every filter it takes, once each, in order", () => {
+    const url = new URL(
+      buildSuggestUrl("https://api.test", "addresses", {
+        q: "77 quillback",
+        filters: {
+          business: { name: "quillback holdings" },
+          person: { name: "dana" },
+          state: ["OR"],
+        },
+      }),
+    );
+
+    expect([...url.searchParams]).toEqual([
+      ["q", "77 quillback"],
+      ["state", "OR"],
+      ["person.name", "dana"],
+      ["business.name", "quillback holdings"],
+    ]);
+  });
+
   it("asks the addresses route with its state", () => {
     const url = new URL(
       buildSuggestUrl("https://api.test", "addresses", {
@@ -160,20 +246,47 @@ describe("buildSuggestUrl on the people and addresses routes", () => {
   it("types each route's filters as exactly what it takes", () => {
     const people: RouteQuery<"people"> = {
       q: "dana",
+      filters: {
+        business: { state: ["PA"], name: "harbor" },
+        address: { text: "77 quillback ln" },
+      },
+    };
+    const addresses: RouteQuery<"addresses"> = {
+      q: "77 quillback",
+      filters: {
+        state: ["OR"],
+        person: { name: "dana" },
+        business: { name: "quillback" },
+      },
+    };
+    const ownState: RouteQuery<"people"> = {
+      q: "dana",
       // @ts-expect-error: a person row has no state of its own.
       filters: { state: ["PA"] },
     };
-    const byName: RouteQuery<"people"> = {
+    const byPerson: RouteQuery<"people"> = {
       q: "dana",
-      // @ts-expect-error: the people route filters businesses by state only.
-      filters: { business: { name: "harbor" } },
-    };
-    const addresses: RouteQuery<"addresses"> = {
-      q: "1200 tallowmere",
-      // @ts-expect-error: the addresses route takes no relation filter.
+      // @ts-expect-error: the people route filters by business and address, not by person.
       filters: { person: { name: "dana" } },
     };
+    const byCity: RouteQuery<"people"> = {
+      q: "dana",
+      // @ts-expect-error: an address filters a person by its text only.
+      filters: { address: { city: "Erie" } },
+    };
+    const byAddress: RouteQuery<"addresses"> = {
+      q: "77 quillback",
+      // @ts-expect-error: the addresses route filters by person and business, not by address.
+      filters: { address: { text: "77 quillback" } },
+    };
 
-    expect([people, byName, addresses]).toHaveLength(3);
+    expect([
+      people,
+      addresses,
+      ownState,
+      byPerson,
+      byCity,
+      byAddress,
+    ]).toHaveLength(6);
   });
 });

@@ -124,6 +124,52 @@ describe("a request the session's scope leaves out", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 
+  it("is refused before it is sent: a person search's address text, its scope granting businesses only", async () => {
+    const fetch = vi.fn<FetchLike>();
+    const { client } = clientWith(
+      { routes: { people: ["businesses"] }, maxLimit: 5 },
+      fetch,
+    );
+
+    const error = await refusal(
+      client.search("people", {
+        q: "dana",
+        filters: { address: { text: "77 quillback ln" } },
+      }),
+    );
+
+    expect(error).toMatchObject({
+      kind: "out_of_scope",
+      route: "people",
+      relation: "addresses",
+      param: "address.text",
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("is refused before it is sent: an address search's business name, its scope granting people only", async () => {
+    const fetch = vi.fn<FetchLike>();
+    const { client } = clientWith(
+      { routes: { addresses: ["people"] }, maxLimit: 5 },
+      fetch,
+    );
+
+    const error = await refusal(
+      client.search("addresses", {
+        q: "77 quillback",
+        filters: { business: { name: "quillback" } },
+      }),
+    );
+
+    expect(error).toMatchObject({
+      kind: "out_of_scope",
+      route: "addresses",
+      relation: "businesses",
+      param: "business.name",
+    });
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("still sends what the scope allows, and a direct filter, which touches no relation", async () => {
     const fetch = vi.fn<FetchLike>(async () =>
       reply(200, empty(["people", "addresses"])),

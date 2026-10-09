@@ -6,6 +6,17 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+### Added
+
+- The people search filters by a business's name (`business.name`) and by an
+  address (`address.text`): the people who hold a role on a business whose
+  name fits, and those who filed from an address that fits or hold a role on
+  a business whose own office it is. The addresses search filters by a
+  person's name (`person.name`) and a business's name (`business.name`): the
+  addresses either filed from or at. Each touches a relation, which the
+  session's scope must grant, and the demo's Add filters offers each search
+  its own.
+
 ### Fixed
 
 - A person's or an address's business lines draw their states at the side
