@@ -317,6 +317,12 @@
   text-transform: uppercase;
 }
 
+/* A count's line is never taller than the title's, so the head keeps the
+   title's height whatever its summary says. */
+.fold-nested .fold-summary {
+  line-height: 1;
+}
+
 .fold-nested .fold-body-inner::before {
   height: 14px;
 }

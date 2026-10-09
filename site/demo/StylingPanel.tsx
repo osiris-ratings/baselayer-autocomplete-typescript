@@ -66,8 +66,9 @@ function orAuto(value: string): string | null {
   return value === "" ? null : value;
 }
 
-function count(n: number): string | undefined {
-  return n === 0 ? undefined : `${n} changed`;
+/** A fold's count of changes; none keeps the room a count takes. */
+function count(n: number): string {
+  return n === 0 ? "" : `${n} changed`;
 }
 
 const MINT_TIMING_LABELS: Record<MintTiming, string> = {

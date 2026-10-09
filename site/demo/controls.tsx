@@ -65,7 +65,14 @@ export function Collapsible({
             {icon !== undefined && <Icon name={icon} />}
           </span>
           {summary !== undefined && (keepSummary || !open) && (
-            <span className="fold-summary">{summary}</span>
+            // An empty summary keeps its room, so a count arriving or
+            // leaving never changes the head's height.
+            <span
+              className="fold-summary"
+              aria-hidden={summary === "" || undefined}
+            >
+              {summary === "" ? "\u00a0" : summary}
+            </span>
           )}
           <span className="fold-chevron" aria-hidden="true" />
         </button>
