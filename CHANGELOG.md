@@ -30,6 +30,13 @@ breaking change bumps the minor version.
   characters at `1ch` each, a good deal wider than "officer" draws. The states
   now end one gap before the longest role, and every role still starts at one
   x down the menu.
+- That column is measured again when the page sets another font on the menu,
+  which loads nothing, and under a zoomed or scaled ancestor it is set as wide
+  as the roles are drawn, where under a zoom of 2 it was twice that.
+- A build under load could leave out the React and server entry points' type
+  declarations and still exit cleanly: its three builds ran at once, and the
+  first one's clean could wipe what the others had written. The build now
+  empties `dist` once, before them.
 
 ## [0.4.0] - 2026-10-08
 
