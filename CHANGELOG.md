@@ -6,6 +6,14 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-08
+
+Narrow a person or an address search by what it is tied to: the people search
+by a business's name and by an address, the addresses search by a person's name
+and by a business's name, each beside its states. A person's or an address's
+business lines keep their states to the side they are placed on, and the role
+column fits the roles the menu draws.
+
 ### Added
 
 - The people search filters by a business's name (`business.name`) and by an
@@ -17,6 +25,14 @@ breaking change bumps the minor version.
   business's name (`business.name`), the addresses that are its own office.
   Each touches a relation, which the session's scope must grant, and the
   demo's Add filters offers each search its own.
+
+### Changed
+
+- The demo's Styling panel drags a line as its whole row, a blank slot showing
+  where it will drop from the moment it is lifted, and Hidden titles the lines
+  and the fields it holds apart. Switching the demo's search from a focused
+  field opens the new search's menu in its own field, with its kept text and
+  answer.
 
 ### Fixed
 
@@ -31,8 +47,9 @@ breaking change bumps the minor version.
   now end one gap before the longest role, and every role still starts at one
   x down the menu.
 - That column is measured again when the page sets another font on the menu,
-  which loads nothing, and under a zoomed or scaled ancestor it is set as wide
-  as the roles are drawn, where under a zoom of 2 it was twice that.
+  which loads nothing, or when a web font loads, Safari included, and under a
+  zoomed or scaled ancestor it is set as wide as the roles are drawn, where
+  under a zoom of 2 it was twice that.
 - A build under load could leave out the React and server entry points' type
   declarations and still exit cleanly: its three builds ran at once, and the
   first one's clean could wipe what the others had written. The build now
