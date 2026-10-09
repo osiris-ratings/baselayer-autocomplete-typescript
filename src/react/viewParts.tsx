@@ -264,8 +264,21 @@ export function useRoleColumn(
     answer: string;
     width: number;
   } | null>(null);
-  // A web font coming in redraws the roles at another width.
+  // A web font coming in redraws the roles at another width, and so does
+  // the page setting another font on them, which loads nothing.
   const [fonts, setFonts] = useState(0);
+  const [font, setFont] = useState("");
+  useDrawnEffect(() => {
+    if (menu.current === null) return;
+    const style = getComputedStyle(menu.current);
+    const now = [
+      style.fontStyle,
+      style.fontWeight,
+      style.fontSize,
+      style.fontFamily,
+    ].join(" ");
+    if (now !== font) setFont(now);
+  });
   useEffect(() => {
     if (!("fonts" in document)) return;
     const redrawn = () => setFonts(count => count + 1);
@@ -284,8 +297,13 @@ export function useRoleColumn(
       words.selectNodeContents(role);
       widest = Math.max(widest, words.getBoundingClientRect().width);
     }
-    if (widest > 0) setMeasured({ answer, width: widest });
-  }, [answer, shown, fonts, menu]);
+    // Drawn pixels, which a zoomed or scaled ancestor makes more or fewer
+    // than the CSS pixels the column is set in.
+    const drawn = menu.current.getBoundingClientRect().width;
+    const scale =
+      menu.current.offsetWidth > 0 ? drawn / menu.current.offsetWidth : 1;
+    if (widest > 0) setMeasured({ answer, width: widest / (scale || 1) });
+  }, [answer, shown, fonts, font, menu]);
   const longest = Math.max(0, ...roles.map(role => role?.length ?? 0));
   if (longest === 0) return undefined;
   return {

@@ -147,6 +147,7 @@ function draw(width: number, answer: Answer) {
     );
   render(answer, "x");
   return {
+    host,
     render,
     /** Each line drawing a role at its right, in the menu's order. */
     lines: () =>
@@ -256,6 +257,51 @@ describe("the role column on a person's or an address's lines", () => {
       }
     });
   }
+
+  it("fits the roles again when the page's font changes under one answer", () => {
+    const answer: Answer = {
+      route: "addresses",
+      suggestion: place(["agent", "principal", "agent"]),
+    };
+    const { host, render, lines, done } = draw(560, answer);
+    try {
+      host.style.fontFamily = "Arial";
+      render(answer, "xy");
+      host.style.fontFamily = "'Courier New'";
+      render(answer, "xyz");
+      const { spread, width, widest } = column(lines());
+      expect(spread).toBeLessThanOrEqual(0.5);
+      expect(
+        Math.abs(width - widest),
+        `${width} for ${widest}`,
+      ).toBeLessThanOrEqual(0.5);
+    } finally {
+      done();
+    }
+  });
+
+  it("fits the roles under a zoomed ancestor, as wide as their words are drawn", () => {
+    const answer: Answer = {
+      route: "addresses",
+      suggestion: place(["principal", "agent"]),
+    };
+    const { host, render, lines, done } = draw(560, answer);
+    try {
+      host.style.zoom = "2";
+      render(answer, "xy");
+      render(
+        { route: "addresses", suggestion: place(["agent", "principal"]) },
+        "xy",
+      );
+      const { width, widest } = column(lines());
+      expect(
+        Math.abs(width - widest),
+        `${width} for ${widest}`,
+      ).toBeLessThanOrEqual(0.5);
+    } finally {
+      done();
+    }
+  });
 
   it("holds still while the text changes over one answer, and fits the next answer once it comes", () => {
     const answer: Answer = {
