@@ -60,10 +60,10 @@ type DropSpot = string;
 const DRAG_SLOP = 4;
 
 /**
- * How far past a line's middle the pointer goes before a carried line's slot
- * moves past it, so a hand resting on the boundary does not flip the order.
+ * How far past a line's middle a carried row's leading edge goes before its
+ * slot moves past that line, so a hand resting at the swap does not flip it.
  */
-const DEAD_BAND = 8;
+const DEAD_BAND = 4;
 
 /**
  * How long after a drop a click on what was dragged is the browser's own,
@@ -488,8 +488,12 @@ interface Slots {
   from: number;
   /** A line and the gap after it. */
   step: number;
-  /** The middles of Shown's other lines, from the top of its frame. */
-  middles: number[];
+  /** The carried row's height. */
+  height: number;
+  /** Where Shown's first line starts, from the top of its frame. */
+  first: number;
+  /** How many other lines Shown holds: its slots are 0 to this. */
+  count: number;
   /** Its place in Hidden, which keeps the row's own order. */
   hiddenAt: number;
 }
@@ -503,6 +507,7 @@ function snapshot(
   shown: HTMLElement[],
   hidden: HTMLElement[],
   order: readonly string[],
+  head: HTMLElement,
 ): Slots | null {
   const origin = shown.some(row => row.dataset.relation === carried)
     ? SHOWN
@@ -517,9 +522,12 @@ function snapshot(
     origin,
     from: lines.indexOf(lifted),
     step: lifted.offsetHeight + gap,
-    middles: shown
-      .filter(row => row !== lifted)
-      .map(row => row.offsetTop + row.offsetHeight / 2),
+    height: lifted.offsetHeight,
+    first:
+      head.offsetTop +
+      head.offsetHeight +
+      parseFloat(getComputedStyle(head.parentElement!).rowGap || "0"),
+    count: shown.filter(row => row !== lifted).length,
     hiddenAt: hidden.filter(
       row => row !== lifted && rank(row.dataset.relation) < rank(carried),
     ).length,
@@ -1013,6 +1021,7 @@ function KindRowMap<P extends string, F extends string>({
   // line only once the pointer is clearly past that line's middle.
   const carried = moving === null ? null : relationOf(moving.field);
   const pointerY = moving?.y ?? null;
+  const grabY = moving?.lifted.grabY ?? 0;
   const slots = useRef<Slots | null>(null);
   // The row's own order of its lines, as each one is named in the DOM.
   const lineOrder = kinds.map(kind => kind.relation ?? "head").join(" ");
@@ -1043,12 +1052,19 @@ function KindRowMap<P extends string, F extends string>({
       return;
     }
     if (slots.current?.relation !== carried) {
-      slots.current = snapshot(
-        carried,
-        lines(SHOWN),
-        lines(HIDDEN),
-        lineOrder.split(" "),
+      const head = scrollers[SHOWN]?.querySelector<HTMLElement>(
+        '.row-map-kind[data-relation="head"]',
       );
+      slots.current =
+        head == null
+          ? null
+          : snapshot(
+              carried,
+              lines(SHOWN),
+              lines(HIDDEN),
+              lineOrder.split(" "),
+              head,
+            );
       held.current = null;
     }
     const at = slots.current;
@@ -1057,14 +1073,33 @@ function KindRowMap<P extends string, F extends string>({
     let target = at.origin;
     let slot = at.from;
     if (over === SHOWN && pointerY !== null) {
-      // Measured untransformed: an offset ignores the slides above.
+      // The carried row's top, in the frame's terms: where it is held, less
+      // how far down the row it was grabbed.
       const frame = shown.parentElement!;
-      const y = pointerY - frame.getBoundingClientRect().top + shown.scrollTop;
-      slot = held.current ?? at.middles.filter(middle => middle < y).length;
-      while (slot < at.middles.length && y > at.middles[slot]! + DEAD_BAND) {
-        slot += 1;
+      const top =
+        pointerY - frame.getBoundingClientRect().top + shown.scrollTop - grabY;
+      // The middle of the line drawn at a slot, the lines laid out evenly.
+      const middle = (place: number) =>
+        at.first + place * at.step + at.height / 2;
+      if (held.current === null) {
+        // Come into Shown: the row goes where its middle is, among the lines
+        // as they are drawn without it.
+        const centre = top + at.height / 2;
+        slot = 0;
+        while (slot < at.count && middle(slot) < centre) slot += 1;
+      } else {
+        // Past the line below once the row's bottom edge is clearly past its
+        // middle, and back past the line above once its top edge is: the two
+        // marks lie a gap and two bands apart, so a tremble flips neither.
+        slot = held.current;
+        while (
+          slot < at.count &&
+          top + at.height > middle(slot + 1) + DEAD_BAND
+        ) {
+          slot += 1;
+        }
+        while (slot > 0 && top < middle(slot - 1) - DEAD_BAND) slot -= 1;
       }
-      while (slot > 0 && y < at.middles[slot - 1]! - DEAD_BAND) slot -= 1;
       held.current = slot;
       target = SHOWN;
     } else {
@@ -1103,7 +1138,7 @@ function KindRowMap<P extends string, F extends string>({
       if (opens) holder.dataset.slot = String(slot);
       else delete holder.dataset.slot;
     }
-  }, [carried, over, pointerY, lineOrder]);
+  }, [carried, over, pointerY, grabY, lineOrder]);
   // A line let go settles where its row now rests, which the drop has drawn.
   useLayoutEffect(() => {
     if (landing === null || landing.to !== null) return;

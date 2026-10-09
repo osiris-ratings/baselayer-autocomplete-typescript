@@ -420,18 +420,25 @@ describe("the blank line a carried line would drop into", () => {
     }
   });
 
-  it("is read afresh when the pointer comes back over Shown from Hidden", async () => {
+  it("is read afresh, where the row's middle falls, when the pointer comes back over Shown from Hidden", async () => {
     const { host, kind, grip, done } = mount(BOTH);
     try {
+      const first = kind("people").getBoundingClientRect();
       const below = kind("addresses").getBoundingClientRect();
-      const middle = below.top + below.height / 2;
       const hidden = host
         .querySelector<HTMLElement>('[data-drawer="hidden"]')!
         .getBoundingClientRect();
       const drag = await press(grip("people"));
-      await drag.to(middle + 12);
+      await drag.to(below.top + below.height / 2 + 12);
+      expect(slot(host)).toEqual(["shown@1"]);
       await drag.to(hidden.top + hidden.height / 2, hidden.left + 60);
-      await drag.to(middle - 4);
+      // Back with the row's middle just under the line drawn first: read
+      // afresh it goes after that line, where a slot kept from before would
+      // have gone back above it.
+      await drag.to(first.top + first.height / 2 + 6);
+      expect(slot(host)).toEqual(["shown@1"]);
+      await drag.to(hidden.top + hidden.height / 2, hidden.left + 60);
+      await drag.to(first.top + first.height / 2 - 10);
       expect(slot(host)).toEqual(["shown@0"]);
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
       await frame();
@@ -463,4 +470,97 @@ describe("the blank line a carried line would drop into", () => {
       done();
     }
   });
+});
+
+/** A line's grip pressed at a height through its row, carried past the slop. */
+async function grabAt(row: HTMLElement, through: number) {
+  const grip = row.querySelector<HTMLElement>("button.row-map-grip")!;
+  const box = row.getBoundingClientRect();
+  const x = grip.getBoundingClientRect().left + 6;
+  const y0 = box.top + box.height * through;
+  const at = (
+    type: string,
+    clientX: number,
+    clientY: number,
+    buttons: number,
+  ) =>
+    new PointerEvent(type, {
+      bubbles: true,
+      pointerId: 7,
+      button: 0,
+      buttons,
+      clientX,
+      clientY,
+    });
+  grip.dispatchEvent(at("pointerdown", x, y0, 1));
+  await frame();
+  window.dispatchEvent(at("pointermove", x + 12, y0, 1));
+  await frame();
+  return {
+    y0,
+    async by(dy: number) {
+      window.dispatchEvent(at("pointermove", x + 12, y0 + dy, 1));
+      await frame();
+    },
+    async up(dy: number) {
+      window.dispatchEvent(at("pointerup", x + 12, y0 + dy, 0));
+      await frame();
+    },
+  };
+}
+
+describe("a carried line passing its neighbour", () => {
+  // Where it is held through its row does not matter: its leading edge does.
+  for (const [where, through] of [
+    ["top", 0.1],
+    ["middle", 0.5],
+    ["bottom", 0.9],
+  ] as const) {
+    it(`swaps once its bottom edge is a few pixels past the next line's middle, held at its ${where}`, async () => {
+      const { host, kind, latest, done } = mount(BOTH);
+      try {
+        const carried = kind("people").getBoundingClientRect();
+        const next = kind("addresses").getBoundingClientRect();
+        // From its bottom edge to the next line's middle: under one row.
+        const reach = next.top + next.height / 2 - carried.bottom;
+        expect(reach).toBeLessThan(carried.height);
+        const drag = await grabAt(kind("people"), through);
+        await drag.by(reach - 2);
+        expect(slot(host)).toEqual(["shown@0"]);
+        await drag.by(reach + 6);
+        expect(slot(host)).toEqual(["shown@1"]);
+        await drag.up(reach + 6);
+        expect(latest.state.rows.businesses.list).toEqual([
+          "addresses",
+          "people",
+        ]);
+        await new Promise(resolve => setTimeout(resolve, 600));
+      } finally {
+        done();
+      }
+    });
+
+    it(`swaps once its top edge is a few pixels past the line above's middle, held at its ${where}`, async () => {
+      const { host, kind, latest, done } = mount(BOTH);
+      try {
+        const above = kind("people").getBoundingClientRect();
+        const carried = kind("addresses").getBoundingClientRect();
+        const reach = carried.top - (above.top + above.height / 2);
+        expect(reach).toBeLessThan(carried.height);
+        const drag = await grabAt(kind("addresses"), through);
+        await drag.by(-(reach - 2));
+        expect(slot(host)).toEqual(["shown@1"]);
+        await drag.by(-(reach + 6));
+        expect(slot(host)).toEqual(["shown@0"]);
+        await drag.up(-(reach + 6));
+        expect(latest.state.rows.businesses.list).toEqual([
+          "addresses",
+          "people",
+        ]);
+        await new Promise(resolve => setTimeout(resolve, 600));
+      } finally {
+        done();
+      }
+    });
+  }
 });
