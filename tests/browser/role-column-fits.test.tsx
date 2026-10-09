@@ -118,13 +118,13 @@ type Answer =
     }
   | { route: "addresses"; suggestion: AddressSuggestion };
 
-function draw(width: number, answer: Answer) {
+function draw(width: number, answer: Answer, open = true) {
   const host = document.createElement("div");
   host.style.width = `${width}px`;
   host.style.fontFamily = "sans-serif";
   document.body.append(host);
   const root = createRoot(host);
-  const render = (next: Answer, value: string) =>
+  const render = (next: Answer, value: string, isOpen = open) =>
     flushSync(() =>
       root.render(
         next.route === "people" ? (
@@ -134,6 +134,7 @@ function draw(width: number, answer: Answer) {
             suggestions={[next.suggestion]}
             list={next.list}
             {...COMMON}
+            open={isOpen}
           />
         ) : (
           <AddressAutocompleteView
@@ -141,6 +142,7 @@ function draw(width: number, answer: Answer) {
             value={value}
             suggestions={[next.suggestion]}
             {...COMMON}
+            open={isOpen}
           />
         ),
       ),
@@ -257,6 +259,25 @@ describe("the role column on a person's or an address's lines", () => {
       }
     });
   }
+
+  it("fits the roles when a menu closed as its answer came is opened on that answer", () => {
+    const answer: Answer = {
+      route: "addresses",
+      suggestion: place(["agent", "principal", "agent"]),
+    };
+    const { render, lines, done } = draw(560, answer, false);
+    try {
+      render(answer, "x", true);
+      const { spread, width, widest } = column(lines());
+      expect(spread).toBeLessThanOrEqual(0.5);
+      expect(
+        Math.abs(width - widest),
+        `${width} for ${widest}`,
+      ).toBeLessThanOrEqual(0.5);
+    } finally {
+      done();
+    }
+  });
 
   it("fits the roles again when the page's font changes under one answer", () => {
     const answer: Answer = {
