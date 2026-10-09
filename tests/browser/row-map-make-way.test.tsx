@@ -420,6 +420,29 @@ describe("the blank line a carried line would drop into", () => {
     }
   });
 
+  it("holds its slot while the leading edge is inside the band at either mark, and moves once it is past", async () => {
+    const { host, kind, grip, done } = mount(BOTH);
+    try {
+      const people = kind("people").getBoundingClientRect();
+      const addresses = kind("addresses").getBoundingClientRect();
+      const half = people.height / 2;
+      const below = addresses.top + addresses.height / 2;
+      const above = people.top + people.height / 2;
+      const drag = await press(grip("people"));
+      await drag.to(below - half + 2);
+      expect(slot(host)).toEqual(["shown@0"]);
+      await drag.to(below - half + 6);
+      expect(slot(host)).toEqual(["shown@1"]);
+      await drag.to(above + half - 2);
+      expect(slot(host)).toEqual(["shown@1"]);
+      await drag.to(above + half - 6);
+      expect(slot(host)).toEqual(["shown@0"]);
+      await drag.up(above + half - 6);
+    } finally {
+      done();
+    }
+  });
+
   it("is read afresh, where the row's middle falls, when the pointer comes back over Shown from Hidden", async () => {
     const { host, kind, grip, done } = mount(BOTH);
     try {
