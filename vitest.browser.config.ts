@@ -28,6 +28,9 @@ const reducedMotion: BrowserCommand<[active: boolean]> = async (
 // that overflows its menu passes there. Run with `pnpm test:browser`.
 export default defineConfig({
   resolve: { alias },
+  // Pre-bundled up front: found mid-run, it reloads the page and loads a
+  // second React beside the one already running.
+  optimizeDeps: { include: ["react-dom/server"] },
   test: {
     name: "browser",
     include: ["tests/browser/**/*.test.{ts,tsx}"],
