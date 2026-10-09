@@ -585,13 +585,14 @@
   font-size: 13px;
 }
 
-/* A hand at each drag, as tall as the capitals and standing on the line,
-   kept on one line with the words either side of it. */
+/* A hand at each drag, as tall as the capitals and kept on one line with
+   the words either side of it. It stands a tenth of an em low, a pixel past
+   the baseline as a round letter's bowl is, or its round palm looks to float. */
 .fold-note .icon {
   width: auto;
   height: 0.72em;
   stroke-width: 2;
-  vertical-align: baseline;
+  vertical-align: -0.1em;
 }
 
 .fold-note-hold {
