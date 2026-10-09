@@ -687,10 +687,12 @@ export function RowMap({
       ),
     colors: rowMapColors(state),
   };
+  // Each search its own map: a switch ends a drag, a copy and a slot with it.
   switch (route) {
     case "people":
       return (
         <KindRowMap
+          key="people"
           editor={PERSON_EDITOR}
           {...lines}
           layout={state.rows.people.layout}
@@ -705,6 +707,7 @@ export function RowMap({
     case "addresses":
       return (
         <KindRowMap
+          key="addresses"
           editor={ADDRESS_EDITOR}
           {...lines}
           layout={state.rows.addresses.layout}
@@ -722,6 +725,7 @@ export function RowMap({
     case "businesses":
       return (
         <KindRowMap
+          key="businesses"
           editor={BUSINESS_EDITOR}
           {...lines}
           layout={state.rows.businesses.layout}
