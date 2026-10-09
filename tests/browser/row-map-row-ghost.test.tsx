@@ -305,6 +305,40 @@ describe("a line carried by its grip", () => {
     }
   });
 
+  it("is held where it was grabbed, and settles over the line, when lifted from Hidden", async () => {
+    await commands.reducedMotion(true);
+    const { grip, done } = mount(DEFAULT_STYLE);
+    try {
+      const live = grip("people").getBoundingClientRect();
+      const drag = await press(grip("people"));
+      await drag.move(drag.x0 + 30, drag.y0 + 20);
+      const held = ghost()!
+        .querySelector(".row-map-grip")!
+        .getBoundingClientRect();
+      expect(held.left - live.left).toBeCloseTo(30, 0);
+      expect(held.top - live.top).toBeCloseTo(20, 0);
+    } finally {
+      done();
+    }
+    await commands.reducedMotion(false);
+    const again = mount(DEFAULT_STYLE);
+    try {
+      const drag = await press(again.grip("people"));
+      await drag.move(drag.x0, drag.y0);
+      await drag.up(drag.x0, drag.y0);
+      await frame();
+      for (const animation of document.getAnimations()) animation.finish();
+      const copy = ghost()!
+        .querySelector(".row-map-grip")!
+        .getBoundingClientRect();
+      const line = again.grip("people").getBoundingClientRect();
+      expect(copy.top).toBeCloseTo(line.top, 0);
+      expect(copy.left).toBeCloseTo(line.left, 0);
+    } finally {
+      again.done();
+    }
+  });
+
   it("is held flat with reduced motion, and gone the moment it is let go", async () => {
     await commands.reducedMotion(true);
     const { kind, grip, latest, done } = mount(BOTH);

@@ -686,6 +686,14 @@ html[data-dragging] * {
   padding-block: var(--map-end-room);
 }
 
+/* A carried line's copy takes its drawer's classes but holds one line, placed
+   from the line's own box: no end room, or a line lifted from Hidden would sit
+   that much below the pointer. */
+.row-map-row-ghost .row-map-scroll {
+  --map-end-room: 0px;
+  padding-block: 0;
+}
+
 .row-map-hidden::before {
   position: absolute;
   z-index: 0;
