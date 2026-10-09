@@ -1171,7 +1171,9 @@ function KindRowMap<P extends string, F extends string>({
           // Only a change: a slide set again would start over.
           if (row.style.transform !== slide) row.style.transform = slide;
         });
-      const grow = opens && !origin ? `${at.step}px` : "";
+      // A slot opened at the end comes on top of the drawer's own room there.
+      const grow =
+        opens && !origin ? `calc(${at.step}px + var(--map-end-room, 0px))` : "";
       const close = origin && !opens ? `${-at.step}px` : "";
       if (scroller.style.paddingBottom !== grow) {
         scroller.style.paddingBottom = grow;

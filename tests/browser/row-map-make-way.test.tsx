@@ -343,19 +343,25 @@ describe("the blank line a carried line would drop into", () => {
 
   for (const exit of ["Escape", "drop"] as const) {
     it(`leaves nothing slid or resized after a carry over the other drawer ends in ${exit === "drop" ? "a drop" : "Escape"}`, async () => {
-      const { host, grip, done } = mount(BOTH);
+      const { host, kind, grip, done } = mount(BOTH);
       try {
         const hidden = host
           .querySelector<HTMLElement>('[data-drawer="hidden"]')!
           .getBoundingClientRect();
         const over = hidden.top + hidden.height / 2;
-        const drag = await press(grip("people"));
-        await drag.to(over, hidden.left + 60);
         const [shown, held] = [
           ...host.querySelectorAll<HTMLElement>(".row-map-scroll"),
         ];
+        const step =
+          kind("addresses").getBoundingClientRect().top -
+          kind("people").getBoundingClientRect().top;
+        const room = () => parseFloat(getComputedStyle(held!).paddingBottom);
+        const idle = room();
+        const drag = await press(grip("people"));
+        await drag.to(over, hidden.left + 60);
         expect(shown!.style.marginBottom).toMatch(/^-\d/);
-        expect(held!.style.paddingBottom).toMatch(/^\d/);
+        // A slot opened at Hidden's end: one line's step past its own room.
+        expect(room() - idle).toBeCloseTo(step, 1);
         if (exit === "Escape") {
           window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
           await frame();
