@@ -2592,6 +2592,25 @@ html[data-dragging] * {
   grid-column: 1 / -1;
 }
 
+/* Each filter's label, input and hint in rows the filters beside it share:
+   the labels stand on their row's foot, so the inputs start on one line
+   whatever a label wraps to, and the hints on the next. */
+.filters-panel > .field-row {
+  display: grid;
+  grid-row: span 3;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+}
+
+.filters-panel > .field-row > .field-label {
+  align-self: end;
+  margin-bottom: 6px;
+}
+
+.filters-panel > .field-row > .field-hint {
+  margin-top: 6px;
+}
+
 .demo-preview .bl-ac-input:disabled {
   background: #f7f8fa;
   color: var(--muted);
