@@ -903,12 +903,12 @@ function KindRowMap<P extends string, F extends string>({
     refocus.current = null;
   });
   const moving = drag?.moving === true ? drag : null;
-  // A line lifted while another still settles: the one let go is shown at
-  // once, rather than kept out of sight until a copy no longer drawn settles.
-  const liftsLine = moving?.lifted.line === true;
+  // Anything lifted while a line still settles: the line let go is shown at
+  // once, and its copy goes, rather than waiting on a copy's timer.
+  const lifting = moving !== null;
   useLayoutEffect(() => {
-    if (liftsLine) setLanding(null);
-  }, [liftsLine]);
+    if (lifting) setLanding(null);
+  }, [lifting]);
   const inHand: Landing | null =
     moving?.lifted.line === true
       ? {

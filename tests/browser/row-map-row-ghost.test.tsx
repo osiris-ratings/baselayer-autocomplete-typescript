@@ -335,6 +335,26 @@ describe("a line carried by its grip", () => {
     }
   });
 
+  it("lets a dropped line be seen again, its copy gone, when a field is lifted before it has settled", async () => {
+    const { host, kind, grip, done } = mount(BOTH);
+    try {
+      const below = kind("addresses").getBoundingClientRect();
+      let drag = await press(grip("people"));
+      await drag.move(below.left + 40, below.bottom - 2);
+      await drag.up(below.left + 40, below.bottom - 2);
+      // A field lifted at once, while the line's copy is still settling.
+      drag = await press(host.querySelector<HTMLElement>(".row-map-chip")!);
+      await drag.move(drag.x0 + 20, drag.y0 + 6);
+      expect(document.querySelector(".row-map-ghost")).not.toBeNull();
+      expect(ghost()).toBeNull();
+      expect(getComputedStyle(kind("people")).opacity).toBe("1");
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      await settled();
+    } finally {
+      done();
+    }
+  });
+
   it("is held by its grip, showing what was in sight, when the line was scrolled sideways", async () => {
     const { host, kind, grip, done } = mount(BOTH, 280);
     try {
