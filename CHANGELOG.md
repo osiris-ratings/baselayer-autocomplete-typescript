@@ -6,6 +6,14 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+### Fixed
+
+- A person's or an address's business lines draw their states at the side
+  they are placed on. At the right, their squares end at one edge down the
+  group, one gap before the role, as a business row's do, where they started
+  at the column's left and left a ragged gap; the +N stays last. At the left
+  they start one gap after the field before them, as before.
+
 ## [0.4.0] - 2026-10-08
 
 Find a business through a person or through an address. The people and addresses

@@ -600,11 +600,13 @@
 }
 
 /* On a line under a row the states and the role are columns: the states as
-   wide as three squares and a +N, the role as wide as the menu's longest, so
-   the squares start at one edge down the group. The role is a step quieter
-   than the name. */
+   wide as three squares and a +N, the role as wide as the menu's longest.
+   The squares keep to the side they are placed on: at the right they end at
+   one edge down the group, one gap before the role, as a business row's do.
+   The role is a step quieter than the name. */
 .bl-ac-group-trailing > .bl-ac-states {
   box-sizing: border-box;
+  justify-content: flex-end;
   min-width: 7.25rem;
 }
 
