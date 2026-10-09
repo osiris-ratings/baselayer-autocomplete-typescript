@@ -1437,7 +1437,7 @@ export function App() {
                     onChange={setStyle}
                     route={mode}
                     routes={offered}
-                    onRoute={switchSearch}
+                    onRoute={setSearchBy}
                   />
                 </section>
               )}

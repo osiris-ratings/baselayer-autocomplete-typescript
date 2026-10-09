@@ -117,6 +117,28 @@ describe("switching the search with its menu open", () => {
     expect(field("demo-person").getAttribute("aria-expanded")).not.toBe("true");
   });
 
+  it("leaves the focus on a Row of tab in Styling, which switches the search but carries no menu", async () => {
+    const { user } = await connect();
+    const styleHere = screen
+      .queryAllByRole("button")
+      .find(button => /Style here/.test(button.textContent ?? ""));
+    await user.click(styleHere ?? screen.getByTestId("demo-switch-styling"));
+    const components = screen
+      .getAllByRole("button")
+      .find(button => /Components/.test(button.textContent ?? ""))!;
+    if (components.getAttribute("aria-expanded") === "false") {
+      await user.click(components);
+    }
+    await user.click(field("demo-business"));
+    await user.type(field("demo-business"), "harbor");
+    const person = within(
+      screen.getByRole("tablist", { name: "Row of" }),
+    ).getByRole("tab", { name: "Person" });
+    await user.click(person);
+    expect(person.getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(person);
+  });
+
   it("switches from the keyboard as before, the focus kept on the words", async () => {
     const { user } = await connect();
     tab("a business").focus();
