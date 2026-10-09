@@ -1362,7 +1362,7 @@ function KindRowMap<P extends string, F extends string>({
         <div
           className="row-map row-map-hidden"
           role="group"
-          aria-label="Hidden lines"
+          aria-label="Hidden lines and fields"
         >
           <div className="row-map-scroll-frame">
             <div className="row-map-scroll" {...edges(hiddenScroller)}>

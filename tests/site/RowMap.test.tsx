@@ -901,7 +901,7 @@ describe("the row map as the row's configuration", () => {
     ).toBeNull();
   });
 
-  it("names each drawer's group of lines", () => {
+  it("names each drawer's group: Shown its lines, Hidden its lines and fields", () => {
     const { drawer } = mountOn("people");
     expect(
       drawer("shown")
@@ -912,7 +912,7 @@ describe("the row map as the row's configuration", () => {
       drawer("hidden")
         .querySelector('[role="group"]')!
         .getAttribute("aria-label"),
-    ).toBe("Hidden lines");
+    ).toBe("Hidden lines and fields");
   });
 
   it("lists what a field reads only for the lines the row shows", () => {

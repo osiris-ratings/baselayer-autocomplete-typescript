@@ -186,6 +186,10 @@ describe("the Hidden drawer's two titles", () => {
       for (const title of titles) {
         expect(title.closest('[aria-hidden="true"]')).not.toBeNull();
       }
+      // The drawer's name covers both of its parts.
+      expect(
+        hidden.querySelector('[role="group"]')!.getAttribute("aria-label"),
+      ).toBe("Hidden lines and fields");
     } finally {
       done();
     }
