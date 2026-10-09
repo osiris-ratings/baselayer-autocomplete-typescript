@@ -115,6 +115,15 @@ const faces = (row: Element) =>
     face => face.textContent,
   );
 
+/** Where each place and the Enabled cell start, from `from`'s left. */
+const places = (row: Element, from: number) =>
+  [...row.querySelectorAll(".row-map-place, .row-map-check-cell")].map(each =>
+    Math.round(each.getBoundingClientRect().left - from),
+  );
+/** A line's places from its own grip. */
+const fromGrip = (row: Element) =>
+  places(row, row.querySelector(".row-map-grip")!.getBoundingClientRect().left);
+
 /** Both of a business's lines shown: its officers, then its addresses. */
 const BOTH = withListed(
   withListed(DEFAULT_STYLE, "businesses", "people", true),
@@ -386,6 +395,24 @@ describe("a line carried by its grip", () => {
       done();
     }
   });
+
+  for (const width of [320, 280]) {
+    it(`is laid out as the line is, each place and the Enabled cell where they are on it, at ${width}px`, async () => {
+      await commands.reducedMotion(true);
+      const { kind, grip, done } = mount(BOTH, width);
+      try {
+        const live = fromGrip(kind("people"));
+        const drag = await press(grip("people"));
+        await drag.move(drag.x0 + 20, drag.y0 + 10);
+        expect(fromGrip(ghost()!.querySelector(".row-map-kind")!)).toEqual(
+          live,
+        );
+        await drag.up(drag.x0 + 20, drag.y0 + 10);
+      } finally {
+        done();
+      }
+    });
+  }
 
   it("is never copied when Alt and an arrow move it", async () => {
     const { grip, latest, done } = mount(BOTH);

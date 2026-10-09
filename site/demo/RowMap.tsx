@@ -604,6 +604,9 @@ function RowGhost({
     // Drawn as it rests, not as the carried line is marked in its drawer.
     copy.removeAttribute("data-dragged");
     copy.style.transform = "";
+    // As wide as the line, which its drawer's widest line can stretch, so
+    // each place and the Enabled cell sit where they do on it.
+    copy.style.width = `${row.getBoundingClientRect().width}px`;
     for (const named of copy.querySelectorAll("[id]")) {
       named.removeAttribute("id");
     }
