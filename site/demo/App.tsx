@@ -170,6 +170,9 @@ function useSessionScope(
   return applied?.firstGrant?.grant.scope ?? DEFAULT_SESSION_SCOPE;
 }
 
+/** The most a filter's name or address may be, as the service takes it. */
+const MAX_FILTER_CHARS = 256;
+
 /** What the switch above the field calls each search. */
 /** The field's label in each search but the business one, which Styling sets. */
 const FIELD_LABELS: Record<Exclude<Route, "businesses">, string> = {
@@ -508,6 +511,7 @@ export function App() {
   const [person, setPerson] = useState("");
   const [states, setStates] = useState("");
   const [address, setAddress] = useState("");
+  const [business, setBusiness] = useState("");
   const [style, setStyle] = useState<StyleState>(INITIAL_STYLE);
 
   const origin = typeof location === "undefined" ? "" : location.origin;
@@ -607,42 +611,57 @@ export function App() {
     window.setTimeout(() => setCheck(result), FOLD_MS);
   };
 
-  // One field per filter, read by the search that takes it: the officer and
-  // address only by the business search, the states by all three (a
-  // business's own, a person's businesses', an address's own).
-  const showPerson = mode === "businesses" && allowed.has("person.name");
-  const showAddress = mode === "businesses" && allowed.has("address.text");
+  // One field per filter, read by each search that takes it: a person's name
+  // by the business and address searches, an address by the business and
+  // person searches, a business's name by the person and address searches,
+  // and the states by all three (a business's own, a person's businesses',
+  // an address's own).
+  const showPerson = allowed.has("person.name");
+  const showAddress = allowed.has("address.text");
+  const showBusiness = allowed.has("business.name");
   const showStates = allowed.has(
     mode === "people" ? "business.state" : "state",
   );
   const codes = useMemo(() => parseStates(states), [states]);
+  const named = showPerson ? person.trim() : "";
+  const placed = showAddress ? address.trim() : "";
+  const firm = showBusiness ? business.trim() : "";
   const filters: Filters | undefined = useMemo(() => {
     const f: Filters = {};
-    if (showPerson && person.trim()) f.person = { name: person.trim() };
+    if (named) f.person = { name: named };
     if (codes.length > 0) f.state = codes;
-    if (showAddress && address.trim()) f.address = { text: address.trim() };
+    if (placed) f.address = { text: placed };
     return Object.keys(f).length > 0 ? f : undefined;
-  }, [person, codes, address, showPerson, showAddress]);
-  const peopleFilters: PeopleFilters | undefined = useMemo(
-    () =>
-      showStates && codes.length > 0
-        ? { business: { state: codes } }
-        : undefined,
-    [codes, showStates],
-  );
-  const addressFilters: AddressesFilters | undefined = useMemo(
-    () => (showStates && codes.length > 0 ? { state: codes } : undefined),
-    [codes, showStates],
-  );
+  }, [named, codes, placed]);
+  const peopleFilters: PeopleFilters | undefined = useMemo(() => {
+    const f: PeopleFilters = {};
+    const inStates = showStates && codes.length > 0;
+    if (inStates || firm) {
+      f.business = {
+        ...(inStates ? { state: codes } : {}),
+        ...(firm ? { name: firm } : {}),
+      };
+    }
+    if (placed) f.address = { text: placed };
+    return Object.keys(f).length > 0 ? f : undefined;
+  }, [codes, showStates, firm, placed]);
+  const addressFilters: AddressesFilters | undefined = useMemo(() => {
+    const f: AddressesFilters = {};
+    if (showStates && codes.length > 0) f.state = codes;
+    if (named) f.person = { name: named };
+    if (firm) f.business = { name: firm };
+    return Object.keys(f).length > 0 ? f : undefined;
+  }, [codes, showStates, named, firm]);
   // A search out of sight keeps the filters it last searched with, so the
   // filters following the search in sight never ask its kept text again.
   const heldFilters = useHeld(filters, mode === "businesses");
   const heldPeopleFilters = useHeld(peopleFilters, mode === "people");
   const heldAddressFilters = useHeld(addressFilters, mode === "addresses");
   const filterCount = [
-    showPerson ? person.trim() : "",
+    named,
     showStates ? codes.join("") : "",
-    showAddress ? address.trim() : "",
+    firm,
+    placed,
   ].filter(Boolean).length;
 
   // A business picked through a person or an address: the field keeps to the
@@ -910,7 +929,17 @@ export function App() {
                 the officer or the address is marked, a state on its flag.
               </p>
               {showPerson && (
-                <Field label="Officer or agent name" optional>
+                <Field
+                  label={
+                    mode === "addresses"
+                      ? "Person's name"
+                      : "Officer or agent name"
+                  }
+                  optional
+                  {...(mode === "addresses"
+                    ? { hint: "Someone who filed from the address." }
+                    : {})}
+                >
                   <input
                     value={person}
                     onChange={e => {
@@ -919,6 +948,7 @@ export function App() {
                     }}
                     placeholder="dana"
                     autoComplete="off"
+                    maxLength={MAX_FILTER_CHARS}
                   />
                 </Field>
               )}
@@ -941,8 +971,38 @@ export function App() {
                   />
                 </Field>
               )}
+              {showBusiness && (
+                <Field
+                  label="Business name"
+                  optional
+                  hint={
+                    mode === "people"
+                      ? "A business they hold a role on."
+                      : "A business that filed there."
+                  }
+                >
+                  <input
+                    value={business}
+                    onChange={e => {
+                      setBusiness(e.target.value);
+                      setPicks(NO_PICKS);
+                    }}
+                    placeholder="harbor concrete"
+                    autoComplete="off"
+                    maxLength={MAX_FILTER_CHARS}
+                  />
+                </Field>
+              )}
               {showAddress && (
-                <Field label="Address" optional>
+                <Field
+                  label="Address"
+                  optional
+                  {...(mode === "people"
+                    ? {
+                        hint: "One they filed from, or a business of theirs has its office at.",
+                      }
+                    : {})}
+                >
                   <input
                     value={address}
                     onChange={e => {
@@ -951,6 +1011,7 @@ export function App() {
                     }}
                     placeholder="1200 Tallowmere Rd"
                     autoComplete="off"
+                    maxLength={MAX_FILTER_CHARS}
                   />
                 </Field>
               )}

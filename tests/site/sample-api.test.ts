@@ -121,6 +121,110 @@ describe("the made-up API's searches", () => {
     ).toEqual(["CONCRETE HARBOR PARTNERS, LP"]);
   });
 
+  it("keeps the people with a role on a business whose name fits, marked", () => {
+    const parsed = parseSuggestResponse(
+      "people",
+      get("/autocomplete/people?q=dana&business.name=northshore").body,
+    );
+
+    expect(parsed.suggestions.map(row => row.label)).toEqual(["Dana Kessler"]);
+    expect(
+      parsed.suggestions[0]!.related.businesses.items.filter(
+        item => item.matched,
+      ).map(item => item.label),
+    ).toEqual(["NORTHSHORE PUMPING, LLC"]);
+  });
+
+  it("keeps the people who filed from an address that fits, the address marked", () => {
+    const parsed = parseSuggestResponse(
+      "people",
+      get(
+        "/autocomplete/people?q=dana&include=businesses,addresses&address.text=48%20corriway",
+      ).body,
+    );
+
+    expect(parsed.suggestions.map(row => row.label)).toEqual([
+      "Dana Whitfield",
+    ]);
+    expect(
+      parsed.suggestions[0]!.related.addresses.items.filter(
+        item => item.matched,
+      ).map(item => item.label),
+    ).toEqual(["48 Corriway St, Pittsburgh, PA 15206"]);
+  });
+
+  it("keeps the people on a business whose own office the address is, but never through its agent's", () => {
+    const office = parseSuggestResponse(
+      "people",
+      get("/autocomplete/people?q=dana&address.text=15%20corvel").body,
+    );
+    expect(office.suggestions.map(row => row.label)).toEqual([
+      "Dana Whitfield",
+    ]);
+    expect(
+      office.suggestions[0]!.related.businesses.items.filter(
+        item => item.matched,
+      ).map(item => item.label),
+    ).toEqual(["HARBOR CONCRETE SUPPLY, INC."]);
+
+    // The registered agent's office of three of the Danas' businesses.
+    const agents = parseSuggestResponse(
+      "people",
+      get("/autocomplete/people?q=dana&address.text=77%20quillfeather").body,
+    );
+    expect(agents.suggestions).toEqual([]);
+  });
+
+  it("keeps a person only when every filter finds something of theirs", () => {
+    const parsed = parseSuggestResponse(
+      "people",
+      get(
+        "/autocomplete/people?q=dana&business.state=PA&address.text=915%20silverkell",
+      ).body,
+    );
+
+    expect(parsed.suggestions.map(row => row.label)).toEqual(["Dana Kessler"]);
+  });
+
+  it("keeps the addresses a person whose name fits filed from, marked", () => {
+    const parsed = parseSuggestResponse(
+      "addresses",
+      get(
+        "/autocomplete/addresses?q=1200&include=businesses,people&person.name=luis",
+      ).body,
+    );
+    expect(parsed.suggestions.map(row => row.label)).toEqual([
+      "1200 Tallowmere Rd, Pittsburgh, PA 15212",
+    ]);
+    expect(
+      parsed.suggestions[0]!.related.people.items.filter(
+        item => item.matched,
+      ).map(item => item.label),
+    ).toEqual(["Luis Ortega"]);
+
+    const nobody = parseSuggestResponse(
+      "addresses",
+      get("/autocomplete/addresses?q=1200&person.name=priya").body,
+    );
+    expect(nobody.suggestions).toEqual([]);
+  });
+
+  it("keeps the addresses a business whose name fits filed at, marked", () => {
+    const parsed = parseSuggestResponse(
+      "addresses",
+      get("/autocomplete/addresses?q=77&business.name=northshore").body,
+    );
+
+    expect(parsed.suggestions.map(row => row.label)).toEqual([
+      "77 Quillfeather Ln Ste 300, Dover, DE 19904",
+    ]);
+    expect(
+      parsed.suggestions[0]!.related.businesses.items.filter(
+        item => item.matched,
+      ).map(item => item.label),
+    ).toEqual(["NORTHSHORE PUMPING, LLC"]);
+  });
+
   it("finds addresses by their words, and filters them by state", () => {
     const found = parseSuggestResponse(
       "addresses",
