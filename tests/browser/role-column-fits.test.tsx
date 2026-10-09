@@ -1,5 +1,6 @@
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import type {
@@ -259,6 +260,49 @@ describe("the role column on a person's or an address's lines", () => {
       }
     });
   }
+
+  it("draws the column as wide as its longest role's characters until it is measured, as a server renders it", () => {
+    const host = document.createElement("div");
+    host.style.width = "560px";
+    host.style.fontFamily = "sans-serif";
+    host.innerHTML = renderToStaticMarkup(
+      <AddressAutocompleteView
+        id="addresses"
+        value="x"
+        suggestions={[place(["agent", "principal", "agent"])]}
+        {...COMMON}
+      />,
+    );
+    document.body.append(host);
+    try {
+      const drawn = [
+        ...host.querySelectorAll<HTMLElement>(
+          ".bl-ac-group-trailing > .bl-ac-role",
+        ),
+      ];
+      expect(drawn.map(role => role.textContent)).toEqual([
+        "agent",
+        "principal office",
+        "agent",
+      ]);
+      // Sixteen characters, "principal office", in the roles' own font.
+      const probe = document.createElement("span");
+      probe.style.cssText = "display: inline-block; width: 16ch";
+      drawn[0]!.append(probe);
+      const chars = probe.getBoundingClientRect().width;
+      probe.remove();
+      for (const role of drawn) {
+        expect(parseFloat(getComputedStyle(role).minWidth)).toBeCloseTo(
+          chars,
+          1,
+        );
+      }
+      const lefts = drawn.map(role => role.getBoundingClientRect().left);
+      expect(Math.max(...lefts) - Math.min(...lefts)).toBeLessThanOrEqual(0.5);
+    } finally {
+      host.remove();
+    }
+  });
 
   it("fits the roles when a menu closed as its answer came is opened on that answer", () => {
     const answer: Answer = {
