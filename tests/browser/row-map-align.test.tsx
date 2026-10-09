@@ -163,9 +163,9 @@ describe("the Hidden drawer's fields", () => {
           Math.abs(chip.getBoundingClientRect().left - firstChip(hidden)),
         ).toBeLessThanOrEqual(1);
         // A rule between the hidden lines and the fields.
-        const rule = getComputedStyle(tray);
-        expect(rule.borderTopStyle).toBe("solid");
-        expect(parseFloat(rule.borderTopWidth)).toBeGreaterThan(0);
+        const rule = getComputedStyle(tray, "::before");
+        expect(rule.content).not.toBe("none");
+        expect(parseFloat(rule.height)).toBeGreaterThan(0);
         expect(tray.getBoundingClientRect().top).toBeGreaterThanOrEqual(
           hidden.querySelector(".row-map-kind")!.getBoundingClientRect().bottom,
         );

@@ -626,9 +626,10 @@ describe("the row map as the row's configuration", () => {
         each => each.dataset.drop,
       ),
     ).toEqual(["shown"]);
-    expect(document.querySelector(".row-map-ghost")?.textContent).toBe(
-      "Their addresses",
-    );
+    expect(
+      document.querySelector<HTMLElement>(".row-map-row-ghost .row-map-kind")
+        ?.dataset.relation,
+    ).toBe("addresses");
     fireEvent.pointerUp(addresses, { clientX: 40, clientY: 30 });
   });
 
@@ -900,7 +901,7 @@ describe("the row map as the row's configuration", () => {
     ).toBeNull();
   });
 
-  it("names each drawer's group of lines", () => {
+  it("names each drawer's group: Shown its lines, Hidden its lines and fields", () => {
     const { drawer } = mountOn("people");
     expect(
       drawer("shown")
@@ -911,7 +912,7 @@ describe("the row map as the row's configuration", () => {
       drawer("hidden")
         .querySelector('[role="group"]')!
         .getAttribute("aria-label"),
-    ).toBe("Hidden lines");
+    ).toBe("Hidden lines and fields");
   });
 
   it("lists what a field reads only for the lines the row shows", () => {
@@ -931,17 +932,20 @@ describe("the row map as the row's configuration", () => {
     expect(reads(shown.view)).toContain("addressRole");
   });
 
-  it("carries a line as its name on a card, the line itself marked as carried", () => {
+  it("carries a line as its whole row, the line itself marked as carried", () => {
     const { grip, drawer, kind } = mountOn("people");
     vi.spyOn(document, "elementFromPoint").mockReturnValue(drawer("shown"));
     const addresses = grip("addresses")!;
     fireEvent.pointerDown(addresses, { button: 0, clientX: 0, clientY: 0 });
     fireEvent.pointerMove(addresses, { buttons: 1, clientX: 40, clientY: 30 });
 
-    const ghost = document.querySelector<HTMLElement>(".row-map-ghost")!;
-    expect(ghost.classList.contains("row-map-line-ghost")).toBe(true);
-    expect(ghost.classList.contains("row-map-place")).toBe(false);
-    expect(ghost.style.width).toBe("");
+    expect(document.querySelector(".row-map-ghost")).toBeNull();
+    const ghost = document.querySelector<HTMLElement>(".row-map-row-ghost")!;
+    expect(ghost.getAttribute("aria-hidden")).toBe("true");
+    expect(ghost.hasAttribute("inert")).toBe(true);
+    const copy = ghost.querySelector<HTMLElement>(".row-map-kind")!;
+    expect(copy.dataset.relation).toBe("addresses");
+    expect(copy.dataset.dragged).toBeUndefined();
     expect(kind("addresses").dataset.dragged).toBe("true");
     fireEvent.pointerUp(addresses, { clientX: 40, clientY: 30 });
     expect(kind("addresses").dataset.dragged).toBeUndefined();

@@ -317,6 +317,12 @@
   text-transform: uppercase;
 }
 
+/* A count's line is never taller than the title's, so the head keeps the
+   title's height whatever its summary says. */
+.fold-nested .fold-summary {
+  line-height: 1;
+}
+
 .fold-nested .fold-body-inner::before {
   height: 14px;
 }
@@ -579,6 +585,34 @@
   font-size: 13px;
 }
 
+/* A hand at each drag, as tall as the capitals and kept on one line with
+   the words either side of it. It stands a tenth of an em low, a pixel past
+   the baseline as a round letter's bowl is, or its round palm looks to float. */
+.fold-note .icon {
+  width: auto;
+  height: 0.72em;
+  stroke-width: 2;
+  vertical-align: -0.1em;
+}
+
+.fold-note-hold {
+  white-space: nowrap;
+}
+
+/* The drawers' and the column's names, as their titles read: underlined in
+   the note's own ink, so they never read as links. */
+.fold-note-term {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+/* Something carried keeps the grabbing hand wherever the pointer goes. */
+html[data-dragging],
+html[data-dragging] * {
+  cursor: grabbing !important;
+}
+
 .fold-subhead {
   margin: 8px 0 6px;
 }
@@ -645,6 +679,21 @@
   position: relative;
 }
 
+/* Its scroller clips both ways, so it keeps a ring's room at each end, or
+   the first and last rings there are cut. */
+.row-map-hidden .row-map-scroll {
+  --map-end-room: var(--map-ground-ring);
+  padding-block: var(--map-end-room);
+}
+
+/* A carried line's copy takes its drawer's classes but holds one line, placed
+   from the line's own box: no end room, or a line lifted from Hidden would sit
+   that much below the pointer. */
+.row-map-row-ghost .row-map-scroll {
+  --map-end-room: 0px;
+  padding-block: 0;
+}
+
 .row-map-hidden::before {
   position: absolute;
   z-index: 0;
@@ -672,14 +721,14 @@
   left: calc(var(--map-grip-cell) + var(--map-indent));
   background: var(--map-bg, var(--paper));
   border-radius: var(--map-line-radius);
-  box-shadow: 0 0 0 2px var(--map-bg, var(--paper));
+  box-shadow: 0 0 0 var(--map-ground-ring) var(--map-bg, var(--paper));
 }
 
 .row-map-hidden .row-map-chip,
 .row-map-hidden .row-map-drawer-label,
 .row-map-hidden .row-map-drawer-hint {
   background: var(--map-bg, var(--paper));
-  box-shadow: 0 0 0 2px var(--map-bg, var(--paper));
+  box-shadow: 0 0 0 var(--map-ground-ring) var(--map-bg, var(--paper));
 }
 
 .row-map-hidden > .row-map-scroll-frame,
@@ -779,6 +828,7 @@
   --map-row-gap: 8px;
   /* The room each side of a heading or a note on a ground of its own. */
   --map-ground-pad: 5px;
+  --map-ground-ring: 2px;
   /* One gap down the Enabled column: heading, line, box, line, box. */
   --map-guide-gap: 6px;
   /* The checkbox and a little room: its heading may run left of it. */
@@ -1091,19 +1141,65 @@
   cursor: not-allowed;
 }
 
-/* A line in flight is its name, on a card. */
-.row-map-line-ghost {
-  display: inline-flex;
-  align-items: center;
-  height: 26px;
-  padding: 0 10px;
-  background: var(--map-bg, var(--paper));
-  border: 1px solid var(--blue);
-  border-radius: var(--map-pill-radius, 3px);
-  color: var(--map-ink);
-  font-size: 12px;
-  font-weight: 600;
-  white-space: nowrap;
+/* A line in hand is its whole row, on a card of the map's own, lifted and
+   tilted about where it was grabbed. Let go, it settles flat into its place,
+   where the live row waits unseen until it has. */
+.row-map-row-ghost {
+  position: fixed;
+  z-index: 1000;
+  margin: 0;
+  pointer-events: none;
+}
+
+.row-map-row-ghost > .row-map {
+  display: block;
+  padding: 0;
+  border: 0;
+  box-shadow:
+    0 0 0 1px var(--map-border, var(--line-soft)),
+    0 10px 24px rgba(9, 35, 79, 0.18);
+  transform: rotate(-1deg);
+}
+
+/* The copy's view of its line, scrolled as the line was, never by hand. */
+.row-map-row-ghost .row-map-scroll {
+  position: relative;
+  overflow: hidden;
+}
+
+/* The drawer's width to scroll across, taking no room in the copy. */
+.row-map-ghost-track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 1px;
+  visibility: hidden;
+}
+
+.row-map-row-ghost[data-settling] {
+  transition:
+    left 180ms ease-out,
+    top 180ms ease-out;
+}
+
+.row-map-row-ghost[data-settling] > .row-map {
+  box-shadow:
+    0 0 0 1px var(--map-border, var(--line-soft)),
+    0 2px 6px rgba(9, 35, 79, 0.06);
+  transform: none;
+  transition:
+    transform 180ms ease-out,
+    box-shadow 180ms ease-out;
+}
+
+.row-map-kind[data-landing] {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-map-row-ghost > .row-map {
+    transform: none;
+  }
 }
 
 /* While a line is carried, the drawer it would go to says so. */
@@ -1419,9 +1515,14 @@
 }
 
 .row-map[data-dragging] .row-map-place:not([data-accepts]),
-.row-map-chip[data-dragged],
-.row-map-kind[data-dragged] {
+.row-map-chip[data-dragged] {
   opacity: 0.4;
+}
+
+/* A carried line is not drawn in its drawer: where it would drop is a blank
+   line, and the copy in hand is all there is of it. */
+.row-map-kind[data-dragged] {
+  opacity: 0;
 }
 
 /* A place nothing can go in until the one beside it is filled is not drawn,
@@ -1431,8 +1532,14 @@
 }
 
 /* The fields the row leaves out, in the Hidden drawer under its hidden
-   lines, ruled off from them, and starting where the lines' chips do. */
+   lines, ruled off from them, under a title of their own, and starting
+   where the lines' chips do. */
 .row-map-tray {
+  display: grid;
+  gap: var(--map-row-gap);
+}
+
+.row-map-tray-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -1443,14 +1550,32 @@
   font-size: 12px;
 }
 
-.row-map-tray:empty {
-  display: none;
-}
-
+/* The rule: two hairlines of its own faint ink (map-ink.ts), its ends
+   rounded, at the top of the room above the fields' title, so nothing after
+   it moves. */
 .row-map-tray[data-ruled] {
   margin-top: 4px;
-  padding-top: 10px;
-  border-top: 1px solid var(--map-border, var(--line-soft));
+  padding-top: 11px;
+}
+
+.row-map-tray[data-ruled]::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--map-rule, var(--map-guide));
+  content: "";
+}
+
+/* Forced colours paint a background as the canvas, which would hide the rule:
+   it takes the text's colour there. */
+@media (forced-colors: active) {
+  .row-map-tray[data-ruled]::before {
+    background: CanvasText;
+    forced-color-adjust: none;
+  }
 }
 
 .row-map-chip {

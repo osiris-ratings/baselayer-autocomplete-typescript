@@ -237,8 +237,9 @@ order it lists them: a line is dragged by its grip to another spot in Shown,
 the other lines making way, or into Hidden to leave it out, and back again as
 it was. A shown line's Enabled checkbox, in a column with a faint guide down it,
 marks it as one that can be chosen; an unticked line is drawn dimmed, as the
-menu draws it. Hidden, faintly striped, holds the hidden lines and the fields
-the row leaves out. A field moves only within its own line, and a segment's icon
+menu draws it. Hidden, faintly striped, holds the hidden lines and, ruled off
+under them, the hidden fields, the fields the row leaves out, each part under
+its own title. A field moves only within its own line, and a segment's icon
 goes on or off from its chip: on, off with a slash, or frozen on a hidden line.
 Each line keeps to one row, scrolling sideways when it runs out of room. The
 rows pretend "harbor concr" was typed, one word in full and the next only begun,

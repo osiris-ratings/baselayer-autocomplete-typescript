@@ -24,7 +24,8 @@ export type IconName =
   | "search"
   | "building"
   | "home"
-  | "mail";
+  | "mail"
+  | "hand";
 
 const PATHS: Record<IconName, string> = {
   caret: "M9 6h6M9 18h6M12 6v12",
@@ -58,13 +59,20 @@ const PATHS: Record<IconName, string> = {
     "M5 21V4h9v17M14 9h5v12M3 21h18M8.5 8h2M8.5 12h2M8.5 16h2M16.5 13h.01M16.5 17h.01",
   home: "M3 11.5L12 4l9 7.5M5.5 10v10h13V10M10 20v-5h4v5M16 7.33V5h2.5v4.42",
   mail: "M3.5 6h17v12h-17zM4 7l8 6 8-6",
+  // An open hand, as a drag takes hold: four fingers and the thumb.
+  hand: "M7 13V6.5a1.5 1.5 0 0 1 3 0V11M10 11V4.5a1.5 1.5 0 0 1 3 0V11M13 11V5.5a1.5 1.5 0 0 1 3 0V11M16 11.5V7.5a1.5 1.5 0 0 1 3 0V14a6 6 0 0 1-6 6h-1.5a5.5 5.5 0 0 1-4.6-2.5l-3.1-4.9a1.5 1.5 0 0 1 2.5-1.6L7 13",
+};
+
+/** An icon drawn tight to its own box, to be sized against the text. */
+const BOXES: Partial<Record<IconName, string>> = {
+  hand: "2.3 2.25 17.45 18.5",
 };
 
 export function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
   return (
     <svg
       aria-hidden="true"
-      viewBox="0 0 24 24"
+      viewBox={BOXES[name] ?? "0 0 24 24"}
       width={size}
       height={size}
       fill="none"

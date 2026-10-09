@@ -96,8 +96,13 @@ describe("the search the session's scope offers", () => {
     it(`is the first it offers, ${shown}'s, titled and selected, under a grant of ${routes.join(" and ")}`, async () => {
       await connect(routes);
 
+      // Every search it offers is mounted, to keep its answer; only the
+      // first is in sight.
       for (const id of FIELDS) {
-        expect(field(id) !== null, id).toBe(id === shown);
+        const each = field(id);
+        expect(each !== null && each.closest("[hidden]") === null, id).toBe(
+          id === shown,
+        );
       }
       expect(screen.getByRole("heading", { name: title })).toBeTruthy();
       if (tabs.length === 0) {

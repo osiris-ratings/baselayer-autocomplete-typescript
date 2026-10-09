@@ -177,6 +177,20 @@ const FIELD_LABELS: Record<Exclude<Route, "businesses">, string> = {
   addresses: "Address",
 };
 
+/** Each search's component id; its field is `<id>-input`. */
+const FIELD_IDS: Record<Route, string> = {
+  businesses: "demo-business",
+  people: "demo-person",
+  addresses: "demo-address",
+};
+
+/** `value` while `active`, and the last of it before then while not. */
+function useHeld<T>(value: T, active: boolean): T {
+  const [held, setHeld] = useState(value);
+  if (active && held !== value) setHeld(value);
+  return active ? value : held;
+}
+
 function useLog(client: AutocompleteClient | null): [LogLine[], () => void] {
   const [lines, setLines] = useState<LogLine[]>([]);
   const next = useRef(1);
@@ -465,6 +479,32 @@ export function App() {
   const [picks, setPicks] = useState<Record<Route, Picked | null>>(NO_PICKS);
   // Which search the field runs.
   const [searchBy, setSearchBy] = useState<Route>("businesses");
+  // A search's field focused as the pointer goes down on the title's words:
+  // the switch it makes opens the new search's menu in its own field. The
+  // keyboard, which reaches the words from outside the field, switches as it
+  // always has.
+  const fieldWasActive = useRef(false);
+  const carryTo = useRef<Route | null>(null);
+  useEffect(() => {
+    const note = () => {
+      const active = document.activeElement;
+      fieldWasActive.current =
+        active instanceof HTMLInputElement &&
+        Object.values(FIELD_IDS).some(id => active.id === `${id}-input`);
+    };
+    const forget = () => {
+      fieldWasActive.current = false;
+    };
+    document.addEventListener("pointerdown", note, true);
+    // A press ends in a click, or, a touch that scrolls, in a cancel.
+    document.addEventListener("click", forget);
+    document.addEventListener("pointercancel", forget);
+    return () => {
+      document.removeEventListener("pointerdown", note, true);
+      document.removeEventListener("click", forget);
+      document.removeEventListener("pointercancel", forget);
+    };
+  }, []);
   const [person, setPerson] = useState("");
   const [states, setStates] = useState("");
   const [address, setAddress] = useState("");
@@ -495,9 +535,21 @@ export function App() {
     ? searchBy
     : (offered[0] ?? searchBy);
   const name = names[mode];
+  // Only a switch carries: the search already in sight, chosen again, would
+  // leave a carry armed for whichever switch next comes back to it.
+  const switchSearch = (route: Route) => {
+    carryTo.current = fieldWasActive.current && route !== mode ? route : null;
+    setSearchBy(route);
+  };
+  useEffect(() => {
+    if (carryTo.current !== mode) return;
+    carryTo.current = null;
+    const input = document.getElementById(`${FIELD_IDS[mode]}-input`);
+    input?.focus();
+    // The field's own way to open: a click toggles a closed menu open.
+    input?.click();
+  }, [mode]);
   const picked = picks[mode];
-  const setName = (value: string) =>
-    setNames(all => ({ ...all, [mode]: value }));
   const setPicked = (pick: Picked | null) =>
     setPicks(all => ({ ...all, [mode]: pick }));
   const allowed = new Set(
@@ -582,6 +634,11 @@ export function App() {
     () => (showStates && codes.length > 0 ? { state: codes } : undefined),
     [codes, showStates],
   );
+  // A search out of sight keeps the filters it last searched with, so the
+  // filters following the search in sight never ask its kept text again.
+  const heldFilters = useHeld(filters, mode === "businesses");
+  const heldPeopleFilters = useHeld(peopleFilters, mode === "people");
+  const heldAddressFilters = useHeld(addressFilters, mode === "addresses");
   const filterCount = [
     showPerson ? person.trim() : "",
     showStates ? codes.join("") : "",
@@ -604,9 +661,13 @@ export function App() {
           : pick.through.address.label,
     });
   };
-  const editName = (value: string) => {
-    setName(value);
-    if (picked !== null && value !== picked.fill) setPicked(null);
+  /** A search's own field edited: its text, and its pick gone once the text is not the pick's. */
+  const editNameOf = (route: Route) => (value: string) => {
+    setNames(all => ({ ...all, [route]: value }));
+    const own = picks[route];
+    if (own !== null && value !== own.fill) {
+      setPicks(all => ({ ...all, [route]: null }));
+    }
   };
 
   // The third step is for the pick it was made from: when the name or a filter
@@ -630,14 +691,15 @@ export function App() {
       </>
     );
 
-  const label = (
+  const labelFor = (route: Route) => (
     <>
-      {mode === "businesses" ? style.label : FIELD_LABELS[mode]}
+      {route === "businesses" ? style.label : FIELD_LABELS[route]}
       <span className="field-required" aria-hidden="true">
         *
       </span>
     </>
   );
+  const label = labelFor(mode);
   // The strings and the structure flags, as one `messages`.
   const messages = { ...style.messages, structures: style.structures };
 
@@ -807,7 +869,7 @@ export function App() {
                 panelId="demo-search-panel"
                 routes={offered}
                 route={mode}
-                onRoute={setSearchBy}
+                onRoute={switchSearch}
               />
               <button
                 type="button"
@@ -931,101 +993,114 @@ export function App() {
                 </div>
               ) : (
                 <>
-                  {mode === "businesses" ? (
-                    <BusinessAutocomplete
-                      key={`${applied?.id}:businesses`}
-                      client={client}
-                      id="demo-business"
-                      label={label}
-                      value={name}
-                      onChange={editName}
-                      onPick={(suggestion, pick) =>
-                        setPicked({
-                          toSearch: pickFromRow(
-                            suggestion,
-                            pick,
-                            filters?.state ?? [],
-                            // The field holds the pick's fill by now; the
-                            // closure still holds what was typed to find it.
-                            { name, person, address },
-                          ),
-                          fill: pickedNameOf(suggestion),
-                        })
-                      }
-                      look={{ ...changedLook(style) }}
-                      limit={style.limit}
-                      minChars={style.minChars}
-                      debounceMs={style.debounceMs}
-                      mintOn={style.mintOn}
-                      menuFollowsInputWidth={style.menuFollowsInputWidth}
-                      messages={messages}
-                      unstyled={style.unstyled}
-                      open={styling || filtering}
-                      // A person or an address picked: nothing redeems its
-                      // token, so there is no business for step 03 to search.
-                      onPickEntity={() => setPicked(null)}
-                      {...componentProps(style, "businesses")}
-                      {...(style.pageInput
-                        ? { classNames: { input: "demo-input" } }
-                        : {})}
-                      {...(filters !== undefined ? { filters } : {})}
-                    />
-                  ) : mode === "people" ? (
-                    <PersonAutocomplete
-                      key={`${applied?.id}:people`}
-                      client={client}
-                      id="demo-person"
-                      label={label}
-                      value={name}
-                      onChange={editName}
-                      onPick={pickedThrough}
-                      // A person or an address picked: nothing redeems its
-                      // token, so there is no business for step 03 to search.
-                      onPickEntity={() => setPicked(null)}
-                      {...componentProps(style, "people")}
-                      look={{ ...changedLook(style) }}
-                      limit={style.limit}
-                      minChars={style.minChars}
-                      debounceMs={style.debounceMs}
-                      mintOn={style.mintOn}
-                      menuFollowsInputWidth={style.menuFollowsInputWidth}
-                      messages={messages}
-                      unstyled={style.unstyled}
-                      open={styling || filtering}
-                      {...(style.pageInput
-                        ? { classNames: { input: "demo-input" } }
-                        : {})}
-                      {...(peopleFilters !== undefined
-                        ? { filters: peopleFilters }
-                        : {})}
-                    />
-                  ) : (
-                    <AddressAutocomplete
-                      key={`${applied?.id}:addresses`}
-                      client={client}
-                      id="demo-address"
-                      label={label}
-                      value={name}
-                      onChange={editName}
-                      onPick={pickedThrough}
-                      onPickEntity={() => setPicked(null)}
-                      {...componentProps(style, "addresses")}
-                      look={{ ...changedLook(style) }}
-                      limit={style.limit}
-                      minChars={style.minChars}
-                      debounceMs={style.debounceMs}
-                      mintOn={style.mintOn}
-                      menuFollowsInputWidth={style.menuFollowsInputWidth}
-                      messages={messages}
-                      unstyled={style.unstyled}
-                      open={styling || filtering}
-                      {...(style.pageInput
-                        ? { classNames: { input: "demo-input" } }
-                        : {})}
-                      {...(addressFilters !== undefined
-                        ? { filters: addressFilters }
-                        : {})}
-                    />
+                  {/* Every search the session offers stays mounted, the others hidden,
+                      so switching back finds its kept answer without asking
+                      again. */}
+                  {offered.includes("businesses") && (
+                    <div className="demo-search" hidden={mode !== "businesses"}>
+                      <BusinessAutocomplete
+                        key={`${applied?.id}:businesses`}
+                        client={client}
+                        id="demo-business"
+                        label={labelFor("businesses")}
+                        value={names.businesses}
+                        onChange={editNameOf("businesses")}
+                        onPick={(suggestion, pick) =>
+                          setPicked({
+                            toSearch: pickFromRow(
+                              suggestion,
+                              pick,
+                              filters?.state ?? [],
+                              // The field holds the pick's fill by now; the
+                              // closure still holds what was typed to find it.
+                              { name, person, address },
+                            ),
+                            fill: pickedNameOf(suggestion),
+                          })
+                        }
+                        look={{ ...changedLook(style) }}
+                        limit={style.limit}
+                        minChars={style.minChars}
+                        debounceMs={style.debounceMs}
+                        mintOn={style.mintOn}
+                        menuFollowsInputWidth={style.menuFollowsInputWidth}
+                        messages={messages}
+                        unstyled={style.unstyled}
+                        open={mode === "businesses" && (styling || filtering)}
+                        // A person or an address picked: nothing redeems its
+                        // token, so there is no business for step 03 to search.
+                        onPickEntity={() => setPicked(null)}
+                        {...componentProps(style, "businesses")}
+                        {...(style.pageInput
+                          ? { classNames: { input: "demo-input" } }
+                          : {})}
+                        {...(heldFilters !== undefined
+                          ? { filters: heldFilters }
+                          : {})}
+                      />
+                    </div>
+                  )}
+                  {offered.includes("people") && (
+                    <div className="demo-search" hidden={mode !== "people"}>
+                      <PersonAutocomplete
+                        key={`${applied?.id}:people`}
+                        client={client}
+                        id="demo-person"
+                        label={labelFor("people")}
+                        value={names.people}
+                        onChange={editNameOf("people")}
+                        onPick={pickedThrough}
+                        // A person or an address picked: nothing redeems its
+                        // token, so there is no business for step 03 to search.
+                        onPickEntity={() => setPicked(null)}
+                        {...componentProps(style, "people")}
+                        look={{ ...changedLook(style) }}
+                        limit={style.limit}
+                        minChars={style.minChars}
+                        debounceMs={style.debounceMs}
+                        mintOn={style.mintOn}
+                        menuFollowsInputWidth={style.menuFollowsInputWidth}
+                        messages={messages}
+                        unstyled={style.unstyled}
+                        open={mode === "people" && (styling || filtering)}
+                        {...(style.pageInput
+                          ? { classNames: { input: "demo-input" } }
+                          : {})}
+                        {...(heldPeopleFilters !== undefined
+                          ? { filters: heldPeopleFilters }
+                          : {})}
+                      />
+                    </div>
+                  )}
+                  {offered.includes("addresses") && (
+                    <div className="demo-search" hidden={mode !== "addresses"}>
+                      <AddressAutocomplete
+                        key={`${applied?.id}:addresses`}
+                        client={client}
+                        id="demo-address"
+                        label={labelFor("addresses")}
+                        value={names.addresses}
+                        onChange={editNameOf("addresses")}
+                        onPick={pickedThrough}
+                        onPickEntity={() => setPicked(null)}
+                        {...componentProps(style, "addresses")}
+                        look={{ ...changedLook(style) }}
+                        limit={style.limit}
+                        minChars={style.minChars}
+                        debounceMs={style.debounceMs}
+                        mintOn={style.mintOn}
+                        menuFollowsInputWidth={style.menuFollowsInputWidth}
+                        messages={messages}
+                        unstyled={style.unstyled}
+                        open={mode === "addresses" && (styling || filtering)}
+                        {...(style.pageInput
+                          ? { classNames: { input: "demo-input" } }
+                          : {})}
+                        {...(heldAddressFilters !== undefined
+                          ? { filters: heldAddressFilters }
+                          : {})}
+                      />
+                    </div>
                   )}
                 </>
               )}

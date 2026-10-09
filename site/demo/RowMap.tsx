@@ -15,6 +15,7 @@ import type {
   Route,
 } from "@baselayer-sdk/autocomplete";
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -57,6 +58,12 @@ type DropSpot = string;
 
 /** How far a pointer travels before a press on a place is a drag. */
 const DRAG_SLOP = 4;
+
+/**
+ * How far past a line's middle a carried row's leading edge goes before its
+ * slot moves past that line, so a hand resting at the swap does not flip it.
+ */
+const DEAD_BAND = 4;
 
 /**
  * How long after a drop a click on what was dragged is the browser's own,
@@ -150,6 +157,7 @@ function rowMapColors(state: StyleState): CSSProperties {
     "--map-ink": inks.ink,
     "--map-soft": inks.soft,
     "--map-guide": inks.guide,
+    "--map-rule": inks.rule,
     "--map-dim-disabled": String(inks.dim.disabled),
     "--map-dim-hidden": String(inks.dim.hidden),
     "--map-check-edge": inks.check.edge,
@@ -182,6 +190,14 @@ interface Lifted {
   grabY: number;
   /** The face's type and padding, which the panel's width may have changed. */
   face: CSSProperties;
+  /** What was lifted, as it is drawn: a line's ghost is a copy of it. */
+  source: HTMLElement;
+  /** The map's width, which its container queries read. */
+  scope: number;
+  /** How far a lifted line's drawer was scrolled sideways, and how far it
+      could be: its widest line, not this one. */
+  scroll: number;
+  track: number;
 }
 
 interface Drag {
@@ -218,8 +234,27 @@ function spotsAt(x: number, y: number): DropSpot[] {
 }
 
 function measure(handle: HTMLElement, x: number, y: number): Lifted {
-  const cell = handle.closest<HTMLElement>(".row-map-place, .row-map-chip");
-  const box = (cell ?? handle).getBoundingClientRect();
+  // A grip lifts its whole row.
+  const cell = handle.closest<HTMLElement>(
+    handle.classList.contains("row-map-grip")
+      ? ".row-map-kind"
+      : ".row-map-place, .row-map-chip",
+  );
+  // A line is seen through its drawer, which may be scrolled sideways under
+  // the sticky grip: what was lifted is that view of it.
+  const view = handle.classList.contains("row-map-grip")
+    ? (cell?.closest<HTMLElement>(".row-map-scroll") ?? null)
+    : null;
+  const row = (cell ?? handle).getBoundingClientRect();
+  const box =
+    view === null
+      ? row
+      : {
+          left: view.getBoundingClientRect().left,
+          top: row.top,
+          width: view.clientWidth,
+          height: row.height,
+        };
   const face = getComputedStyle(
     cell?.querySelector(".row-map-face") ?? cell ?? handle,
   );
@@ -236,21 +271,27 @@ function measure(handle: HTMLElement, x: number, y: number): Lifted {
       paddingLeft: face.paddingLeft,
       paddingRight: face.paddingRight,
     },
+    source: cell ?? handle,
+    scope: handle.closest(".row-map-wrap")?.getBoundingClientRect().width ?? 0,
+    scroll: view?.scrollLeft ?? 0,
+    track: view?.scrollWidth ?? 0,
   };
 }
 
 function useFieldDrag(
   accepts: (field: string, to: DropSpot) => boolean,
   onDrop: (field: string, to: DropSpot) => void,
+  /** A carried field let go, dropped or not, after any drop is applied. */
+  onLetGo: (drag: Drag) => void,
 ) {
   const [drag, setDrag] = useState<Drag | null>(null);
   // Read in the listeners, which a render may not have caught up with.
   const current = useRef<Drag | null>(null);
   const menu = useRef<HTMLSelectElement | null>(null);
   const droppedAt = useRef(Number.NEGATIVE_INFINITY);
-  const latest = useRef({ accepts, onDrop });
+  const latest = useRef({ accepts, onDrop, onLetGo });
   useLayoutEffect(() => {
-    latest.current = { accepts, onDrop };
+    latest.current = { accepts, onDrop, onLetGo };
   });
   const update = (next: Drag | null) => {
     current.current = next;
@@ -267,7 +308,15 @@ function useFieldDrag(
   const tracking = drag === null ? null : (drag.pointerId ?? "mouse");
   useEffect(() => {
     if (tracking === null) return;
+    // The grabbing hand for the whole gesture, wherever the pointer goes.
+    document.documentElement.dataset.dragging = "";
     const byMouse = tracking === "mouse";
+    /** Ends the drag; one that was carried is let go where it was last held. */
+    const end = () => {
+      const now = current.current;
+      update(null);
+      if (now?.moving) latest.current.onLetGo(now);
+    };
     const carries = (event: MouseEvent) =>
       byMouse || (event as PointerEvent).pointerId === tracking;
     const move = (event: MouseEvent) => {
@@ -277,7 +326,7 @@ function useFieldDrag(
       // context menu, another window), so the drag is over. Only a pointer
       // says so reliably; the mouse events Safari falls back to are left be.
       if (!byMouse && (event.buttons & 1) === 0) {
-        update(null);
+        end();
         return;
       }
       const moving =
@@ -298,9 +347,13 @@ function useFieldDrag(
       update(null);
       if (now.moving) {
         droppedAt.current = Date.now();
-        // Where it is let go, which a scroll since the last move can change.
-        const spot = landing(now.field, event.clientX, event.clientY);
+        // A line lands in the slot it was shown; a field where it is let go,
+        // which a scroll since the last move can change.
+        const spot = now.lifted.line
+          ? now.over
+          : landing(now.field, event.clientX, event.clientY);
         if (spot !== null) latest.current.onDrop(now.field, spot);
+        latest.current.onLetGo(now);
         return;
       }
       // A press that never moved is a tap: it opens the place's menu.
@@ -312,11 +365,11 @@ function useFieldDrag(
       }
     };
     const cancel = (event: MouseEvent) => {
-      if (current.current !== null && carries(event)) update(null);
+      if (current.current !== null && carries(event)) end();
     };
     // Escape puts the field back; so does anything that takes the pointer
     // from the page before it is let go.
-    const abandon = () => update(null);
+    const abandon = () => end();
     const escape = (event: KeyboardEvent) => {
       if (event.key === "Escape") abandon();
     };
@@ -330,6 +383,7 @@ function useFieldDrag(
     window.addEventListener("blur", abandon);
     window.addEventListener("contextmenu", abandon);
     return () => {
+      delete document.documentElement.dataset.dragging;
       window.removeEventListener(moveType, move);
       window.removeEventListener(upType, up);
       window.removeEventListener("pointercancel", cancel);
@@ -422,17 +476,6 @@ function Ghost({
     height: lifted.height,
     transformOrigin: `${lifted.grabX}px ${lifted.grabY}px`,
   };
-  if (lifted.line) {
-    // A line flies as its name: the whole row would hide where it lands.
-    return (
-      <span
-        className="row-map-line-ghost row-map-ghost"
-        style={{ ...colors, left: drag.x - 12, top: drag.y - 12 }}
-      >
-        {label}
-      </span>
-    );
-  }
   return lifted.chip ? (
     <span
       className="row-map-chip row-map-ghost"
@@ -452,6 +495,172 @@ function Ghost({
         {label}
       </span>
     </span>
+  );
+}
+
+type Drawer = typeof SHOWN | typeof HIDDEN;
+const DRAWERS: readonly Drawer[] = [SHOWN, HIDDEN];
+
+/** The drawers as a line was lifted from them: where its slot can go. */
+interface Slots {
+  relation: Relation;
+  /** The drawer it came from, and its place among that drawer's lines. */
+  origin: Drawer;
+  from: number;
+  /** A line and the gap after it. */
+  step: number;
+  /** The carried row's height. */
+  height: number;
+  /** Where Shown's first line starts, from the top of its frame. */
+  first: number;
+  /** How many other lines Shown holds: its slots are 0 to this. */
+  count: number;
+  /** Its place in Hidden, which keeps the row's own order. */
+  hiddenAt: number;
+}
+
+/**
+ * Shown's and Hidden's lines, untransformed, as `carried` is lifted. `order`
+ * is the row's own order of its lines, which Hidden keeps.
+ */
+function snapshot(
+  carried: Relation,
+  shown: HTMLElement[],
+  hidden: HTMLElement[],
+  order: readonly string[],
+  head: HTMLElement,
+): Slots | null {
+  const origin = shown.some(row => row.dataset.relation === carried)
+    ? SHOWN
+    : HIDDEN;
+  const lines = origin === SHOWN ? shown : hidden;
+  const lifted = lines.find(row => row.dataset.relation === carried);
+  if (lifted === undefined) return null;
+  const gap = parseFloat(getComputedStyle(lifted.parentElement!).rowGap || "0");
+  const rank = (relation: string | undefined) => order.indexOf(relation ?? "");
+  return {
+    relation: carried,
+    origin,
+    from: lines.indexOf(lifted),
+    step: lifted.offsetHeight + gap,
+    height: lifted.offsetHeight,
+    first:
+      head.offsetTop +
+      head.offsetHeight +
+      parseFloat(getComputedStyle(head.parentElement!).rowGap || "0"),
+    count: shown.filter(row => row !== lifted).length,
+    hiddenAt: hidden.filter(
+      row => row !== lifted && rank(row.dataset.relation) < rank(carried),
+    ).length,
+  };
+}
+
+/** How long a let-go row takes to settle flat into its place. */
+const SETTLE_MS = 180;
+
+/** A carried line let go: where it was held, and where it settles. */
+interface Landing {
+  relation: Relation;
+  x: number;
+  y: number;
+  lifted: Lifted;
+  /**
+   * The row's place once the drop is drawn, and how far its drawer is
+   * scrolled sideways; null until it is measured.
+   */
+  to: { left: number; top: number; scroll: number } | null;
+}
+
+const reducedMotion = () =>
+  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+
+/**
+ * A line in hand: a copy of its whole row as drawn, held where it was grabbed
+ * and tilted, on a card of the map's own. Let go, it settles flat over the
+ * row's place. The copy is drawn only: hidden from assistive tech and inert,
+ * so the live row keeps the focus and the name.
+ */
+function RowGhost({
+  x,
+  y,
+  lifted,
+  to,
+  colors,
+  onSettled,
+}: {
+  x: number;
+  y: number;
+  lifted: Lifted;
+  to: Landing["to"];
+  colors: CSSProperties;
+  onSettled: () => void;
+}) {
+  // Copied as the drag starts: a drop can move the live row to the other
+  // drawer before the copy has settled.
+  const row = lifted.source;
+  const [drawer] = useState(
+    () => row.closest(".row-map")?.className ?? "row-map",
+  );
+  const view = useRef<HTMLDivElement | null>(null);
+  useLayoutEffect(() => {
+    const copy = row.cloneNode(true) as HTMLElement;
+    // Drawn as it rests, not as the carried line is marked in its drawer.
+    copy.removeAttribute("data-dragged");
+    copy.style.transform = "";
+    // As wide as the line, which its drawer's widest line can stretch, so
+    // each place and the Enabled cell sit where they do on it.
+    copy.style.width = `${row.getBoundingClientRect().width}px`;
+    for (const named of copy.querySelectorAll("[id]")) {
+      named.removeAttribute("id");
+    }
+    // The Enabled column's guide runs down the drawer, not with a row.
+    for (const guide of copy.querySelectorAll(".row-map-guide")) {
+      guide.remove();
+    }
+    const scroller = view.current;
+    if (scroller === null) return;
+    // As wide as the drawer's widest line, which the line was scrolled by,
+    // and scrolled as the line was, so its grip and what was in sight match.
+    const track = document.createElement("span");
+    track.className = "row-map-ghost-track";
+    track.style.width = `${lifted.track}px`;
+    scroller.replaceChildren(copy, track);
+    scroller.scrollLeft = lifted.scroll;
+  }, [row, lifted.scroll, lifted.track]);
+  // Settling, it shows what the row's drawer shows, scrolled since the lift.
+  useLayoutEffect(() => {
+    if (to !== null && view.current !== null) {
+      view.current.scrollLeft = to.scroll;
+    }
+  }, [to]);
+  useEffect(() => {
+    if (to === null) return;
+    const timer = setTimeout(onSettled, SETTLE_MS + 100);
+    return () => clearTimeout(timer);
+  }, [to, onSettled]);
+  return (
+    <div
+      className="row-map-wrap row-map-row-ghost"
+      aria-hidden="true"
+      inert
+      data-settling={to !== null || undefined}
+      style={{
+        ...colors,
+        left: to?.left ?? x - lifted.grabX,
+        top: to?.top ?? y - lifted.grabY,
+        width: lifted.scope,
+      }}
+    >
+      <div
+        className={drawer}
+        style={{
+          width: lifted.width,
+          transformOrigin: `${lifted.grabX}px ${lifted.grabY}px`,
+        }}
+      >
+        <div ref={view} className="row-map-scroll" />
+      </div>
+    </div>
   );
 }
 
@@ -490,10 +699,12 @@ export function RowMap({
       ),
     colors: rowMapColors(state),
   };
+  // Each search its own map: a switch ends a drag, a copy and a slot with it.
   switch (route) {
     case "people":
       return (
         <KindRowMap
+          key="people"
           editor={PERSON_EDITOR}
           {...lines}
           layout={state.rows.people.layout}
@@ -508,6 +719,7 @@ export function RowMap({
     case "addresses":
       return (
         <KindRowMap
+          key="addresses"
           editor={ADDRESS_EDITOR}
           {...lines}
           layout={state.rows.addresses.layout}
@@ -525,6 +737,7 @@ export function RowMap({
     case "businesses":
       return (
         <KindRowMap
+          key="businesses"
           editor={BUSINESS_EDITOR}
           {...lines}
           layout={state.rows.businesses.layout}
@@ -658,28 +871,41 @@ function KindRowMap<P extends string, F extends string>({
     }
     return to !== TRAY && canDrop(layout, item as F, fieldSpot(to) as P);
   };
-  const { drag, handle, clicked } = useFieldDrag(takes, (item, to) => {
-    const relation = relationOf(item);
-    if (relation === null) {
-      onLayout(moveField(layout, item as F, fieldSpot(to) as P));
-      return;
-    }
-    const name = capitalized(kindName(relation));
-    if (to === HIDDEN) {
-      onList(relation, false);
-      say(`${name} hidden`);
-      return;
-    }
-    const at = dropAt.current ?? list.length;
-    const from = list.indexOf(relation);
-    if (from === -1) {
-      onList(relation, true, at);
-      say(`${name} shown`);
-    } else if (at !== from) {
-      onOrder(relation, at);
-      say(`${name} moved to position ${at + 1} of ${list.length}`);
-    }
-  });
+  // A carried line let go settles into its place, unless motion is reduced.
+  const [landing, setLanding] = useState<Landing | null>(null);
+  const landed = useCallback(() => setLanding(null), []);
+  const letGo = (carried: Drag) => {
+    const relation = relationOf(carried.field);
+    if (relation === null || reducedMotion()) return;
+    const { x, y, lifted } = carried;
+    setLanding({ relation, x, y, lifted, to: null });
+  };
+  const { drag, handle, clicked } = useFieldDrag(
+    takes,
+    (item, to) => {
+      const relation = relationOf(item);
+      if (relation === null) {
+        onLayout(moveField(layout, item as F, fieldSpot(to) as P));
+        return;
+      }
+      const name = capitalized(kindName(relation));
+      if (to === HIDDEN) {
+        onList(relation, false);
+        say(`${name} hidden`);
+        return;
+      }
+      const at = dropAt.current ?? list.length;
+      const from = list.indexOf(relation);
+      if (from === -1) {
+        onList(relation, true, at);
+        say(`${name} shown`);
+      } else if (at !== from) {
+        onOrder(relation, at);
+        say(`${name} moved to position ${at + 1} of ${list.length}`);
+      }
+    },
+    letGo,
+  );
   // A line moved from the keyboard lands in the other drawer: its grip keeps
   // the focus there.
   const wrap = useRef<HTMLDivElement | null>(null);
@@ -694,6 +920,22 @@ function KindRowMap<P extends string, F extends string>({
     refocus.current = null;
   });
   const moving = drag?.moving === true ? drag : null;
+  // Anything lifted while a line still settles: the line let go is shown at
+  // once, and its copy goes, rather than waiting on a copy's timer.
+  const lifting = moving !== null;
+  useLayoutEffect(() => {
+    if (lifting) setLanding(null);
+  }, [lifting]);
+  const inHand: Landing | null =
+    moving?.lifted.line === true
+      ? {
+          relation: relationOf(moving.field)!,
+          x: moving.x,
+          y: moving.y,
+          lifted: moving.lifted,
+          to: null,
+        }
+      : landing;
   const over = moving?.over ?? null;
   /** While a field is dragged, every spot that takes it says so. */
   const accepts = (spot: DropSpot) =>
@@ -791,6 +1033,13 @@ function KindRowMap<P extends string, F extends string>({
   const unplaced = unplacedFields(layout).filter(field =>
     shownFields.has(field),
   );
+  // Hidden titles each of its two parts only while it holds something, as it
+  // draws them; empty, it keeps the first title over its note. A line carried
+  // over it opens its slot under that title.
+  const linesTitled =
+    hidden.length > 0 ||
+    unplaced.length === 0 ||
+    (moving?.lifted.line === true && over === HIDDEN);
   // A drawer out of room scrolls its lines sideways: its frame shadows each
   // edge there is more beyond, as it scrolls and as its lines change.
   const shownScroller = useRef<HTMLDivElement | null>(null);
@@ -810,54 +1059,156 @@ function KindRowMap<P extends string, F extends string>({
     }
     return () => observer.disconnect();
   }, []);
-  // A line carried over Shown makes its way: the lines it would land among
-  // slide aside to open its gap there, and the row it was lifted from goes
-  // to the gap, so the drawer shows the order a drop would make.
+  // A carried line leaves a blank line where a drop would put it: in the
+  // drawer under the pointer, or where it came from over neither. The lines
+  // around the slot slide aside, the drawer it would join grows by a line and
+  // the one it left closes up. Where the slot falls is read off the drawers as
+  // they were when the line was lifted, which no slide moves, and it passes a
+  // line only once the pointer is clearly past that line's middle.
   const carried = moving === null ? null : relationOf(moving.field);
   const pointerY = moving?.y ?? null;
+  const grabY = moving?.lifted.grabY ?? 0;
+  const slots = useRef<Slots | null>(null);
+  // The row's own order of its lines, as each one is named in the DOM.
+  const lineOrder = kinds.map(kind => kind.relation ?? "head").join(" ");
+  /** The slot in Shown while the pointer is over it, for the dead band. */
+  const held = useRef<number | null>(null);
   useLayoutEffect(() => {
-    const scroller = shownScroller.current;
-    if (scroller === null) return;
-    const rows = [
-      ...scroller.querySelectorAll<HTMLElement>(
+    const scrollers = {
+      [SHOWN]: shownScroller.current,
+      [HIDDEN]: hiddenScroller.current,
+    };
+    const lines = (drawer: Drawer) => [
+      ...(scrollers[drawer]?.querySelectorAll<HTMLElement>(
         '.row-map-kind:not([data-relation="head"])',
-      ),
+      ) ?? []),
     ];
-    for (const row of rows) row.style.transform = "";
-    scroller.style.paddingBottom = "";
-    dropAt.current = null;
-    if (carried === null || over !== SHOWN || pointerY === null) return;
-    // Measured untransformed: an offset ignores the slides above.
-    const frame = scroller.parentElement!;
-    const y = pointerY - frame.getBoundingClientRect().top + scroller.scrollTop;
-    const others = rows.filter(row => row.dataset.relation !== carried);
-    const at = others.filter(
-      row => row.offsetTop + row.offsetHeight / 2 < y,
-    ).length;
-    dropAt.current = at;
-    const lifted =
-      rows.find(row => row.dataset.relation === carried) ??
-      wrap.current?.querySelector<HTMLElement>(
-        `[data-drawer="hidden"] .row-map-kind[data-relation="${carried}"]`,
-      ) ??
-      null;
-    const step =
-      (lifted?.offsetHeight ?? 0) +
-      parseFloat(getComputedStyle(scroller).rowGap || "0");
-    const from = others.length === rows.length ? null : rows.indexOf(lifted!);
-    others.forEach((row, index) => {
-      const was = from !== null && index >= from ? index + 1 : index;
-      const now = index >= at ? index + 1 : index;
-      if (now !== was)
-        row.style.transform = `translateY(${(now - was) * step}px)`;
-    });
-    if (from === null) {
-      // From Hidden: the drawer grows by the line it is to take.
-      scroller.style.paddingBottom = `${step}px`;
-    } else if (lifted !== null && at !== from) {
-      lifted.style.transform = `translateY(${(at - from) * step}px)`;
+    if (carried === null) {
+      for (const drawer of DRAWERS) {
+        const scroller = scrollers[drawer];
+        if (scroller === null) continue;
+        for (const row of lines(drawer)) row.style.transform = "";
+        scroller.style.paddingBottom = "";
+        scroller.style.marginBottom = "";
+        delete scroller.closest<HTMLElement>(".row-map-drawer")?.dataset.slot;
+      }
+      slots.current = null;
+      held.current = null;
+      dropAt.current = null;
+      return;
     }
-  }, [carried, over, pointerY]);
+    if (slots.current?.relation !== carried) {
+      const head = scrollers[SHOWN]?.querySelector<HTMLElement>(
+        '.row-map-kind[data-relation="head"]',
+      );
+      slots.current =
+        head == null
+          ? null
+          : snapshot(
+              carried,
+              lines(SHOWN),
+              lines(HIDDEN),
+              lineOrder.split(" "),
+              head,
+            );
+      held.current = null;
+    }
+    const at = slots.current;
+    const shown = scrollers[SHOWN];
+    if (at === null || shown === null) return;
+    let target = at.origin;
+    let slot = at.from;
+    if (over === SHOWN && pointerY !== null) {
+      // The carried row's top, in the frame's terms: where it is held, less
+      // how far down the row it was grabbed.
+      const frame = shown.parentElement!;
+      const top =
+        pointerY - frame.getBoundingClientRect().top + shown.scrollTop - grabY;
+      // The middle of the line drawn at a slot, the lines laid out evenly.
+      const middle = (place: number) =>
+        at.first + place * at.step + at.height / 2;
+      if (held.current === null) {
+        // Come into Shown: the row goes where its middle is, among the lines
+        // as they are drawn without it.
+        const centre = top + at.height / 2;
+        slot = 0;
+        while (slot < at.count && middle(slot) < centre) slot += 1;
+      } else {
+        // Past the line below once the row's bottom edge is clearly past its
+        // middle, and back past the line above once its top edge is: the two
+        // marks lie a gap and two bands apart, so a tremble flips neither.
+        slot = held.current;
+        while (
+          slot < at.count &&
+          top + at.height > middle(slot + 1) + DEAD_BAND
+        ) {
+          slot += 1;
+        }
+        while (slot > 0 && top < middle(slot - 1) - DEAD_BAND) slot -= 1;
+      }
+      held.current = slot;
+      target = SHOWN;
+    } else {
+      held.current = null;
+      if (over === HIDDEN) {
+        target = HIDDEN;
+        slot = at.hiddenAt;
+      }
+    }
+    dropAt.current = over === SHOWN ? slot : null;
+    for (const drawer of DRAWERS) {
+      const scroller = scrollers[drawer];
+      if (scroller === null) continue;
+      const origin = drawer === at.origin;
+      const opens = drawer === target;
+      lines(drawer)
+        .filter(row => row.dataset.relation !== carried)
+        .forEach((row, index) => {
+          const was = origin && index >= at.from ? index + 1 : index;
+          const now = opens && index >= slot ? index + 1 : index;
+          const slide =
+            now === was ? "" : `translateY(${(now - was) * at.step}px)`;
+          // Only a change: a slide set again would start over.
+          if (row.style.transform !== slide) row.style.transform = slide;
+        });
+      // A slot opened at the end comes on top of the drawer's own room there.
+      const grow =
+        opens && !origin ? `calc(${at.step}px + var(--map-end-room, 0px))` : "";
+      const close = origin && !opens ? `${-at.step}px` : "";
+      if (scroller.style.paddingBottom !== grow) {
+        scroller.style.paddingBottom = grow;
+      }
+      if (scroller.style.marginBottom !== close) {
+        scroller.style.marginBottom = close;
+      }
+      const holder = scroller.closest<HTMLElement>(".row-map-drawer");
+      if (holder === null) continue;
+      if (opens) holder.dataset.slot = String(slot);
+      else delete holder.dataset.slot;
+    }
+  }, [carried, over, pointerY, grabY, lineOrder]);
+  // A line let go settles where its row now rests, which the drop has drawn.
+  useLayoutEffect(() => {
+    if (landing === null || landing.to !== null) return;
+    const row = wrap.current?.querySelector<HTMLElement>(
+      `.row-map-kind[data-relation="${landing.relation}"]`,
+    );
+    if (row == null) {
+      setLanding(null);
+      return;
+    }
+    // Where it will rest, not where a slide back still has it, seen through
+    // its drawer as the copy is.
+    row.style.transition = "none";
+    const { top } = row.getBoundingClientRect();
+    row.style.transition = "";
+    const view = row.closest<HTMLElement>(".row-map-scroll");
+    const { left } = (view ?? row).getBoundingClientRect();
+    setLanding({
+      ...landing,
+      to: { left, top, scroll: view?.scrollLeft ?? 0 },
+    });
+  }, [landing]);
   // The Enabled column's guide starts one gap under its heading's ink,
   // wherever the heading's font puts that; it is measured again once the
   // page's fonts have come.
@@ -927,6 +1278,9 @@ function KindRowMap<P extends string, F extends string>({
           relation !== null && moving?.field === lineItem(relation)
             ? true
             : undefined
+        }
+        data-landing={
+          (relation !== null && landing?.relation === relation) || undefined
         }
       >
         {!isListed && (
@@ -1097,13 +1451,15 @@ function KindRowMap<P extends string, F extends string>({
         <div
           className="row-map row-map-hidden"
           role="group"
-          aria-label="Hidden lines"
+          aria-label="Hidden lines and fields"
         >
           <div className="row-map-scroll-frame">
             <div className="row-map-scroll" {...edges(hiddenScroller)}>
-              <div className="row-map-head" aria-hidden="true">
-                <span className="row-map-drawer-label">Hidden</span>
-              </div>
+              {linesTitled && (
+                <div className="row-map-head" aria-hidden="true">
+                  <span className="row-map-drawer-label">Hidden lines</span>
+                </div>
+              )}
               {hidden.length === 0 && unplaced.length === 0 && (
                 <div className="row-map-hint-row">
                   <p className="row-map-drawer-note">
@@ -1117,24 +1473,31 @@ function KindRowMap<P extends string, F extends string>({
             </div>
           </div>
           {/* The fields the row leaves out, under its hidden lines. */}
-          <div
-            className="row-map-tray"
-            data-drop={TRAY}
-            data-ruled={(hidden.length > 0 && unplaced.length > 0) || undefined}
-          >
-            {unplaced.map(field => (
-              <span
-                key={field}
-                className="row-map-chip"
-                data-field={field}
-                title={`Drag ${editor.fieldLabels[field]} onto a place · reads ${editor.fieldWire[field].join(", ")}`}
-                {...handle(field)}
-                data-dragged={moving?.field === field || undefined}
-              >
-                {editor.fieldLabels[field]}
-              </span>
-            ))}
-          </div>
+          {unplaced.length > 0 && (
+            <div
+              className="row-map-tray"
+              data-drop={TRAY}
+              data-ruled={linesTitled || undefined}
+            >
+              <div className="row-map-head" aria-hidden="true">
+                <span className="row-map-drawer-label">Hidden fields</span>
+              </div>
+              <div className="row-map-tray-chips">
+                {unplaced.map(field => (
+                  <span
+                    key={field}
+                    className="row-map-chip"
+                    data-field={field}
+                    title={`Drag ${editor.fieldLabels[field]} onto a place · reads ${editor.fieldWire[field].join(", ")}`}
+                    {...handle(field)}
+                    data-dragged={moving?.field === field || undefined}
+                  >
+                    {editor.fieldLabels[field]}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
       <details className="row-map-reads-fold">
@@ -1162,16 +1525,26 @@ function KindRowMap<P extends string, F extends string>({
           </tbody>
         </table>
       </details>
+      {inHand !== null &&
+        createPortal(
+          <RowGhost
+            key={inHand.relation}
+            x={inHand.x}
+            y={inHand.y}
+            lifted={inHand.lifted}
+            to={inHand.to}
+            colors={colors}
+            onSettled={landed}
+          />,
+          document.body,
+        )}
       {moving !== null &&
+        !moving.lifted.line &&
         createPortal(
           <Ghost
             drag={moving}
             colors={colors}
-            label={
-              relationOf(moving.field) === null
-                ? editor.fieldLabels[moving.field as F]
-                : capitalized(kindName(relationOf(moving.field)))
-            }
+            label={editor.fieldLabels[moving.field as F]}
           />,
           document.body,
         )}
