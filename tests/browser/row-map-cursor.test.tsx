@@ -124,4 +124,40 @@ describe("the pointer while something is carried", () => {
       }
     });
   }
+
+  it("is a grabbing hand over a place's menu too", async () => {
+    // Both lines shown: the officers carried over the addresses' menu.
+    const { host, done } = mount(
+      withListed(ONE, "businesses", "addresses", true),
+    );
+    try {
+      const select = host.querySelector<HTMLElement>(
+        '.row-map-kind[data-relation="addresses"] .row-map-place select',
+      )!;
+      const box = select.getBoundingClientRect();
+      const [x, y] = [box.left + box.width / 2, box.top + box.height / 2];
+      const grip = host.querySelector<HTMLElement>(
+        'button.row-map-grip[data-relation="people"]',
+      )!;
+      const start = grip.getBoundingClientRect();
+      grip.dispatchEvent(
+        pointer(
+          "pointerdown",
+          start.left + start.width / 2,
+          start.top + start.height / 2,
+          1,
+        ),
+      );
+      await frame();
+      window.dispatchEvent(pointer("pointermove", x, y, 1));
+      await frame();
+      const under = document.elementFromPoint(x, y)!;
+      expect(under.tagName).toBe("SELECT");
+      expect(getComputedStyle(under).cursor).toBe("grabbing");
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      await frame();
+    } finally {
+      done();
+    }
+  });
 });

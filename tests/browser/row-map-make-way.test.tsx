@@ -77,12 +77,12 @@ async function press(from: HTMLElement) {
   return {
     x,
     y0,
-    async to(y: number) {
-      window.dispatchEvent(at("pointermove", x, y, 1));
+    async to(y: number, atX = x) {
+      window.dispatchEvent(at("pointermove", atX, y, 1));
       await frame();
     },
-    async up(y: number) {
-      window.dispatchEvent(at("pointerup", x, y, 0));
+    async up(y: number, atX = x) {
+      window.dispatchEvent(at("pointerup", atX, y, 0));
       await frame();
     },
   };
@@ -305,11 +305,18 @@ describe("the blank line a carried line would drop into", () => {
   it("is gone after a drop outside the map and after Escape, nothing slid or resized", async () => {
     const { host, grip, latest, done } = mount(BOTH);
     try {
+      // Well clear of the map: no drawer, no place.
+      const outside = { x: host.getBoundingClientRect().right + 200, y: 600 };
+      expect(
+        document
+          .elementFromPoint(outside.x, outside.y)
+          ?.closest("[data-drop]") ?? null,
+      ).toBeNull();
       let drag = await press(grip("people"));
-      await drag.to(4);
+      await drag.to(outside.y, outside.x);
       // Over nothing it waits where the line came from, where a cancel puts it.
       expect(slot(host)).toEqual(["shown@0"]);
-      await drag.up(4);
+      await drag.up(outside.y, outside.x);
       expect(slot(host)).toEqual([]);
 
       drag = await press(grip("people"));
@@ -329,6 +336,129 @@ describe("the blank line a carried line would drop into", () => {
         "people",
         "addresses",
       ]);
+    } finally {
+      done();
+    }
+  });
+
+  for (const exit of ["Escape", "drop"] as const) {
+    it(`leaves nothing slid or resized after a carry over the other drawer ends in ${exit === "drop" ? "a drop" : "Escape"}`, async () => {
+      const { host, grip, done } = mount(BOTH);
+      try {
+        const hidden = host
+          .querySelector<HTMLElement>('[data-drawer="hidden"]')!
+          .getBoundingClientRect();
+        const over = hidden.top + hidden.height / 2;
+        const drag = await press(grip("people"));
+        await drag.to(over, hidden.left + 60);
+        const [shown, held] = [
+          ...host.querySelectorAll<HTMLElement>(".row-map-scroll"),
+        ];
+        expect(shown!.style.marginBottom).toMatch(/^-\d/);
+        expect(held!.style.paddingBottom).toMatch(/^\d/);
+        if (exit === "Escape") {
+          window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+          await frame();
+        } else {
+          await drag.up(over, hidden.left + 60);
+        }
+        for (const scroller of host.querySelectorAll<HTMLElement>(
+          ".row-map-scroll",
+        )) {
+          expect(scroller.style.marginBottom).toBe("");
+          expect(scroller.style.paddingBottom).toBe("");
+        }
+        for (const row of host.querySelectorAll<HTMLElement>(".row-map-kind")) {
+          expect(row.style.transform).toBe("");
+        }
+      } finally {
+        done();
+      }
+    });
+  }
+
+  it("opens in Hidden after the hidden lines the line follows in the row", async () => {
+    // Its addresses shown, its officers, which come first in the row, hidden.
+    const { host, grip, done } = mount(
+      withListed(
+        withListed(DEFAULT_STYLE, "businesses", "addresses", true),
+        "businesses",
+        "people",
+        false,
+      ),
+    );
+    try {
+      const hidden = host
+        .querySelector<HTMLElement>('[data-drawer="hidden"]')!
+        .getBoundingClientRect();
+      const drag = await press(grip("addresses"));
+      await drag.to(hidden.top + hidden.height / 2, hidden.left + 60);
+      expect(slot(host)).toEqual(["hidden@1"]);
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      await frame();
+    } finally {
+      done();
+    }
+  });
+
+  it("stays past a boundary once over it, a tremble there flipping nothing back", async () => {
+    const { host, kind, grip, done } = mount(BOTH);
+    try {
+      const below = kind("addresses").getBoundingClientRect();
+      const middle = below.top + below.height / 2;
+      const drag = await press(grip("people"));
+      await drag.to(middle + 12);
+      expect(slot(host)).toEqual(["shown@1"]);
+      for (let count = 0; count < 20; count++) {
+        await drag.to(middle + (count % 2 === 0 ? 2 : -2));
+        expect(slot(host), `tremor ${count}`).toEqual(["shown@1"]);
+      }
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      await frame();
+    } finally {
+      done();
+    }
+  });
+
+  it("is read afresh when the pointer comes back over Shown from Hidden", async () => {
+    const { host, kind, grip, done } = mount(BOTH);
+    try {
+      const below = kind("addresses").getBoundingClientRect();
+      const middle = below.top + below.height / 2;
+      const hidden = host
+        .querySelector<HTMLElement>('[data-drawer="hidden"]')!
+        .getBoundingClientRect();
+      const drag = await press(grip("people"));
+      await drag.to(middle + 12);
+      await drag.to(hidden.top + hidden.height / 2, hidden.left + 60);
+      await drag.to(middle - 4);
+      expect(slot(host)).toEqual(["shown@0"]);
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      await frame();
+    } finally {
+      done();
+    }
+  });
+
+  it("opens under a Hidden lines title over a Hidden that holds only fields", async () => {
+    const { host, grip, done } = mount(BOTH);
+    try {
+      const titles = () =>
+        [
+          ...host.querySelectorAll(
+            '[data-drawer="hidden"] .row-map-drawer-label',
+          ),
+        ].map(title => title.textContent);
+      expect(titles()).toEqual(["Hidden fields"]);
+      const hidden = host
+        .querySelector<HTMLElement>('[data-drawer="hidden"]')!
+        .getBoundingClientRect();
+      const drag = await press(grip("people"));
+      await drag.to(hidden.top + hidden.height / 2, hidden.left + 60);
+      expect(titles()).toEqual(["Hidden lines", "Hidden fields"]);
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
+      await frame();
+      expect(titles()).toEqual(["Hidden fields"]);
     } finally {
       done();
     }

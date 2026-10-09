@@ -203,8 +203,8 @@ describe("a line carried by its grip", () => {
     }
   });
 
-  it("goes back where it was on Escape, and on a drop outside the map", async () => {
-    const { kind, grip, latest, done } = mount(BOTH);
+  it("goes back where it was on Escape, on a pointercancel, and on a drop outside the map", async () => {
+    const { host, kind, grip, latest, done } = mount(BOTH);
     try {
       const below = kind("addresses").getBoundingClientRect();
       let drag = await press(grip("people"));
@@ -220,8 +220,11 @@ describe("a line carried by its grip", () => {
       ]);
 
       drag = await press(grip("people"));
-      await drag.move(4, 4);
-      await drag.up(4, 4);
+      await drag.move(below.left + 40, below.bottom - 2);
+      window.dispatchEvent(
+        new PointerEvent("pointercancel", { pointerId: 7, bubbles: true }),
+      );
+      await frame();
       expect(ghost()?.dataset.settling).toBe("true");
       await settled();
       expect(ghost()).toBeNull();
@@ -229,6 +232,65 @@ describe("a line carried by its grip", () => {
         "people",
         "addresses",
       ]);
+
+      // Well clear of the map: no drawer, no place.
+      const outside = { x: host.getBoundingClientRect().right + 200, y: 600 };
+      expect(
+        document
+          .elementFromPoint(outside.x, outside.y)
+          ?.closest("[data-drop]") ?? null,
+      ).toBeNull();
+      drag = await press(grip("people"));
+      await drag.move(outside.x, outside.y);
+      await drag.up(outside.x, outside.y);
+      expect(ghost()?.dataset.settling).toBe("true");
+      await settled();
+      expect(ghost()).toBeNull();
+      expect(latest.state.rows.businesses.list).toEqual([
+        "people",
+        "addresses",
+      ]);
+    } finally {
+      done();
+    }
+  });
+
+  it("settles over the line's new place, the line itself out of sight until it has", async () => {
+    const { kind, grip, done } = mount(BOTH);
+    try {
+      const below = kind("addresses").getBoundingClientRect();
+      const drag = await press(grip("people"));
+      await drag.move(below.left + 40, below.bottom - 2);
+      await drag.up(below.left + 40, below.bottom - 2);
+      await frame();
+      const row = kind("people").getBoundingClientRect();
+      expect(parseFloat(ghost()!.style.left)).toBeCloseTo(row.left, 0);
+      expect(parseFloat(ghost()!.style.top)).toBeCloseTo(row.top, 0);
+      expect(getComputedStyle(kind("people")).opacity).toBe("0");
+      await settled();
+      expect(getComputedStyle(kind("people")).opacity).toBe("1");
+    } finally {
+      done();
+    }
+  });
+
+  it("copies the row without the column's guide, as wide as the map, held where it was grabbed", async () => {
+    await commands.reducedMotion(true);
+    const { host, grip, done } = mount(BOTH);
+    try {
+      const live = grip("people").getBoundingClientRect();
+      const drag = await press(grip("people"));
+      await drag.move(drag.x0 + 30, drag.y0 + 20);
+      const copy = ghost()!;
+      expect(copy.querySelector(".row-map-guide")).toBeNull();
+      expect(copy.getBoundingClientRect().width).toBeCloseTo(
+        host.querySelector(".row-map-wrap")!.getBoundingClientRect().width,
+        0,
+      );
+      const held = copy.querySelector(".row-map-grip")!.getBoundingClientRect();
+      expect(held.left - live.left).toBeCloseTo(30, 0);
+      expect(held.top - live.top).toBeCloseTo(20, 0);
+      await drag.up(drag.x0 + 30, drag.y0 + 20);
     } finally {
       done();
     }

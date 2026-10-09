@@ -152,6 +152,21 @@ describe("the Hidden drawer's two titles", () => {
     });
   }
 
+  it("keeps both titles from assistive tech, which the drawer's own name speaks for", () => {
+    const { hidden, done } = mount(ROLE_OUT, 560);
+    try {
+      const titles = [
+        ...hidden.querySelectorAll<HTMLElement>(".row-map-drawer-label"),
+      ];
+      expect(titles).toHaveLength(2);
+      for (const title of titles) {
+        expect(title.closest('[aria-hidden="true"]')).not.toBeNull();
+      }
+    } finally {
+      done();
+    }
+  });
+
   it("draws a section only when it holds something, the note standing for an empty drawer", () => {
     // A hidden line, no hidden field.
     let mounted = mount(DEFAULT_STYLE, 560);
