@@ -1533,7 +1533,7 @@ html[data-dragging] * {
   font-size: 12px;
 }
 
-/* The rule: 4px of the drawer's faintest stroke, its ends rounded, at the
+/* The rule: 4px in its own faint ink (map-ink.ts), its ends rounded, at the
    top of the room above the fields' title, so nothing after it moves. */
 .row-map-tray[data-ruled] {
   margin-top: 4px;
@@ -1547,7 +1547,7 @@ html[data-dragging] * {
   left: 0;
   height: 4px;
   border-radius: 999px;
-  background: var(--map-guide);
+  background: var(--map-rule, var(--map-guide));
   content: "";
 }
 

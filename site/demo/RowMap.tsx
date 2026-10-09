@@ -157,6 +157,7 @@ function rowMapColors(state: StyleState): CSSProperties {
     "--map-ink": inks.ink,
     "--map-soft": inks.soft,
     "--map-guide": inks.guide,
+    "--map-rule": inks.rule,
     "--map-dim-disabled": String(inks.dim.disabled),
     "--map-dim-hidden": String(inks.dim.hidden),
     "--map-check-edge": inks.check.edge,

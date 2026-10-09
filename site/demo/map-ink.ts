@@ -53,6 +53,29 @@ function ratio(a: Rgb, b: Rgb): number {
   return (light! + 0.05) / (dark! + 0.05);
 }
 
+/** The contrast #e4e4e4 holds on white: the Hidden drawer's rule. */
+const RULE_CONTRAST = ratio([228, 228, 228], WHITE);
+
+/**
+ * The rule's ink on a ground: the ground taken toward black, or toward white
+ * on a dark one, until it holds the rule's contrast and no further, so it is
+ * #e4e4e4 on white and as faint on any other ground.
+ */
+function ruleOn(ground: Rgb): Rgb {
+  const BLACK: Rgb = [0, 0, 0];
+  const toward = ratio(ground, BLACK) >= ratio(ground, WHITE) ? BLACK : WHITE;
+  let [short, enough] = [0, 1];
+  for (let step = 0; step < 32; step++) {
+    const share = (short + enough) / 2;
+    if (ratio(mix(ground, toward, share), ground) >= RULE_CONTRAST) {
+      enough = share;
+    } else {
+      short = share;
+    }
+  }
+  return mix(ground, toward, enough);
+}
+
 /** WCAG's contrast ratio between two `#rgb` or `#rrggbb` colours. */
 export function contrast(a: string, b: string): number {
   return ratio(parse(a)!, parse(b)!);
@@ -190,6 +213,8 @@ export interface MapInks {
   soft: string;
   /** Fainter still, but there: the Enabled column's guide. */
   guide: string;
+  /** The Hidden drawer's rule between its lines and its fields. */
+  rule: string;
   /** The opacity of a disabled line, and of a hidden one. */
   dim: { disabled: number; hidden: number };
   /**
@@ -245,6 +270,7 @@ export function mapInks(state: StyleState): MapInks {
       ink: mixed(85),
       soft: mixed(60),
       guide: mixed(25),
+      rule: mixed(10),
       dim: { ...DIM },
       ring: BLUE,
       check: {
@@ -290,6 +316,7 @@ export function mapInks(state: StyleState): MapInks {
     ink: hex(ink),
     soft: hex(soft),
     guide: hex(furthest(soft, ground, 0.95, rgb => ratio(rgb, ground) >= 1.5)),
+    rule: hex(ruleOn(ground)),
     dim: { disabled: DIM.disabled, hidden },
     ring: hex(ring),
     check: {

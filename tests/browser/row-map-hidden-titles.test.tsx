@@ -6,6 +6,8 @@ import { commands } from "vitest/browser";
 import { RowMap } from "../../site/demo/RowMap";
 import {
   DEFAULT_STYLE,
+  PRESETS,
+  applyPreset,
   withListed,
   type StyleState,
 } from "../../site/demo/style-state";
@@ -159,6 +161,56 @@ describe("the Hidden drawer's two titles", () => {
       }
     });
   }
+
+  it("draws the rule in #e4e4e4 on the Light map, and at that contrast on any other", () => {
+    const light = mount(ROLE_OUT, 560);
+    let lightContrast = 0;
+    try {
+      const rule = getComputedStyle(
+        light.hidden.querySelector(".row-map-tray")!,
+        "::before",
+      );
+      expect(rule.backgroundColor).toBe("rgb(228, 228, 228)");
+      lightContrast = contrast(rgb(rule.backgroundColor), [255, 255, 255]);
+    } finally {
+      light.done();
+    }
+    // Midnight, its addresses hidden and its role left out: both parts.
+    const midnight = applyPreset(
+      DEFAULT_STYLE,
+      PRESETS.find(each => each.name === "Midnight")!,
+    );
+    const held = withListed(midnight, "people", "addresses", false);
+    const dark = mount(
+      {
+        ...held,
+        rows: {
+          ...held.rows,
+          people: {
+            ...held.rows.people,
+            layout: { ...held.rows.people.layout, businessTrailing: null },
+          },
+        },
+      },
+      560,
+    );
+    try {
+      const rule = getComputedStyle(
+        dark.hidden.querySelector(".row-map-tray")!,
+        "::before",
+      );
+      const ground = rgb(
+        getComputedStyle(dark.host.querySelector(".row-map-wrap")!)
+          .getPropertyValue("--map-bg")
+          .trim(),
+      );
+      expect(
+        Math.abs(contrast(rgb(rule.backgroundColor), ground) - lightContrast),
+      ).toBeLessThanOrEqual(0.05);
+    } finally {
+      dark.done();
+    }
+  });
 
   it("draws the rule in the text's own colour when the system forces colours", async () => {
     await commands.forcedColors(true);
