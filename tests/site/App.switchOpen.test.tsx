@@ -171,6 +171,22 @@ describe("switching the search with its menu open", () => {
     expect(field("demo-person").getAttribute("aria-expanded")).not.toBe("true");
   });
 
+  it("leaves a hidden search's menu closed, asking nothing, while Styling holds the one in sight open", async () => {
+    const { user, asked } = await connect();
+    await user.click(tab("a person"));
+    await user.click(field("demo-person"));
+    await user.type(field("demo-person"), "dana");
+    await waitFor(() => expect(rows("demo-person").length).toBeGreaterThan(0));
+    await user.click(tab("a business"));
+    const before = asked("people");
+
+    await user.click(styleButton());
+    await new Promise(resolve => setTimeout(resolve, 400));
+
+    expect(asked("people")).toBe(before);
+    expect(field("demo-person").getAttribute("aria-expanded")).not.toBe("true");
+  });
+
   it("carries nothing from a click on the search already in sight to a later switch in Styling", async () => {
     const { user } = await connect();
     await user.click(field("demo-business"));
