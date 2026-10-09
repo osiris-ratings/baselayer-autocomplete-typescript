@@ -1,6 +1,12 @@
 /** @vitest-environment jsdom */
 
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -67,6 +73,21 @@ const styleButton = () =>
     .queryAllByRole("button")
     .find(button => /Style here/.test(button.textContent ?? "")) ??
   screen.getByTestId("demo-switch-styling");
+
+/** Styling open on its Components fold; its Row of tabs, by name. */
+async function openStyling(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(styleButton());
+  const components = screen
+    .getAllByRole("button")
+    .find(button => /Components/.test(button.textContent ?? ""))!;
+  if (components.getAttribute("aria-expanded") === "false") {
+    await user.click(components);
+  }
+  return (name: string) =>
+    within(screen.getByRole("tablist", { name: "Row of" })).getByRole("tab", {
+      name,
+    });
+}
 /** The options a field's open menu shows. */
 const rows = (id: string) => {
   const list = document.getElementById(
@@ -194,20 +215,40 @@ describe("switching the search with its menu open", () => {
     // The search in sight, chosen again from its field: nothing switches.
     await user.click(tab("a business"));
 
-    await user.click(styleButton());
-    const components = screen
-      .getAllByRole("button")
-      .find(button => /Components/.test(button.textContent ?? ""))!;
-    if (components.getAttribute("aria-expanded") === "false") {
-      await user.click(components);
-    }
-    const rowOf = within(screen.getByRole("tablist", { name: "Row of" }));
-    await user.click(rowOf.getByRole("tab", { name: "Person" }));
-    const business = rowOf.getByRole("tab", { name: "Business" });
-    await user.click(business);
+    const rowOf = await openStyling(user);
+    await user.click(rowOf("Person"));
+    await user.click(rowOf("Business"));
 
-    expect(business.getAttribute("aria-selected")).toBe("true");
-    expect(document.activeElement).toBe(business);
+    expect(rowOf("Business").getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(rowOf("Business"));
+  });
+
+  it("carries nothing from Enter on the search already in sight either", async () => {
+    const { user } = await connect();
+    await user.click(field("demo-business"));
+    await user.type(field("demo-business"), "harbor");
+    tab("a business").focus();
+    await user.keyboard("{Enter}");
+
+    const rowOf = await openStyling(user);
+    await user.click(rowOf("Person"));
+    await user.click(rowOf("Business"));
+
+    expect(document.activeElement).toBe(rowOf("Business"));
+  });
+
+  it("forgets a focused field when a press never becomes a click, so a later switch from the keyboard carries nothing", async () => {
+    const { user } = await connect();
+    await user.click(field("demo-business"));
+    await user.type(field("demo-business"), "harbor");
+    // A touch that turns into a scroll: pressed, then cancelled.
+    fireEvent.pointerDown(document.body);
+    fireEvent.pointerCancel(document.body);
+    tab("a business").focus();
+    await user.keyboard("{ArrowRight}");
+
+    expect(tab("a person").getAttribute("aria-selected")).toBe("true");
+    expect(document.activeElement).toBe(tab("a person"));
   });
 
   it("switches from the keyboard as before, the focus kept on the words", async () => {

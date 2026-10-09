@@ -496,10 +496,13 @@ export function App() {
       fieldWasActive.current = false;
     };
     document.addEventListener("pointerdown", note, true);
+    // A press ends in a click, or, a touch that scrolls, in a cancel.
     document.addEventListener("click", forget);
+    document.addEventListener("pointercancel", forget);
     return () => {
       document.removeEventListener("pointerdown", note, true);
       document.removeEventListener("click", forget);
+      document.removeEventListener("pointercancel", forget);
     };
   }, []);
   const [person, setPerson] = useState("");
