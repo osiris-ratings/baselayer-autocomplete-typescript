@@ -564,8 +564,11 @@ interface Landing {
   x: number;
   y: number;
   lifted: Lifted;
-  /** The row's place once the drop is drawn; null until it is measured. */
-  to: { left: number; top: number } | null;
+  /**
+   * The row's place once the drop is drawn, and how far its drawer is
+   * scrolled sideways; null until it is measured.
+   */
+  to: { left: number; top: number; scroll: number } | null;
 }
 
 const reducedMotion = () =>
@@ -624,6 +627,12 @@ function RowGhost({
     scroller.replaceChildren(copy, track);
     scroller.scrollLeft = lifted.scroll;
   }, [row, lifted.scroll, lifted.track]);
+  // Settling, it shows what the row's drawer shows, scrolled since the lift.
+  useLayoutEffect(() => {
+    if (to !== null && view.current !== null) {
+      view.current.scrollLeft = to.scroll;
+    }
+  }, [to]);
   useEffect(() => {
     if (to === null) return;
     const timer = setTimeout(onSettled, SETTLE_MS + 100);
@@ -1191,9 +1200,12 @@ function KindRowMap<P extends string, F extends string>({
     row.style.transition = "none";
     const { top } = row.getBoundingClientRect();
     row.style.transition = "";
-    const left = (row.closest(".row-map-scroll") ?? row).getBoundingClientRect()
-      .left;
-    setLanding({ ...landing, to: { left, top } });
+    const view = row.closest<HTMLElement>(".row-map-scroll");
+    const { left } = (view ?? row).getBoundingClientRect();
+    setLanding({
+      ...landing,
+      to: { left, top, scroll: view?.scrollLeft ?? 0 },
+    });
   }, [landing]);
   // The Enabled column's guide starts one gap under its heading's ink,
   // wherever the heading's font puts that; it is measured again once the

@@ -414,6 +414,29 @@ describe("a line carried by its grip", () => {
     });
   }
 
+  it("settles showing what its drawer shows, scrolled back while the line was held", async () => {
+    const { kind, grip, done } = mount(BOTH, 280);
+    try {
+      const scroller = kind("people").closest<HTMLElement>(".row-map-scroll")!;
+      scroller.scrollLeft = scroller.scrollWidth - scroller.clientWidth;
+      await frame();
+      expect(scroller.scrollLeft).toBeGreaterThan(20);
+      const below = kind("addresses").getBoundingClientRect();
+      const drag = await press(grip("people"));
+      await drag.move(below.left + 40, below.bottom - 2);
+      scroller.scrollLeft = 0;
+      await frame();
+      await drag.up(below.left + 40, below.bottom - 2);
+      await frame();
+      // Settled at once, and not yet gone: a wait would race a loaded runner.
+      for (const animation of document.getAnimations()) animation.finish();
+      const copy = ghost()!.querySelector(".row-map-kind")!;
+      expect(places(copy, 0)).toEqual(places(kind("people"), 0));
+    } finally {
+      done();
+    }
+  });
+
   it("is never copied when Alt and an arrow move it", async () => {
     const { grip, latest, done } = mount(BOTH);
     try {
