@@ -1144,6 +1144,21 @@ html[data-dragging] * {
   transform: rotate(-1deg);
 }
 
+/* The copy's view of its line, scrolled as the line was, never by hand. */
+.row-map-row-ghost .row-map-scroll {
+  position: relative;
+  overflow: hidden;
+}
+
+/* The drawer's width to scroll across, taking no room in the copy. */
+.row-map-ghost-track {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 1px;
+  visibility: hidden;
+}
+
 .row-map-row-ghost[data-settling] {
   transition:
     left 180ms ease-out,

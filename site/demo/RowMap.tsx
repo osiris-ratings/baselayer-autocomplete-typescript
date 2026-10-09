@@ -193,6 +193,10 @@ interface Lifted {
   source: HTMLElement;
   /** The map's width, which its container queries read. */
   scope: number;
+  /** How far a lifted line's drawer was scrolled sideways, and how far it
+      could be: its widest line, not this one. */
+  scroll: number;
+  track: number;
 }
 
 interface Drag {
@@ -235,7 +239,21 @@ function measure(handle: HTMLElement, x: number, y: number): Lifted {
       ? ".row-map-kind"
       : ".row-map-place, .row-map-chip",
   );
-  const box = (cell ?? handle).getBoundingClientRect();
+  // A line is seen through its drawer, which may be scrolled sideways under
+  // the sticky grip: what was lifted is that view of it.
+  const view = handle.classList.contains("row-map-grip")
+    ? (cell?.closest<HTMLElement>(".row-map-scroll") ?? null)
+    : null;
+  const row = (cell ?? handle).getBoundingClientRect();
+  const box =
+    view === null
+      ? row
+      : {
+          left: view.getBoundingClientRect().left,
+          top: row.top,
+          width: view.clientWidth,
+          height: row.height,
+        };
   const face = getComputedStyle(
     cell?.querySelector(".row-map-face") ?? cell ?? handle,
   );
@@ -254,6 +272,8 @@ function measure(handle: HTMLElement, x: number, y: number): Lifted {
     },
     source: cell ?? handle,
     scope: handle.closest(".row-map-wrap")?.getBoundingClientRect().width ?? 0,
+    scroll: view?.scrollLeft ?? 0,
+    track: view?.scrollWidth ?? 0,
   };
 }
 
@@ -577,7 +597,7 @@ function RowGhost({
   const [drawer] = useState(
     () => row.closest(".row-map")?.className ?? "row-map",
   );
-  const card = useRef<HTMLDivElement | null>(null);
+  const view = useRef<HTMLDivElement | null>(null);
   useLayoutEffect(() => {
     const copy = row.cloneNode(true) as HTMLElement;
     // Drawn as it rests, not as the carried line is marked in its drawer.
@@ -590,8 +610,16 @@ function RowGhost({
     for (const guide of copy.querySelectorAll(".row-map-guide")) {
       guide.remove();
     }
-    card.current?.replaceChildren(copy);
-  }, [row]);
+    const scroller = view.current;
+    if (scroller === null) return;
+    // As wide as the drawer's widest line, which the line was scrolled by,
+    // and scrolled as the line was, so its grip and what was in sight match.
+    const track = document.createElement("span");
+    track.className = "row-map-ghost-track";
+    track.style.width = `${lifted.track}px`;
+    scroller.replaceChildren(copy, track);
+    scroller.scrollLeft = lifted.scroll;
+  }, [row, lifted.scroll, lifted.track]);
   useEffect(() => {
     if (to === null) return;
     const timer = setTimeout(onSettled, SETTLE_MS + 100);
@@ -611,13 +639,14 @@ function RowGhost({
       }}
     >
       <div
-        ref={card}
         className={drawer}
         style={{
           width: lifted.width,
           transformOrigin: `${lifted.grabX}px ${lifted.grabY}px`,
         }}
-      />
+      >
+        <div ref={view} className="row-map-scroll" />
+      </div>
     </div>
   );
 }
@@ -1149,10 +1178,13 @@ function KindRowMap<P extends string, F extends string>({
       setLanding(null);
       return;
     }
-    // Where it will rest, not where a slide back still has it.
+    // Where it will rest, not where a slide back still has it, seen through
+    // its drawer as the copy is.
     row.style.transition = "none";
-    const { left, top } = row.getBoundingClientRect();
+    const { top } = row.getBoundingClientRect();
     row.style.transition = "";
+    const left = (row.closest(".row-map-scroll") ?? row).getBoundingClientRect()
+      .left;
     setLanding({ ...landing, to: { left, top } });
   }, [landing]);
   // The Enabled column's guide starts one gap under its heading's ink,

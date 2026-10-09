@@ -22,10 +22,10 @@ declare module "vitest/browser" {
 }
 
 /** The map with its state kept, the latest state read back. */
-function mount(initial: StyleState) {
+function mount(initial: StyleState, width = 560) {
   const host = document.createElement("div");
   host.className = "demo";
-  host.style.width = "560px";
+  host.style.width = `${width}px`;
   document.body.append(host);
   const root = createRoot(host);
   const latest = { state: initial };
@@ -330,6 +330,38 @@ describe("a line carried by its grip", () => {
       expect(kind("people").dataset.landing).toBeUndefined();
       window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape" }));
       await settled();
+    } finally {
+      done();
+    }
+  });
+
+  it("is held by its grip, showing what was in sight, when the line was scrolled sideways", async () => {
+    const { host, kind, grip, done } = mount(BOTH, 280);
+    try {
+      const scroller = kind("people").closest<HTMLElement>(".row-map-scroll")!;
+      const overflow = scroller.scrollWidth - scroller.clientWidth;
+      expect(overflow).toBeGreaterThan(20);
+      scroller.scrollLeft = overflow;
+      await frame();
+      const live = grip("people").getBoundingClientRect();
+      const liveFace = kind("people")
+        .querySelector(".row-map-face")!
+        .getBoundingClientRect();
+      const drag = await press(grip("people"));
+      await drag.move(drag.x0 + 20, drag.y0 + 10);
+      const copy = ghost()!;
+      // Its grip under the pointer, as it was under the press.
+      const held = copy.querySelector(".row-map-grip")!.getBoundingClientRect();
+      expect(Math.abs(held.left - (live.left + 20))).toBeLessThanOrEqual(2);
+      expect(Math.abs(held.top - (live.top + 10))).toBeLessThanOrEqual(2);
+      // The same part of the line in sight: its first place as far from the
+      // grip as on the live line.
+      const face = copy.querySelector(".row-map-face")!.getBoundingClientRect();
+      expect(
+        Math.abs(face.left - held.left - (liveFace.left - live.left)),
+      ).toBeLessThanOrEqual(2);
+      expect(host.scrollWidth).toBeLessThanOrEqual(host.clientWidth + 1);
+      await drag.up(drag.x0 + 20, drag.y0 + 10);
     } finally {
       done();
     }
