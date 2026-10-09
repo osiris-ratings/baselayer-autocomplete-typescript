@@ -289,6 +289,9 @@ export function useRoleColumn(
     const loading = () => void document.fonts.ready.then(redrawn);
     document.fonts.addEventListener("loading", loading);
     document.fonts.addEventListener("loadingdone", redrawn);
+    // A load already under way, or one that ended before these listeners
+    // were in place, said so to nobody: measure again once fonts settle.
+    loading();
     return () => {
       live = false;
       document.fonts.removeEventListener("loading", loading);

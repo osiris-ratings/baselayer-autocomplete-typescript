@@ -142,6 +142,35 @@ describe("the role column when a web font comes in", () => {
     }
   });
 
+  it("fits the roles once a font that was already loading when the menu came in loads", async () => {
+    const face = new FontFace("Early Face", `url(${newsreader}?early)`);
+    document.fonts.add(face);
+    // The load starts, and says so, before the menu and its listeners exist.
+    const started = new Promise(resolve =>
+      document.fonts.addEventListener("loading", resolve, { once: true }),
+    );
+    const loaded = face.load();
+    await started;
+    const { host, done } = draw("'Early Face', monospace");
+    try {
+      expect(face.status, "still loading as the menu comes in").toBe("loading");
+      const before = column(host);
+      await loaded;
+      await expect
+        .poll(
+          () => {
+            const now = column(host);
+            return Math.abs(now.widest - before.widest) > 2 && fits(now);
+          },
+          { timeout: 3000 },
+        )
+        .toBe(true);
+    } finally {
+      document.fonts.delete(face);
+      done();
+    }
+  });
+
   it("fits the roles again once a font the page's stylesheet declares loads", async () => {
     const style = declare("Declared Face", newsreader);
     const { host, done } = draw("'Declared Face', monospace");
