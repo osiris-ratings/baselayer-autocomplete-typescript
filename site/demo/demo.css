@@ -1491,12 +1491,23 @@
   font-size: 12px;
 }
 
-/* In the drawer's own ink, plain to see; the rule's extra pixel comes out of
-   the room under it, so nothing after it moves. */
+/* The rule: 2px of the drawer's faintest stroke on a rounded outline of its
+   ground, in the room a border took, so nothing after it moves. */
 .row-map-tray[data-ruled] {
   margin-top: 4px;
-  padding-top: 9px;
-  border-top: 2px solid var(--map-soft);
+  padding-top: 11px;
+}
+
+.row-map-tray[data-ruled]::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--map-guide);
+  box-shadow: 0 0 0 2px var(--map-bg, var(--paper));
+  content: "";
 }
 
 .row-map-chip {

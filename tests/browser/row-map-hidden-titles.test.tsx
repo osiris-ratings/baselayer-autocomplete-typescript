@@ -37,6 +37,31 @@ function mount(state: StyleState, width: number) {
   };
 }
 
+type Rgb = [number, number, number];
+
+/** A color as the browser reads it back, or as a look gives it. */
+function rgb(color: string): Rgb {
+  const hex = /^#([0-9a-f]{6})$/i.exec(color);
+  if (hex) {
+    return [0, 2, 4].map(at => parseInt(hex[1]!.slice(at, at + 2), 16)) as Rgb;
+  }
+  const [r, g, b] = /rgba?\(([^)]*)\)/.exec(color)![1]!.split(",").map(Number);
+  return [r!, g!, b!];
+}
+
+/** WCAG's contrast ratio between two colors. */
+function contrast(a: Rgb, b: Rgb): number {
+  const luminance = (color: Rgb) => {
+    const [r, g, b] = color.map(channel => {
+      const c = channel / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+  };
+  const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (light! + 0.05) / (dark! + 0.05);
+}
+
 /** A person's row with its role left out: a hidden field beside the hidden line. */
 const ROLE_OUT: StyleState = {
   ...DEFAULT_STYLE,
@@ -51,7 +76,7 @@ const ROLE_OUT: StyleState = {
 
 describe("the Hidden drawer's two titles", () => {
   for (const width of [560, 320]) {
-    it(`title the hidden lines and, ruled off under them, the hidden fields, in ${width}px`, () => {
+    it(`title the hidden lines and, faintly ruled off under them, the hidden fields, in ${width}px`, () => {
       const { host, hidden, titles, done } = mount(ROLE_OUT, width);
       try {
         expect(titles()).toEqual(["Hidden lines", "Hidden fields"]);
@@ -68,16 +93,34 @@ describe("the Hidden drawer's two titles", () => {
         expect(fields!.getBoundingClientRect().bottom).toBeLessThanOrEqual(
           chip.getBoundingClientRect().top,
         );
-        // The second under the rule, the rule under the lines.
-        const rule = getComputedStyle(tray);
-        expect(rule.borderTopStyle).toBe("solid");
-        expect(parseFloat(rule.borderTopWidth)).toBeGreaterThanOrEqual(2);
+        // The rule: under the lines, over the second title; 2px of the
+        // drawer's faintest stroke, on a rounded outline of its ground.
+        const rule = getComputedStyle(tray, "::before");
+        const thick = parseFloat(rule.height);
+        expect(thick).toBeGreaterThanOrEqual(2);
         expect(tray.getBoundingClientRect().top).toBeGreaterThanOrEqual(
           line.getBoundingClientRect().bottom,
         );
         expect(fields!.getBoundingClientRect().top).toBeGreaterThanOrEqual(
-          tray.getBoundingClientRect().top + parseFloat(rule.borderTopWidth),
+          tray.getBoundingClientRect().top + thick,
         );
+        const ground = rgb(
+          getComputedStyle(host.querySelector(".row-map-wrap")!)
+            .getPropertyValue("--map-bg")
+            .trim(),
+        );
+        // Faint: about the stripes' contrast, a little above, never a line
+        // that reads as a border.
+        const faint = contrast(rgb(rule.backgroundColor), ground);
+        expect(faint).toBeGreaterThanOrEqual(1.2);
+        expect(faint).toBeLessThanOrEqual(1.6);
+        expect(parseFloat(rule.borderTopLeftRadius)).toBeGreaterThan(0);
+        const outline = /^(rgba?\([^)]*\)) 0px 0px 0px (\d+)px$/.exec(
+          rule.boxShadow,
+        );
+        expect(outline, rule.boxShadow).not.toBeNull();
+        expect(Number(outline![2])).toBeGreaterThanOrEqual(2);
+        expect(rgb(outline![1]!)).toEqual(ground);
         // Each title's text starts where its section's chips do.
         const text = (element: Element) => {
           const range = document.createRange();
