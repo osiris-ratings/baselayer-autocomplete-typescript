@@ -287,6 +287,8 @@ function useFieldDrag(
   const tracking = drag === null ? null : (drag.pointerId ?? "mouse");
   useEffect(() => {
     if (tracking === null) return;
+    // The grabbing hand for the whole gesture, wherever the pointer goes.
+    document.documentElement.dataset.dragging = "";
     const byMouse = tracking === "mouse";
     /** Ends the drag; one that was carried is let go where it was last held. */
     const end = () => {
@@ -360,6 +362,7 @@ function useFieldDrag(
     window.addEventListener("blur", abandon);
     window.addEventListener("contextmenu", abandon);
     return () => {
+      delete document.documentElement.dataset.dragging;
       window.removeEventListener(moveType, move);
       window.removeEventListener(upType, up);
       window.removeEventListener("pointercancel", cancel);

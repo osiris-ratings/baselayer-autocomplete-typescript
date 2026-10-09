@@ -606,6 +606,12 @@
   text-underline-offset: 2px;
 }
 
+/* Something carried keeps the grabbing hand wherever the pointer goes. */
+html[data-dragging],
+html[data-dragging] * {
+  cursor: grabbing !important;
+}
+
 .fold-subhead {
   margin: 8px 0 6px;
 }
