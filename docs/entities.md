@@ -130,8 +130,11 @@ as well, when no business name filters, and on a person or an address.
 
 A related item a filter matched carries `highlight`, the parts of the name it
 matched on, as a row's own `highlight` does: its `matched_name` when it has
-one, else its `label`. The grouped components mark them as they mark a row's
-name, as the service sent them. It is null when no filter matched the item.
+one, else its `label`. The components mark them as they mark a row's name, as
+the service sent them, wherever the item is drawn: a line under a person or an
+address, a person's first address, a business row's officer and address
+(`addressLineOf` and `peopleLineOf` carry the parts). It is null when no
+filter matched the item.
 
 The person's and the address's own `token` is redeemed nowhere: pick one of
 their businesses instead. Each of those carries a business token, sealed with

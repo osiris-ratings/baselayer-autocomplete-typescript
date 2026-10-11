@@ -681,9 +681,15 @@ function GroupedView<R extends GroupedRoute>({
             className={cx("address", "bl-ac-address")}
             data-place={place}
             data-testid="grouped-firstAddress"
+            data-emphasis={look.matchEmphasis}
           >
             {iconOf("firstAddress", "address", first.role)}
-            {first.label}
+            {marked(
+              first.label,
+              relatedParts(first.label, first),
+              markClass,
+              "grouped-match",
+            )}
             {more > 0 ? ` ${text.more(more)}` : ""}
           </span>
         );

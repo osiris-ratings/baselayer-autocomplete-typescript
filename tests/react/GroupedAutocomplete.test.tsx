@@ -1054,6 +1054,39 @@ describe("a related item's highlight", () => {
     expect(marks(person[1]!)).toEqual([]);
   });
 
+  it("underlines the parts of the first address a person's head shows", () => {
+    const copy = structuredClone(PEOPLE);
+    Object.assign(copy.suggestions[0]!.related.addresses.items[0]!, {
+      matched: true,
+      highlight: [
+        { text: "12 Fernhallow", matched: true },
+        { text: " Ln, Dover, DE 19901", matched: false },
+      ],
+    });
+    render(
+      <PersonAutocompleteView
+        id="person"
+        value="fern"
+        onInputChange={() => {}}
+        onSelect={() => {}}
+        suggestions={parseSuggestResponse("people", copy).suggestions}
+        found={2}
+        foundCapped={false}
+        truncated={false}
+        indexTag={null}
+        roundTripMs={null}
+        isSearching={false}
+        error={null}
+        open
+      />,
+    );
+
+    const [first, second] = screen.getAllByTestId("grouped-firstAddress");
+    expect(marks(first!)).toEqual(["12 Fernhallow"]);
+    expect(first).toHaveAttribute("data-emphasis", "underline");
+    expect(second).toBeUndefined();
+  });
+
   it("leaves an item without parts plain, and every item under the plain emphasis", () => {
     const parted = withParts({ highlight: ridgeline });
     const { business } = drawAddresses(parted);

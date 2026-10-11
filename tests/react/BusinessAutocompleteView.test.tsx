@@ -1815,6 +1815,64 @@ describe("what a row matched on", () => {
     expect(marks(address)).toEqual(["301 Quenby St, San Francisco, CA 94105"]);
   });
 
+  // A newer service sends the parts of a matched officer's name and of a
+  // matched address; the row marks those, as sent, rather than the whole.
+  const parted: BusinessSuggestion = {
+    ...filtered,
+    related: {
+      people: {
+        ...filtered.related.people,
+        items: filtered.related.people.items.map((item, index) =>
+          index === 0
+            ? {
+                ...item,
+                highlight: [
+                  { text: "Ada", matched: true },
+                  { text: " Fox", matched: false },
+                ],
+              }
+            : item,
+        ),
+      },
+      addresses: {
+        ...filtered.related.addresses,
+        items: filtered.related.addresses.items.map((item, index) =>
+          index === 0
+            ? {
+                ...item,
+                highlight: [
+                  { text: "301", matched: true },
+                  {
+                    text: " Quenby St, San Francisco, CA 94105",
+                    matched: false,
+                  },
+                ],
+              }
+            : item,
+        ),
+      },
+    },
+  };
+
+  it("marks only the parts the service sent for a matched officer and address", () => {
+    const row = rowOf(parted);
+
+    expect(
+      marks(within(row).getByTestId("business-suggestion-officers")),
+    ).toEqual(["Ada"]);
+    expect(
+      marks(within(row).getByTestId("business-suggestion-address")),
+    ).toEqual(["301"]);
+  });
+
+  it("marks none of the parts under the plain emphasis", () => {
+    const row = rowOf(parted, {
+      look: { ...DEFAULT_LOOK, matchEmphasis: "plain" },
+    });
+
+    expect(marks(row)).toEqual([]);
+  });
+
   it("calls a matched agent's address an agent's, and an address the family filed itself nothing", () => {
     const addressOf = (row: BusinessSuggestion) =>
       within(rowOf(row)).getByTestId("business-suggestion-address");

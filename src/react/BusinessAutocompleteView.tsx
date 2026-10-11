@@ -36,7 +36,11 @@ import {
   queryTokens,
   structureLabel,
 } from "@baselayer-sdk/autocomplete";
-import type { BusinessSuggestion, Filters } from "@baselayer-sdk/autocomplete";
+import type {
+  BusinessSuggestion,
+  Filters,
+  HighlightPart,
+} from "@baselayer-sdk/autocomplete";
 
 import { SegmentIcon, type IconSet } from "./icons";
 import { resolveMessages, type AutocompleteMessages } from "./messages";
@@ -227,11 +231,27 @@ function DefaultRow({
   const matchedStates = matches.flatMap(match =>
     match.kind === "state" ? match.states : [],
   );
-  // A match with no parts of its own is marked whole, as the one part.
-  const wholeMark = (label: string, matched: boolean): ReactNode =>
-    matched && look.matchEmphasis !== "plain"
+  /**
+   * A related name a filter matched: the parts the autocomplete service sent
+   * for it, as it sent them; else, as from one that sends none, the whole
+   * name as the one part.
+   */
+  const relatedMark = (
+    label: string,
+    highlight: HighlightPart[] | null,
+    matched: boolean,
+  ): ReactNode => {
+    if (look.matchEmphasis === "plain") {
+      return label;
+    }
+    const sent = partsFor(label, highlight ?? [], region, []);
+    if (sent !== null) {
+      return marked(label, sent, markClass);
+    }
+    return matched
       ? marked(label, [{ text: label, matched: true }], markClass)
       : label;
+  };
   const addressSuffix =
     address === null || !address.matched
       ? ""
@@ -279,7 +299,7 @@ function DefaultRow({
               "address",
               item.related.addresses.items[0]?.role ?? null,
             )}
-            {wholeMark(address.label, address.matched)}
+            {relatedMark(address.label, address.highlight, address.matched)}
             {addressSuffix}
           </>
         )}
@@ -296,7 +316,11 @@ function DefaultRow({
           data-matched={people.matched > 0 ? "true" : undefined}
         >
           {iconOf("people", "person", people.role)}
-          {wholeMark(people.names[0] ?? "", people.matched > 0)}
+          {relatedMark(
+            people.names[0] ?? "",
+            people.highlight,
+            people.matched > 0,
+          )}
           {people.more > 0 ? ` ${text.more(people.more)}` : ""}
           {people.role === "agent" ? text.agentSuffix : ""}
         </span>

@@ -720,9 +720,9 @@
  * weight; the alternative name stays at the subtitle's color and normal
  * weight. With the weight emphasis, a matched word on either takes
  * `--bl-ac-weight-mark`. The address and the people, muted like the
- * alternative name, take its treatment
- * when a filter matched them: the wire has no parts for those, so the whole
- * label is the mark.
+ * alternative name, take its treatment when a filter matched them: on the
+ * parts the autocomplete service sent, or, from one that sends none, on the
+ * whole label.
  */
 .bl-ac-name[data-emphasis="underline"] .bl-ac-mark,
 .bl-ac-line-name[data-emphasis="underline"] .bl-ac-mark,

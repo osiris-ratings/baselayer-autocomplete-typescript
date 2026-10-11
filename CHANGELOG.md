@@ -13,9 +13,12 @@ breaking change bumps the minor version.
   line: `also` and that name after its own, muted, as a business row says it.
   `RelatedItem.matched_name` carries it, null when the label fit as well.
 - A related item a filter matched carries the parts of the name it matched on,
-  as a row's own `highlight` does (`RelatedItem.highlight`), and its line under
-  a person or an address marks them in the row's emphasis: its name, or the
-  other name it goes by.
+  as a row's own `highlight` does (`RelatedItem.highlight`), and wherever it is
+  drawn they are marked in the row's emphasis: its line under a person or an
+  address (its name, or the other name it goes by), a person's first address,
+  and a business row's officer and address, which mark the whole name only
+  when an older service sends no parts. `AddressLine` and `PeopleLine` carry
+  the parts of the name they show.
 - A person search narrowed by its businesses' states (`business.state`) moves
   the states it named up behind the domicile on each business line the service
   says matched, never behind the `+N`, and marks them, as a business row does
