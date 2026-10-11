@@ -9,6 +9,7 @@ import {
   routeOf,
   redactBody,
   redactTokens,
+  urlParts,
 } from "../../site/demo/network";
 
 // What Debug › Network keeps of a request, and what it keeps out of sight.
@@ -91,6 +92,54 @@ describe("redactTokens", () => {
     const cutOff = `{"suggestions":[{"token":"${TOKEN}","label":"A"},{"token":"${TOKEN}","la`;
     expect(redactTokens(cutOff)).not.toContain(TOKEN);
     expect(indentJson(cutOff)).toBe(cutOff);
+  });
+});
+
+describe("urlParts", () => {
+  it("tells each query parameter's name from its value, and mutes the escapes", () => {
+    const url =
+      "https://api.baselayer.com/autocomplete/people?q=jane+doe&include=businesses%2Caddresses&business.name=osiri";
+    const parts = urlParts(url);
+    expect(parts.map(p => p.text).join("")).toBe(url);
+    expect(parts).toEqual([
+      { text: "https://api.baselayer.com/autocomplete/people", part: "base" },
+      { text: "?", part: "sign" },
+      { text: "q", part: "key" },
+      { text: "=", part: "sign" },
+      { text: "jane", part: "value" },
+      { text: "+", part: "escape" },
+      { text: "doe", part: "value" },
+      { text: "&", part: "sign" },
+      { text: "include", part: "key" },
+      { text: "=", part: "sign" },
+      { text: "businesses", part: "value" },
+      { text: "%2C", part: "escape" },
+      { text: "addresses", part: "value" },
+      { text: "&", part: "sign" },
+      { text: "business.name", part: "key" },
+      { text: "=", part: "sign" },
+      { text: "osiri", part: "value" },
+    ]);
+  });
+
+  it("keeps a URL without a query whole", () => {
+    expect(urlParts("https://api.baselayer.com/searches")).toEqual([
+      { text: "https://api.baselayer.com/searches", part: "base" },
+    ]);
+  });
+
+  it("keeps a parameter without a value, or with an empty one", () => {
+    const url = "https://x.test/a?flag&q=&limit=5";
+    const parts = urlParts(url);
+    expect(parts.map(p => p.text).join("")).toBe(url);
+    expect(parts.filter(p => p.part === "key").map(p => p.text)).toEqual([
+      "flag",
+      "q",
+      "limit",
+    ]);
+    expect(parts.filter(p => p.part === "value").map(p => p.text)).toEqual([
+      "5",
+    ]);
   });
 });
 

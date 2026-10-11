@@ -89,6 +89,56 @@ export function indentJson(text: string): string {
   }
 }
 
+export type UrlPart = "base" | "sign" | "key" | "value" | "escape";
+
+const ESCAPE = /(%[0-9a-f]{2}|\+)/i;
+
+/** A query name or value, with its percent escapes and `+` spaces apart. */
+function escaped(
+  text: string,
+  part: UrlPart,
+): { text: string; part: UrlPart }[] {
+  return text
+    .split(ESCAPE)
+    .filter(piece => piece !== "")
+    .map(piece => ({
+      text: piece,
+      part: ESCAPE.test(piece) ? "escape" : part,
+    }));
+}
+
+/**
+ * A URL in the pieces the network panel colours: its origin and path, then
+ * each query parameter's name and value, the `?`, `&` and `=` between them,
+ * and the escapes inside them, which the panel mutes. The pieces join back
+ * into the URL exactly.
+ */
+export function urlParts(url: string): { text: string; part: UrlPart }[] {
+  const at = url.indexOf("?");
+  if (at === -1) return [{ text: url, part: "base" }];
+  const parts: { text: string; part: UrlPart }[] = [
+    { text: url.slice(0, at), part: "base" },
+    { text: "?", part: "sign" },
+  ];
+  url
+    .slice(at + 1)
+    .split("&")
+    .forEach((pair, i) => {
+      if (i > 0) parts.push({ text: "&", part: "sign" });
+      const eq = pair.indexOf("=");
+      if (eq === -1) {
+        parts.push(...escaped(pair, "key"));
+        return;
+      }
+      parts.push(
+        ...escaped(pair.slice(0, eq), "key"),
+        { text: "=", part: "sign" },
+        ...escaped(pair.slice(eq + 1), "value"),
+      );
+    });
+  return parts;
+}
+
 /** A request's body as the panels show it: tokens cut short, JSON indented. */
 export function redactBody(text: string): string {
   return indentJson(redactTokens(text));

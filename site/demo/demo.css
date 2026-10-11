@@ -2372,16 +2372,47 @@ html[data-dragging] * {
   display: block;
 }
 
+.net-detail .net-url,
 .net-body {
-  max-height: 300px;
   margin: 0;
   padding: 12px 14px;
-  overflow: auto;
   background: var(--navy-deep);
   border-radius: 2px;
   color: #e8eefb;
   font-size: 12px;
   line-height: 1.55;
+}
+
+.net-detail .net-url {
+  display: block;
+  white-space: pre-wrap;
+}
+
+.demo .net-url + .hint {
+  display: block;
+  margin: 6px 0 0;
+  font-size: 13px;
+}
+
+.net-url [data-part="sign"] {
+  color: var(--sh-sign);
+}
+
+.net-url [data-part="key"] {
+  color: var(--sh-property);
+}
+
+.net-url [data-part="value"] {
+  color: var(--sh-string);
+}
+
+.net-url [data-part="escape"] {
+  color: var(--sh-comment);
+}
+
+.net-body {
+  max-height: 480px;
+  overflow: auto;
 }
 
 @media (max-width: 640px) {

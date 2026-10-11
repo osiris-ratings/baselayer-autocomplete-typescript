@@ -23,6 +23,10 @@ breaking change bumps the minor version.
   `underline`, the highlight laid over it under `background`, bolder letters
   under `weight`, the mark's ink under `ink`. On a business row and on a line
   alike.
+- The demo's Debug › Network colours a request's and a response's body as JSON,
+  and shows more of it before it scrolls. A request's URL sits in the same
+  navy box, each query parameter's name apart from its value and the escapes
+  (`%2C`, `+`) muted.
 
 ## [0.5.0] - 2026-10-08
 
