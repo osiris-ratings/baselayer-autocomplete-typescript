@@ -20,6 +20,8 @@ const business = (
   label,
   role,
   matched: false,
+  matched_name: null,
+  highlight: null,
   address: null,
   states: null,
   domicile_state: null,

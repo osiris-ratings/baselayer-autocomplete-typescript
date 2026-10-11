@@ -46,6 +46,11 @@ export interface AddressLine {
    * filing names no role.
    */
   role: AddressOwner | null;
+  /**
+   * The parts of `label` an address filter marked, as the autocomplete
+   * service sent them; null when it sent none.
+   */
+  highlight: HighlightPart[] | null;
 }
 
 function ownerOf(role: RelatedRole | null): AddressOwner | null {
@@ -71,7 +76,12 @@ export function addressLineOf(
   const lead = suggestion.related.addresses.items[0];
   return lead === undefined
     ? null
-    : { label: lead.label, matched: lead.matched, role: ownerOf(lead.role) };
+    : {
+        label: lead.label,
+        matched: lead.matched,
+        role: ownerOf(lead.role),
+        highlight: lead.highlight,
+      };
 }
 
 /** The family's officers as named in the index; registered agents are not people. */
@@ -92,6 +102,11 @@ export interface PeopleLine {
    * first name shown is a match when this is above zero.
    */
   matched: number;
+  /**
+   * The parts of the first of `names` a person filter marked, as the
+   * autocomplete service sent them; null when it sent none.
+   */
+  highlight: HighlightPart[] | null;
 }
 
 /**
@@ -119,15 +134,17 @@ function moreOf(
 function peopleOfRole(
   suggestion: BusinessSuggestion,
   role: PeopleLine["role"],
-): { names: string[]; matched: number } {
+): { names: string[]; matched: number; highlight: HighlightPart[] | null } {
   const items = suggestion.related.people.items.filter(
     item => item.role === role,
   );
   const matched = items.filter(item => item.matched);
   const rest = items.filter(item => !item.matched);
+  const ordered = [...matched, ...rest];
   return {
-    names: [...matched, ...rest].map(item => item.label),
+    names: ordered.map(item => item.label),
     matched: matched.length,
+    highlight: ordered[0]?.highlight ?? null,
   };
 }
 
@@ -141,13 +158,14 @@ export function peopleLineOf(
   suggestion: BusinessSuggestion,
 ): PeopleLine | null {
   for (const role of ["officer", "agent"] as const) {
-    const { names, matched } = peopleOfRole(suggestion, role);
+    const { names, matched, highlight } = peopleOfRole(suggestion, role);
     if (names.length > 0) {
       return {
         names,
         role,
         more: moreOf(suggestion, names, role),
         matched,
+        highlight,
       };
     }
   }

@@ -22,6 +22,8 @@ function person(
     label,
     role,
     matched,
+    matched_name: null,
+    highlight: null,
     address: null,
     states: null,
     domicile_state: null,
@@ -39,6 +41,8 @@ function address(
     label,
     role,
     matched,
+    matched_name: null,
+    highlight: null,
     address: null,
     states: null,
     domicile_state: null,
@@ -323,6 +327,7 @@ describe("the readers the matches reorder", () => {
       role: "officer",
       more: 6,
       matched: 1,
+      highlight: null,
     });
   });
 
@@ -345,12 +350,47 @@ describe("the readers the matches reorder", () => {
       label: "900 Saltmarrow Ave, Oakland, CA",
       matched: true,
       role: "officer",
+      highlight: null,
     });
     expect(addressLineOf(harbor)).toEqual({
       label: "12 Kestrelwick Rd, Wilmington, DE 19801",
       matched: false,
       role: "principal",
+      highlight: null,
     });
+  });
+
+  it("carries the parts the service sent for the name each line shows", () => {
+    const thomas = [
+      { text: "Thomas", matched: true },
+      { text: " Harlow", matched: false },
+    ];
+    const saltmarrow = [
+      { text: "900 Saltmarrow", matched: true },
+      { text: " Ave, Oakland, CA", matched: false },
+    ];
+    const row = withRelated({
+      people: set(
+        [
+          person("Ada Brandt", "officer"),
+          { ...person("Thomas Harlow", "officer", true), highlight: thomas },
+        ],
+        { matched: 1 },
+      ),
+      addresses: set(
+        [
+          {
+            ...address("900 Saltmarrow Ave, Oakland, CA", "officer", true),
+            highlight: saltmarrow,
+          },
+        ],
+        { matched: 1 },
+      ),
+    });
+
+    // The matched officer leads the line, and its parts with it.
+    expect(peopleLineOf(row)?.highlight).toEqual(thomas);
+    expect(addressLineOf(row)?.highlight).toEqual(saltmarrow);
   });
 
   it("has no address line without an address", () => {

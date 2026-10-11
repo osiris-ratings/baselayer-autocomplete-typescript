@@ -8,6 +8,19 @@ breaking change bumps the minor version.
 
 ### Added
 
+- A business under a person or an address that a business name filter reached
+  through another name it goes by (a DBA, or a former name) says which on its
+  line: `also` and that name after its own, muted, as a business row says it.
+  `RelatedItem.matched_name` carries it, null when the label fit as well.
+- A related item a filter matched carries the parts of the name it matched on,
+  as a row's own `highlight` does (`RelatedItem.highlight`), and wherever it is
+  drawn they are marked in the row's emphasis: its line under a person or an
+  address (its name, or the other name it goes by), a person's first address,
+  and a business row's officer and address, which still mark the whole name
+  when it matched and no parts were sent. Under the typed-characters region,
+  they are cut at what was typed in the filter that matched the item, as a
+  row's name is at its field. `AddressLine` and `PeopleLine` carry the parts of
+  the name they show.
 - A person search narrowed by its businesses' states (`business.state`) moves
   the states it named up behind the domicile on each business line the service
   says matched, never behind the `+N`, and marks them, as a business row does
@@ -17,6 +30,12 @@ breaking change bumps the minor version.
 
 ### Changed
 
+- **Breaking:** `RelatedItem` gains `matched_name` and `highlight`, required as
+  the parser always fills them; a fixture that builds a related item by hand
+  must add them, null where nothing matched and, for `matched_name`, on a
+  person or an address item. `AddressLine` and `PeopleLine`, which
+  `addressLineOf` and `peopleLineOf` return, gain `highlight` too: a change
+  only to code that builds one by hand.
 - A matched state's square is no longer ringed, which read as a second
   domicile. It keeps its size, the domicile keeps the only border, and the
   square takes the emphasis's own mark: a line a little under it under

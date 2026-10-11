@@ -30,6 +30,8 @@ const related = (
   label,
   role,
   matched: false,
+  matched_name: null,
+  highlight: null,
   address: type === "business" ? "1200 Tallowmere Rd, Pittsburgh, PA" : null,
   states: type === "business" ? ["PA"] : null,
   domicile_state: type === "business" ? "PA" : null,

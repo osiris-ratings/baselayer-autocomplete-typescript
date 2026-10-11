@@ -48,6 +48,8 @@ const cinder: BusinessSuggestion = {
           label: "NORTHGATE AGENT SERVICES, INC",
           role: "agent",
           matched: false,
+          matched_name: null,
+          highlight: null,
           address: null,
           states: null,
           domicile_state: null,
@@ -58,6 +60,8 @@ const cinder: BusinessSuggestion = {
           label: "Wesley Crane",
           role: "officer",
           matched: false,
+          matched_name: null,
+          highlight: null,
           address: null,
           states: null,
           domicile_state: null,
@@ -68,6 +72,8 @@ const cinder: BusinessSuggestion = {
           label: "Ada Fox",
           role: "officer",
           matched: false,
+          matched_name: null,
+          highlight: null,
           address: null,
           states: null,
           domicile_state: null,
@@ -88,6 +94,8 @@ const cinder: BusinessSuggestion = {
           label: "412 Wrenmoor Ln, Springfield, MO 65806",
           role: "principal",
           matched: false,
+          matched_name: null,
+          highlight: null,
           address: null,
           states: null,
           domicile_state: null,
@@ -98,6 +106,8 @@ const cinder: BusinessSuggestion = {
           label: "PO Box 4417, Durham, NC 27702",
           role: "mailing",
           matched: false,
+          matched_name: null,
+          highlight: null,
           address: null,
           states: null,
           domicile_state: null,
@@ -108,6 +118,8 @@ const cinder: BusinessSuggestion = {
           label: "88 Thistlecrest Dr, Tempe, AZ 85281",
           role: "agent",
           matched: false,
+          matched_name: null,
+          highlight: null,
           address: null,
           states: null,
           domicile_state: null,
@@ -152,6 +164,8 @@ const filtered: BusinessSuggestion = {
           label: "Ada Fox",
           role: "officer",
           matched: true,
+          matched_name: null,
+          highlight: null,
           address: null,
           states: null,
           domicile_state: null,
@@ -170,6 +184,8 @@ const filtered: BusinessSuggestion = {
           label: "301 Quenby St, San Francisco, CA 94105",
           role: "officer",
           matched: true,
+          matched_name: null,
+          highlight: null,
           address: null,
           states: null,
           domicile_state: null,
@@ -350,6 +366,8 @@ describe("BusinessAutocompleteView", () => {
               label: "Wesley Crane",
               role: "officer",
               matched: false,
+              matched_name: null,
+              highlight: null,
               address: null,
               states: null,
               domicile_state: null,
@@ -360,6 +378,8 @@ describe("BusinessAutocompleteView", () => {
               label: "Ada Fox",
               role: "officer",
               matched: false,
+              matched_name: null,
+              highlight: null,
               address: null,
               states: null,
               domicile_state: null,
@@ -370,6 +390,8 @@ describe("BusinessAutocompleteView", () => {
               label: "Sam Lee",
               role: "officer",
               matched: false,
+              matched_name: null,
+              highlight: null,
               address: null,
               states: null,
               domicile_state: null,
@@ -741,6 +763,8 @@ const agentsOnly: BusinessSuggestion = {
           label: "NORTHGATE AGENT SERVICES, INC",
           role: "agent",
           matched: false,
+          matched_name: null,
+          highlight: null,
           address: null,
           states: null,
           domicile_state: null,
@@ -751,6 +775,8 @@ const agentsOnly: BusinessSuggestion = {
           label: "LAKESIDE FILING AGENTS",
           role: "agent",
           matched: false,
+          matched_name: null,
+          highlight: null,
           address: null,
           states: null,
           domicile_state: null,
@@ -1787,6 +1813,77 @@ describe("what a row matched on", () => {
     );
     expect(address).toHaveAttribute("data-matched", "true");
     expect(marks(address)).toEqual(["301 Quenby St, San Francisco, CA 94105"]);
+  });
+
+  // A newer service sends the parts of a matched officer's name and of a
+  // matched address; the row marks those, as sent, rather than the whole.
+  const parted: BusinessSuggestion = {
+    ...filtered,
+    related: {
+      people: {
+        ...filtered.related.people,
+        items: filtered.related.people.items.map((item, index) =>
+          index === 0
+            ? {
+                ...item,
+                highlight: [
+                  { text: "Ada", matched: true },
+                  { text: " Fox", matched: false },
+                ],
+              }
+            : item,
+        ),
+      },
+      addresses: {
+        ...filtered.related.addresses,
+        items: filtered.related.addresses.items.map((item, index) =>
+          index === 0
+            ? {
+                ...item,
+                highlight: [
+                  { text: "301", matched: true },
+                  {
+                    text: " Quenby St, San Francisco, CA 94105",
+                    matched: false,
+                  },
+                ],
+              }
+            : item,
+        ),
+      },
+    },
+  };
+
+  it("marks only the parts the service sent for a matched officer and address", () => {
+    const row = rowOf(parted);
+
+    expect(
+      marks(within(row).getByTestId("business-suggestion-officers")),
+    ).toEqual(["Ada"]);
+    expect(
+      marks(within(row).getByTestId("business-suggestion-address")),
+    ).toEqual(["301"]);
+  });
+
+  it("cuts the parts at the typed characters of the filter that matched them", () => {
+    const row = rowOf(parted, {
+      appliedFilters: { person: { name: "ad" }, address: { text: "30" } },
+    });
+
+    expect(
+      marks(within(row).getByTestId("business-suggestion-officers")),
+    ).toEqual(["Ad"]);
+    expect(
+      marks(within(row).getByTestId("business-suggestion-address")),
+    ).toEqual(["30"]);
+  });
+
+  it("marks none of the parts under the plain emphasis", () => {
+    const row = rowOf(parted, {
+      look: { ...DEFAULT_LOOK, matchEmphasis: "plain" },
+    });
+
+    expect(marks(row)).toEqual([]);
   });
 
   it("calls a matched agent's address an agent's, and an address the family filed itself nothing", () => {

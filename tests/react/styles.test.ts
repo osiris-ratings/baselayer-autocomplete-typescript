@@ -200,6 +200,25 @@ describe("the type", () => {
   });
 });
 
+describe("a related line's name", () => {
+  it("takes each emphasis's mark as a row's name does", () => {
+    expect(
+      rule('.bl-ac-line-name[data-emphasis="underline"] .bl-ac-mark'),
+    ).toContain("text-decoration: underline;");
+    expect(
+      rule('.bl-ac-line-name[data-emphasis="background"] .bl-ac-mark'),
+    ).toContain("background: var(--bl-ac-mark, var(--bl-ac-marker));");
+    expect(
+      rule('.bl-ac-line-name[data-emphasis="weight"] > .bl-ac-mark'),
+    ).toContain("font-weight: var(--bl-ac-weight-mark);");
+    expect(
+      rule('.bl-ac-line-name[data-emphasis="ink"] > .bl-ac-mark'),
+    ).toContain(
+      "color: var(--bl-ac-mark, var(--bl-ac-ink-mark, var(--bl-ac-title)));",
+    );
+  });
+});
+
 describe("a disabled line", () => {
   it("is drawn by the default look's inks when the component sets none", () => {
     // The component sets the variables only for another look, so each
@@ -223,6 +242,13 @@ describe("a disabled line", () => {
       `opacity: var(--bl-ac-disabled-opacity, ${inks.opacity});`,
     );
     expect(flat).toContain(`var(--bl-ac-disabled-mark, ${inks.markShare}%)`);
+  });
+
+  it("fades a business line's other name with its address", () => {
+    // `rule` splits selectors at every comma, those inside `:is()` too.
+    expect(css.replace(/\s+/g, " ")).toMatch(
+      /\.bl-ac-group-line:not\(\[data-enabled\]\) :is\(\.bl-ac-address, \.bl-ac-also, \.bl-ac-icon\),[^{]*\{ color: var\( --bl-ac-disabled-text,/,
+    );
   });
 
   it("fades nothing at 0, and the default far enough to read as inactive", () => {

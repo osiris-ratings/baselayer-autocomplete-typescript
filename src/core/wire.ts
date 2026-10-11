@@ -17,6 +17,9 @@
  * `RelatedItem.token`, `role`, `RelatedSet.count`, `RelatedSet.matched`,
  * `structure`, an address's components, a related item's `address`, `states`
  * and `domicile_state`) may be absent as well as null; either reads as null.
+ * So may a related item's `matched_name` and `highlight`, which a newer
+ * autocomplete service sends ahead of this repository's copy of its contract,
+ * and an older one leaves out.
  */
 
 import {
@@ -88,6 +91,19 @@ export interface RelatedItem {
   role: RelatedRole | null;
   /** This item is why the row is here. */
   matched: boolean;
+  /**
+   * The other name a matched business goes by (a DBA, or a former name) when
+   * it fit the business name filter better than `label`, as a business row's
+   * `matched_name` says it. Null when the label fit as well, when no business
+   * name filters, and on a person or an address.
+   */
+  matched_name: string | null;
+  /**
+   * The name a filter matched the item on, split into parts as a row's own
+   * `highlight` is: `matched_name` when it is set, else `label`. Null when no
+   * filter matched the item by its name, or the filter marked no word in it.
+   */
+  highlight: HighlightPart[] | null;
   /**
    * A business's lead address, the one its own row leads with: on an address
    * row too, where it need not be the row's. Null when it has none, and on a
@@ -351,6 +367,10 @@ function relatedItem(
     label: string(o.label, `${path}.label`),
     role: nullable(o.role, `${path}.role`, relatedRole),
     matched: boolean(o.matched, `${path}.matched`),
+    matched_name: nullable(o.matched_name, `${path}.matched_name`, string),
+    highlight: nullable(o.highlight, `${path}.highlight`, (v, p) =>
+      array(v, p, highlightPart),
+    ),
     address: nullable(o.address, `${path}.address`, string),
     states: nullable(o.states, `${path}.states`, (v, p) => array(v, p, string)),
     domicile_state: nullable(

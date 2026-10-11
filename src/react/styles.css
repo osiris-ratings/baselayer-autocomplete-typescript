@@ -409,6 +409,15 @@
   max-width: 60%;
 }
 
+/* The other name a business matched on reads as the name does, in its size,
+   and keeps its own width as the name does: it says why the line is here.
+   The address after it gives way first; then the two names give way
+   together, each by its width, rather than the other name going to a stub. */
+.bl-ac-group-lead > .bl-ac-also {
+  flex: 0 1 auto;
+  font-size: 0.9375em;
+}
+
 /* The trailing corner starts at the right, so its columns line up down the
    group. */
 .bl-ac-group-trailing > :first-child {
@@ -468,7 +477,8 @@
   );
 }
 
-.bl-ac-group-line:not([data-enabled]) :is(.bl-ac-address, .bl-ac-icon),
+.bl-ac-group-line:not([data-enabled])
+  :is(.bl-ac-address, .bl-ac-also, .bl-ac-icon),
 .bl-ac-group-head:not([data-enabled])
   :is(.bl-ac-address, .bl-ac-group-count, .bl-ac-icon),
 .bl-ac-group
@@ -525,7 +535,7 @@
 }
 
 :is(.bl-ac-group-head, .bl-ac-group-line):not([data-enabled])
-  .bl-ac-name[data-emphasis="ink"]
+  :is(.bl-ac-name, .bl-ac-line-name)[data-emphasis="ink"]
   > .bl-ac-mark,
 .bl-ac-group
   > .bl-ac-row:not([data-enabled])
@@ -541,7 +551,7 @@
 
 .bl-ac[data-mark-color]
   :is(.bl-ac-group-head, .bl-ac-group-line):not([data-enabled])
-  .bl-ac-name[data-emphasis="weight"]
+  :is(.bl-ac-name, .bl-ac-line-name)[data-emphasis="weight"]
   > .bl-ac-mark,
 .bl-ac[data-mark-color]
   .bl-ac-group
@@ -555,8 +565,11 @@
   );
 }
 
-.bl-ac-group
-  > .bl-ac-row:not([data-enabled])
+:is(
+    .bl-ac-group-head:not([data-enabled]),
+    .bl-ac-group-line:not([data-enabled]),
+    .bl-ac-group > .bl-ac-row:not([data-enabled])
+  )
   :is(.bl-ac-also, .bl-ac-address, .bl-ac-people):is(
     [data-emphasis="ink"],
     [data-emphasis="weight"]
@@ -703,14 +716,18 @@
 
 /*
  * The marks, one treatment per emphasis, on the name and on the alternative
- * name, each of which carries the emphasis. The name owns its weight; the
- * alternative name stays at the subtitle's color and normal weight. With the
- * weight emphasis, a matched word on either takes `--bl-ac-weight-mark`. The
- * address and the people, muted like the alternative name, take its treatment
- * when a filter matched them: the wire has no parts for those, so the whole
- * label is the mark.
+ * name, each of which carries the emphasis. A related line's name, when the
+ * service sent parts for it, is marked as the name is, but keeps its own
+ * ink under the ink emphasis: only its marked words change. The name owns its
+ * weight; the alternative name stays at the subtitle's color and normal
+ * weight. With the weight emphasis, a matched word on either takes
+ * `--bl-ac-weight-mark`. The address and the people, muted like the
+ * alternative name, take its treatment when a filter matched them: on the
+ * parts the autocomplete service sent, or, from one that sends none, on the
+ * whole label.
  */
 .bl-ac-name[data-emphasis="underline"] .bl-ac-mark,
+.bl-ac-line-name[data-emphasis="underline"] .bl-ac-mark,
 .bl-ac-also[data-emphasis="underline"] .bl-ac-mark,
 .bl-ac-address[data-emphasis="underline"] .bl-ac-mark,
 .bl-ac-people[data-emphasis="underline"] .bl-ac-mark {
@@ -721,6 +738,7 @@
 }
 
 .bl-ac-name[data-emphasis="background"] .bl-ac-mark,
+.bl-ac-line-name[data-emphasis="background"] .bl-ac-mark,
 .bl-ac-also[data-emphasis="background"] .bl-ac-mark,
 .bl-ac-address[data-emphasis="background"] .bl-ac-mark,
 .bl-ac-people[data-emphasis="background"] .bl-ac-mark {
@@ -734,11 +752,13 @@
   font-weight: var(--bl-ac-weight-base);
 }
 
-.bl-ac-name[data-emphasis="weight"] > .bl-ac-mark {
+.bl-ac-name[data-emphasis="weight"] > .bl-ac-mark,
+.bl-ac-line-name[data-emphasis="weight"] > .bl-ac-mark {
   font-weight: var(--bl-ac-weight-mark);
 }
 
-.bl-ac[data-mark-color] .bl-ac-name[data-emphasis="weight"] > .bl-ac-mark {
+.bl-ac[data-mark-color] .bl-ac-name[data-emphasis="weight"] > .bl-ac-mark,
+.bl-ac[data-mark-color] .bl-ac-line-name[data-emphasis="weight"] > .bl-ac-mark {
   color: var(--bl-ac-mark);
 }
 
@@ -753,7 +773,8 @@
   color: var(--bl-ac-ink-base);
 }
 
-.bl-ac-name[data-emphasis="ink"] > .bl-ac-mark {
+.bl-ac-name[data-emphasis="ink"] > .bl-ac-mark,
+.bl-ac-line-name[data-emphasis="ink"] > .bl-ac-mark {
   color: var(--bl-ac-mark, var(--bl-ac-ink-mark, var(--bl-ac-title)));
 }
 

@@ -1,5 +1,6 @@
 import {
   act,
+  cleanup,
   render,
   renderHook,
   screen,
@@ -13,7 +14,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   BUSINESS_TOKEN_TTL_SECONDS,
   DEFAULT_ENABLED_LINES,
+  DEFAULT_LOOK,
   createAutocompleteClient,
+  parseSuggestResponse,
   type AddressesFilters,
   type BusinessPick,
   type EntityPick,
@@ -828,6 +831,372 @@ describe("AddressAutocomplete", () => {
       token: "tok-p-ada",
       label: "Ada Fox",
     });
+  });
+});
+
+// A business a business name filter reached through the other name it goes
+// by (a DBA, or a former name) says so on its line, as a business row does:
+// `also` and that name, muted, after its own. The service sends no marks for
+// it, so it is drawn plain, as the line's own name is.
+describe("a business matched on its other name", () => {
+  /** `body` with its first row's first business matched on `name`. */
+  function matchedOn<T extends typeof PEOPLE | typeof ADDRESSES>(
+    body: T,
+    name: string,
+  ): T {
+    const copy = structuredClone(body);
+    Object.assign(copy.suggestions[0]!.related.businesses.items[0]!, {
+      matched: true,
+      matched_name: name,
+    });
+    return copy;
+  }
+
+  const view = {
+    onInputChange: () => {},
+    onSelect: () => {},
+    found: 1,
+    foundCapped: false,
+    truncated: false,
+    indexTag: null,
+    roundTripMs: null,
+    isSearching: false,
+    error: null,
+    open: true,
+  };
+
+  it("says it after the business's name under a person, muted and unmarked", () => {
+    render(
+      <PersonAutocompleteView
+        {...view}
+        id="person"
+        value="dana"
+        suggestions={
+          parseSuggestResponse("people", matchedOn(PEOPLE, "Tidewater Pumps"))
+            .suggestions
+        }
+      />,
+    );
+
+    const dana = screen.getByRole("group", { name: "Dana Whitfield" });
+    const [harbor, unsealed, cobalt] =
+      within(dana).getAllByTestId("business-line");
+    const also = within(harbor!).getByTestId("grouped-also");
+    expect(also).toHaveTextContent(/^also Tidewater Pumps$/);
+    expect(also).toHaveClass("bl-ac-also");
+    expect(also.querySelector(".bl-ac-mark")).toBeNull();
+    const name = within(harbor!).getByText("Harbor Concrete Pumping Co., Inc.");
+    expect(also.closest('[data-corner="lead"]')).toBe(
+      name.closest('[data-corner="lead"]'),
+    );
+    expect(
+      name.compareDocumentPosition(also) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // Right after the name, before the badge, which is the business's
+    // address by default: the line reads as the row's title does.
+    const address = within(harbor!).getByTestId("grouped-address");
+    expect(also.nextElementSibling).toBe(address);
+    // Only the business that matched on another name says one.
+    expect(within(unsealed!).queryByTestId("grouped-also")).toBeNull();
+    expect(within(cobalt!).queryByTestId("grouped-also")).toBeNull();
+  });
+
+  it("says it after the business's name under an address", () => {
+    render(
+      <AddressAutocompleteView
+        {...view}
+        id="address"
+        value="45 corvel"
+        suggestions={
+          parseSuggestResponse(
+            "addresses",
+            matchedOn(ADDRESSES, "Ember Freight"),
+          ).suggestions
+        }
+      />,
+    );
+
+    const [ridgeline, cinder] = screen.getAllByTestId("business-line");
+    expect(ridgeline).toHaveTextContent(
+      /^Ridgeline Freight LLC\s*also Ember Freight/,
+    );
+    expect(within(cinder!).queryByTestId("grouped-also")).toBeNull();
+  });
+
+  it("still picks the business by its own name", async () => {
+    const fetch = vi.fn<FetchLike>(async url =>
+      reply(
+        200,
+        answer(
+          matchedOn(PEOPLE, "Tidewater Pumps"),
+          (new URL(url).searchParams.get("include") ?? "businesses").split(","),
+        ),
+      ),
+    );
+    const client = createAutocompleteClient({
+      baseUrl: BASE_URL,
+      mint: async () => grant(SCOPE),
+      fetch,
+    });
+    const onPick = vi.fn<(pick: BusinessPick) => void>();
+    const { user } = await typeDana(client, { onPick });
+
+    await user.click(
+      screen.getByRole("option", { name: /Harbor Concrete Pumping/ }),
+    );
+
+    expect(onPick.mock.calls[0]![0]).toMatchObject({
+      businessToken: "tok-b-harbor",
+      businessName: "Harbor Concrete Pumping Co., Inc.",
+    });
+  });
+});
+
+// A related item a filter matched carries the parts of the name it matched
+// on. Its line marks them as a row's own name is marked, in the look's
+// emphasis, as the service sent them: what was typed is the row's text, not
+// the filter that matched the item, so nothing is cut at it.
+describe("a related item's highlight", () => {
+  const ridgeline = [
+    { text: "Ridgeline", matched: true },
+    { text: " Freight LLC", matched: false },
+  ];
+
+  /** `ADDRESSES` with its first business, and its first person, given parts. */
+  function withParts(business: object, person: object = {}) {
+    const copy = structuredClone(ADDRESSES);
+    const [row] = copy.suggestions;
+    Object.assign(row!.related.businesses.items[0]!, {
+      matched: true,
+      ...business,
+    });
+    Object.assign(row!.related.people.items[0]!, person);
+    return parseSuggestResponse("addresses", copy).suggestions;
+  }
+
+  function drawAddresses(
+    suggestions: ReturnType<typeof withParts>,
+    look: Partial<typeof DEFAULT_LOOK> = {},
+    appliedFilters?: AddressesFilters,
+  ) {
+    render(
+      <AddressAutocompleteView
+        id="address"
+        value="ridge"
+        onInputChange={() => {}}
+        onSelect={() => {}}
+        suggestions={suggestions}
+        found={1}
+        foundCapped={false}
+        truncated={false}
+        indexTag={null}
+        roundTripMs={null}
+        isSearching={false}
+        error={null}
+        list={["businesses", "people"]}
+        look={{ ...DEFAULT_LOOK, ...look }}
+        {...(appliedFilters !== undefined ? { appliedFilters } : {})}
+        open
+      />,
+    );
+    return {
+      business: screen.getAllByTestId("business-line"),
+      person: screen.getAllByTestId("person-line"),
+    };
+  }
+
+  const marks = (element: Element) =>
+    [...element.querySelectorAll(".bl-ac-mark")].map(mark => mark.textContent);
+
+  it("underlines the parts of a business's name under an address, whole as sent", () => {
+    const { business } = drawAddresses(withParts({ highlight: ridgeline }));
+
+    const name = business[0]!.querySelector<HTMLElement>(".bl-ac-line-name")!;
+    // `ridge` was typed, but the parts are the filter's: not cut at it.
+    expect(marks(name)).toEqual(["Ridgeline"]);
+    expect(name).toHaveTextContent("Ridgeline Freight LLC");
+    expect(name).toHaveAttribute("data-emphasis", "underline");
+  });
+
+  it("underlines the other name when the parts spell it, and leaves the label plain", () => {
+    const { business } = drawAddresses(
+      withParts({
+        matched_name: "Ember Freight",
+        highlight: [
+          { text: "Ember", matched: true },
+          { text: " Freight", matched: false },
+        ],
+      }),
+    );
+
+    const name = business[0]!.querySelector<HTMLElement>(".bl-ac-line-name")!;
+    const also = within(business[0]!).getByTestId("grouped-also");
+    expect(marks(name)).toEqual([]);
+    expect(name).not.toHaveAttribute("data-emphasis");
+    expect(marks(also)).toEqual(["Ember"]);
+    expect(also).toHaveTextContent(/^also Ember Freight$/);
+    expect(also).toHaveAttribute("data-emphasis", "underline");
+  });
+
+  it("underlines the parts of a person's name under an address", () => {
+    const { person } = drawAddresses(
+      withParts(
+        {},
+        {
+          matched: true,
+          highlight: [
+            { text: "Wesley", matched: true },
+            { text: " Crane", matched: false },
+          ],
+        },
+      ),
+    );
+
+    expect(marks(person[0]!)).toEqual(["Wesley"]);
+    expect(marks(person[1]!)).toEqual([]);
+  });
+
+  it("underlines the parts of the first address a person's head shows", () => {
+    const copy = structuredClone(PEOPLE);
+    Object.assign(copy.suggestions[0]!.related.addresses.items[0]!, {
+      matched: true,
+      highlight: [
+        { text: "12 Fernhallow", matched: true },
+        { text: " Ln, Dover, DE 19901", matched: false },
+      ],
+    });
+    render(
+      <PersonAutocompleteView
+        id="person"
+        value="fern"
+        onInputChange={() => {}}
+        onSelect={() => {}}
+        suggestions={parseSuggestResponse("people", copy).suggestions}
+        found={2}
+        foundCapped={false}
+        truncated={false}
+        indexTag={null}
+        roundTripMs={null}
+        isSearching={false}
+        error={null}
+        open
+      />,
+    );
+
+    const [first, second] = screen.getAllByTestId("grouped-firstAddress");
+    expect(marks(first!)).toEqual(["12 Fernhallow"]);
+    expect(first).toHaveAttribute("data-emphasis", "underline");
+    expect(second).toBeUndefined();
+  });
+
+  // A row's marks are cut at what was typed in its field; a related item's
+  // are cut at what was typed in the filter that matched it, under the
+  // typed-characters region, and never marked past the service's own.
+  it("cuts a related item's parts at its own filter's typed characters", () => {
+    const { business, person } = drawAddresses(
+      withParts(
+        {
+          matched_name: "Ember Freight",
+          highlight: [
+            { text: "Ember", matched: true },
+            { text: " Freight", matched: false },
+          ],
+        },
+        {
+          matched: true,
+          highlight: [
+            { text: "Wesley", matched: true },
+            { text: " Crane", matched: false },
+          ],
+        },
+      ),
+      {},
+      { business: { name: "embe" }, person: { name: "wes" } },
+    );
+
+    expect(marks(within(business[0]!).getByTestId("grouped-also"))).toEqual([
+      "Embe",
+    ]);
+    expect(marks(person[0]!)).toEqual(["Wes"]);
+  });
+
+  it("keeps the service's whole words under the token region", () => {
+    const { business } = drawAddresses(
+      withParts({ highlight: ridgeline }),
+      { matchEmphasisRegion: "token" },
+      { business: { name: "ridg" } },
+    );
+
+    expect(marks(business[0]!)).toEqual(["Ridgeline"]);
+  });
+
+  it("marks no word the service did not, whatever the filter typed", () => {
+    const { business } = drawAddresses(
+      withParts({ highlight: ridgeline }),
+      {},
+      { business: { name: "ridgeline freight" } },
+    );
+
+    // `Freight` was typed, but the service marked only `Ridgeline`.
+    expect(marks(business[0]!)).toEqual(["Ridgeline"]);
+  });
+
+  it("cuts a person's first address and their businesses at the person search's filters", () => {
+    const copy = structuredClone(PEOPLE);
+    const [dana] = copy.suggestions;
+    Object.assign(dana!.related.addresses.items[0]!, {
+      matched: true,
+      highlight: [
+        { text: "12 Fernhallow", matched: true },
+        { text: " Ln, Dover, DE 19901", matched: false },
+      ],
+    });
+    Object.assign(dana!.related.businesses.items[0]!, {
+      matched: true,
+      highlight: [
+        { text: "Harbor", matched: true },
+        { text: " Concrete Pumping Co., Inc.", matched: false },
+      ],
+    });
+    render(
+      <PersonAutocompleteView
+        id="person"
+        value="dana"
+        onInputChange={() => {}}
+        onSelect={() => {}}
+        suggestions={parseSuggestResponse("people", copy).suggestions}
+        found={2}
+        foundCapped={false}
+        truncated={false}
+        indexTag={null}
+        roundTripMs={null}
+        isSearching={false}
+        error={null}
+        appliedFilters={{
+          address: { text: "12 fern" },
+          business: { name: "harb" },
+        }}
+        open
+      />,
+    );
+
+    const [first] = screen.getAllByTestId("grouped-firstAddress");
+    expect(marks(first!)).toEqual(["12 Fern"]);
+    const [harbor] = screen.getAllByTestId("business-line");
+    expect(marks(harbor!)).toEqual(["Harb"]);
+  });
+
+  it("leaves an item without parts plain, and every item under the plain emphasis", () => {
+    const parted = withParts({ highlight: ridgeline });
+    const { business } = drawAddresses(parted);
+    expect(marks(business[1]!)).toEqual([]);
+    expect(business[1]!.querySelector(".bl-ac-line-name")).not.toHaveAttribute(
+      "data-emphasis",
+    );
+    cleanup();
+
+    const plain = drawAddresses(parted, { matchEmphasis: "plain" });
+    expect(marks(plain.business[0]!)).toEqual([]);
   });
 });
 

@@ -71,27 +71,72 @@ function personRow(businesses: object[], addresses: object[] = []) {
   };
 }
 
+function addressRow(businesses: object[], people: object[] = []) {
+  return {
+    query: "45 corvel",
+    found: 1,
+    found_capped: false,
+    truncated: false,
+    sources: {
+      businesses: { status: "ok" },
+      people: { status: people.length > 0 ? "ok" : "not_requested" },
+    },
+    suggestions: [
+      {
+        type: "address",
+        token: "tok-corvel",
+        label: "45 Corvel Landing, Erie, PA 16507",
+        matched_name: null,
+        match: "strong",
+        highlight: [],
+        components: {
+          line1: "45 Corvel Landing",
+          line2: null,
+          city: "Erie",
+          state: "PA",
+          postal_code: "16507",
+        },
+        related: {
+          businesses: {
+            count: businesses.length,
+            matched: 1,
+            truncated: false,
+            items: businesses,
+          },
+          people: {
+            count: people.length,
+            matched: null,
+            truncated: false,
+            items: people,
+          },
+        },
+      },
+    ],
+  };
+}
+
+/** The contract's related item, as the vendored spec spells it. */
+const relatedItem = (
+  JSON.parse(
+    readFileSync(
+      join(__dirname, "../../contracts/autocomplete-openapi.json"),
+      "utf8",
+    ),
+  ) as {
+    components: {
+      schemas: Record<
+        string,
+        {
+          required?: string[];
+          properties: Record<string, { type?: string | string[] }>;
+        }
+      >;
+    };
+  }
+).components.schemas.RelatedItem!;
+
 describe("a related business's address, states and domicile", () => {
   it("are what the contract puts on a related item: nullable, and not required", () => {
-    const relatedItem = (
-      JSON.parse(
-        readFileSync(
-          join(__dirname, "../../contracts/autocomplete-openapi.json"),
-          "utf8",
-        ),
-      ) as {
-        components: {
-          schemas: Record<
-            string,
-            {
-              required?: string[];
-              properties: Record<string, { type?: string | string[] }>;
-            }
-          >;
-        };
-      }
-    ).components.schemas.RelatedItem!;
-
     expect(relatedItem.properties.address?.type).toEqual(["string", "null"]);
     expect(relatedItem.properties.states?.type).toEqual(["array", "null"]);
     expect(relatedItem.properties.domicile_state?.type).toEqual([
@@ -110,7 +155,11 @@ describe("a related business's address, states and domicile", () => {
       personRow([harbor]),
     ).suggestions;
 
-    expect(row!.related.businesses.items[0]).toEqual(harbor);
+    expect(row!.related.businesses.items[0]).toEqual({
+      ...harbor,
+      matched_name: null,
+      highlight: null,
+    });
   });
 
   it("reads them as null on a person's address, which carries none", () => {
@@ -153,6 +202,162 @@ describe("a related business's address, states and domicile", () => {
     ]) {
       expect(() =>
         parseSuggestResponse("people", personRow([{ ...harbor, ...bad }])),
+      ).toThrow(ContractViolation);
+    }
+  });
+});
+
+// A business under a person or an address that a business name filter
+// reached through the other name it goes by (a DBA, or a former name) says
+// which, as a business row's own `matched_name` does. The service spells it
+// null when the label fit as well; one that predates the key leaves it out.
+describe("a related business's matched name", () => {
+  const matchedHarbor = {
+    ...harbor,
+    matched: true,
+    matched_name: "SALTMARSH PROVISIONS",
+  };
+
+  it("reads the name a business under a person matched on", () => {
+    const [row] = parseSuggestResponse(
+      "people",
+      personRow([matchedHarbor]),
+    ).suggestions;
+
+    expect(row!.related.businesses.items[0]).toEqual({
+      ...matchedHarbor,
+      highlight: null,
+    });
+  });
+
+  it("reads the name a business under an address matched on", () => {
+    const [row] = parseSuggestResponse(
+      "addresses",
+      addressRow([matchedHarbor]),
+    ).suggestions;
+
+    expect(row!.related.businesses.items[0]?.matched_name).toBe(
+      "SALTMARSH PROVISIONS",
+    );
+  });
+
+  it("reads null when the label fit, as the service spells it", () => {
+    const labelFit = { ...harbor, matched: true, matched_name: null };
+    const [person] = parseSuggestResponse(
+      "people",
+      personRow([labelFit], [{ ...oakLane, matched_name: null }]),
+    ).suggestions;
+    const [address] = parseSuggestResponse(
+      "addresses",
+      addressRow([labelFit]),
+    ).suggestions;
+
+    expect(person!.related.businesses.items[0]?.matched_name).toBeNull();
+    expect(person!.related.addresses.items[0]?.matched_name).toBeNull();
+    expect(address!.related.businesses.items[0]?.matched_name).toBeNull();
+  });
+
+  it("reads null from a service that predates it, which leaves it out", () => {
+    const [person] = parseSuggestResponse(
+      "people",
+      personRow([{ ...harbor, matched: true }], [oakLane]),
+    ).suggestions;
+
+    expect(person!.related.businesses.items[0]?.matched_name).toBeNull();
+    expect(person!.related.addresses.items[0]?.matched_name).toBeNull();
+  });
+
+  it("refuses one that is not a string", () => {
+    for (const bad of [7, ["SALTMARSH PROVISIONS"], { name: "SALTMARSH" }]) {
+      expect(() =>
+        parseSuggestResponse(
+          "people",
+          personRow([{ ...matchedHarbor, matched_name: bad }]),
+        ),
+      ).toThrow(ContractViolation);
+    }
+  });
+});
+
+// A related item a filter matched carries the parts of the name it matched
+// on, as a row's own `highlight` does: its `matched_name` when it has one,
+// else its label. An item no filter matched carries none.
+describe("a related item's highlight", () => {
+  const saltmarsh = [
+    { text: "SALTMARSH", matched: true },
+    { text: " PROVISIONS", matched: false },
+  ];
+  const crane = [
+    { text: "Wesley", matched: false },
+    { text: " ", matched: false },
+    { text: "Crane", matched: true },
+  ];
+  const wesley = {
+    type: "person",
+    token: "tok-wesley",
+    label: "Wesley Crane",
+    role: "officer",
+    matched: true,
+    matched_name: null,
+    address: null,
+    states: null,
+    domicile_state: null,
+    highlight: crane,
+  };
+
+  it("reads the parts of the name a business and a person under an address matched on", () => {
+    const [row] = parseSuggestResponse(
+      "addresses",
+      addressRow(
+        [
+          {
+            ...harbor,
+            matched: true,
+            matched_name: "SALTMARSH PROVISIONS",
+            highlight: saltmarsh,
+          },
+        ],
+        [wesley],
+      ),
+    ).suggestions;
+
+    expect(row!.related.businesses.items[0]?.highlight).toEqual(saltmarsh);
+    expect(row!.related.people.items[0]?.highlight).toEqual(crane);
+  });
+
+  it("reads the parts a business under a person carries", () => {
+    const [row] = parseSuggestResponse(
+      "people",
+      personRow([{ ...harbor, matched: true, highlight: saltmarsh }]),
+    ).suggestions;
+
+    expect(row!.related.businesses.items[0]?.highlight).toEqual(saltmarsh);
+  });
+
+  it("reads null for an item no filter matched, and from a service that predates the key", () => {
+    const [row] = parseSuggestResponse(
+      "addresses",
+      addressRow([{ ...harbor, highlight: null }, harbor]),
+    ).suggestions;
+
+    expect(row!.related.businesses.items.map(item => item.highlight)).toEqual([
+      null,
+      null,
+    ]);
+  });
+
+  it("refuses parts that are not a list of text and a flag", () => {
+    for (const bad of [
+      "SALTMARSH",
+      [{ text: "SALTMARSH" }],
+      [{ text: 7, matched: true }],
+      { text: "SALTMARSH", matched: true },
+    ]) {
+      expect(() =>
+        parseSuggestResponse(
+          "people",
+          personRow([{ ...harbor, matched: true, highlight: bad }]),
+        ),
       ).toThrow(ContractViolation);
     }
   });

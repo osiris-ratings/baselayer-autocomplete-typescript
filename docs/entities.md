@@ -122,6 +122,26 @@ own, which need not be the row's), `states`, sorted by code, and
 `domicile_state`. `orderedStates(item)` puts the domicile first, as a
 business row draws them. On a person or an address item all three are null.
 
+A business that a business name filter reached through another name it goes
+by (a DBA, or a former name) says which in its `matched_name`, as a business
+row's own `matched_name` does, and the grouped components draw it after the
+business's name: `also` and that name, muted. It is null when the label fit
+as well, when no business name filters, and on a person or an address.
+
+A related item a filter matched carries `highlight`, the parts of the name it
+matched on, as a row's own `highlight` does: its `matched_name` when it has
+one, else its `label`. The components mark them as they mark a row's name,
+wherever the item is drawn: a line under a person or an address, a person's
+first address, a business row's officer and address (`addressLineOf` and
+`peopleLineOf` carry the parts). Under the typed-characters region they are
+cut at what was typed in the filter that matched the item (a business's name,
+a person's name, an address's text), as a row's are at its field, and never
+mark a word the service did not. It is null when no
+filter matched the item by its name, which a bridge officer or an address
+matched only by its city, state or postal code is not, and when the filter
+marked no word in it. A business row still marks a matched officer or
+address whole when no parts came, as from an older service.
+
 The person's and the address's own `token` is redeemed nowhere: pick one of
 their businesses instead. Each of those carries a business token, sealed with
 the person or address it was reached through, which `POST /searches` redeems

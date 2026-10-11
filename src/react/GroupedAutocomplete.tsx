@@ -29,6 +29,7 @@ import {
   type BusinessPick,
   type EntityType,
   type FiltersByRelation,
+  type AddressesFilters,
   type PeopleFilters,
   type GroupedOption,
   type GroupedRequest,
@@ -612,6 +613,28 @@ function GroupedView<R extends GroupedRoute>({
   );
   const region = look.matchEmphasisRegion;
   const markClass = cx("mark", "bl-ac-mark");
+  /**
+   * What was typed into the filter that matched each kind of related item:
+   * its parts are cut at it, as a row's are at what was typed in the field.
+   * A person search's businesses and addresses, an address search's
+   * businesses and people.
+   */
+  const filtered = appliedFilters as
+    (PeopleFilters & AddressesFilters) | undefined;
+  const filterTokens: Record<EntityType, string[]> = {
+    business: queryTokens(filtered?.business?.name ?? ""),
+    person: queryTokens(filtered?.person?.name ?? ""),
+    address: queryTokens(filtered?.address?.text ?? ""),
+  };
+  /**
+   * The parts to draw for `text` on a related item's line: the service's,
+   * when they spell `text`, cut at its filter's typed characters under that
+   * region; else none. The cut only narrows a word the service marked.
+   */
+  const relatedParts = (text: string, item: RelatedItem) =>
+    look.matchEmphasis === "plain"
+      ? null
+      : partsFor(text, item.highlight ?? [], region, filterTokens[item.type]);
   const entity = route === "people" ? "person" : "address";
   const hasRows = combobox.isOpen && rows.length > 0;
   const hasCountRow = combobox.isOpen && hasFooter;
@@ -671,9 +694,15 @@ function GroupedView<R extends GroupedRoute>({
             className={cx("address", "bl-ac-address")}
             data-place={place}
             data-testid="grouped-firstAddress"
+            data-emphasis={look.matchEmphasis}
           >
             {iconOf("firstAddress", "address", first.role)}
-            {first.label}
+            {marked(
+              first.label,
+              relatedParts(first.label, first),
+              markClass,
+              "grouped-match",
+            )}
             {more > 0 ? ` ${text.more(more)}` : ""}
           </span>
         );
@@ -815,6 +844,25 @@ function GroupedView<R extends GroupedRoute>({
             ? iconOf("name", of.row.type, null)
             : iconOf(`${of.line}Name`, of.item.type, of.item.role)}
           {name}
+          {/* The other name a business matched on, right after its own, as a
+              business row's title says it, and before the badge: a business
+              line's is its address. The service sends no marks for it, so it
+              is plain, as the line's own name is. */}
+          {of.line !== "head" && of.item.matched_name !== null && (
+            <span
+              className={cx("also", "bl-ac-also")}
+              data-testid="grouped-also"
+              data-emphasis={look.matchEmphasis}
+            >
+              also{" "}
+              {marked(
+                of.item.matched_name,
+                relatedParts(of.item.matched_name, of.item),
+                markClass,
+                "grouped-match",
+              )}
+            </span>
+          )}
           {badge}
         </span>
         {(trailingBadge || trailing) && (
@@ -927,17 +975,28 @@ function GroupedView<R extends GroupedRoute>({
                   )}
                   {lines.lists.map(list => (
                     <div key={list.relation} data-list={list.relation}>
-                      {list.lines.map(({ item, option }, itemIndex) =>
-                        line(
+                      {list.lines.map(({ item, option }, itemIndex) => {
+                        const parts = relatedParts(item.label, item);
+                        return line(
                           `${list.line}-${itemIndex}`,
                           { line: list.line, item },
                           option,
-                          <span className={cx("lineName", "bl-ac-line-name")}>
-                            {item.label}
+                          <span
+                            className={cx("lineName", "bl-ac-line-name")}
+                            data-emphasis={
+                              parts !== null ? look.matchEmphasis : undefined
+                            }
+                          >
+                            {marked(
+                              item.label,
+                              parts,
+                              markClass,
+                              "grouped-match",
+                            )}
                           </span>,
                           headId,
-                        ),
-                      )}
+                        );
+                      })}
                       {list.notShown > 0 && (
                         <div
                           id={`${headId}-more-${list.relation}`}
