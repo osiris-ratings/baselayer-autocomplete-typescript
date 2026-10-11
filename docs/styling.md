@@ -534,10 +534,11 @@ The row says so where it already shows them, and adds no line:
 
 The marks follow `look.matchEmphasis`, drawn on the whole officer, address or
 square, since the autocomplete service sends no parts for them; `plain` draws
-none, and `matchEmphasisRegion` does not apply. A square already has a fill and
-a weight, so under every other emphasis a matched one is ringed in
-`--bl-ac-pill-primary-border` (`--bl-ac-mark`, when `matchEmphasisColor` is
-set), and `underline` and `weight` add their own. The suffix after a matched
+none, and `matchEmphasisRegion` does not apply. A matched square keeps its
+size, and the domicile keeps the only border: `underline` draws a line a little
+under the square, `background` lays the highlight over it as a border of the
+highlight's colour, `weight` sets its letters bolder and `ink` sets them in the
+mark's ink, each in `--bl-ac-mark` when `matchEmphasisColor` is set. The suffix after a matched
 address is one of `messages`: `officerAddressSuffix` or `agentAddressSuffix`; an
 address the business filed itself has none.
 

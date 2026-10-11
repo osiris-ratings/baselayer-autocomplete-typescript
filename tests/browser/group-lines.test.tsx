@@ -2,10 +2,12 @@ import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
 
-import type {
-  PeopleFilters,
-  PersonSuggestion,
-  RelatedItem,
+import {
+  DEFAULT_LOOK,
+  type MatchEmphasis,
+  type PeopleFilters,
+  type PersonSuggestion,
+  type RelatedItem,
 } from "@baselayer-sdk/autocomplete";
 import { PersonAutocompleteView } from "@baselayer-sdk/autocomplete/react";
 
@@ -57,6 +59,7 @@ function draw(
   width: number,
   appliedFilters?: PeopleFilters,
   person: PersonSuggestion = DANA,
+  matchEmphasis: MatchEmphasis = "underline",
 ) {
   const host = document.createElement("div");
   host.style.width = `${width}px`;
@@ -80,6 +83,7 @@ function draw(
         error={null}
         open
         {...(appliedFilters !== undefined ? { appliedFilters } : {})}
+        look={{ ...DEFAULT_LOOK, matchEmphasis }}
       />,
     ),
   );
@@ -144,33 +148,87 @@ describe("the lines under a person", () => {
 });
 
 describe("a state a person search's business filter matched", () => {
-  it("sits behind the domicile on its line, ringed and underlined as on a business row", () => {
-    // The service says Bayside is why Dana is here.
-    const filtered: PersonSuggestion = structuredClone(DANA);
-    filtered.related.businesses.items[1]!.matched = true;
+  // The service says Bayside (CA, AZ, NV, OR, WA; domicile CA) is why Dana
+  // is here, and the search named NV.
+  const filtered: PersonSuggestion = structuredClone(DANA);
+  filtered.related.businesses.items[1]!.matched = true;
+
+  /** Bayside's NV square, matched or not, and its domicile's, as drawn. */
+  function squaresOf(matchEmphasis: MatchEmphasis, matched: boolean) {
     const { lines, done } = draw(
       560,
-      { business: { state: ["nv"] } },
+      matched ? { business: { state: ["nv"] } } : undefined,
       filtered,
+      matchEmphasis,
     );
-    try {
-      const bayside = lines[1]!;
-      const squares = [
-        ...bayside.querySelectorAll<HTMLElement>(
-          '[data-testid="business-suggestion-state"]',
-        ),
-      ];
-      expect(squares.map(square => square.textContent)).toEqual([
-        "CA",
-        "NV",
-        "AZ",
-      ]);
-      const nv = getComputedStyle(squares[1]!);
-      expect(nv.textDecorationLine).toBe("underline");
-      expect(nv.boxShadow).not.toBe("none");
-      expect(getComputedStyle(squares[2]!).textDecorationLine).toBe("none");
-    } finally {
-      done();
-    }
+    const squares = [
+      ...lines[1]!.querySelectorAll<HTMLElement>(
+        '[data-testid="business-suggestion-state"]',
+      ),
+    ];
+    const nv = squares.find(square => square.textContent === "NV")!;
+    const box = nv.getBoundingClientRect();
+    const style = getComputedStyle(nv);
+    const after = getComputedStyle(nv, "::after");
+    const domicile = getComputedStyle(squares[0]!);
+    const drawn = {
+      order: squares.map(square => square.textContent),
+      width: box.width,
+      height: box.height,
+      boxShadow: style.boxShadow,
+      textDecorationLine: style.textDecorationLine,
+      fontWeight: style.fontWeight,
+      color: style.color,
+      bar: after.content === "none" ? null : after.backgroundColor,
+      barBottom: after.bottom,
+      domicileBorder: domicile.borderTopColor,
+    };
+    done();
+    return drawn;
+  }
+
+  const EMPHASES = ["underline", "background", "weight", "ink"] as const;
+
+  it("moves behind the domicile, the domicile keeping its border", () => {
+    const matched = squaresOf("underline", true);
+    expect(matched.order).toEqual(["CA", "NV", "AZ"]);
+    expect(matched.domicileBorder).toBe(
+      squaresOf("underline", false).domicileBorder,
+    );
+  });
+
+  for (const emphasis of EMPHASES) {
+    it(`keeps its square the size of every other under ${emphasis}, and rings none`, () => {
+      const matched = squaresOf(emphasis, true);
+      const plain = squaresOf(emphasis, false);
+      expect(matched.width).toBe(plain.width);
+      expect(matched.height).toBe(plain.height);
+      if (emphasis !== "background") {
+        expect(matched.boxShadow).toBe("none");
+      }
+      expect(plain.boxShadow).toBe("none");
+      expect(plain.bar).toBeNull();
+    });
+  }
+
+  it("draws a line a little under the square under underline, the text left be", () => {
+    const matched = squaresOf("underline", true);
+    expect(matched.bar).toBe("rgb(56, 161, 105)");
+    expect(parseFloat(matched.barBottom)).toBeLessThan(0);
+    expect(matched.textDecorationLine).toBe("none");
+  });
+
+  it("lays the highlight over the square under background, as a border of its colour", () => {
+    const matched = squaresOf("background", true);
+    expect(matched.boxShadow).toContain("rgb(198, 246, 213)");
+    expect(matched.bar).toBeNull();
+  });
+
+  it("sets the square's letters bolder under weight, and in the mark's ink under ink", () => {
+    expect(squaresOf("weight", true).fontWeight).toBe("700");
+    expect(squaresOf("weight", false).fontWeight).toBe("600");
+    expect(squaresOf("ink", true).color).not.toBe(
+      squaresOf("ink", false).color,
+    );
   });
 });

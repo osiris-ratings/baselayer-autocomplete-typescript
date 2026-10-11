@@ -737,26 +737,44 @@
 }
 
 /*
- * A state a state filter matched is ringed in the primary pill border, or in
- * the color override, under every emphasis but plain: a square has a fill and
- * a weight of its own, so the marks the name takes would barely show on it.
- * The underline emphasis underlines its text as well, and the weight emphasis
- * sets it bolder still. The emphasis is the root's.
+ * A state a state filter matched keeps its square's size, and the domicile
+ * keeps the only border: the square takes the emphasis's mark as a square
+ * can, under every emphasis but plain. Underline draws a line a little under
+ * it; background lays the highlight over it, a border of the highlight's
+ * colour; weight sets its letters bolder; ink sets them in the mark's ink.
+ * None moves the square. The emphasis is the root's.
  */
-.bl-ac[data-emphasis="underline"] .bl-ac-state[data-matched],
-.bl-ac[data-emphasis="background"] .bl-ac-state[data-matched],
-.bl-ac[data-emphasis="weight"] .bl-ac-state[data-matched],
-.bl-ac[data-emphasis="ink"] .bl-ac-state[data-matched] {
-  box-shadow: 0 0 0 1.5px var(--bl-ac-mark, var(--bl-ac-pill-primary-border));
+.bl-ac-state[data-matched] {
+  position: relative;
 }
 
-.bl-ac[data-emphasis="underline"] .bl-ac-state[data-matched] {
-  text-decoration: underline;
-  text-decoration-color: var(--bl-ac-mark, var(--bl-ac-underline));
-  text-decoration-thickness: 1.5px;
-  text-underline-offset: 2px;
+.bl-ac[data-emphasis="underline"] .bl-ac-state[data-matched]::after {
+  position: absolute;
+  right: 0;
+  bottom: -4px;
+  left: 0;
+  height: 1.5px;
+  content: "";
+  background: var(--bl-ac-mark, var(--bl-ac-underline));
+  border-radius: 1px;
+}
+
+.bl-ac[data-emphasis="background"] .bl-ac-state[data-matched] {
+  box-shadow: 0 0 0 0.125rem var(--bl-ac-mark, var(--bl-ac-marker));
 }
 
 .bl-ac[data-emphasis="weight"] .bl-ac-state[data-matched] {
   font-weight: var(--bl-ac-weight-mark);
+}
+
+.bl-ac[data-emphasis="ink"] .bl-ac-state[data-matched] {
+  color: var(--bl-ac-mark, var(--bl-ac-ink-mark, var(--bl-ac-title)));
+}
+
+/* Forced colours draw no fill of the author's: the line keeps the text's. */
+@media (forced-colors: active) {
+  .bl-ac[data-emphasis="underline"] .bl-ac-state[data-matched]::after {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
 }

@@ -60,22 +60,31 @@ describe("the emphasis of what a filter matched", () => {
     }
   });
 
-  it("rings a matched state's square under each emphasis, as a fill and a weight it already has would not show", () => {
-    for (const emphasis of EMPHASES) {
-      const square = `.bl-ac[data-emphasis="${emphasis}"] .bl-ac-state[data-matched]`;
-      expect(rule(square), square).toContain("box-shadow: 0 0 0 1.5px");
-    }
-    // Plain is no treatment at all.
-    expect(css).not.toContain('data-emphasis="plain"');
-  });
-
-  it("underlines a matched state's text under the underline emphasis, and sets it bolder under weight", () => {
+  it("marks a matched state's square as a square can, and rings it under none", () => {
+    // The domicile keeps the only border; nothing moves the square.
+    expect(css.replace(/\s+/g, " ")).not.toMatch(
+      /\.bl-ac-state\[data-matched\][^{]*\{[^}]*pill-primary-border/,
+    );
     expect(
-      rule('.bl-ac[data-emphasis="underline"] .bl-ac-state[data-matched]'),
-    ).toContain("text-decoration: underline;");
+      rule(
+        '.bl-ac[data-emphasis="underline"] .bl-ac-state[data-matched]::after',
+      ),
+    ).toContain("bottom: -4px;");
+    expect(
+      rule('.bl-ac[data-emphasis="background"] .bl-ac-state[data-matched]'),
+    ).toContain(
+      "box-shadow: 0 0 0 0.125rem var(--bl-ac-mark, var(--bl-ac-marker));",
+    );
     expect(
       rule('.bl-ac[data-emphasis="weight"] .bl-ac-state[data-matched]'),
     ).toContain("font-weight: var(--bl-ac-weight-mark);");
+    expect(
+      rule('.bl-ac[data-emphasis="ink"] .bl-ac-state[data-matched]'),
+    ).toContain(
+      "color: var(--bl-ac-mark, var(--bl-ac-ink-mark, var(--bl-ac-title)));",
+    );
+    // Plain is no treatment at all.
+    expect(css).not.toContain('data-emphasis="plain"');
   });
 });
 
