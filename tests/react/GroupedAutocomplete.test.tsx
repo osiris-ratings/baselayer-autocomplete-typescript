@@ -977,6 +977,7 @@ describe("a related item's highlight", () => {
   function drawAddresses(
     suggestions: ReturnType<typeof withParts>,
     look: Partial<typeof DEFAULT_LOOK> = {},
+    appliedFilters?: AddressesFilters,
   ) {
     render(
       <AddressAutocompleteView
@@ -994,6 +995,7 @@ describe("a related item's highlight", () => {
         error={null}
         list={["businesses", "people"]}
         look={{ ...DEFAULT_LOOK, ...look }}
+        {...(appliedFilters !== undefined ? { appliedFilters } : {})}
         open
       />,
     );
@@ -1085,6 +1087,103 @@ describe("a related item's highlight", () => {
     expect(marks(first!)).toEqual(["12 Fernhallow"]);
     expect(first).toHaveAttribute("data-emphasis", "underline");
     expect(second).toBeUndefined();
+  });
+
+  // A row's marks are cut at what was typed in its field; a related item's
+  // are cut at what was typed in the filter that matched it, under the
+  // typed-characters region, and never marked past the service's own.
+  it("cuts a related item's parts at its own filter's typed characters", () => {
+    const { business, person } = drawAddresses(
+      withParts(
+        {
+          matched_name: "Ember Freight",
+          highlight: [
+            { text: "Ember", matched: true },
+            { text: " Freight", matched: false },
+          ],
+        },
+        {
+          matched: true,
+          highlight: [
+            { text: "Wesley", matched: true },
+            { text: " Crane", matched: false },
+          ],
+        },
+      ),
+      {},
+      { business: { name: "embe" }, person: { name: "wes" } },
+    );
+
+    expect(marks(within(business[0]!).getByTestId("grouped-also"))).toEqual([
+      "Embe",
+    ]);
+    expect(marks(person[0]!)).toEqual(["Wes"]);
+  });
+
+  it("keeps the service's whole words under the token region", () => {
+    const { business } = drawAddresses(
+      withParts({ highlight: ridgeline }),
+      { matchEmphasisRegion: "token" },
+      { business: { name: "ridg" } },
+    );
+
+    expect(marks(business[0]!)).toEqual(["Ridgeline"]);
+  });
+
+  it("marks no word the service did not, whatever the filter typed", () => {
+    const { business } = drawAddresses(
+      withParts({ highlight: ridgeline }),
+      {},
+      { business: { name: "ridgeline freight" } },
+    );
+
+    // `Freight` was typed, but the service marked only `Ridgeline`.
+    expect(marks(business[0]!)).toEqual(["Ridgeline"]);
+  });
+
+  it("cuts a person's first address and their businesses at the person search's filters", () => {
+    const copy = structuredClone(PEOPLE);
+    const [dana] = copy.suggestions;
+    Object.assign(dana!.related.addresses.items[0]!, {
+      matched: true,
+      highlight: [
+        { text: "12 Fernhallow", matched: true },
+        { text: " Ln, Dover, DE 19901", matched: false },
+      ],
+    });
+    Object.assign(dana!.related.businesses.items[0]!, {
+      matched: true,
+      highlight: [
+        { text: "Harbor", matched: true },
+        { text: " Concrete Pumping Co., Inc.", matched: false },
+      ],
+    });
+    render(
+      <PersonAutocompleteView
+        id="person"
+        value="dana"
+        onInputChange={() => {}}
+        onSelect={() => {}}
+        suggestions={parseSuggestResponse("people", copy).suggestions}
+        found={2}
+        foundCapped={false}
+        truncated={false}
+        indexTag={null}
+        roundTripMs={null}
+        isSearching={false}
+        error={null}
+        appliedFilters={{
+          address: { text: "12 fern" },
+          business: { name: "harb" },
+        }}
+        open
+      />,
+    );
+
+    const [first] = screen.getAllByTestId("grouped-firstAddress");
+    expect(marks(first!)).toEqual(["12 Fern"]);
+    const [harbor] = screen.getAllByTestId("business-line");
+    expect(marks(harbor!)).toEqual(["Harb"]);
   });
 
   it("leaves an item without parts plain, and every item under the plain emphasis", () => {

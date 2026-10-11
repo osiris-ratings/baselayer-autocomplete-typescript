@@ -130,10 +130,13 @@ as well, when no business name filters, and on a person or an address.
 
 A related item a filter matched carries `highlight`, the parts of the name it
 matched on, as a row's own `highlight` does: its `matched_name` when it has
-one, else its `label`. The components mark them as they mark a row's name, as
-the service sent them, wherever the item is drawn: a line under a person or an
-address, a person's first address, a business row's officer and address
-(`addressLineOf` and `peopleLineOf` carry the parts). It is null when no
+one, else its `label`. The components mark them as they mark a row's name,
+wherever the item is drawn: a line under a person or an address, a person's
+first address, a business row's officer and address (`addressLineOf` and
+`peopleLineOf` carry the parts). Under the typed-characters region they are
+cut at what was typed in the filter that matched the item (a business's name,
+a person's name, an address's text), as a row's are at its field, and never
+mark a word the service did not. It is null when no
 filter matched the item by its name, which a bridge officer or an address
 matched only by its city, state or postal code is not, and when the filter
 marked no word in it. A business row still marks a matched officer or

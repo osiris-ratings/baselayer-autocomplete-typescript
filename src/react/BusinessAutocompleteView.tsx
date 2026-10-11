@@ -188,8 +188,12 @@ interface DefaultRowProps {
   tokens: string[];
   text: AutocompleteMessages;
   cx: ClassFor;
-  /** The states the filters the rows were fetched with named, if any. */
-  stateFilter: readonly string[] | undefined;
+  /**
+   * The filters the rows were fetched with, if any: the states they named,
+   * and the person's name and the address typed, which a matched officer's
+   * and address's parts are cut at.
+   */
+  appliedFilters: Filters | undefined;
   /** An id for the name, which labels the row's group when it lists lines. */
   nameId?: string | undefined;
   /** The icon a segment carries, for an entity in a role, or none. */
@@ -215,7 +219,7 @@ function DefaultRow({
   tokens,
   text,
   cx,
-  stateFilter,
+  appliedFilters,
   nameId,
   iconOf,
 }: DefaultRowProps) {
@@ -227,7 +231,7 @@ function DefaultRow({
   const people = peopleLineOf(item);
   const structure = structureLabel(item.structure, text.structures);
   const counts = countsText("businesses", item.related, text);
-  const matches = matchedOn(item, { state: stateFilter });
+  const matches = matchedOn(item, { state: appliedFilters?.state });
   const matchedStates = matches.flatMap(match =>
     match.kind === "state" ? match.states : [],
   );
@@ -241,11 +245,19 @@ function DefaultRow({
     label: string,
     highlight: HighlightPart[] | null,
     matched: boolean,
+    typed: string | undefined,
   ): ReactNode => {
     if (look.matchEmphasis === "plain") {
       return label;
     }
-    const sent = partsFor(label, highlight ?? [], region, []);
+    // Cut at what was typed in the filter that matched it, as the name's
+    // parts are at the field; the cut only narrows a word the service marked.
+    const sent = partsFor(
+      label,
+      highlight ?? [],
+      region,
+      queryTokens(typed ?? ""),
+    );
     if (sent !== null) {
       return marked(label, sent, markClass);
     }
@@ -300,7 +312,12 @@ function DefaultRow({
               "address",
               item.related.addresses.items[0]?.role ?? null,
             )}
-            {relatedMark(address.label, address.highlight, address.matched)}
+            {relatedMark(
+              address.label,
+              address.highlight,
+              address.matched,
+              appliedFilters?.address?.text,
+            )}
             {addressSuffix}
           </>
         )}
@@ -321,6 +338,7 @@ function DefaultRow({
             people.names[0] ?? "",
             people.highlight,
             people.matched > 0,
+            appliedFilters?.person?.name,
           )}
           {people.more > 0 ? ` ${text.more(people.more)}` : ""}
           {people.role === "agent" ? text.agentSuffix : ""}
@@ -732,7 +750,7 @@ export function BusinessAutocompleteView({
                   tokens={tokens}
                   text={text}
                   cx={cx}
-                  stateFilter={appliedFilters?.state}
+                  appliedFilters={appliedFilters}
                   nameId={headId}
                   iconOf={iconOf}
                 />
@@ -805,7 +823,7 @@ export function BusinessAutocompleteView({
                   tokens={tokens}
                   text={text}
                   cx={cx}
-                  stateFilter={appliedFilters?.state}
+                  appliedFilters={appliedFilters}
                   iconOf={iconOf}
                 />
               );

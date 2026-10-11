@@ -1865,6 +1865,19 @@ describe("what a row matched on", () => {
     ).toEqual(["301"]);
   });
 
+  it("cuts the parts at the typed characters of the filter that matched them", () => {
+    const row = rowOf(parted, {
+      appliedFilters: { person: { name: "ad" }, address: { text: "30" } },
+    });
+
+    expect(
+      marks(within(row).getByTestId("business-suggestion-officers")),
+    ).toEqual(["Ad"]);
+    expect(
+      marks(within(row).getByTestId("business-suggestion-address")),
+    ).toEqual(["30"]);
+  });
+
   it("marks none of the parts under the plain emphasis", () => {
     const row = rowOf(parted, {
       look: { ...DEFAULT_LOOK, matchEmphasis: "plain" },

@@ -54,10 +54,11 @@ emphasis) keeps its default too.
 Colors are hex: `#rgb`, `#rrggbb` or `#rrggbbaa`. `plain` draws no marks,
 `weight` sets the matched words bolder than the rest of the name, `ink`
 darker, `underline` underlines them and `background` fills behind them. The
-same treatment marks what a filter matched: an officer and an address, whole,
-since the autocomplete service sends no parts for them, and a state's square
-(see [what matched](#what-matched)). `matchEmphasisRegion` applies to the
-name's words only.
+same treatment marks what a filter matched: an officer, an address or a
+related name, on the words the autocomplete service marked (whole, when it
+sends none), and a state's square (see [what matched](#what-matched)).
+`matchEmphasisRegion` cuts a name's marked words at what was typed in the
+field, and a related name's at what was typed in the filter that matched it.
 `DEFAULT_LOOK` in the core holds these defaults, `resolveLook(look)` lays a
 staged look over them as the component does, and `MATCH_EMPHASES` and
 `MATCH_REGIONS` list the accepted values.
@@ -533,14 +534,15 @@ The row says so where it already shows them, and adds no line:
 | an alias typed          | `also …`, as before                                                   |
 | only the name           | nothing added: the name's marks say it                                |
 
-The marks follow `look.matchEmphasis`, drawn on the whole officer, address or
-square, since the autocomplete service sends no parts for them; `plain` draws
-none, and `matchEmphasisRegion` does not apply. A matched square keeps its
+The marks follow `look.matchEmphasis`: on the words of an officer or an address
+the autocomplete service marked, cut at what was typed in its filter under
+`matchEmphasisRegion`'s typed characters, or on the whole name when it sends no
+parts; on the square of a state. `plain` draws none. A matched square keeps its
 size, and the domicile keeps the only border: `underline` draws a line a little
 under the square, `background` lays the highlight over it as a border of the
 highlight's colour, `weight` sets its letters bolder and `ink` sets them in the
-mark's ink, each in `--bl-ac-mark` when `matchEmphasisColor` is set. The
-suffix after a matched address is one of `messages`: `officerAddressSuffix` or
+mark's ink, each in `--bl-ac-mark` when `matchEmphasisColor` is set. The suffix
+after a matched address is one of `messages`: `officerAddressSuffix` or
 `agentAddressSuffix`; an address the business filed itself has none.
 
 The core says the same in data. `matchedOn(suggestion, { state })` returns

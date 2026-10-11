@@ -17,8 +17,10 @@ breaking change bumps the minor version.
   drawn they are marked in the row's emphasis: its line under a person or an
   address (its name, or the other name it goes by), a person's first address,
   and a business row's officer and address, which still mark the whole name
-  when it matched and no parts were sent. `AddressLine` and `PeopleLine` carry
-  the parts of the name they show.
+  when it matched and no parts were sent. Under the typed-characters region,
+  they are cut at what was typed in the filter that matched the item, as a
+  row's name is at its field. `AddressLine` and `PeopleLine` carry the parts of
+  the name they show.
 - A person search narrowed by its businesses' states (`business.state`) moves
   the states it named up behind the domicile on each business line the service
   says matched, never behind the `+N`, and marks them, as a business row does

@@ -29,6 +29,7 @@ import {
   type BusinessPick,
   type EntityType,
   type FiltersByRelation,
+  type AddressesFilters,
   type PeopleFilters,
   type GroupedOption,
   type GroupedRequest,
@@ -613,15 +614,27 @@ function GroupedView<R extends GroupedRoute>({
   const region = look.matchEmphasisRegion;
   const markClass = cx("mark", "bl-ac-mark");
   /**
-   * The parts to draw for `text` on a related item's line: the service's, as
-   * it sent them, when they spell `text`; else none. What was typed is the
-   * row's text, not the filter that matched the item, so they are not cut at
-   * it.
+   * What was typed into the filter that matched each kind of related item:
+   * its parts are cut at it, as a row's are at what was typed in the field.
+   * A person search's businesses and addresses, an address search's
+   * businesses and people.
+   */
+  const filtered = appliedFilters as
+    (PeopleFilters & AddressesFilters) | undefined;
+  const filterTokens: Record<EntityType, string[]> = {
+    business: queryTokens(filtered?.business?.name ?? ""),
+    person: queryTokens(filtered?.person?.name ?? ""),
+    address: queryTokens(filtered?.address?.text ?? ""),
+  };
+  /**
+   * The parts to draw for `text` on a related item's line: the service's,
+   * when they spell `text`, cut at its filter's typed characters under that
+   * region; else none. The cut only narrows a word the service marked.
    */
   const relatedParts = (text: string, item: RelatedItem) =>
     look.matchEmphasis === "plain"
       ? null
-      : partsFor(text, item.highlight ?? [], region, []);
+      : partsFor(text, item.highlight ?? [], region, filterTokens[item.type]);
   const entity = route === "people" ? "person" : "address";
   const hasRows = combobox.isOpen && rows.length > 0;
   const hasCountRow = combobox.isOpen && hasFooter;
