@@ -717,7 +717,8 @@
 /*
  * The marks, one treatment per emphasis, on the name and on the alternative
  * name, each of which carries the emphasis. A related line's name, when the
- * service sent parts for it, is marked as the name is. The name owns its
+ * service sent parts for it, is marked as the name is, but keeps its own
+ * ink under the ink emphasis: only its marked words change. The name owns its
  * weight; the alternative name stays at the subtitle's color and normal
  * weight. With the weight emphasis, a matched word on either takes
  * `--bl-ac-weight-mark`. The address and the people, muted like the
@@ -768,8 +769,7 @@
   color: var(--bl-ac-mark, var(--bl-ac-also-mark));
 }
 
-.bl-ac-name[data-emphasis="ink"],
-.bl-ac-line-name[data-emphasis="ink"] {
+.bl-ac-name[data-emphasis="ink"] {
   color: var(--bl-ac-ink-base);
 }
 

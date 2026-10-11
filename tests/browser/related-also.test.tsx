@@ -271,3 +271,58 @@ describe("a person's first address with parts", () => {
     expect(markColour(false)).not.toBe(markColour(true));
   });
 });
+
+describe("a related line's name under the ink emphasis", () => {
+  it("keeps its own ink, marked or not, and inks only the marked words", () => {
+    const parted: PersonSuggestion = structuredClone(DANA);
+    parted.related.businesses.items[0]!.highlight = [
+      { text: "HARBOR", matched: true },
+      { text: " CONCRETE SUPPLY, INC.", matched: false },
+    ];
+    const host = document.createElement("div");
+    host.style.width = "560px";
+    document.body.append(host);
+    const root = createRoot(host);
+    flushSync(() =>
+      root.render(
+        <PersonAutocompleteView
+          id="people"
+          value="dana"
+          onInputChange={() => {}}
+          onSelect={() => {}}
+          suggestions={[parted]}
+          found={1}
+          foundCapped={false}
+          truncated={false}
+          indexTag={null}
+          roundTripMs={null}
+          isSearching={false}
+          error={null}
+          look={{
+            ...DEFAULT_LOOK,
+            matchEmphasis: "ink",
+            matchEmphasisColor: "#D53F8C",
+          }}
+          open
+        />,
+      ),
+    );
+    try {
+      const [marked, plain] = [
+        ...host.querySelectorAll<HTMLElement>(
+          '[data-testid="business-line"] .bl-ac-line-name',
+        ),
+      ];
+      const mark = marked!.querySelector<HTMLElement>(".bl-ac-mark")!;
+      expect(mark.textContent).toBe("HARBOR");
+      // The marked line's words read as the unmarked line's do.
+      expect(getComputedStyle(marked!).color).toBe(
+        getComputedStyle(plain!).color,
+      );
+      expect(getComputedStyle(mark).color).toBe("rgb(213, 63, 140)");
+    } finally {
+      root.unmount();
+      host.remove();
+    }
+  });
+});
