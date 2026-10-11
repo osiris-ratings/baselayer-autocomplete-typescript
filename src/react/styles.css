@@ -409,6 +409,15 @@
   max-width: 60%;
 }
 
+/* The other name a business matched on reads as the name does, in its size,
+   and keeps its own width as the name does: it says why the line is here.
+   The address after it gives way first; then the two names give way
+   together, each by its width, rather than the other name going to a stub. */
+.bl-ac-group-lead > .bl-ac-also {
+  flex: 0 1 auto;
+  font-size: 0.9375em;
+}
+
 /* The trailing corner starts at the right, so its columns line up down the
    group. */
 .bl-ac-group-trailing > :first-child {

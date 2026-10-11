@@ -890,6 +890,10 @@ describe("a business matched on its other name", () => {
     expect(
       name.compareDocumentPosition(also) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+    // Right after the name, before the badge, which is the business's
+    // address by default: the line reads as the row's title does.
+    const address = within(harbor!).getByTestId("grouped-address");
+    expect(also.nextElementSibling).toBe(address);
     // Only the business that matched on another name says one.
     expect(within(unsealed!).queryByTestId("grouped-also")).toBeNull();
     expect(within(cobalt!).queryByTestId("grouped-also")).toBeNull();

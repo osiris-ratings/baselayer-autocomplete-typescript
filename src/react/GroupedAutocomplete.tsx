@@ -815,10 +815,10 @@ function GroupedView<R extends GroupedRoute>({
             ? iconOf("name", of.row.type, null)
             : iconOf(`${of.line}Name`, of.item.type, of.item.role)}
           {name}
-          {badge}
-          {/* The other name a business matched on, as a business row's title
-              says it. The service sends no marks for it, so it is plain, as
-              the line's own name is. */}
+          {/* The other name a business matched on, right after its own, as a
+              business row's title says it, and before the badge: a business
+              line's is its address. The service sends no marks for it, so it
+              is plain, as the line's own name is. */}
           {of.line !== "head" && of.item.matched_name !== null && (
             <span
               className={cx("also", "bl-ac-also")}
@@ -827,6 +827,7 @@ function GroupedView<R extends GroupedRoute>({
               also {of.item.matched_name}
             </span>
           )}
+          {badge}
         </span>
         {(trailingBadge || trailing) && (
           <span
