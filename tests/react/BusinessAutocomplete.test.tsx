@@ -445,10 +445,35 @@ describe("BusinessAutocomplete", () => {
     await aMoment();
     expect(fetch.mock.calls.length).toBe(asked);
 
-    // Any of them can be picked again.
+    // Any of them can be picked again, and the field reopens on them again.
     await user.click(screen.getByText("CINDER RIGGING, INC."));
     expect(onPick).toHaveBeenCalledTimes(2);
     expect(onPick.mock.calls[1]![0].label).toBe("CINDER RIGGING, INC.");
+    await user.click(screen.getByRole("button", { name: "elsewhere" }));
+    await user.click(input());
+    expect(screen.getAllByTestId("business-suggestion")).toHaveLength(2);
+    await aMoment();
+    expect(fetch.mock.calls.length).toBe(asked);
+  });
+
+  it("keeps the rows in a menu held open through a second pick", async () => {
+    const fetch = autocompleteFetch();
+    const client = createAutocompleteClient({
+      baseUrl: BASE_URL,
+      mint: grantingMint(),
+      fetch,
+    });
+    const user = userEvent.setup();
+    render(<Host source={{ client }} open />);
+
+    await user.type(input(), "cind");
+    await screen.findAllByTestId("business-suggestion");
+    await user.click(screen.getByText("CINDER RACING STABLES, LLC"));
+    await aMoment();
+    await user.click(screen.getByText("CINDER RIGGING, INC."));
+    await aMoment();
+
+    expect(screen.getAllByTestId("business-suggestion")).toHaveLength(2);
   });
 
   it("reopens on them from the keyboard too, and leaves them once the name is edited", async () => {

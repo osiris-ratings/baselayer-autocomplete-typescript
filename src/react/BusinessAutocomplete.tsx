@@ -283,8 +283,10 @@ function Connected({
     ...(messages !== undefined ? { messages } : {}),
   });
   // Held off by a pick, the search has nothing; the menu shows the answer the
-  // pick was made from instead, should the field reopen it.
+  // pick was made from instead, should the field reopen it, and a pick from
+  // it keeps it.
   const { unavailable } = live;
+  const shown = justPicked ? picked.answer : live;
   const {
     errorKind,
     filtersWithheld,
@@ -293,7 +295,7 @@ function Connected({
     expanded,
     unavailable: shownUnavailable,
     ...state
-  } = justPicked ? picked.answer : live;
+  } = shown;
   // A row lists only what its answer was asked to expand: a relation outside
   // the scope it was asked under comes back empty, and a row left nothing to
   // list is the one option it always was.
@@ -326,7 +328,7 @@ function Connected({
       onSelect={suggestion => {
         const pickedAt = Date.now();
         const name = pickedNameOf(suggestion);
-        setPicked({ name, filtersKey, answer: live });
+        setPicked({ name, filtersKey, answer: shown });
         // The business itself picked: the field names it, no line under it.
         pick(name, null);
         onChange(name);
@@ -341,7 +343,7 @@ function Connected({
         // An officer or an address picked: the field takes the business's
         // name, and the line under it names who or what was picked.
         const name = pickedNameOf(suggestion);
-        setPicked({ name, filtersKey, answer: live });
+        setPicked({ name, filtersKey, answer: shown });
         pick(name, { type: entity.type, label: entity.label });
         onChange(name);
         onPickEntity?.(entity);

@@ -1095,6 +1095,16 @@ describe("a pick", () => {
     expect(input()).toHaveValue("Dana Whitfield");
     await aMoment();
     expect(fetch.mock.calls.length).toBe(asked);
+
+    // A second pick from those rows, and they reopen again.
+    await user.click(
+      screen.getByRole("option", { name: /Harbor Concrete Pumping/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "elsewhere" }));
+    await user.click(input());
+    expect(screen.getAllByRole("group")).toHaveLength(2);
+    await aMoment();
+    expect(fetch.mock.calls.length).toBe(asked);
   });
 
   it("lets typing search again", async () => {

@@ -321,11 +321,11 @@ function Connected<R extends GroupedRoute>({
     ...(messages !== undefined ? { messages } : {}),
   });
   // Held off by a pick, the search has nothing; the menu shows the answer the
-  // pick was made from instead, should the field reopen it.
+  // pick was made from instead, should the field reopen it, and a pick from
+  // it keeps it.
   const { unavailable } = live;
-  const { unavailable: shownUnavailable, ...state } = justPicked
-    ? held.answer
-    : live;
+  const shown = justPicked ? held.answer : live;
+  const { unavailable: shownUnavailable, ...state } = shown;
   void shownUnavailable;
   // A row lists only what its answer was asked to expand: a relation outside
   // the scope it was asked under comes back empty, whatever a grant since says.
@@ -386,7 +386,7 @@ function Connected<R extends GroupedRoute>({
             // A business row's own head: no person's or address's row has one.
             return;
         }
-        setHeld({ name: field, filtersKey, answer: live });
+        setHeld({ name: field, filtersKey, answer: shown });
         onChange(field);
         if (option.kind === "business") {
           onPick(businessPickFrom(option.row, option.business, Date.now()));
