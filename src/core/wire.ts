@@ -99,7 +99,7 @@ export interface RelatedItem {
   /**
    * The name a filter matched the item on, split into parts as a row's own
    * `highlight` is: `matched_name` when it is set, else `label`. Null when no
-   * filter matched the item.
+   * filter matched the item by its name, or the filter marked no word in it.
    */
   highlight: HighlightPart[] | null;
   /**

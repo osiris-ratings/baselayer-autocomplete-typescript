@@ -2,10 +2,11 @@ import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
 
-import type {
-  EntityType,
-  PersonSuggestion,
-  RelatedItem,
+import {
+  DEFAULT_LOOK,
+  type EntityType,
+  type PersonSuggestion,
+  type RelatedItem,
 } from "@baselayer-sdk/autocomplete";
 import { PersonAutocompleteView } from "@baselayer-sdk/autocomplete/react";
 
@@ -200,5 +201,73 @@ describe("a related line's highlight", () => {
       root.unmount();
       host.remove();
     }
+  });
+});
+
+describe("a person's first address with parts", () => {
+  /** The mark's colour on Dana's first address, the head a pick or not. */
+  function markColour(headEnabled: boolean) {
+    const parted: PersonSuggestion = structuredClone(DANA);
+    parted.related.addresses = {
+      count: 1,
+      matched: 1,
+      truncated: false,
+      items: [
+        {
+          type: "address",
+          token: "tok-fern",
+          label: "12 Fernhallow Ln, Dover, DE 19901",
+          role: "officer",
+          matched: true,
+          matched_name: null,
+          highlight: [
+            { text: "12 Fernhallow", matched: true },
+            { text: " Ln, Dover, DE 19901", matched: false },
+          ],
+          address: null,
+          states: null,
+          domicile_state: null,
+        },
+      ],
+    };
+    const host = document.createElement("div");
+    host.style.width = "560px";
+    document.body.append(host);
+    const root = createRoot(host);
+    flushSync(() =>
+      root.render(
+        <PersonAutocompleteView
+          id="people"
+          value="dana"
+          onInputChange={() => {}}
+          onSelect={() => {}}
+          suggestions={[parted]}
+          found={1}
+          foundCapped={false}
+          truncated={false}
+          indexTag={null}
+          roundTripMs={null}
+          isSearching={false}
+          error={null}
+          look={{ ...DEFAULT_LOOK, matchEmphasis: "ink" }}
+          enabledLines={headEnabled ? ["person", "business"] : ["business"]}
+          open
+        />,
+      ),
+    );
+    try {
+      const mark = host.querySelector<HTMLElement>(
+        '[data-testid="grouped-firstAddress"] .bl-ac-mark',
+      )!;
+      expect(mark.textContent).toBe("12 Fernhallow");
+      return getComputedStyle(mark).color;
+    } finally {
+      root.unmount();
+      host.remove();
+    }
+  }
+
+  it("fades its ink mark on a head that is not a pick, as the address text fades", () => {
+    expect(markColour(false)).not.toBe(markColour(true));
   });
 });

@@ -232,9 +232,10 @@ function DefaultRow({
     match.kind === "state" ? match.states : [],
   );
   /**
-   * A related name a filter matched: the parts the autocomplete service sent
-   * for it, as it sent them; else, as from one that sends none, the whole
-   * name as the one part.
+   * A related name: the parts the autocomplete service sent for it, as it
+   * sent them. With no parts sent, the whole name when it matched: an older
+   * service sends none, and a current one none for an item matched other
+   * than by its name, or by a name in which it marked no word.
    */
   const relatedMark = (
     label: string,

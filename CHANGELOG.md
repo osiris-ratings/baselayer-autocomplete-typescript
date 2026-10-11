@@ -16,8 +16,8 @@ breaking change bumps the minor version.
   as a row's own `highlight` does (`RelatedItem.highlight`), and wherever it is
   drawn they are marked in the row's emphasis: its line under a person or an
   address (its name, or the other name it goes by), a person's first address,
-  and a business row's officer and address, which mark the whole name only
-  when an older service sends no parts. `AddressLine` and `PeopleLine` carry
+  and a business row's officer and address, which still mark the whole name
+  when it matched and no parts were sent. `AddressLine` and `PeopleLine` carry
   the parts of the name they show.
 - A person search narrowed by its businesses' states (`business.state`) moves
   the states it named up behind the domicile on each business line the service
@@ -31,7 +31,9 @@ breaking change bumps the minor version.
 - **Breaking:** `RelatedItem` gains `matched_name` and `highlight`, required as
   the parser always fills them; a fixture that builds a related item by hand
   must add them, null where nothing matched and, for `matched_name`, on a
-  person or an address item.
+  person or an address item. `AddressLine` and `PeopleLine`, which
+  `addressLineOf` and `peopleLineOf` return, gain `highlight` too: a change
+  only to code that builds one by hand.
 - A matched state's square is no longer ringed, which read as a second
   domicile. It keeps its size, the domicile keeps the only border, and the
   square takes the emphasis's own mark: a line a little under it under

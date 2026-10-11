@@ -566,6 +566,7 @@
 }
 
 :is(
+    .bl-ac-group-head:not([data-enabled]),
     .bl-ac-group-line:not([data-enabled]),
     .bl-ac-group > .bl-ac-row:not([data-enabled])
   )

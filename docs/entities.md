@@ -134,7 +134,10 @@ one, else its `label`. The components mark them as they mark a row's name, as
 the service sent them, wherever the item is drawn: a line under a person or an
 address, a person's first address, a business row's officer and address
 (`addressLineOf` and `peopleLineOf` carry the parts). It is null when no
-filter matched the item.
+filter matched the item by its name, which a bridge officer or an address
+matched only by its city, state or postal code is not, and when the filter
+marked no word in it. A business row still marks a matched officer or
+address whole when no parts came, as from an older service.
 
 The person's and the address's own `token` is redeemed nowhere: pick one of
 their businesses instead. Each of those carries a business token, sealed with
