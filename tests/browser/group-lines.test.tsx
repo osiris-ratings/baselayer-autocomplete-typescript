@@ -318,6 +318,14 @@ describe("a matched state's mark on a business row", () => {
       "in the title, as its badge",
       { titleBadge: "states", titleTrailing: null },
     ],
+    [
+      "at the end of the subtitle line",
+      { titleTrailing: null, subtitleTrailing: "states" },
+    ],
+    [
+      "in the subtitle, as its badge",
+      { titleTrailing: null, subtitleBadge: "states" },
+    ],
   ] as const) {
     for (const width of [560, 320] as const) {
       it(`is drawn whole ${placed} at ${width}px`, () => {
