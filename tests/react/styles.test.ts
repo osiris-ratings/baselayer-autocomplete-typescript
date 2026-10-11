@@ -69,6 +69,12 @@ describe("the emphasis of what a filter matched", () => {
       rule(
         '.bl-ac[data-emphasis="underline"] .bl-ac-state[data-matched]::after',
       ),
+    ).toContain("bottom: -5px;");
+    // A title shows one line: there, the line sits closer.
+    expect(
+      rule(
+        '.bl-ac[data-emphasis="underline"] .bl-ac-title .bl-ac-state[data-matched]::after',
+      ),
     ).toContain("bottom: -3px;");
     expect(
       rule('.bl-ac[data-emphasis="background"] .bl-ac-state[data-matched]'),

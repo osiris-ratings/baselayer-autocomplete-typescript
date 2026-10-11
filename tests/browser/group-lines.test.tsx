@@ -218,7 +218,8 @@ describe("a state a person search's business filter matched", () => {
   it("draws a line a little under the square under underline, the text left be", () => {
     const matched = squaresOf("underline", true);
     expect(matched.bar).toBe("rgb(56, 161, 105)");
-    expect(parseFloat(matched.barBottom)).toBeLessThan(0);
+    // 3.5px clear of the square, as an underline clears its text.
+    expect(matched.barBottom).toBe("-5px");
     expect(matched.textDecorationLine).toBe("none");
   });
 

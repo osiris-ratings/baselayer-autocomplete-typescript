@@ -748,16 +748,23 @@
   position: relative;
 }
 
-/* Close enough under the square to stay within a title's one line. */
+/* 3.5px clear of the square, as an underline clears its text; in a title,
+   which shows one line, close enough to stay within it. */
 .bl-ac[data-emphasis="underline"] .bl-ac-state[data-matched]::after {
   position: absolute;
   right: 0;
-  bottom: -3px;
+  bottom: -5px;
   left: 0;
   height: 1.5px;
   content: "";
   background: var(--bl-ac-mark, var(--bl-ac-underline));
   border-radius: 1px;
+}
+
+.bl-ac[data-emphasis="underline"]
+  .bl-ac-title
+  .bl-ac-state[data-matched]::after {
+  bottom: -3px;
 }
 
 .bl-ac[data-emphasis="background"] .bl-ac-state[data-matched] {
