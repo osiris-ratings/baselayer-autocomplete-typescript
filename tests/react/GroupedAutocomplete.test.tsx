@@ -1071,6 +1071,42 @@ describe("a pick", () => {
     expect(screen.queryAllByRole("group")).toHaveLength(0);
   });
 
+  it("reopens on the rows a business was picked from when the field is clicked", async () => {
+    const { client, fetch } = setup();
+    const user = userEvent.setup();
+    render(
+      <>
+        <PersonHost client={client} />
+        <button type="button">elsewhere</button>
+      </>,
+    );
+    await user.type(input(), "dana");
+    await user.click(
+      await screen.findByRole("option", { name: /Cobalt Tile Supply LLC/ }),
+    );
+    await aMoment();
+    const asked = fetch.mock.calls.length;
+    expect(screen.queryAllByRole("group")).toHaveLength(0);
+
+    await user.click(screen.getByRole("button", { name: "elsewhere" }));
+    await user.click(input());
+
+    expect(screen.getAllByRole("group")).toHaveLength(2);
+    expect(input()).toHaveValue("Dana Whitfield");
+    await aMoment();
+    expect(fetch.mock.calls.length).toBe(asked);
+
+    // A second pick from those rows, and they reopen again.
+    await user.click(
+      screen.getByRole("option", { name: /Harbor Concrete Pumping/ }),
+    );
+    await user.click(screen.getByRole("button", { name: "elsewhere" }));
+    await user.click(input());
+    expect(screen.getAllByRole("group")).toHaveLength(2);
+    await aMoment();
+    expect(fetch.mock.calls.length).toBe(asked);
+  });
+
   it("lets typing search again", async () => {
     const { client, fetch } = setup();
     const { user } = await typeDana(client);
