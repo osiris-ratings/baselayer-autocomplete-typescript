@@ -748,10 +748,11 @@
   position: relative;
 }
 
+/* Close enough under the square to stay within a title's one line. */
 .bl-ac[data-emphasis="underline"] .bl-ac-state[data-matched]::after {
   position: absolute;
   right: 0;
-  bottom: -4px;
+  bottom: -3px;
   left: 0;
   height: 1.5px;
   content: "";

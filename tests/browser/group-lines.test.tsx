@@ -4,12 +4,16 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_LOOK,
+  type BusinessSuggestion,
   type MatchEmphasis,
   type PeopleFilters,
   type PersonSuggestion,
   type RelatedItem,
 } from "@baselayer-sdk/autocomplete";
-import { PersonAutocompleteView } from "@baselayer-sdk/autocomplete/react";
+import {
+  BusinessAutocompleteView,
+  PersonAutocompleteView,
+} from "@baselayer-sdk/autocomplete/react";
 
 import "../../src/react/styles.css";
 
@@ -231,4 +235,127 @@ describe("a state a person search's business filter matched", () => {
       squaresOf("ink", false).color,
     );
   });
+});
+
+/**
+ * How far past `square` its mark reaches, below (the line under it, as drawn)
+ * and on every side, that some ancestor up to the menu would clip; zero or
+ * less when nothing cuts it.
+ */
+function clipped(square: HTMLElement, around: number): number {
+  // As far below the square as the line under it is drawn.
+  const below = -parseFloat(getComputedStyle(square, "::after").bottom);
+  const box = square.getBoundingClientRect();
+  let worst = 0;
+  for (
+    let node = square.parentElement;
+    node !== null && !node.classList.contains("bl-ac-menu");
+    node = node.parentElement
+  ) {
+    const style = getComputedStyle(node);
+    if (style.overflowX === "visible" && style.overflowY === "visible") {
+      continue;
+    }
+    const edge = node.getBoundingClientRect();
+    worst = Math.max(
+      worst,
+      box.bottom + below - edge.bottom,
+      edge.left - (box.left - around),
+      box.right + around - edge.right,
+      edge.top - (box.top - around),
+    );
+  }
+  return worst;
+}
+
+describe("a matched state's mark", () => {
+  const filtered: PersonSuggestion = structuredClone(DANA);
+  filtered.related.businesses.items[1]!.matched = true;
+
+  for (const width of [560, 400, 320] as const) {
+    it(`is drawn whole on a line at ${width}px, the line under it and the highlight around it`, () => {
+      const { lines, done } = draw(
+        width,
+        { business: { state: ["nv"] } },
+        filtered,
+      );
+      try {
+        const nv = lines[1]!.querySelector<HTMLElement>(
+          ".bl-ac-state[data-matched]",
+        )!;
+        expect(nv.textContent).toBe("NV");
+        expect(clipped(nv, 2)).toBeLessThanOrEqual(0);
+      } finally {
+        done();
+      }
+    });
+  }
+});
+
+describe("a matched state's mark on a business row", () => {
+  const ROW: BusinessSuggestion = {
+    type: "business",
+    token: "tok-bayside",
+    label: "BAYSIDE HARBOR CONCRETE, INC.",
+    matched_name: null,
+    match: "strong",
+    domicile_state: "CA",
+    states: ["AZ", "CA", "NV", "OR", "WA"],
+    structure: "C_CORPORATION",
+    highlight: [],
+    related: {
+      people: { count: 0, matched: null, truncated: false, items: [] },
+      addresses: { count: 0, matched: null, truncated: false, items: [] },
+    },
+  };
+
+  // The title shows one line and hides the rest, so a mark under a square
+  // placed in it must fit within that line.
+  for (const [placed, layout] of [
+    ["at the end of the title line", undefined],
+    [
+      "in the title, as its badge",
+      { titleBadge: "states", titleTrailing: null },
+    ],
+  ] as const) {
+    for (const width of [560, 320] as const) {
+      it(`is drawn whole ${placed} at ${width}px`, () => {
+        const host = document.createElement("div");
+        host.style.width = `${width}px`;
+        document.body.append(host);
+        const root = createRoot(host);
+        flushSync(() =>
+          root.render(
+            <BusinessAutocompleteView
+              id="business"
+              value="bay"
+              onInputChange={() => {}}
+              onSelect={() => {}}
+              suggestions={[ROW]}
+              found={1}
+              foundCapped={false}
+              truncated={false}
+              indexTag={null}
+              roundTripMs={null}
+              isSearching={false}
+              error={null}
+              open
+              appliedFilters={{ state: ["nv"] }}
+              {...(layout !== undefined ? { layout } : {})}
+            />,
+          ),
+        );
+        try {
+          const nv = host.querySelector<HTMLElement>(
+            ".bl-ac-state[data-matched]",
+          )!;
+          expect(nv.textContent).toBe("NV");
+          expect(clipped(nv, 2)).toBeLessThanOrEqual(0);
+        } finally {
+          root.unmount();
+          host.remove();
+        }
+      });
+    }
+  }
 });

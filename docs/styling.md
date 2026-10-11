@@ -538,9 +538,9 @@ none, and `matchEmphasisRegion` does not apply. A matched square keeps its
 size, and the domicile keeps the only border: `underline` draws a line a little
 under the square, `background` lays the highlight over it as a border of the
 highlight's colour, `weight` sets its letters bolder and `ink` sets them in the
-mark's ink, each in `--bl-ac-mark` when `matchEmphasisColor` is set. The suffix after a matched
-address is one of `messages`: `officerAddressSuffix` or `agentAddressSuffix`; an
-address the business filed itself has none.
+mark's ink, each in `--bl-ac-mark` when `matchEmphasisColor` is set. The
+suffix after a matched address is one of `messages`: `officerAddressSuffix` or
+`agentAddressSuffix`; an address the business filed itself has none.
 
 The core says the same in data. `matchedOn(suggestion, { state })` returns
 what matched besides the name, in this order:
