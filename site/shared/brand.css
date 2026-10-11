@@ -21,6 +21,20 @@
   --mint: #bef9b6;
   --teal: #1888a2;
 
+  /* The highlighter's colours, for code on navy: these blocks and the
+     demo's network bodies. */
+  --sh-class: #9fd4ff;
+  --sh-identifier: #e8eefb;
+  --sh-sign: #93a6cf;
+  --sh-property: #b9c6ff;
+  --sh-entity: #9fd4ff;
+  --sh-jsxliterals: #e8eefb;
+  --sh-string: #bef9b6;
+  --sh-keyword: #aab6ff;
+  --sh-comment: #7588b0;
+  --sh-break: #e8eefb;
+  --sh-space: #e8eefb;
+
   --serif: "Newsreader Variable", Georgia, "Times New Roman", serif;
   --sans:
     "Uncut Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
@@ -440,18 +454,6 @@ h3 code {
 /* ---- Code ------------------------------------------------------------ */
 
 .code {
-  --sh-class: #9fd4ff;
-  --sh-identifier: #e8eefb;
-  --sh-sign: #93a6cf;
-  --sh-property: #b9c6ff;
-  --sh-entity: #9fd4ff;
-  --sh-jsxliterals: #e8eefb;
-  --sh-string: #bef9b6;
-  --sh-keyword: #aab6ff;
-  --sh-comment: #7588b0;
-  --sh-break: #e8eefb;
-  --sh-space: #e8eefb;
-
   min-width: 0;
   overflow: hidden;
   border-radius: 2px;

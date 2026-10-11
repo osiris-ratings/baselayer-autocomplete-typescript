@@ -2372,16 +2372,79 @@ html[data-dragging] * {
   display: block;
 }
 
+/* The network panel's own colours, on the navy of its boxes: keys pink,
+   strings mint, numbers and true or false orange, null grey; a URL's host
+   and path each their own, its parameters' names and values as the body's
+   keys and strings. The punctuation and the escapes are muted. */
+.net-detail {
+  --net-key: #ff9fd6;
+  --net-string: #bef9b6;
+  --net-literal: #ffb86c;
+  --net-null: #8a97b8;
+  --net-host: #8fd3ff;
+  --net-path: #c9b8ff;
+  --net-sign: #93a6cf;
+  --net-escape: #7588b0;
+}
+
+.net-detail .net-url,
 .net-body {
-  max-height: 300px;
   margin: 0;
   padding: 12px 14px;
-  overflow: auto;
   background: var(--navy-deep);
   border-radius: 2px;
   color: #e8eefb;
   font-size: 12px;
   line-height: 1.55;
+}
+
+.net-detail .net-url {
+  display: block;
+  white-space: pre-wrap;
+}
+
+.demo .net-url + .hint {
+  display: block;
+  margin: 6px 0 0;
+  font-size: 13px;
+}
+
+.net-url [data-part="scheme"],
+.net-url [data-part="sign"] {
+  color: var(--net-sign);
+}
+
+.net-url [data-part="host"] {
+  color: var(--net-host);
+}
+
+.net-url [data-part="path"] {
+  color: var(--net-path);
+}
+
+.net-url [data-part="key"] {
+  color: var(--net-key);
+}
+
+.net-url [data-part="value"] {
+  color: var(--net-string);
+}
+
+.net-url [data-part="escape"] {
+  color: var(--net-escape);
+}
+
+/* The highlighter's colours, retold for the body: a key is a property, a
+   number a class, true and false keywords (null is given --net-null). */
+.net-body {
+  --sh-property: var(--net-key);
+  --sh-string: var(--net-string);
+  --sh-class: var(--net-literal);
+  --sh-keyword: var(--net-literal);
+  --sh-sign: var(--net-sign);
+
+  max-height: 480px;
+  overflow: auto;
 }
 
 @media (max-width: 640px) {

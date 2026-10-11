@@ -2,9 +2,20 @@
 // the server spent on it (Server-Timing) against the whole round trip, what
 // came back and how big it was. Superseded keystrokes show as aborted.
 
-import { Fragment, useEffect, useState, useSyncExternalStore } from "react";
+import {
+  Fragment,
+  useEffect,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 
-import { indentJson, type NetworkEntry, type NetworkLog } from "./network";
+import {
+  bodyHtml,
+  urlParts,
+  type NetworkEntry,
+  type NetworkLog,
+} from "./network";
 
 function bytes(n: number | null): string {
   if (n === null) return "–";
@@ -50,6 +61,32 @@ const NOT_FILTERS = new Set(["q", "limit", "include"]);
 function filtersOf(entry: NetworkEntry): string[] {
   return [...new URL(entry.url).searchParams.keys()].filter(
     key => !NOT_FILTERS.has(key),
+  );
+}
+
+/** A request's URL, its query parameters told apart and its escapes muted. */
+function Url({ url }: { url: string }) {
+  return (
+    <code className="net-url">
+      {urlParts(url).map((piece, i) => (
+        <span key={i} data-part={piece.part}>
+          {piece.text}
+        </span>
+      ))}
+    </code>
+  );
+}
+
+/**
+ * A body, highlighted once rather than on every tick of a request in flight
+ * (`bodyHtml`, which escapes what the server sent).
+ */
+function Body({ text }: { text: string }) {
+  const html = useMemo(() => bodyHtml(text), [text]);
+  return (
+    <pre className="net-body">
+      <code dangerouslySetInnerHTML={{ __html: html }} />
+    </pre>
   );
 }
 
@@ -201,7 +238,7 @@ export function NetworkTimeline({ log }: { log: NetworkLog }) {
                       <div>
                         <dt>{entry.method}</dt>
                         <dd>
-                          <code>{entry.url}</code>
+                          <Url url={entry.url} />
                           {entry.viaDevServer && (
                             <span className="hint">
                               {" "}
@@ -249,7 +286,7 @@ export function NetworkTimeline({ log }: { log: NetworkLog }) {
                         <div>
                           <dt>Request body</dt>
                           <dd>
-                            <pre className="net-body">{entry.requestBody}</pre>
+                            <Body text={entry.requestBody} />
                           </dd>
                         </div>
                       )}
@@ -268,9 +305,7 @@ export function NetworkTimeline({ log }: { log: NetworkLog }) {
                         </div>
                       )}
                     </dl>
-                    {entry.body !== null && (
-                      <pre className="net-body">{indentJson(entry.body)}</pre>
-                    )}
+                    {entry.body !== null && <Body text={entry.body} />}
                   </div>
                 )}
               </Fragment>

@@ -4,6 +4,7 @@
 // aborted it. Credentials are redacted before anything is kept.
 
 import { ROUTES, ROUTE_NAMES, type Route } from "@baselayer-sdk/autocomplete";
+import { highlight } from "sugar-high";
 
 export type NetworkKind = "mint" | "autocomplete" | "search" | "other";
 export type NetworkOutcome = "pending" | "done" | "aborted" | "failed";
@@ -87,6 +88,86 @@ export function indentJson(text: string): string {
   } catch {
     return text;
   }
+}
+
+export type UrlPart =
+  "scheme" | "host" | "path" | "sign" | "key" | "value" | "escape";
+
+const ORIGIN = /^([a-z][a-z\d+.-]*:\/\/)([^/?#]*)/i;
+
+const ESCAPE = /(%[0-9a-f]{2}|\+)/i;
+
+/** A query name or value, with its percent escapes and `+` spaces apart. */
+function escaped(
+  text: string,
+  part: UrlPart,
+): { text: string; part: UrlPart }[] {
+  return text
+    .split(ESCAPE)
+    .filter(piece => piece !== "")
+    .map(piece => ({
+      text: piece,
+      part: ESCAPE.test(piece) ? "escape" : part,
+    }));
+}
+
+/**
+ * A URL in the pieces the network panel colours: its scheme, its host, its
+ * path's segments and the `/` between them, then each query parameter's name
+ * and value, the `?`, `&` and `=` between them, and the escapes inside them,
+ * which the panel mutes. The pieces join back into the URL exactly.
+ */
+export function urlParts(url: string): { text: string; part: UrlPart }[] {
+  const at = url.indexOf("?");
+  const base = at === -1 ? url : url.slice(0, at);
+  const [, scheme = "", host = ""] = ORIGIN.exec(base) ?? [];
+  const parts: { text: string; part: UrlPart }[] = [
+    { text: scheme, part: "scheme" as const },
+    { text: host, part: "host" as const },
+    ...base
+      .slice(scheme.length + host.length)
+      .split(/(\/)/)
+      .map(piece => ({
+        text: piece,
+        part: piece === "/" ? ("sign" as const) : ("path" as const),
+      })),
+  ].filter(piece => piece.text !== "");
+  if (at === -1) return parts;
+  parts.push({ text: "?", part: "sign" });
+  url
+    .slice(at + 1)
+    .split("&")
+    .forEach((pair, i) => {
+      if (i > 0) parts.push({ text: "&", part: "sign" });
+      const eq = pair.indexOf("=");
+      if (eq === -1) {
+        parts.push(...escaped(pair, "key"));
+        return;
+      }
+      parts.push(
+        ...escaped(pair.slice(0, eq), "key"),
+        { text: "=", part: "sign" },
+        ...escaped(pair.slice(eq + 1), "value"),
+      );
+    });
+  return parts;
+}
+
+/**
+ * A body as the network panel draws it: indented and marked up as JSON, null
+ * in a colour of its own, which the highlighter gives `true` and `false` too.
+ * The highlighter escapes the text it marks up, which here is whatever the
+ * server sent.
+ */
+export function bodyHtml(text: string): string {
+  return highlight(indentJson(text), {
+    lang: "json",
+    mark: token => {
+      if (token.type === "keyword" && token.value === "null") {
+        token.style = { color: "var(--net-null)" };
+      }
+    },
+  });
 }
 
 /** A request's body as the panels show it: tokens cut short, JSON indented. */
