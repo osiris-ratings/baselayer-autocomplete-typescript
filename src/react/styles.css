@@ -746,8 +746,7 @@
  * The background's fill reaches 0.125rem past the marked letters on both
  * sides. Every box that cuts a long field short makes that much room inside
  * its edges and gives it back in its margins, so nothing moves and a mark at
- * the start or the end of a field keeps its rounded ends. A box pushed right
- * by an auto margin keeps it.
+ * the start or the end of a field keeps its rounded ends.
  */
 .bl-ac[data-emphasis="background"]
   :is(
@@ -759,19 +758,27 @@
     .bl-ac-people
   ) {
   padding-inline: 0.125rem;
-  margin-right: -0.125rem;
+  margin-inline: -0.125rem;
 }
 
+/* The first field of a line's trailing corner keeps the auto margin that
+   holds the corner at the right, and on a full line that margin is nothing.
+   It gives the room at its start back at its end instead, and is drawn that
+   far to the left of where it is laid out. */
 .bl-ac[data-emphasis="background"]
-  :is(
+  .bl-ac-group-trailing
+  > :is(
     .bl-ac-title,
     .bl-ac-name,
     .bl-ac-line-name,
     .bl-ac-also,
     .bl-ac-address,
     .bl-ac-people
-  ):not(.bl-ac-group-trailing > :first-child) {
-  margin-left: -0.125rem;
+  ):first-child {
+  position: relative;
+  left: -0.125rem;
+  margin-left: auto;
+  margin-right: -0.25rem;
 }
 
 .bl-ac-name[data-emphasis="background"] .bl-ac-mark,

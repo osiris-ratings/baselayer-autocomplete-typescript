@@ -267,6 +267,139 @@ describe("making room for the fill", () => {
       Math.abs(background.officerEnd - 2 - underline.officerEnd),
     ).toBeLessThan(0.5);
   });
+
+  /**
+   * Where the letters of `field` on a person's first business line start and
+   * end, drawn under `matchEmphasis`.
+   */
+  function letters(
+    field: string,
+    matchEmphasis: "background" | "underline",
+    business: Partial<RelatedItem>,
+    { width = 560, layout = {} }: { width?: number; layout?: object } = {},
+  ) {
+    const host = document.createElement("div");
+    host.style.width = `${width}px`;
+    document.body.append(host);
+    const root = createRoot(host);
+    flushSync(() =>
+      root.render(
+        <PersonAutocompleteView
+          {...common}
+          look={{ ...look, matchEmphasis }}
+          id="p"
+          value="dana"
+          suggestions={[
+            {
+              ...DANA,
+              related: {
+                ...DANA.related,
+                businesses: {
+                  ...DANA.related.businesses,
+                  items: [
+                    { ...DANA.related.businesses.items[0]!, ...business },
+                  ],
+                },
+              },
+            },
+          ]}
+          layout={layout}
+        />,
+      ),
+    );
+    const drawn = host
+      .querySelector("[data-testid='business-line']")!
+      .querySelector(field)!;
+    const box = drawn.getBoundingClientRect();
+    const style = getComputedStyle(drawn);
+    const line = drawn.closest(".bl-ac-group-line")!;
+    const lineStyle = getComputedStyle(line);
+    const drawnLetters = {
+      left: box.left + parseFloat(style.paddingLeft),
+      right: box.right - parseFloat(style.paddingRight),
+      overflows: drawn.scrollWidth > drawn.clientWidth,
+      lineWidth:
+        line.clientWidth -
+        parseFloat(lineStyle.paddingLeft) -
+        parseFloat(lineStyle.paddingRight),
+    };
+    root.unmount();
+    host.remove();
+    return drawnLetters;
+  }
+
+  function expectSame(
+    background: ReturnType<typeof letters>,
+    underline: ReturnType<typeof letters>,
+  ) {
+    expect(Math.abs(background.left - underline.left)).toBeLessThan(0.5);
+    expect(Math.abs(background.right - underline.right)).toBeLessThan(0.5);
+  }
+
+  describe("a field first in a line's trailing corner", () => {
+    // The address, moved from the lead to the trailing corner, before the role.
+    const layout = {
+      businessBadge: null,
+      businessTrailingBadge: "address",
+      businessTrailing: "role",
+    };
+    const business = { address: "2210 Pellington Hwy, Baltimore, MD 21230" };
+
+    it("sits where it does under underline, with room to spare", () => {
+      const background = letters(".bl-ac-address", "background", business, {
+        width: 900,
+        layout,
+      });
+      expect(background.overflows).toBe(false);
+      expectSame(
+        background,
+        letters(".bl-ac-address", "underline", business, {
+          width: 900,
+          layout,
+        }),
+      );
+    });
+
+    it("sits where it does under underline on a full line, cut short", () => {
+      const background = letters(".bl-ac-address", "background", business, {
+        width: 400,
+        layout,
+      });
+      expect(background.overflows).toBe(true);
+      expectSame(
+        background,
+        letters(".bl-ac-address", "underline", business, {
+          width: 400,
+          layout,
+        }),
+      );
+    });
+  });
+
+  it("gives a line's name at its cap as much room for its letters as underline does", () => {
+    // Long enough to reach the name's cap, 60% of the line.
+    const label =
+      "HARBOR LANE HOLDINGS AND CONCRETE PUMPING OF WESTERN PENNSYLVANIA LLC";
+    const business = {
+      label,
+      highlight: [
+        { text: "HARBOR", matched: true },
+        { text: label.slice("HARBOR".length), matched: false },
+      ],
+    };
+    const background = letters(".bl-ac-line-name", "background", business, {
+      width: 900,
+    });
+    const underline = letters(".bl-ac-line-name", "underline", business, {
+      width: 900,
+    });
+    expect(background.overflows).toBe(true);
+    expect(underline.right - underline.left).toBeCloseTo(
+      underline.lineWidth * 0.6,
+      0,
+    );
+    expectSame(background, underline);
+  });
 });
 
 describe("a background mark's letters", () => {
