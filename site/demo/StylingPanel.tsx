@@ -193,6 +193,7 @@ export function StylingPanel({
             "matchEmphasis",
             "matchEmphasisRegion",
             "matchEmphasisColor",
+            "matchEmphasisTextColor",
             "showDebugInfo",
           ]),
         )}
@@ -230,6 +231,19 @@ export function StylingPanel({
               reset={{ value: null, to: "auto" }}
               value={state.look.matchEmphasisColor}
               onChange={value => setLook("matchEmphasisColor", value)}
+            />
+          </Field>
+          <Field
+            label="Mark text"
+            group
+            hint="The letters on a background mark. Empty: white or the name's color, whichever reads better on the override; on the default marker, their own."
+          >
+            <ColorInput
+              label="Mark text"
+              allowAuto
+              reset={{ value: null, to: "auto" }}
+              value={state.look.matchEmphasisTextColor}
+              onChange={value => setLook("matchEmphasisTextColor", value)}
             />
           </Field>
           <Field label="Footer" group>

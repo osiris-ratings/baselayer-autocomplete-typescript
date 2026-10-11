@@ -527,6 +527,11 @@
   > .bl-ac-row:not([data-enabled])
   [data-emphasis="background"]
   .bl-ac-mark {
+  color: color-mix(
+    in srgb,
+    var(--bl-ac-mark-fg) var(--bl-ac-disabled-mark, 67%),
+    var(--bl-ac-bg)
+  );
   background: color-mix(
     in srgb,
     var(--bl-ac-mark, var(--bl-ac-marker)) var(--bl-ac-disabled-mark, 67%),
@@ -737,6 +742,38 @@
   text-underline-offset: 3px;
 }
 
+/*
+ * The background's fill reaches 0.125rem past the marked letters on both
+ * sides. Every box that cuts a long field short makes that much room inside
+ * its edges and gives it back in its margins, so nothing moves and a mark at
+ * the start or the end of a field keeps its rounded ends. A box pushed right
+ * by an auto margin keeps it.
+ */
+.bl-ac[data-emphasis="background"]
+  :is(
+    .bl-ac-title,
+    .bl-ac-name,
+    .bl-ac-line-name,
+    .bl-ac-also,
+    .bl-ac-address,
+    .bl-ac-people
+  ) {
+  padding-inline: 0.125rem;
+  margin-right: -0.125rem;
+}
+
+.bl-ac[data-emphasis="background"]
+  :is(
+    .bl-ac-title,
+    .bl-ac-name,
+    .bl-ac-line-name,
+    .bl-ac-also,
+    .bl-ac-address,
+    .bl-ac-people
+  ):not(.bl-ac-group-trailing > :first-child) {
+  margin-left: -0.125rem;
+}
+
 .bl-ac-name[data-emphasis="background"] .bl-ac-mark,
 .bl-ac-line-name[data-emphasis="background"] .bl-ac-mark,
 .bl-ac-also[data-emphasis="background"] .bl-ac-mark,
@@ -744,6 +781,8 @@
 .bl-ac-people[data-emphasis="background"] .bl-ac-mark {
   margin: 0 -0.125rem;
   padding: 0 0.125rem;
+  /* Unset, the letters keep their own color, as on the default marker. */
+  color: var(--bl-ac-mark-fg);
   background: var(--bl-ac-mark, var(--bl-ac-marker));
   border-radius: 0.25rem;
 }

@@ -26,6 +26,12 @@ export interface Look {
   matchEmphasis: MatchEmphasis;
   /** The marks' own color, or null for the treatment's default. */
   matchEmphasisColor: string | null;
+  /**
+   * The letters' color on a background mark, or null to draw them in whichever
+   * of white and the title's color reads better on `matchEmphasisColor`
+   * (and as they are on the default marker).
+   */
+  matchEmphasisTextColor: string | null;
   /** The whole word a token starts, or only the typed characters. */
   matchEmphasisRegion: MatchRegion;
   /** Behind the suggestion menu. */
@@ -56,6 +62,7 @@ export const DEFAULT_LOOK: Readonly<Look> = Object.freeze({
   showDebugInfo: false,
   matchEmphasis: "underline",
   matchEmphasisColor: null,
+  matchEmphasisTextColor: null,
   matchEmphasisRegion: "substring",
   backgroundColor: "#FFFFFF", // white
   titleColor: "#1A202C", // gray.800
@@ -111,6 +118,11 @@ export function resolveLook(staged: LookInput = {}): Look {
       typeof staged.matchEmphasisColor === "string" &&
       HEX_COLOR.test(staged.matchEmphasisColor)
         ? staged.matchEmphasisColor
+        : null,
+    matchEmphasisTextColor:
+      typeof staged.matchEmphasisTextColor === "string" &&
+      HEX_COLOR.test(staged.matchEmphasisTextColor)
+        ? staged.matchEmphasisTextColor
         : null,
     matchEmphasisRegion: oneOf(
       staged.matchEmphasisRegion,
