@@ -14,6 +14,7 @@ import {
   BUSINESS_TOKEN_TTL_SECONDS,
   DEFAULT_ENABLED_LINES,
   createAutocompleteClient,
+  parseSuggestResponse,
   type AddressesFilters,
   type BusinessPick,
   type EntityPick,
@@ -827,6 +828,120 @@ describe("AddressAutocomplete", () => {
       type: "person",
       token: "tok-p-ada",
       label: "Ada Fox",
+    });
+  });
+});
+
+// A business a business name filter reached through the other name it goes
+// by (a DBA, or a former name) says so on its line, as a business row does:
+// `also` and that name, muted, after its own. The service sends no marks for
+// it, so it is drawn plain, as the line's own name is.
+describe("a business matched on its other name", () => {
+  /** `body` with its first row's first business matched on `name`. */
+  function matchedOn<T extends typeof PEOPLE | typeof ADDRESSES>(
+    body: T,
+    name: string,
+  ): T {
+    const copy = structuredClone(body);
+    Object.assign(copy.suggestions[0]!.related.businesses.items[0]!, {
+      matched: true,
+      matched_name: name,
+    });
+    return copy;
+  }
+
+  const view = {
+    onInputChange: () => {},
+    onSelect: () => {},
+    found: 1,
+    foundCapped: false,
+    truncated: false,
+    indexTag: null,
+    roundTripMs: null,
+    isSearching: false,
+    error: null,
+    open: true,
+  };
+
+  it("says it after the business's name under a person, muted and unmarked", () => {
+    render(
+      <PersonAutocompleteView
+        {...view}
+        id="person"
+        value="dana"
+        suggestions={
+          parseSuggestResponse("people", matchedOn(PEOPLE, "Tidewater Pumps"))
+            .suggestions
+        }
+      />,
+    );
+
+    const dana = screen.getByRole("group", { name: "Dana Whitfield" });
+    const [harbor, unsealed, cobalt] =
+      within(dana).getAllByTestId("business-line");
+    const also = within(harbor!).getByTestId("grouped-also");
+    expect(also).toHaveTextContent(/^also Tidewater Pumps$/);
+    expect(also).toHaveClass("bl-ac-also");
+    expect(also.querySelector(".bl-ac-mark")).toBeNull();
+    const name = within(harbor!).getByText("Harbor Concrete Pumping Co., Inc.");
+    expect(also.closest('[data-corner="lead"]')).toBe(
+      name.closest('[data-corner="lead"]'),
+    );
+    expect(
+      name.compareDocumentPosition(also) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // Only the business that matched on another name says one.
+    expect(within(unsealed!).queryByTestId("grouped-also")).toBeNull();
+    expect(within(cobalt!).queryByTestId("grouped-also")).toBeNull();
+  });
+
+  it("says it after the business's name under an address", () => {
+    render(
+      <AddressAutocompleteView
+        {...view}
+        id="address"
+        value="45 corvel"
+        suggestions={
+          parseSuggestResponse(
+            "addresses",
+            matchedOn(ADDRESSES, "Ember Freight"),
+          ).suggestions
+        }
+      />,
+    );
+
+    const [ridgeline, cinder] = screen.getAllByTestId("business-line");
+    expect(ridgeline).toHaveTextContent(
+      /^Ridgeline Freight LLC\s*also Ember Freight/,
+    );
+    expect(within(cinder!).queryByTestId("grouped-also")).toBeNull();
+  });
+
+  it("still picks the business by its own name", async () => {
+    const fetch = vi.fn<FetchLike>(async url =>
+      reply(
+        200,
+        answer(
+          matchedOn(PEOPLE, "Tidewater Pumps"),
+          (new URL(url).searchParams.get("include") ?? "businesses").split(","),
+        ),
+      ),
+    );
+    const client = createAutocompleteClient({
+      baseUrl: BASE_URL,
+      mint: async () => grant(SCOPE),
+      fetch,
+    });
+    const onPick = vi.fn<(pick: BusinessPick) => void>();
+    const { user } = await typeDana(client, { onPick });
+
+    await user.click(
+      screen.getByRole("option", { name: /Harbor Concrete Pumping/ }),
+    );
+
+    expect(onPick.mock.calls[0]![0]).toMatchObject({
+      businessToken: "tok-b-harbor",
+      businessName: "Harbor Concrete Pumping Co., Inc.",
     });
   });
 });

@@ -26,6 +26,7 @@ const person = (label: string): RelatedItem => ({
   label,
   role: "officer",
   matched: false,
+  matched_name: null,
   address: null,
   states: null,
   domicile_state: null,

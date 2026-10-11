@@ -36,6 +36,7 @@ const business = (label: string, role: RelatedItem["role"]): RelatedItem => ({
   label,
   role,
   matched: false,
+  matched_name: null,
   address:
     "4120 Wrenmoor Lane Northwest Building C Suite 1400, Springfield, MO 65806",
   states: ["CA", "DE", "FL", "IL", "MO", "NY", "TX"],
@@ -52,6 +53,7 @@ const entity = (
   label,
   role,
   matched: false,
+  matched_name: null,
   address: null,
   states: null,
   domicile_state: null,

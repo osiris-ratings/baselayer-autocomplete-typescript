@@ -24,6 +24,7 @@ function item(
     label,
     role,
     matched: false,
+    matched_name: null,
     address: null,
     states: null,
     domicile_state: null,

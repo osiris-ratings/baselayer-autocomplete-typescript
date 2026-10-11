@@ -14,6 +14,10 @@ breaking change bumps the minor version.
   for `state`. The grouped views take `appliedFilters`, which
   `<PersonAutocomplete>` and `<AddressAutocomplete>` pass from
   `useEntityAutocomplete`.
+- A business under a person or an address that a business name filter reached
+  through another name it goes by (a DBA, or a former name) says which on its
+  line: `also` and that name after its own, muted, as a business row says it.
+  `RelatedItem.matched_name` carries it, null when the label fit as well.
 
 ### Changed
 

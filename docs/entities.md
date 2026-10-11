@@ -122,6 +122,12 @@ own, which need not be the row's), `states`, sorted by code, and
 `domicile_state`. `orderedStates(item)` puts the domicile first, as a
 business row draws them. On a person or an address item all three are null.
 
+A business that a business name filter reached through another name it goes
+by (a DBA, or a former name) says which in its `matched_name`, as a business
+row's own `matched_name` does, and the grouped components draw it after the
+business's name: `also` and that name, muted. It is null when the label fit
+as well, when no business name filters, and on a person or an address.
+
 The person's and the address's own `token` is redeemed nowhere: pick one of
 their businesses instead. Each of those carries a business token, sealed with
 the person or address it was reached through, which `POST /searches` redeems

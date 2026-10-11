@@ -37,6 +37,7 @@ const business = (label: string, token: string | null): RelatedItem => ({
   label,
   role: "officer",
   matched: false,
+  matched_name: null,
   address: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
   states: ["OH", "PA"],
   domicile_state: "PA",
@@ -482,6 +483,7 @@ const lineItem = (
   label,
   role,
   matched: false,
+  matched_name: null,
   address:
     type === "business" ? "1200 Tallowmere Rd, Pittsburgh, PA 15212" : null,
   states: type === "business" ? ["OH", "PA"] : null,

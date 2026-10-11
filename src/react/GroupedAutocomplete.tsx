@@ -816,6 +816,17 @@ function GroupedView<R extends GroupedRoute>({
             : iconOf(`${of.line}Name`, of.item.type, of.item.role)}
           {name}
           {badge}
+          {/* The other name a business matched on, as a business row's title
+              says it. The service sends no marks for it, so it is plain, as
+              the line's own name is. */}
+          {of.line !== "head" && of.item.matched_name !== null && (
+            <span
+              className={cx("also", "bl-ac-also")}
+              data-testid="grouped-also"
+            >
+              also {of.item.matched_name}
+            </span>
+          )}
         </span>
         {(trailingBadge || trailing) && (
           <span

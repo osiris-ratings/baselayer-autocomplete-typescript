@@ -68,6 +68,7 @@ function related(
     items: items.map(item => ({
       type,
       ...item,
+      matched_name: null,
       address: null,
       states: null,
       domicile_state: null,

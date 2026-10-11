@@ -468,7 +468,8 @@
   );
 }
 
-.bl-ac-group-line:not([data-enabled]) :is(.bl-ac-address, .bl-ac-icon),
+.bl-ac-group-line:not([data-enabled])
+  :is(.bl-ac-address, .bl-ac-also, .bl-ac-icon),
 .bl-ac-group-head:not([data-enabled])
   :is(.bl-ac-address, .bl-ac-group-count, .bl-ac-icon),
 .bl-ac-group

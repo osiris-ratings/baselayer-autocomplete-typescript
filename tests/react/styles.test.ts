@@ -225,6 +225,13 @@ describe("a disabled line", () => {
     expect(flat).toContain(`var(--bl-ac-disabled-mark, ${inks.markShare}%)`);
   });
 
+  it("fades a business line's other name with its address", () => {
+    // `rule` splits selectors at every comma, those inside `:is()` too.
+    expect(css.replace(/\s+/g, " ")).toMatch(
+      /\.bl-ac-group-line:not\(\[data-enabled\]\) :is\(\.bl-ac-address, \.bl-ac-also, \.bl-ac-icon\),[^{]*\{ color: var\( --bl-ac-disabled-text,/,
+    );
+  });
+
   it("fades nothing at 0, and the default far enough to read as inactive", () => {
     expect(disabledInks({ ...DEFAULT_LOOK, disabledDim: 0 })).toMatchObject({
       filter: "none",

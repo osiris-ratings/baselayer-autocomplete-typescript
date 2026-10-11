@@ -15,8 +15,9 @@
  * value before the autocomplete service sends it. One liberty is kept: the
  * keys the contract leaves out of `required` (`matched_name`,
  * `RelatedItem.token`, `role`, `RelatedSet.count`, `RelatedSet.matched`,
- * `structure`, an address's components, a related item's `address`, `states`
- * and `domicile_state`) may be absent as well as null; either reads as null.
+ * `structure`, an address's components, a related item's `address`, `states`,
+ * `domicile_state` and `matched_name`) may be absent as well as null; either
+ * reads as null.
  */
 
 import {
@@ -88,6 +89,13 @@ export interface RelatedItem {
   role: RelatedRole | null;
   /** This item is why the row is here. */
   matched: boolean;
+  /**
+   * The other name a matched business goes by (a DBA, or a former name) when
+   * it fit the business name filter better than `label`, as a business row's
+   * `matched_name` says it. Null when the label fit as well, when no business
+   * name filters, and on a person or an address.
+   */
+  matched_name: string | null;
   /**
    * A business's lead address, the one its own row leads with: on an address
    * row too, where it need not be the row's. Null when it has none, and on a
@@ -351,6 +359,7 @@ function relatedItem(
     label: string(o.label, `${path}.label`),
     role: nullable(o.role, `${path}.role`, relatedRole),
     matched: boolean(o.matched, `${path}.matched`),
+    matched_name: nullable(o.matched_name, `${path}.matched_name`, string),
     address: nullable(o.address, `${path}.address`, string),
     states: nullable(o.states, `${path}.states`, (v, p) => array(v, p, string)),
     domicile_state: nullable(

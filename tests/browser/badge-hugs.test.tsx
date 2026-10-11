@@ -32,6 +32,7 @@ const item = (
   label,
   role,
   matched: false,
+  matched_name: null,
   address: type === "business" ? "1200 Tallowmere Rd, Pittsburgh, PA" : null,
   states: type === "business" ? ["PA", "OH"] : null,
   domicile_state: type === "business" ? "PA" : null,
