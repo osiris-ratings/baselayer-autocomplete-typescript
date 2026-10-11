@@ -32,6 +32,10 @@ breaking change bumps the minor version.
   a faint edge of their own ink, where the highlight, the same grey as their
   fill by default, hid them. Nothing moves; `--bl-ac-highlighted-pill-border`
   sets the edge.
+- After a pick, a click on the field, or the down arrow, reopens the menu on
+  the rows the pick was made from, without asking again, so another can be
+  picked; in a business, a person or an address search alike. Typing in the
+  field or changing a filter searches as before.
 
 ## [0.5.0] - 2026-10-08
 

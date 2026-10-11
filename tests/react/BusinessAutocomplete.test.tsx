@@ -413,6 +413,70 @@ describe("BusinessAutocomplete", () => {
     expect(mint).toHaveBeenCalledTimes(1);
   });
 
+  it("reopens on the rows a pick came from when the field is clicked, asking nothing more", async () => {
+    const fetch = autocompleteFetch();
+    const client = createAutocompleteClient({
+      baseUrl: BASE_URL,
+      mint: grantingMint(),
+      fetch,
+    });
+    const onPick = vi.fn<BusinessAutocompleteProps["onPick"]>();
+    const user = userEvent.setup();
+    render(
+      <>
+        <Host source={{ client }} onPick={onPick} />
+        <button type="button">elsewhere</button>
+      </>,
+    );
+
+    await user.type(input(), "cind");
+    await screen.findAllByTestId("business-suggestion");
+    await user.click(screen.getByText("CINDER RACING STABLES, LLC"));
+    await aMoment();
+    const asked = fetch.mock.calls.length;
+    expect(screen.queryAllByTestId("business-suggestion")).toHaveLength(0);
+
+    await user.click(screen.getByRole("button", { name: "elsewhere" }));
+    await user.click(input());
+
+    // The rows it was picked from, the field still holding the pick.
+    expect(screen.getAllByTestId("business-suggestion")).toHaveLength(2);
+    expect(input()).toHaveValue("CINDER RACING STABLES, LLC");
+    await aMoment();
+    expect(fetch.mock.calls.length).toBe(asked);
+
+    // Any of them can be picked again.
+    await user.click(screen.getByText("CINDER RIGGING, INC."));
+    expect(onPick).toHaveBeenCalledTimes(2);
+    expect(onPick.mock.calls[1]![0].label).toBe("CINDER RIGGING, INC.");
+  });
+
+  it("reopens on them from the keyboard too, and leaves them once the name is edited", async () => {
+    const fetch = autocompleteFetch();
+    const client = createAutocompleteClient({
+      baseUrl: BASE_URL,
+      mint: grantingMint(),
+      fetch,
+    });
+    const user = userEvent.setup();
+    render(<Host source={{ client }} />);
+
+    await user.type(input(), "cind");
+    await screen.findAllByTestId("business-suggestion");
+    await user.click(screen.getByText("CINDER RACING STABLES, LLC"));
+    await aMoment();
+    await user.keyboard("{ArrowDown}");
+    expect(screen.getAllByTestId("business-suggestion")).toHaveLength(2);
+
+    // Typing is a new search: the rows are the new answer's.
+    await user.type(input(), "{Backspace}");
+    await waitFor(() =>
+      expect(fetch.mock.calls.map(([url]) => queryOf(url))).toContain(
+        "CINDER RACING STABLES, LL",
+      ),
+    );
+  });
+
   it("fills the name the row matched on: the one the business goes by, when the row matched that", async () => {
     const fetch = vi.fn<FetchLike>(async url =>
       jsonResponse(
@@ -474,15 +538,15 @@ describe("BusinessAutocomplete", () => {
     await screen.findAllByTestId("business-suggestion");
     await user.click(screen.getByText("CINDER RACING STABLES, LLC"));
     await aMoment();
-    expect(screen.queryAllByTestId("business-suggestion")).toHaveLength(0);
+    // Held open, the menu shows the rows the pick was made from.
+    expect(screen.getAllByTestId("business-suggestion")).toHaveLength(2);
     const asked = fetch.mock.calls.length;
 
     rerender(
       <Host source={{ client }} open filters={{ person: { name: "tima" } }} />,
     );
 
-    await screen.findAllByTestId("business-suggestion");
-    expect(fetch.mock.calls.length).toBeGreaterThan(asked);
+    await waitFor(() => expect(fetch.mock.calls.length).toBeGreaterThan(asked));
     const url = new URL(fetch.mock.calls.at(-1)![0]);
     expect(url.searchParams.get("q")).toBe("CINDER RACING STABLES, LLC");
     expect(url.searchParams.get("person.name")).toBe("tima");
@@ -549,7 +613,8 @@ describe("BusinessAutocomplete", () => {
     await aMoment();
 
     expect(fetch.mock.calls.length).toBe(asked);
-    expect(screen.queryAllByTestId("business-suggestion")).toHaveLength(0);
+    // Still the rows the pick was made from, held open.
+    expect(screen.getAllByTestId("business-suggestion")).toHaveLength(2);
   });
 
   it("hands the host what the picked row matched on, by the filters its rows were fetched with", async () => {

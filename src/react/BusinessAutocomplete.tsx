@@ -42,6 +42,7 @@ import type { AutocompleteMessages } from "./messages";
 import {
   filtersKeyOf,
   useBusinessAutocomplete,
+  type BusinessAutocompleteState,
 } from "./useBusinessAutocomplete";
 
 /**
@@ -240,11 +241,13 @@ function Connected({
   // A pick writes the name the row matched on into the field; querying that
   // exact name again would only reopen the menu on the row just chosen.
   // Editing a filter afterwards is a new search for the same name, so the pick
-  // remembers the filters it was made under.
+  // remembers the filters it was made under, and the answer it was made from:
+  // while it holds, a click on the field reopens the menu on those rows.
   const filtersKey = filtersKeyOf(filters);
   const [picked, setPicked] = useState<{
     name: string;
     filtersKey: string;
+    answer: BusinessAutocompleteState;
   } | null>(null);
   // A pick is of the filters it was made under. Once they change it is over,
   // and putting them back is not a return to it: the name is searched again,
@@ -268,15 +271,7 @@ function Connected({
   );
   const include = includeGiven ?? request.include;
   const { selection, pick } = usePickedSelection(value, showSelection);
-  const {
-    unavailable,
-    errorKind,
-    filtersWithheld,
-    appliedFilters,
-    requestId,
-    expanded,
-    ...state
-  } = useBusinessAutocomplete({
+  const live = useBusinessAutocomplete({
     client,
     query: value,
     enabled: enabled && !justPicked,
@@ -287,12 +282,25 @@ function Connected({
     ...(debounceMs !== undefined ? { debounceMs } : {}),
     ...(messages !== undefined ? { messages } : {}),
   });
+  // Held off by a pick, the search has nothing; the menu shows the answer the
+  // pick was made from instead, should the field reopen it.
+  const { unavailable } = live;
+  const {
+    errorKind,
+    filtersWithheld,
+    appliedFilters,
+    requestId,
+    expanded,
+    unavailable: shownUnavailable,
+    ...state
+  } = justPicked ? picked.answer : live;
   // A row lists only what its answer was asked to expand: a relation outside
   // the scope it was asked under comes back empty, and a row left nothing to
   // list is the one option it always was.
   const listed = request.list.filter(relation => expanded.includes(relation));
   void errorKind;
   void filtersWithheld;
+  void shownUnavailable;
   void requestId;
   const reported = useRef(false);
   useEffect(() => {
@@ -318,7 +326,7 @@ function Connected({
       onSelect={suggestion => {
         const pickedAt = Date.now();
         const name = pickedNameOf(suggestion);
-        setPicked({ name, filtersKey });
+        setPicked({ name, filtersKey, answer: live });
         // The business itself picked: the field names it, no line under it.
         pick(name, null);
         onChange(name);
@@ -333,7 +341,7 @@ function Connected({
         // An officer or an address picked: the field takes the business's
         // name, and the line under it names who or what was picked.
         const name = pickedNameOf(suggestion);
-        setPicked({ name, filtersKey });
+        setPicked({ name, filtersKey, answer: live });
         pick(name, { type: entity.type, label: entity.label });
         onChange(name);
         onPickEntity?.(entity);

@@ -54,7 +54,11 @@ import {
   type PickTargets,
 } from "./selection";
 import { resolveMessages, type AutocompleteMessages } from "./messages";
-import { filtersKeyOf, useEntityAutocomplete } from "./useBusinessAutocomplete";
+import {
+  filtersKeyOf,
+  useEntityAutocomplete,
+  type EntityAutocompleteState,
+} from "./useBusinessAutocomplete";
 import { useSuggestionCombobox } from "./useBusinessCombobox";
 import {
   StateSquares,
@@ -288,11 +292,14 @@ function Connected<R extends GroupedRoute>({
   // A pick puts its row's name in the field, which is not to be searched: it
   // holds until the field is typed in or the filters change, as a business
   // pick does. Released during the render, so no frame holds it under new
-  // filters.
+  // filters. It keeps the answer it was made from: while it holds, a click on
+  // the field reopens the menu on those rows.
   const filtersKey = filtersKeyOf(filters);
-  const [held, setHeld] = useState<{ name: string; filtersKey: string } | null>(
-    null,
-  );
+  const [held, setHeld] = useState<{
+    name: string;
+    filtersKey: string;
+    answer: EntityAutocompleteState<R>;
+  } | null>(null);
   if (held !== null && held.filtersKey !== filtersKey) {
     setHeld(null);
   }
@@ -301,7 +308,7 @@ function Connected<R extends GroupedRoute>({
   // What the rows draw decides what is asked for, and the hook drops what the
   // session's scope does not grant as it asks.
   const request = requestOf(route, drawnFor(route, layout), list);
-  const { unavailable, ...state } = useEntityAutocomplete<R>({
+  const live = useEntityAutocomplete<R>({
     relation: route,
     client,
     query: value,
@@ -313,6 +320,13 @@ function Connected<R extends GroupedRoute>({
     ...(debounceMs !== undefined ? { debounceMs } : {}),
     ...(messages !== undefined ? { messages } : {}),
   });
+  // Held off by a pick, the search has nothing; the menu shows the answer the
+  // pick was made from instead, should the field reopen it.
+  const { unavailable } = live;
+  const { unavailable: shownUnavailable, ...state } = justPicked
+    ? held.answer
+    : live;
+  void shownUnavailable;
   // A row lists only what its answer was asked to expand: a relation outside
   // the scope it was asked under comes back empty, whatever a grant since says.
   const expanded: readonly Relation[] = state.expanded;
@@ -372,7 +386,7 @@ function Connected<R extends GroupedRoute>({
             // A business row's own head: no person's or address's row has one.
             return;
         }
-        setHeld({ name: field, filtersKey });
+        setHeld({ name: field, filtersKey, answer: live });
         onChange(field);
         if (option.kind === "business") {
           onPick(businessPickFrom(option.row, option.business, Date.now()));
