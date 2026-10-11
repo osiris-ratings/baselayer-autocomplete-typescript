@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
 
 import type {
+  PeopleFilters,
   PersonSuggestion,
   RelatedItem,
 } from "@baselayer-sdk/autocomplete";
@@ -52,7 +53,7 @@ const DANA: PersonSuggestion = {
   },
 };
 
-function draw(width: number) {
+function draw(width: number, appliedFilters?: PeopleFilters) {
   const host = document.createElement("div");
   host.style.width = `${width}px`;
   host.style.fontFamily = "sans-serif";
@@ -74,6 +75,7 @@ function draw(width: number) {
         isSearching={false}
         error={null}
         open
+        {...(appliedFilters !== undefined ? { appliedFilters } : {})}
       />,
     ),
   );
@@ -131,6 +133,31 @@ describe("the lines under a person", () => {
         lines[0]!.querySelector(".bl-ac-line-name")!,
       );
       expect(px(name.fontSize)).toBeLessThan(px(head.fontSize));
+    } finally {
+      done();
+    }
+  });
+});
+
+describe("a state a person search's business filter matched", () => {
+  it("sits behind the domicile on its line, ringed and underlined as on a business row", () => {
+    const { lines, done } = draw(560, { business: { state: ["nv"] } });
+    try {
+      const bayside = lines[1]!;
+      const squares = [
+        ...bayside.querySelectorAll<HTMLElement>(
+          '[data-testid="business-suggestion-state"]',
+        ),
+      ];
+      expect(squares.map(square => square.textContent)).toEqual([
+        "CA",
+        "NV",
+        "AZ",
+      ]);
+      const nv = getComputedStyle(squares[1]!);
+      expect(nv.textDecorationLine).toBe("underline");
+      expect(nv.boxShadow).not.toBe("none");
+      expect(getComputedStyle(squares[2]!).textDecorationLine).toBe("none");
     } finally {
       done();
     }

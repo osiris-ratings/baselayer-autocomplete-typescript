@@ -28,6 +28,7 @@ import {
   type BusinessPick,
   type EntityType,
   type FiltersByRelation,
+  type PeopleFilters,
   type GroupedOption,
   type GroupedRequest,
   type IconSegmentByRoute,
@@ -340,6 +341,7 @@ function Connected<R extends GroupedRoute>({
       roundTripMs={state.roundTripMs}
       isSearching={state.isSearching}
       error={state.error}
+      appliedFilters={state.appliedFilters}
       selection={selection}
       onInputChange={next => {
         setHeld(null);
@@ -412,6 +414,15 @@ interface GroupedViewCommonProps<R extends GroupedRoute> {
   roundTripMs: number | null;
   isSearching: boolean;
   error: string | null;
+  /**
+   * The filters `suggestions` were fetched with (`appliedFilters` of
+   * `useEntityAutocomplete`), none when there were none or the client
+   * withheld them. The lines read only a person search's business states from
+   * it: the wire flags what a name or an address filter matched, but not what
+   * a state filter did. An address search's own `state` is the address's, and
+   * says nothing of the businesses filed at it.
+   */
+  appliedFilters?: FiltersByRelation[R] | undefined;
   /** The relations listed under each row, a line per item. Default: businesses. */
   list?: readonly IncludeOf<R>[] | undefined;
   /** A host's own icons, by entity or by entity and role; `false` draws none. */
@@ -500,6 +511,7 @@ function GroupedView<R extends GroupedRoute>({
   icons,
   iconSegments,
   enabledLines,
+  appliedFilters,
   layout: layoutInput,
   selection = null,
   open = false,
@@ -569,6 +581,14 @@ function GroupedView<R extends GroupedRoute>({
     rowCount: rows.length,
   });
   const tokens = queryTokens(value);
+  // The business states a person search was narrowed by, which a business
+  // line moves behind its domicile and marks, as a business row does.
+  const filteredStates = new Set(
+    (route === "people"
+      ? ((appliedFilters as PeopleFilters | undefined)?.business?.state ?? [])
+      : []
+    ).map(state => state.trim().toUpperCase()),
+  );
   const region = look.matchEmphasisRegion;
   const markClass = cx("mark", "bl-ac-mark");
   const entity = route === "people" ? "person" : "address";
@@ -673,7 +693,9 @@ function GroupedView<R extends GroupedRoute>({
           (of.item.states?.length ?? 0) > 0 && (
             <StateSquares
               business={of.item}
-              matched={[]}
+              matched={(of.item.states ?? []).filter(state =>
+                filteredStates.has(state),
+              )}
               cx={cx}
               more={text.more}
               place={place}

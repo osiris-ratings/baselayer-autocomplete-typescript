@@ -571,6 +571,14 @@ send no `officer_names`, the officer.
 `matched`, how many of the names) and `addressLineOf` (the lead address,
 whether it matched, and whose it is) are the readers the row draws from.
 
+A person search narrowed by its businesses' states (`business.state`) does the
+same on each business line under a person: the states the filter named move
+up behind the domicile, never behind the `+N`, and are marked as a business
+row marks them. `<PersonAutocomplete>` passes the filters its rows were
+fetched with; with `PersonAutocompleteView`, pass `appliedFilters` from
+`useEntityAutocomplete`. An address search's own `state` is the address's, and
+marks none of the businesses filed at it.
+
 ### The structure's flag
 
 The flag is short, shaped like the suffix a name carries:
