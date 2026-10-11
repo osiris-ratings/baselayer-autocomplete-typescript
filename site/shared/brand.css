@@ -207,6 +207,10 @@ kbd {
   display: none;
 }
 
+.header-actions .try-short {
+  display: none;
+}
+
 .btn-github {
   gap: 8px;
 }
@@ -286,9 +290,28 @@ kbd {
   }
 }
 
-@media (max-width: 420px) {
-  .header-actions .btn-primary {
+/* On a phone the header holds the brand, the demo button and Menu, which
+   want about 550px as they are: the button says "Try" below 580px, the brand
+   and the gaps tighten below 500px, and below 420px, where even that is too
+   wide, the button goes (the hero leads with it). Below 360px the product's
+   name beside the logo goes too; the hero names it. */
+@media (max-width: 580px) {
+  .header-actions .try-long {
     display: none;
+  }
+
+  .header-actions .try-short {
+    display: inline;
+  }
+}
+
+@media (max-width: 500px) {
+  .site-header .wrap {
+    gap: 12px;
+  }
+
+  .header-actions {
+    gap: 8px;
   }
 
   .brand {
@@ -303,6 +326,18 @@ kbd {
   .brand-product {
     padding-left: 10px;
     font-size: 11px;
+  }
+}
+
+@media (max-width: 420px) {
+  .header-actions .btn-primary {
+    display: none;
+  }
+}
+
+@media (max-width: 359px) {
+  .brand-product {
+    display: none;
   }
 }
 

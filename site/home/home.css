@@ -1,8 +1,10 @@
 /* ---- Hero: two columns split by a hairline, as on baselayer.com --------- */
 
+/* Each column as narrow as the screen needs: the install line, which never
+   wraps, scrolls in its own box rather than widen the page. */
 .hero {
   display: grid;
-  grid-template-columns: 1.15fr 1fr;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
 }
 
 .hero-copy {
@@ -38,7 +40,7 @@
 
 @media (max-width: 900px) {
   .hero {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .hero-copy {
@@ -394,7 +396,7 @@
 @media (max-width: 760px) {
   .layers,
   .facts {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -523,7 +525,7 @@
 
 @media (max-width: 900px) {
   .step {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -554,7 +556,7 @@
 
 @media (max-width: 900px) {
   .styling {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -587,7 +589,7 @@
 
 @media (max-width: 800px) {
   .cta-inner {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

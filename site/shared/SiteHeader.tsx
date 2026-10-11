@@ -105,8 +105,14 @@ export function SiteHeader({ current }: { current: Page }) {
             nothing else. */}
         <div className="header-actions">
           {current !== "demo" && (
-            <a className="btn btn-primary btn-sm" href={links.demo}>
-              Try the demo
+            <a
+              className="btn btn-primary btn-sm"
+              href={links.demo}
+              aria-label="Try the demo"
+            >
+              {/* As much as the header has room for: on a phone, "Try". */}
+              <span className="try-long">Try the demo</span>
+              <span className="try-short">Try</span>
             </a>
           )}
           <a
