@@ -29,6 +29,7 @@ const business = (
   role,
   matched: false,
   matched_name: null,
+  highlight: null,
   address: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
   states,
   domicile_state: states[0]!,

@@ -71,7 +71,7 @@ function personRow(businesses: object[], addresses: object[] = []) {
   };
 }
 
-function addressRow(businesses: object[]) {
+function addressRow(businesses: object[], people: object[] = []) {
   return {
     query: "45 corvel",
     found: 1,
@@ -79,7 +79,7 @@ function addressRow(businesses: object[]) {
     truncated: false,
     sources: {
       businesses: { status: "ok" },
-      people: { status: "not_requested" },
+      people: { status: people.length > 0 ? "ok" : "not_requested" },
     },
     suggestions: [
       {
@@ -103,7 +103,12 @@ function addressRow(businesses: object[]) {
             truncated: false,
             items: businesses,
           },
-          people: { count: null, matched: null, truncated: false, items: [] },
+          people: {
+            count: people.length,
+            matched: null,
+            truncated: false,
+            items: people,
+          },
         },
       },
     ],
@@ -153,6 +158,7 @@ describe("a related business's address, states and domicile", () => {
     expect(row!.related.businesses.items[0]).toEqual({
       ...harbor,
       matched_name: null,
+      highlight: null,
     });
   });
 
@@ -226,7 +232,10 @@ describe("a related business's matched name", () => {
       personRow([matchedHarbor]),
     ).suggestions;
 
-    expect(row!.related.businesses.items[0]).toEqual(matchedHarbor);
+    expect(row!.related.businesses.items[0]).toEqual({
+      ...matchedHarbor,
+      highlight: null,
+    });
   });
 
   it("reads the name a business under an address matched on", () => {
@@ -272,6 +281,95 @@ describe("a related business's matched name", () => {
         parseSuggestResponse(
           "people",
           personRow([{ ...matchedHarbor, matched_name: bad }]),
+        ),
+      ).toThrow(ContractViolation);
+    }
+  });
+});
+
+// A related item a filter matched carries the parts of the name it matched
+// on, as a row's own `highlight` does: its `matched_name` when it has one,
+// else its label. An item no filter matched carries none.
+describe("a related item's highlight", () => {
+  const saltmarsh = [
+    { text: "SALTMARSH", matched: true },
+    { text: " PROVISIONS", matched: false },
+  ];
+  const crane = [
+    { text: "Wesley", matched: false },
+    { text: " ", matched: false },
+    { text: "Crane", matched: true },
+  ];
+  const wesley = {
+    type: "person",
+    token: "tok-wesley",
+    label: "Wesley Crane",
+    role: "officer",
+    matched: true,
+    matched_name: null,
+    address: null,
+    states: null,
+    domicile_state: null,
+    highlight: crane,
+  };
+
+  it("is what the contract puts on a related item: nullable, and not required", () => {
+    expect(relatedItem.properties.highlight?.type).toEqual(["array", "null"]);
+    expect(relatedItem.required).not.toContain("highlight");
+  });
+
+  it("reads the parts of the name a business and a person under an address matched on", () => {
+    const [row] = parseSuggestResponse(
+      "addresses",
+      addressRow(
+        [
+          {
+            ...harbor,
+            matched: true,
+            matched_name: "SALTMARSH PROVISIONS",
+            highlight: saltmarsh,
+          },
+        ],
+        [wesley],
+      ),
+    ).suggestions;
+
+    expect(row!.related.businesses.items[0]?.highlight).toEqual(saltmarsh);
+    expect(row!.related.people.items[0]?.highlight).toEqual(crane);
+  });
+
+  it("reads the parts a business under a person carries", () => {
+    const [row] = parseSuggestResponse(
+      "people",
+      personRow([{ ...harbor, matched: true, highlight: saltmarsh }]),
+    ).suggestions;
+
+    expect(row!.related.businesses.items[0]?.highlight).toEqual(saltmarsh);
+  });
+
+  it("reads null for an item no filter matched, and from a service that predates the key", () => {
+    const [row] = parseSuggestResponse(
+      "addresses",
+      addressRow([{ ...harbor, highlight: null }, harbor]),
+    ).suggestions;
+
+    expect(row!.related.businesses.items.map(item => item.highlight)).toEqual([
+      null,
+      null,
+    ]);
+  });
+
+  it("refuses parts that are not a list of text and a flag", () => {
+    for (const bad of [
+      "SALTMARSH",
+      [{ text: "SALTMARSH" }],
+      [{ text: 7, matched: true }],
+      { text: "SALTMARSH", matched: true },
+    ]) {
+      expect(() =>
+        parseSuggestResponse(
+          "people",
+          personRow([{ ...harbor, matched: true, highlight: bad }]),
         ),
       ).toThrow(ContractViolation);
     }

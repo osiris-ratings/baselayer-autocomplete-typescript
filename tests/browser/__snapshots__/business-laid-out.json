@@ -627,7 +627,7 @@
                   "data-testid": "business-suggestion-match"
                  },
                  "rules": [
-                  ".bl-ac-name[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-also[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-address[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-people[data-emphasis=\"underline\"] .bl-ac-mark { text-decoration-line: underline; text-decoration-style: initial; text-decoration-color: var(--bl-ac-mark, var(--bl-ac-underline)); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }"
+                  ".bl-ac-name[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-line-name[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-also[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-address[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-people[data-emphasis=\"underline\"] .bl-ac-mark { text-decoration-line: underline; text-decoration-style: initial; text-decoration-color: var(--bl-ac-mark, var(--bl-ac-underline)); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }"
                  ],
                  "style": {
                   "display": "inline",
@@ -1476,7 +1476,7 @@
                 "data-testid": "business-suggestion-match"
                },
                "rules": [
-                ".bl-ac-name[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-also[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-address[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-people[data-emphasis=\"underline\"] .bl-ac-mark { text-decoration-line: underline; text-decoration-style: initial; text-decoration-color: var(--bl-ac-mark, var(--bl-ac-underline)); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }"
+                ".bl-ac-name[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-line-name[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-also[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-address[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-people[data-emphasis=\"underline\"] .bl-ac-mark { text-decoration-line: underline; text-decoration-style: initial; text-decoration-color: var(--bl-ac-mark, var(--bl-ac-underline)); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }"
                ],
                "style": {
                 "display": "inline",
@@ -1872,7 +1872,7 @@
                 "data-testid": "business-suggestion-match"
                },
                "rules": [
-                ".bl-ac-name[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-also[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-address[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-people[data-emphasis=\"underline\"] .bl-ac-mark { text-decoration-line: underline; text-decoration-style: initial; text-decoration-color: var(--bl-ac-mark, var(--bl-ac-underline)); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }"
+                ".bl-ac-name[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-line-name[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-also[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-address[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-people[data-emphasis=\"underline\"] .bl-ac-mark { text-decoration-line: underline; text-decoration-style: initial; text-decoration-color: var(--bl-ac-mark, var(--bl-ac-underline)); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }"
                ],
                "style": {
                 "display": "inline",
@@ -2318,7 +2318,7 @@
                   "data-testid": "business-suggestion-match"
                  },
                  "rules": [
-                  ".bl-ac-name[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-also[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-address[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-people[data-emphasis=\"underline\"] .bl-ac-mark { text-decoration-line: underline; text-decoration-style: initial; text-decoration-color: var(--bl-ac-mark, var(--bl-ac-underline)); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }"
+                  ".bl-ac-name[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-line-name[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-also[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-address[data-emphasis=\"underline\"] .bl-ac-mark, .bl-ac-people[data-emphasis=\"underline\"] .bl-ac-mark { text-decoration-line: underline; text-decoration-style: initial; text-decoration-color: var(--bl-ac-mark, var(--bl-ac-underline)); text-decoration-thickness: 1.5px; text-underline-offset: 3px; }"
                  ],
                  "style": {
                   "display": "inline",

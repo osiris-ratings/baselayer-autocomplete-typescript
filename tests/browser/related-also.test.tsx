@@ -20,6 +20,7 @@ const business = (label: string, matched_name: string | null): RelatedItem => ({
   role: "officer",
   matched: true,
   matched_name,
+  highlight: null,
   address: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
   states: ["PA"],
   domicile_state: "PA",
@@ -152,6 +153,52 @@ describe("a business line that matched on its other name", () => {
       );
     } finally {
       done();
+    }
+  });
+});
+
+describe("a related line's highlight", () => {
+  it("underlines the parts the service sent as a row's name is underlined", () => {
+    const parted: PersonSuggestion = structuredClone(DANA);
+    parted.related.businesses.items[1]!.highlight = [
+      { text: "NORTHSHORE", matched: true },
+      { text: " PUMPING, LLC", matched: false },
+    ];
+    const host = document.createElement("div");
+    host.style.width = "560px";
+    document.body.append(host);
+    const root = createRoot(host);
+    flushSync(() =>
+      root.render(
+        <PersonAutocompleteView
+          id="people"
+          value="dana"
+          onInputChange={() => {}}
+          onSelect={() => {}}
+          suggestions={[parted]}
+          found={1}
+          foundCapped={false}
+          truncated={false}
+          indexTag={null}
+          roundTripMs={null}
+          isSearching={false}
+          error={null}
+          open
+        />,
+      ),
+    );
+    try {
+      const mark = host.querySelector<HTMLElement>(
+        '[data-testid="business-line"] .bl-ac-line-name .bl-ac-mark',
+      )!;
+      expect(mark.textContent).toBe("NORTHSHORE");
+      const style = getComputedStyle(mark);
+      expect(style.textDecorationLine).toBe("underline");
+      expect(style.textDecorationThickness).toBe("1.5px");
+      expect(style.textUnderlineOffset).toBe("3px");
+    } finally {
+      root.unmount();
+      host.remove();
     }
   });
 });

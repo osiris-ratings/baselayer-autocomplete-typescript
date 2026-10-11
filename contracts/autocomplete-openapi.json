@@ -495,6 +495,16 @@
               "null"
             ]
           },
+          "highlight": {
+            "description": "How the name this item matched on (`matched_name` when that is it, else `label`) reads\nagainst the typed text of the filter that matched it, drawn as a suggestion's own\n`highlight` is: a business item by the business name, a person item by the person name,\nan address item by the address text. Null on an item no filter matched by its name or\ntext.",
+            "items": {
+              "$ref": "#/components/schemas/HighlightPart"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "label": {
             "type": "string"
           },

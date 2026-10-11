@@ -23,6 +23,7 @@ const business = (
   role: "officer",
   matched: false,
   matched_name: null,
+  highlight: null,
   address,
   states,
   domicile_state: states[0]!,

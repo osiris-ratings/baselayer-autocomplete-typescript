@@ -8,22 +8,27 @@ breaking change bumps the minor version.
 
 ### Added
 
+- A business under a person or an address that a business name filter reached
+  through another name it goes by (a DBA, or a former name) says which on its
+  line: `also` and that name after its own, muted, as a business row says it.
+  `RelatedItem.matched_name` carries it, null when the label fit as well.
+- A related item a filter matched carries the parts of the name it matched on,
+  as a row's own `highlight` does (`RelatedItem.highlight`), and its line under
+  a person or an address marks them in the row's emphasis: its name, or the
+  other name it goes by.
 - A person search narrowed by its businesses' states (`business.state`) moves
   the states it named up behind the domicile on each business line the service
   says matched, never behind the `+N`, and marks them, as a business row does
   for `state`. The grouped views take `appliedFilters`, which
   `<PersonAutocomplete>` and `<AddressAutocomplete>` pass from
   `useEntityAutocomplete`.
-- A business under a person or an address that a business name filter reached
-  through another name it goes by (a DBA, or a former name) says which on its
-  line: `also` and that name after its own, muted, as a business row says it.
-  `RelatedItem.matched_name` carries it, null when the label fit as well.
 
 ### Changed
 
-- **Breaking:** `RelatedItem` gains `matched_name`, required as the parser
-  always fills it; a fixture that builds a related item by hand must add it,
-  null when the label fit and on a person or an address item.
+- **Breaking:** `RelatedItem` gains `matched_name` and `highlight`, required as
+  the parser always fills them; a fixture that builds a related item by hand
+  must add them, null where nothing matched and, for `matched_name`, on a
+  person or an address item.
 - A matched state's square is no longer ringed, which read as a second
   domicile. It keeps its size, the domicile keeps the only border, and the
   square takes the emphasis's own mark: a line a little under it under

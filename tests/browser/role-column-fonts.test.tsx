@@ -19,6 +19,7 @@ const business = (label: string, role: RelatedItem["role"]): RelatedItem => ({
   role,
   matched: false,
   matched_name: null,
+  highlight: null,
   address: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
   states: ["OR", "WA"],
   domicile_state: "OR",

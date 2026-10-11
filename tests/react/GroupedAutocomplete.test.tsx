@@ -1,5 +1,6 @@
 import {
   act,
+  cleanup,
   render,
   renderHook,
   screen,
@@ -13,6 +14,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   BUSINESS_TOKEN_TTL_SECONDS,
   DEFAULT_ENABLED_LINES,
+  DEFAULT_LOOK,
   createAutocompleteClient,
   parseSuggestResponse,
   type AddressesFilters,
@@ -947,6 +949,122 @@ describe("a business matched on its other name", () => {
       businessToken: "tok-b-harbor",
       businessName: "Harbor Concrete Pumping Co., Inc.",
     });
+  });
+});
+
+// A related item a filter matched carries the parts of the name it matched
+// on. Its line marks them as a row's own name is marked, in the look's
+// emphasis, as the service sent them: what was typed is the row's text, not
+// the filter that matched the item, so nothing is cut at it.
+describe("a related item's highlight", () => {
+  const ridgeline = [
+    { text: "Ridgeline", matched: true },
+    { text: " Freight LLC", matched: false },
+  ];
+
+  /** `ADDRESSES` with its first business, and its first person, given parts. */
+  function withParts(business: object, person: object = {}) {
+    const copy = structuredClone(ADDRESSES);
+    const [row] = copy.suggestions;
+    Object.assign(row!.related.businesses.items[0]!, {
+      matched: true,
+      ...business,
+    });
+    Object.assign(row!.related.people.items[0]!, person);
+    return parseSuggestResponse("addresses", copy).suggestions;
+  }
+
+  function drawAddresses(
+    suggestions: ReturnType<typeof withParts>,
+    look: Partial<typeof DEFAULT_LOOK> = {},
+  ) {
+    render(
+      <AddressAutocompleteView
+        id="address"
+        value="ridge"
+        onInputChange={() => {}}
+        onSelect={() => {}}
+        suggestions={suggestions}
+        found={1}
+        foundCapped={false}
+        truncated={false}
+        indexTag={null}
+        roundTripMs={null}
+        isSearching={false}
+        error={null}
+        list={["businesses", "people"]}
+        look={{ ...DEFAULT_LOOK, ...look }}
+        open
+      />,
+    );
+    return {
+      business: screen.getAllByTestId("business-line"),
+      person: screen.getAllByTestId("person-line"),
+    };
+  }
+
+  const marks = (element: Element) =>
+    [...element.querySelectorAll(".bl-ac-mark")].map(mark => mark.textContent);
+
+  it("underlines the parts of a business's name under an address, whole as sent", () => {
+    const { business } = drawAddresses(withParts({ highlight: ridgeline }));
+
+    const name = business[0]!.querySelector<HTMLElement>(".bl-ac-line-name")!;
+    // `ridge` was typed, but the parts are the filter's: not cut at it.
+    expect(marks(name)).toEqual(["Ridgeline"]);
+    expect(name).toHaveTextContent("Ridgeline Freight LLC");
+    expect(name).toHaveAttribute("data-emphasis", "underline");
+  });
+
+  it("underlines the other name when the parts spell it, and leaves the label plain", () => {
+    const { business } = drawAddresses(
+      withParts({
+        matched_name: "Ember Freight",
+        highlight: [
+          { text: "Ember", matched: true },
+          { text: " Freight", matched: false },
+        ],
+      }),
+    );
+
+    const name = business[0]!.querySelector<HTMLElement>(".bl-ac-line-name")!;
+    const also = within(business[0]!).getByTestId("grouped-also");
+    expect(marks(name)).toEqual([]);
+    expect(name).not.toHaveAttribute("data-emphasis");
+    expect(marks(also)).toEqual(["Ember"]);
+    expect(also).toHaveTextContent(/^also Ember Freight$/);
+    expect(also).toHaveAttribute("data-emphasis", "underline");
+  });
+
+  it("underlines the parts of a person's name under an address", () => {
+    const { person } = drawAddresses(
+      withParts(
+        {},
+        {
+          matched: true,
+          highlight: [
+            { text: "Wesley", matched: true },
+            { text: " Crane", matched: false },
+          ],
+        },
+      ),
+    );
+
+    expect(marks(person[0]!)).toEqual(["Wesley"]);
+    expect(marks(person[1]!)).toEqual([]);
+  });
+
+  it("leaves an item without parts plain, and every item under the plain emphasis", () => {
+    const parted = withParts({ highlight: ridgeline });
+    const { business } = drawAddresses(parted);
+    expect(marks(business[1]!)).toEqual([]);
+    expect(business[1]!.querySelector(".bl-ac-line-name")).not.toHaveAttribute(
+      "data-emphasis",
+    );
+    cleanup();
+
+    const plain = drawAddresses(parted, { matchEmphasis: "plain" });
+    expect(marks(plain.business[0]!)).toEqual([]);
   });
 });
 

@@ -200,6 +200,25 @@ describe("the type", () => {
   });
 });
 
+describe("a related line's name", () => {
+  it("takes each emphasis's mark as a row's name does", () => {
+    expect(
+      rule('.bl-ac-line-name[data-emphasis="underline"] .bl-ac-mark'),
+    ).toContain("text-decoration: underline;");
+    expect(
+      rule('.bl-ac-line-name[data-emphasis="background"] .bl-ac-mark'),
+    ).toContain("background: var(--bl-ac-mark, var(--bl-ac-marker));");
+    expect(
+      rule('.bl-ac-line-name[data-emphasis="weight"] > .bl-ac-mark'),
+    ).toContain("font-weight: var(--bl-ac-weight-mark);");
+    expect(
+      rule('.bl-ac-line-name[data-emphasis="ink"] > .bl-ac-mark'),
+    ).toContain(
+      "color: var(--bl-ac-mark, var(--bl-ac-ink-mark, var(--bl-ac-title)));",
+    );
+  });
+});
+
 describe("a disabled line", () => {
   it("is drawn by the default look's inks when the component sets none", () => {
     // The component sets the variables only for another look, so each

@@ -16,8 +16,8 @@
  * keys the contract leaves out of `required` (`matched_name`,
  * `RelatedItem.token`, `role`, `RelatedSet.count`, `RelatedSet.matched`,
  * `structure`, an address's components, a related item's `address`, `states`,
- * `domicile_state` and `matched_name`) may be absent as well as null; either
- * reads as null.
+ * `domicile_state`, `matched_name` and `highlight`) may be absent as well as
+ * null; either reads as null.
  */
 
 import {
@@ -96,6 +96,12 @@ export interface RelatedItem {
    * name filters, and on a person or an address.
    */
   matched_name: string | null;
+  /**
+   * The name a filter matched the item on, split into parts as a row's own
+   * `highlight` is: `matched_name` when it is set, else `label`. Null when no
+   * filter matched the item.
+   */
+  highlight: HighlightPart[] | null;
   /**
    * A business's lead address, the one its own row leads with: on an address
    * row too, where it need not be the row's. Null when it has none, and on a
@@ -360,6 +366,9 @@ function relatedItem(
     role: nullable(o.role, `${path}.role`, relatedRole),
     matched: boolean(o.matched, `${path}.matched`),
     matched_name: nullable(o.matched_name, `${path}.matched_name`, string),
+    highlight: nullable(o.highlight, `${path}.highlight`, (v, p) =>
+      array(v, p, highlightPart),
+    ),
     address: nullable(o.address, `${path}.address`, string),
     states: nullable(o.states, `${path}.states`, (v, p) => array(v, p, string)),
     domicile_state: nullable(

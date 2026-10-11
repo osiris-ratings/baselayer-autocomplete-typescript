@@ -128,6 +128,11 @@ row's own `matched_name` does, and the grouped components draw it after the
 business's name: `also` and that name, muted. It is null when the label fit
 as well, when no business name filters, and on a person or an address.
 
+A related item a filter matched carries `highlight`, the parts of the name it
+matched on, as a row's own `highlight` does: its `matched_name` when it has
+one, else its `label`. The grouped components mark them as they mark a row's
+name, as the service sent them. It is null when no filter matched the item.
+
 The person's and the address's own `token` is redeemed nowhere: pick one of
 their businesses instead. Each of those carries a business token, sealed with
 the person or address it was reached through, which `POST /searches` redeems

@@ -142,6 +142,7 @@ function item(
     role,
     matched,
     matched_name: null,
+    highlight: null,
     address: null,
     states: null,
     domicile_state: null,
