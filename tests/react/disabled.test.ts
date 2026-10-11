@@ -9,7 +9,9 @@ import {
   DISABLED_TEXT_FLOOR,
   DISABLED_TEXT_KEEPS,
   disabledInks,
+  markTextColor,
 } from "../../src/react/disabled";
+import { lookVariables } from "../../src/react/viewParts";
 
 type Rgb = [number, number, number];
 
@@ -40,6 +42,52 @@ const LOOKS = [
     look: resolveLook(preset.look),
   })),
 ];
+
+// The letters on a background mark: on a fill of the host's, white or the
+// title's color, whichever APCA (the WCAG 3 draft's perceptual contrast)
+// reads better; the WCAG 2 ratio calls a mid-tone pink even, and leans dark.
+describe("a background mark's letters", () => {
+  const pick = (matchEmphasisColor: string) =>
+    markTextColor({ ...DEFAULT_LOOK, matchEmphasisColor });
+
+  it("are white on a saturated fill, dark on a light one", () => {
+    for (const fill of [
+      "#e63b7a",
+      "#D53F8C",
+      "#38a169",
+      "#384ce3",
+      "#94540f",
+    ]) {
+      expect(pick(fill), fill).toBe("#ffffff");
+    }
+    for (const fill of ["#fd971f", "#fb923c", "#f0abfc", "#fff3a3"]) {
+      expect(pick(fill), fill).toBe(DEFAULT_LOOK.titleColor.toLowerCase());
+    }
+  });
+
+  it("read a translucent fill as it is drawn on the menu", () => {
+    // Half the pink on white is a light pink: dark letters read better.
+    expect(pick("#e63b7a80")).toBe(DEFAULT_LOOK.titleColor.toLowerCase());
+  });
+
+  it("are the look's own when it sets them, and left be on the default marker", () => {
+    expect(
+      markTextColor({
+        ...DEFAULT_LOOK,
+        matchEmphasisColor: "#e63b7a",
+        matchEmphasisTextColor: "#fff3a3",
+      }),
+    ).toBe("#fff3a3");
+    expect(markTextColor(DEFAULT_LOOK)).toBeNull();
+  });
+
+  it("reach the stylesheet as --bl-ac-mark-fg, only when there is one", () => {
+    expect(
+      lookVariables({ ...DEFAULT_LOOK, matchEmphasisColor: "#e63b7a" }),
+    ).toMatchObject({ "--bl-ac-mark-fg": "#ffffff" });
+    expect(lookVariables(DEFAULT_LOOK)).not.toHaveProperty("--bl-ac-mark-fg");
+  });
+});
 
 describe("a disabled line's inks", () => {
   for (const { name, look } of LOOKS) {

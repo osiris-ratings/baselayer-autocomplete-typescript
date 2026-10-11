@@ -94,6 +94,16 @@ describe("resolveLook", () => {
     });
   });
 
+  it("reads the mark's text color as null unless it is a usable hex", () => {
+    expect(DEFAULT_LOOK.matchEmphasisTextColor).toBeNull();
+    expect(
+      resolveLook({ matchEmphasisTextColor: "#ffffff" }).matchEmphasisTextColor,
+    ).toBe("#ffffff");
+    expect(
+      resolveLook({ matchEmphasisTextColor: "white" }).matchEmphasisTextColor,
+    ).toBeNull();
+  });
+
   it("keeps the default for an emphasis or a region this build does not draw", () => {
     expect(resolveLook({ matchEmphasisRegion: "word" })).toEqual(DEFAULT_LOOK);
     expect(resolveLook({ matchEmphasis: "UNDERLINE" })).toEqual(DEFAULT_LOOK);

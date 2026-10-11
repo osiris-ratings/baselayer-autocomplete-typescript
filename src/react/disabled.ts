@@ -87,6 +87,52 @@ function contrast(a: Rgb, b: Rgb): number {
 }
 
 /**
+ * How readable `text` is on `ground`, as APCA (the WCAG 3 draft's perceptual
+ * contrast, 0.0.98G-4g) measures it: the magnitude of Lc, 0 to about 106.
+ * Unlike the WCAG 2 ratio, it weighs light text on a dark ground and dark
+ * text on a light one differently, as the eye does, so it reads white on a
+ * mid-tone pink (Lc 71) as plainly better than near-black (Lc 36), where the
+ * ratio calls the two even.
+ */
+function apcaContrast(text: Rgb, ground: Rgb): number {
+  const screen = (rgb: Rgb) => {
+    const [r, g, b] = rgb.map(channel => (channel / 255) ** 2.4);
+    const y = 0.2126729 * r! + 0.7151522 * g! + 0.072175 * b!;
+    // Near-black is lifted a little, as a screen shows it.
+    return y > 0.022 ? y : y + (0.022 - y) ** 1.414;
+  };
+  const [textY, groundY] = [screen(text), screen(ground)];
+  if (Math.abs(groundY - textY) < 0.0005) return 0;
+  const lc =
+    groundY > textY
+      ? (groundY ** 0.56 - textY ** 0.57) * 1.14
+      : (groundY ** 0.65 - textY ** 0.62) * 1.14;
+  return Math.abs(lc) < 0.1 ? 0 : (Math.abs(lc) - 0.027) * 100;
+}
+
+/**
+ * The letters' color on a background mark: the look's own, or, under a mark
+ * color of the host's, whichever of white and the title's color reads better
+ * on it as drawn on the menu, by APCA; none on the default marker, whose
+ * letters keep the color they have.
+ */
+export function markTextColor(look: Look): string | null {
+  if (look.matchEmphasisTextColor !== null) {
+    return look.matchEmphasisTextColor;
+  }
+  if (look.matchEmphasisColor === null) {
+    return null;
+  }
+  const ground = drawnOn(look.backgroundColor, [255, 255, 255]);
+  const fill = drawnOn(look.matchEmphasisColor, ground);
+  const title = drawnOn(look.titleColor, fill);
+  const white: Rgb = [255, 255, 255];
+  return apcaContrast(white, fill) > apcaContrast(title, fill)
+    ? "#ffffff"
+    : hexOf(title);
+}
+
+/**
  * How far `ink` moves toward `ground`, up to `most` of the way, and keeps
  * `floor`; none when it is at or under the floor already.
  */

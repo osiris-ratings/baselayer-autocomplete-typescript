@@ -23,7 +23,7 @@ import {
   type Route,
 } from "@baselayer-sdk/autocomplete";
 
-import { disabledInks } from "./disabled";
+import { disabledInks, markTextColor } from "./disabled";
 import type { AutocompleteMessages } from "./messages";
 
 /**
@@ -163,6 +163,10 @@ export function lookVariables(look: Look): CSSProperties {
   );
   if (look.matchEmphasisColor !== null) {
     vars["--bl-ac-mark"] = look.matchEmphasisColor;
+  }
+  const markText = markTextColor(look);
+  if (markText !== null) {
+    vars["--bl-ac-mark-fg"] = markText;
   }
   return vars as CSSProperties;
 }

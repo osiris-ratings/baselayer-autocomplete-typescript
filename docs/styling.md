@@ -34,26 +34,31 @@ emphasis) keeps its default too.
 />
 ```
 
-| Knob                           | Default       | Sets                                              |
-| ------------------------------ | ------------- | ------------------------------------------------- |
-| `matchEmphasis`                | `"underline"` | how the marks are drawn                           |
-| `matchEmphasisRegion`          | `"substring"` | the typed characters, or whole words              |
-| `matchEmphasisColor`           | `null`        | `--bl-ac-mark`                                    |
-| `backgroundColor`              | `#FFFFFF`     | `--bl-ac-bg`                                      |
-| `titleColor`                   | `#1A202C`     | `--bl-ac-title`                                   |
-| `subtitleColor`                | `#718096`     | `--bl-ac-subtitle`                                |
-| `pillBackgroundColor`          | `#C6F6D5`     | `--bl-ac-pill-bg`                                 |
-| `pillForegroundColor`          | `#22543D`     | `--bl-ac-pill-fg`                                 |
-| `primaryPillBorderColor`       | `#48BB78`     | `--bl-ac-pill-primary-border`                     |
-| `secondaryPillBackgroundColor` | `#EDF2F7`     | `--bl-ac-pill-secondary-bg`                       |
-| `structurePillBackgroundColor` | `#EDF2F7`     | `--bl-ac-structure-bg`                            |
-| `structurePillForegroundColor` | `#4A5568`     | `--bl-ac-structure-fg`                            |
-| `showDebugInfo`                | `false`       | the round trip and index in the footer            |
-| `disabledDim`                  | `0.6`         | how far a disabled line under a row fades, 0 to 1 |
+| Knob                           | Default       | Sets                                                |
+| ------------------------------ | ------------- | --------------------------------------------------- |
+| `matchEmphasis`                | `"underline"` | how the marks are drawn                             |
+| `matchEmphasisRegion`          | `"substring"` | the typed characters, or whole words                |
+| `matchEmphasisColor`           | `null`        | `--bl-ac-mark`                                      |
+| `matchEmphasisTextColor`       | `null`        | `--bl-ac-mark-fg`: the letters on a background mark |
+| `backgroundColor`              | `#FFFFFF`     | `--bl-ac-bg`                                        |
+| `titleColor`                   | `#1A202C`     | `--bl-ac-title`                                     |
+| `subtitleColor`                | `#718096`     | `--bl-ac-subtitle`                                  |
+| `pillBackgroundColor`          | `#C6F6D5`     | `--bl-ac-pill-bg`                                   |
+| `pillForegroundColor`          | `#22543D`     | `--bl-ac-pill-fg`                                   |
+| `primaryPillBorderColor`       | `#48BB78`     | `--bl-ac-pill-primary-border`                       |
+| `secondaryPillBackgroundColor` | `#EDF2F7`     | `--bl-ac-pill-secondary-bg`                         |
+| `structurePillBackgroundColor` | `#EDF2F7`     | `--bl-ac-structure-bg`                              |
+| `structurePillForegroundColor` | `#4A5568`     | `--bl-ac-structure-fg`                              |
+| `showDebugInfo`                | `false`       | the round trip and index in the footer              |
+| `disabledDim`                  | `0.6`         | how far a disabled line under a row fades, 0 to 1   |
 
 Colors are hex: `#rgb`, `#rrggbb` or `#rrggbbaa`. `plain` draws no marks,
 `weight` sets the matched words bolder than the rest of the name, `ink`
-darker, `underline` underlines them and `background` fills behind them. The
+darker, `underline` underlines them and `background` fills behind them. On a
+fill of your own (`matchEmphasisColor`), the letters on a background mark are
+white or the title's color, whichever reads better on it by APCA, the WCAG 3
+draft's perceptual contrast; `matchEmphasisTextColor` sets them yourself. On
+the default marker they keep their own color. The
 same treatment marks what a filter matched: an officer, an address or a
 related name, on the words the autocomplete service marked (whole, when it
 sends none), and a state's square (see [what matched](#what-matched)).
@@ -91,6 +96,7 @@ Set them on `.bl-ac` or any ancestor selector more specific than it:
 | `--bl-ac-mark`                    | unset                              | every mark, when set                                |
 | `--bl-ac-underline`               | `#38a169`                          | the underline mark                                  |
 | `--bl-ac-marker`                  | `#c6f6d5`                          | the background mark                                 |
+| `--bl-ac-mark-fg`                 | unset: the letters' own color      | the letters on a background mark                    |
 | `--bl-ac-ink-mark`                | unset: the title's color           | a matched word, under `ink`                         |
 | `--bl-ac-ink-base`                | `#4a5568`                          | the name's unmatched text, under `ink`              |
 | `--bl-ac-also-mark`               | `#2d3748`                          | the `also …` marks, under `weight` and `ink`        |

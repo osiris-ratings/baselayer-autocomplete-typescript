@@ -257,11 +257,21 @@ function faults(narrow = false): string[] {
         line.clientWidth -
         parseFloat(style.paddingLeft) -
         parseFloat(style.paddingRight);
+      // The badge's own room is its content's: under the background emphasis
+      // a field keeps a little padding for the fill, given back in margins.
+      const badgeRoom = (badge: Element) => {
+        const box = getComputedStyle(badge);
+        return (
+          badge.getBoundingClientRect().width -
+          parseFloat(box.paddingLeft) -
+          parseFloat(box.paddingRight)
+        );
+      };
       if (
         name != null &&
         badge != null &&
         name.scrollWidth > name.clientWidth &&
-        badge.getBoundingClientRect().width > 1 &&
+        badgeRoom(badge) > 1 &&
         name.getBoundingClientRect().width < 0.59 * room
       ) {
         found.push(`line ${index}: the name is cut while its badge has room`);

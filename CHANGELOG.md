@@ -27,6 +27,11 @@ breaking change bumps the minor version.
   for `state`. The grouped views take `appliedFilters`, which
   `<PersonAutocomplete>` and `<AddressAutocomplete>` pass from
   `useEntityAutocomplete`.
+- The letters on a background mark read on a fill of the host's own: white or
+  the title's color, whichever APCA (the WCAG 3 draft's perceptual contrast)
+  reads better on `matchEmphasisColor`, where they kept their field's gray or
+  ink. `look.matchEmphasisTextColor` (`--bl-ac-mark-fg`) sets them instead; on
+  the default marker they keep their own color.
 
 ### Changed
 
@@ -64,6 +69,12 @@ breaking change bumps the minor version.
   500px. Below 360px the product's name beside the logo gives way. The home
   page's hero and styling section, whose code lines never wrap, scroll those
   lines in their own boxes instead of widening the page.
+- A background mark at the start or the end of a name, an officer, an
+  address or an `also …` keeps its whole fill and its rounded ends, where the
+  box that cuts a long field short cut them too. Nothing moves.
+- A demo filter whose label wraps, such as "Their businesses' states", keeps
+  its "optional" tag on the label's last line, right above the input, where it
+  sat beside the first.
 
 ## [0.5.0] - 2026-10-08
 
