@@ -72,6 +72,9 @@ breaking change bumps the minor version.
 - A background mark at the start or the end of a name, an officer, an
   address or an `also …` keeps its whole fill and its rounded ends, where the
   box that cuts a long field short cut them too. Nothing moves.
+- A demo filter whose label wraps, such as "Their businesses' states", keeps
+  its "optional" tag on the label's last line, right above the input, where it
+  sat beside the first.
 
 ## [0.5.0] - 2026-10-08
 

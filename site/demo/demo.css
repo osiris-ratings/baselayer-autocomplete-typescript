@@ -341,9 +341,10 @@
   margin: 0 0 14px;
 }
 
+/* A label that wraps keeps its tag on its last line, by the input. */
 .field-label {
   display: flex;
-  align-items: baseline;
+  align-items: last baseline;
   gap: 8px;
   font-size: 14px;
   font-weight: 500;
