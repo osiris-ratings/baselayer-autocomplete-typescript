@@ -322,7 +322,7 @@ function Connected<R extends GroupedRoute>({
   });
   // Held off by a pick, the search has nothing; the menu shows the answer the
   // pick was made from instead, should the field reopen it, and a pick from
-  // it keeps it.
+  // it keeps it: the rows as they are, no request in flight behind them.
   const { unavailable } = live;
   const shown = justPicked ? held.answer : live;
   const { unavailable: shownUnavailable, ...state } = shown;
@@ -386,7 +386,11 @@ function Connected<R extends GroupedRoute>({
             // A business row's own head: no person's or address's row has one.
             return;
         }
-        setHeld({ name: field, filtersKey, answer: shown });
+        setHeld({
+          name: field,
+          filtersKey,
+          answer: { ...shown, isSearching: false },
+        });
         onChange(field);
         if (option.kind === "business") {
           onPick(businessPickFrom(option.row, option.business, Date.now()));
