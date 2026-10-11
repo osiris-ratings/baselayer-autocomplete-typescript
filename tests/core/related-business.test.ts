@@ -203,8 +203,8 @@ describe("a related business's address, states and domicile", () => {
 
 // A business under a person or an address that a business name filter
 // reached through the other name it goes by (a DBA, or a former name) says
-// which, as a business row's own `matched_name` does. The service leaves the
-// key out when the label fit as well.
+// which, as a business row's own `matched_name` does. The service spells it
+// null when the label fit as well; one that predates the key leaves it out.
 describe("a related business's matched name", () => {
   const matchedHarbor = {
     ...harbor,
@@ -240,19 +240,30 @@ describe("a related business's matched name", () => {
     );
   });
 
-  it("reads null when the service leaves it out, as it does when the label fit", () => {
+  it("reads null when the label fit, as the service spells it", () => {
+    const labelFit = { ...harbor, matched: true, matched_name: null };
     const [person] = parseSuggestResponse(
       "people",
-      personRow([{ ...harbor, matched: true }], [oakLane]),
+      personRow([labelFit], [{ ...oakLane, matched_name: null }]),
     ).suggestions;
     const [address] = parseSuggestResponse(
       "addresses",
-      addressRow([{ ...harbor, matched_name: null }]),
+      addressRow([labelFit]),
     ).suggestions;
 
     expect(person!.related.businesses.items[0]?.matched_name).toBeNull();
     expect(person!.related.addresses.items[0]?.matched_name).toBeNull();
     expect(address!.related.businesses.items[0]?.matched_name).toBeNull();
+  });
+
+  it("reads null from a service that predates it, which leaves it out", () => {
+    const [person] = parseSuggestResponse(
+      "people",
+      personRow([{ ...harbor, matched: true }], [oakLane]),
+    ).suggestions;
+
+    expect(person!.related.businesses.items[0]?.matched_name).toBeNull();
+    expect(person!.related.addresses.items[0]?.matched_name).toBeNull();
   });
 
   it("refuses one that is not a string", () => {

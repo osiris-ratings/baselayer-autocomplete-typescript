@@ -503,7 +503,7 @@
             "type": "boolean"
           },
           "matched_name": {
-            "description": "A business item's other name that fits the business name filtering the answer better\nthan `label` does, as a business suggestion's `matched_name` means it; absent when\n`label` fits at least as well, when no business name filters, and on a person or an\naddress item.",
+            "description": "A business item's other name that fits the business name filtering the answer better\nthan `label` does, as a business suggestion's `matched_name` means it; null when\n`label` fits at least as well, when no business name filters, and on a person or an\naddress item.",
             "type": [
               "string",
               "null"

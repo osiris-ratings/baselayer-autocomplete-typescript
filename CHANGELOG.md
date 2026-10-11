@@ -21,6 +21,9 @@ breaking change bumps the minor version.
 
 ### Changed
 
+- **Breaking:** `RelatedItem` gains `matched_name`, required as the parser
+  always fills it; a fixture that builds a related item by hand must add it,
+  null when the label fit and on a person or an address item.
 - A matched state's square is no longer ringed, which read as a second
   domicile. It keeps its size, the domicile keeps the only border, and the
   square takes the emphasis's own mark: a line a little under it under
