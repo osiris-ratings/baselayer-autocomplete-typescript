@@ -746,7 +746,8 @@
  * The background's fill reaches 0.125rem past the marked letters on both
  * sides. Every box that cuts a long field short makes that much room inside
  * its edges and gives it back in its margins, so nothing moves and a mark at
- * the start or the end of a field keeps its rounded ends.
+ * the start or the end of a field keeps its rounded ends. Its widths and caps
+ * stay its letters', on a page that sizes every box by its border too.
  */
 .bl-ac[data-emphasis="background"]
   :is(
@@ -757,6 +758,7 @@
     .bl-ac-address,
     .bl-ac-people
   ) {
+  box-sizing: content-box;
   padding-inline: 0.125rem;
   margin-inline: -0.125rem;
 }

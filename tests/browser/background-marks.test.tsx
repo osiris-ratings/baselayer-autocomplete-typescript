@@ -376,8 +376,8 @@ describe("making room for the fill", () => {
     });
   });
 
-  it("gives a line's name at its cap as much room for its letters as underline does", () => {
-    // Long enough to reach the name's cap, 60% of the line.
+  describe("a line's name at its cap, 60% of the line", () => {
+    // Long enough to reach the cap.
     const label =
       "HARBOR LANE HOLDINGS AND CONCRETE PUMPING OF WESTERN PENNSYLVANIA LLC";
     const business = {
@@ -387,18 +387,36 @@ describe("making room for the fill", () => {
         { text: label.slice("HARBOR".length), matched: false },
       ],
     };
-    const background = letters(".bl-ac-line-name", "background", business, {
-      width: 900,
+
+    function expectRoomAsUnderline() {
+      const background = letters(".bl-ac-line-name", "background", business, {
+        width: 900,
+      });
+      const underline = letters(".bl-ac-line-name", "underline", business, {
+        width: 900,
+      });
+      expect(background.overflows).toBe(true);
+      expect(underline.right - underline.left).toBeCloseTo(
+        underline.lineWidth * 0.6,
+        0,
+      );
+      expectSame(background, underline);
+    }
+
+    it("has as much room for its letters as under underline", () => {
+      expectRoomAsUnderline();
     });
-    const underline = letters(".bl-ac-line-name", "underline", business, {
-      width: 900,
+
+    it("has as much room on a page that sizes every box by its border, as many resets do", () => {
+      const reset = document.createElement("style");
+      reset.textContent = "*, *::before, *::after { box-sizing: border-box; }";
+      document.head.append(reset);
+      try {
+        expectRoomAsUnderline();
+      } finally {
+        reset.remove();
+      }
     });
-    expect(background.overflows).toBe(true);
-    expect(underline.right - underline.left).toBeCloseTo(
-      underline.lineWidth * 0.6,
-      0,
-    );
-    expectSame(background, underline);
   });
 });
 
