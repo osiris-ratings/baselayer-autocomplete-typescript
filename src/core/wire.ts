@@ -15,9 +15,11 @@
  * value before the autocomplete service sends it. One liberty is kept: the
  * keys the contract leaves out of `required` (`matched_name`,
  * `RelatedItem.token`, `role`, `RelatedSet.count`, `RelatedSet.matched`,
- * `structure`, an address's components, a related item's `address`, `states`,
- * `domicile_state`, `matched_name` and `highlight`) may be absent as well as
- * null; either reads as null.
+ * `structure`, an address's components, a related item's `address`, `states`
+ * and `domicile_state`) may be absent as well as null; either reads as null.
+ * So may a related item's `matched_name` and `highlight`, which a newer
+ * autocomplete service sends ahead of this repository's copy of its contract,
+ * and an older one leaves out.
  */
 
 import {

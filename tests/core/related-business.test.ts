@@ -218,14 +218,6 @@ describe("a related business's matched name", () => {
     matched_name: "SALTMARSH PROVISIONS",
   };
 
-  it("is what the contract puts on a related item: nullable, and not required", () => {
-    expect(relatedItem.properties.matched_name?.type).toEqual([
-      "string",
-      "null",
-    ]);
-    expect(relatedItem.required).not.toContain("matched_name");
-  });
-
   it("reads the name a business under a person matched on", () => {
     const [row] = parseSuggestResponse(
       "people",
@@ -312,11 +304,6 @@ describe("a related item's highlight", () => {
     domicile_state: null,
     highlight: crane,
   };
-
-  it("is what the contract puts on a related item: nullable, and not required", () => {
-    expect(relatedItem.properties.highlight?.type).toEqual(["array", "null"]);
-    expect(relatedItem.required).not.toContain("highlight");
-  });
 
   it("reads the parts of the name a business and a person under an address matched on", () => {
     const [row] = parseSuggestResponse(
