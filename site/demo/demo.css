@@ -2372,6 +2372,21 @@ html[data-dragging] * {
   display: block;
 }
 
+/* The network panel's own colours, on the navy of its boxes: keys pink,
+   strings mint, numbers and true or false orange, null grey; a URL's host
+   and path each their own, its parameters' names and values as the body's
+   keys and strings. The punctuation and the escapes are muted. */
+.net-detail {
+  --net-key: #ff9fd6;
+  --net-string: #bef9b6;
+  --net-literal: #ffb86c;
+  --net-null: #8a97b8;
+  --net-host: #8fd3ff;
+  --net-path: #c9b8ff;
+  --net-sign: #93a6cf;
+  --net-escape: #7588b0;
+}
+
 .net-detail .net-url,
 .net-body {
   margin: 0;
@@ -2394,23 +2409,40 @@ html[data-dragging] * {
   font-size: 13px;
 }
 
+.net-url [data-part="scheme"],
 .net-url [data-part="sign"] {
-  color: var(--sh-sign);
+  color: var(--net-sign);
+}
+
+.net-url [data-part="host"] {
+  color: var(--net-host);
+}
+
+.net-url [data-part="path"] {
+  color: var(--net-path);
 }
 
 .net-url [data-part="key"] {
-  color: var(--sh-property);
+  color: var(--net-key);
 }
 
 .net-url [data-part="value"] {
-  color: var(--sh-string);
+  color: var(--net-string);
 }
 
 .net-url [data-part="escape"] {
-  color: var(--sh-comment);
+  color: var(--net-escape);
 }
 
+/* The highlighter's colours, retold for the body: a key is a property, a
+   number a class, true and false keywords (null is given --net-null). */
 .net-body {
+  --sh-property: var(--net-key);
+  --sh-string: var(--net-string);
+  --sh-class: var(--net-literal);
+  --sh-keyword: var(--net-literal);
+  --sh-sign: var(--net-sign);
+
   max-height: 480px;
   overflow: auto;
 }

@@ -9,10 +9,9 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { highlight } from "sugar-high";
 
 import {
-  indentJson,
+  bodyHtml,
   urlParts,
   type NetworkEntry,
   type NetworkLog,
@@ -79,15 +78,11 @@ function Url({ url }: { url: string }) {
 }
 
 /**
- * A body, indented and highlighted as JSON once rather than on every tick of
- * a request in flight. The highlighter escapes the text it marks up, which
- * here is whatever the server sent.
+ * A body, highlighted once rather than on every tick of a request in flight
+ * (`bodyHtml`, which escapes what the server sent).
  */
 function Body({ text }: { text: string }) {
-  const html = useMemo(
-    () => highlight(indentJson(text), { lang: "json" }),
-    [text],
-  );
+  const html = useMemo(() => bodyHtml(text), [text]);
   return (
     <pre className="net-body">
       <code dangerouslySetInnerHTML={{ __html: html }} />

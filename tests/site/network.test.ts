@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   NetworkLog,
+  bodyHtml,
   cutShort,
   indentJson,
   kindOf,
@@ -96,13 +97,18 @@ describe("redactTokens", () => {
 });
 
 describe("urlParts", () => {
-  it("tells each query parameter's name from its value, and mutes the escapes", () => {
+  it("tells the host from the path, each query parameter's name from its value, and mutes the escapes", () => {
     const url =
-      "https://api.baselayer.com/autocomplete/people?q=jane+doe&include=businesses%2Caddresses&business.name=osiri";
+      "https://api.baselayer.com/autocomplete/people?q=jane+doe&include=businesses%2Caddresses&business.name=harbo";
     const parts = urlParts(url);
     expect(parts.map(p => p.text).join("")).toBe(url);
     expect(parts).toEqual([
-      { text: "https://api.baselayer.com/autocomplete/people", part: "base" },
+      { text: "https://", part: "scheme" },
+      { text: "api.baselayer.com", part: "host" },
+      { text: "/", part: "sign" },
+      { text: "autocomplete", part: "path" },
+      { text: "/", part: "sign" },
+      { text: "people", part: "path" },
       { text: "?", part: "sign" },
       { text: "q", part: "key" },
       { text: "=", part: "sign" },
@@ -118,13 +124,18 @@ describe("urlParts", () => {
       { text: "&", part: "sign" },
       { text: "business.name", part: "key" },
       { text: "=", part: "sign" },
-      { text: "osiri", part: "value" },
+      { text: "harbo", part: "value" },
     ]);
   });
 
-  it("keeps a URL without a query whole", () => {
-    expect(urlParts("https://api.baselayer.com/searches")).toEqual([
-      { text: "https://api.baselayer.com/searches", part: "base" },
+  it("splits a URL without a query into its scheme, host and path", () => {
+    expect(urlParts("http://localhost:3000/_baselayer/searches")).toEqual([
+      { text: "http://", part: "scheme" },
+      { text: "localhost:3000", part: "host" },
+      { text: "/", part: "sign" },
+      { text: "_baselayer", part: "path" },
+      { text: "/", part: "sign" },
+      { text: "searches", part: "path" },
     ]);
   });
 
@@ -140,6 +151,45 @@ describe("urlParts", () => {
     expect(parts.filter(p => p.part === "value").map(p => p.text)).toEqual([
       "5",
     ]);
+  });
+});
+
+describe("bodyHtml", () => {
+  const html = bodyHtml(
+    JSON.stringify({
+      found: 2,
+      capped: true,
+      cut: false,
+      token: null,
+      note: "null",
+    }),
+  );
+
+  it("indents the body and marks it up as JSON", () => {
+    expect(html).toContain("sh__token--property");
+    expect(html.split('class="sh__line"')).toHaveLength(8);
+  });
+
+  it("draws null in its own colour, and leaves true, false and a string that says null be", () => {
+    const keywords = [
+      ...html.matchAll(
+        /<span class="sh__token--keyword" style="([^"]*)">(\w+)</g,
+      ),
+    ].map(([, style, word]) => [word, style]);
+    expect(keywords).toEqual([
+      ["true", "color:var(--sh-keyword)"],
+      ["false", "color:var(--sh-keyword)"],
+      ["null", "color:var(--net-null)"],
+    ]);
+    expect(html).toContain(
+      '<span class="sh__token--string" style="color:var(--sh-string)">&quot;null&quot;</span>',
+    );
+  });
+
+  it("escapes what the server sent", () => {
+    expect(bodyHtml('{"name": "<img src=x onerror=alert(1)>"}')).toContain(
+      "&lt;img src=x onerror=alert(1)&gt;",
+    );
   });
 });
 
