@@ -38,6 +38,8 @@ const business: RelatedItem = {
   label: "BAYSIDE HARBOR CONCRETE, INC.",
   role: "officer",
   matched: false,
+  matched_name: null,
+  highlight: null,
   address: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
   states: ["AZ", "CA", "NV", "OR", "WA"],
   domicile_state: "CA",
