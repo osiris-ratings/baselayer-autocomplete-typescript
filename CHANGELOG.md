@@ -9,8 +9,9 @@ breaking change bumps the minor version.
 ### Added
 
 - A person search narrowed by its businesses' states (`business.state`) moves
-  the states it named up behind the domicile on each business line, never
-  behind the `+N`, and marks them, as a business row does for `state`. The
+  the states it named up behind the domicile on each business line the service
+  says matched, never behind the `+N`, and marks them, as a business row does
+  for `state`. The
   grouped views take `appliedFilters`, which `<PersonAutocomplete>` and
   `<AddressAutocomplete>` pass from `useEntityAutocomplete`.
 

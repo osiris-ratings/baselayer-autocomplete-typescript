@@ -572,9 +572,11 @@ send no `officer_names`, the officer.
 whether it matched, and whose it is) are the readers the row draws from.
 
 A person search narrowed by its businesses' states (`business.state`) does the
-same on each business line under a person: the states the filter named move
-up behind the domicile, never behind the `+N`, and are marked as a business
-row marks them. `<PersonAutocomplete>` passes the filters its rows were
+same on each business line under a person that the service says matched: the
+states the filter named move up behind the domicile, never behind the `+N`,
+and are marked as a business row marks them. A business that did not match,
+listed as another of the person's, is not why they are here, and its states
+are not marked. `<PersonAutocomplete>` passes the filters its rows were
 fetched with; with `PersonAutocompleteView`, pass `appliedFilters` from
 `useEntityAutocomplete`. An address search's own `state` is the address's, and
 marks none of the businesses filed at it.

@@ -53,7 +53,11 @@ const DANA: PersonSuggestion = {
   },
 };
 
-function draw(width: number, appliedFilters?: PeopleFilters) {
+function draw(
+  width: number,
+  appliedFilters?: PeopleFilters,
+  person: PersonSuggestion = DANA,
+) {
   const host = document.createElement("div");
   host.style.width = `${width}px`;
   host.style.fontFamily = "sans-serif";
@@ -66,7 +70,7 @@ function draw(width: number, appliedFilters?: PeopleFilters) {
         value="dana"
         onInputChange={() => {}}
         onSelect={() => {}}
-        suggestions={[DANA]}
+        suggestions={[person]}
         found={1}
         foundCapped={false}
         truncated={false}
@@ -141,7 +145,14 @@ describe("the lines under a person", () => {
 
 describe("a state a person search's business filter matched", () => {
   it("sits behind the domicile on its line, ringed and underlined as on a business row", () => {
-    const { lines, done } = draw(560, { business: { state: ["nv"] } });
+    // The service says Bayside is why Dana is here.
+    const filtered: PersonSuggestion = structuredClone(DANA);
+    filtered.related.businesses.items[1]!.matched = true;
+    const { lines, done } = draw(
+      560,
+      { business: { state: ["nv"] } },
+      filtered,
+    );
     try {
       const bayside = lines[1]!;
       const squares = [

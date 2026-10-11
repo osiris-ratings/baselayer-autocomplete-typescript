@@ -16,6 +16,7 @@ import {
   drawnLayout,
   formatFound,
   groupedLines,
+  orderedStates,
   partsFor,
   queryTokens,
   requestFor,
@@ -582,7 +583,9 @@ function GroupedView<R extends GroupedRoute>({
   });
   const tokens = queryTokens(value);
   // The business states a person search was narrowed by, which a business
-  // line moves behind its domicile and marks, as a business row does.
+  // line the service says matched moves behind its domicile and marks, as a
+  // business row does. An unmatched business in one of them is not why the
+  // person is here.
   const filteredStates = new Set(
     (route === "people"
       ? ((appliedFilters as PeopleFilters | undefined)?.business?.state ?? [])
@@ -693,9 +696,14 @@ function GroupedView<R extends GroupedRoute>({
           (of.item.states?.length ?? 0) > 0 && (
             <StateSquares
               business={of.item}
-              matched={(of.item.states ?? []).filter(state =>
-                filteredStates.has(state),
-              )}
+              matched={
+                of.item.matched
+                  ? // Every state drawn, as `matchedOn` reads them.
+                    orderedStates(of.item).filter(state =>
+                      filteredStates.has(state.trim().toUpperCase()),
+                    )
+                  : []
+              }
               cx={cx}
               more={text.more}
               place={place}

@@ -833,9 +833,10 @@ describe("AddressAutocomplete", () => {
 
 // A person search filtered by its businesses' states says which of a
 // business's states the filter matched, as a business row does: right after
-// the domicile, never behind the +N, and marked. The filters are the ones the
-// rows were fetched with; an address's own state filter says nothing of the
-// businesses filed at it.
+// the domicile, never behind the +N, and marked, on a business the service
+// says is why the person is here. The filters are the ones the rows were
+// fetched with; an address's own state filter says nothing of the businesses
+// filed at it.
 describe("the states a filter matched on a business line", () => {
   const view = {
     onInputChange: () => {},
@@ -854,29 +855,44 @@ describe("the states a filter matched on a business line", () => {
       .queryAllByTestId("business-suggestion-state")
       .map(state => [state.textContent, state.hasAttribute("data-matched")]);
 
-  it("moves the business.state a person search matched behind the domicile, and marks it", () => {
+  /**
+   * `PEOPLE` as a `business.state` and `business.name` search answers it:
+   * Dana's Harbor, in FL, matched both; Cobalt, in FL too, matched neither,
+   * and is listed only as another of Dana's businesses.
+   */
+  function filtered(harbor: object = {}) {
+    const copy = structuredClone(PEOPLE);
+    const [harborItem, , cobaltItem] =
+      copy.suggestions[0]!.related.businesses.items;
+    Object.assign(harborItem!, { matched: true, ...harbor });
+    Object.assign(cobaltItem!, { states: ["FL"], domicile_state: "FL" });
+    return copy;
+  }
+
+  it("moves the business.state a matched business has behind its domicile, and marks it", () => {
     render(
       <PersonAutocompleteView
         {...view}
         id="person"
         value="dana"
-        suggestions={PEOPLE.suggestions as never}
-        appliedFilters={{ business: { state: ["fl"] } }}
+        suggestions={filtered().suggestions as never}
+        appliedFilters={{ business: { state: ["fl"], name: "harbor" } }}
       />,
     );
 
-    const [harbor] = screen.getAllByTestId("business-line");
+    const [harbor, , cobalt] = screen.getAllByTestId("business-line");
     // Domicile PA first, then the matched FL, then the rest.
     expect(squares(harbor!)).toEqual([
       ["PA", false],
       ["FL", true],
       ["DE", false],
     ]);
+    // Cobalt is in FL too, but the service does not say it matched.
+    expect(squares(cobalt!)).toEqual([["FL", false]]);
   });
 
   it("never leaves a matched state behind the +N", () => {
-    const wide = structuredClone(PEOPLE);
-    Object.assign(wide.suggestions[0]!.related.businesses.items[0]!, {
+    const wide = filtered({
       states: ["AZ", "CA", "DE", "NV", "NY", "OR"],
       domicile_state: "DE",
     });
@@ -901,13 +917,57 @@ describe("the states a filter matched on a business line", () => {
     ).toHaveTextContent("+3");
   });
 
+  it("matches a state without regard to case or space on either side", () => {
+    render(
+      <PersonAutocompleteView
+        {...view}
+        id="person"
+        value="dana"
+        suggestions={
+          filtered({ states: ["de", "fl", "pa"], domicile_state: "pa" })
+            .suggestions as never
+        }
+        appliedFilters={{ business: { state: [" Fl "] } }}
+      />,
+    );
+
+    const [harbor] = screen.getAllByTestId("business-line");
+    expect(squares(harbor!)).toEqual([
+      ["pa", false],
+      ["fl", true],
+      ["de", false],
+    ]);
+  });
+
+  it("marks a domicile the filter named, though the wire leaves it out of the states", () => {
+    render(
+      <PersonAutocompleteView
+        {...view}
+        id="person"
+        value="dana"
+        suggestions={
+          filtered({ states: ["DE", "PA"], domicile_state: "FL" })
+            .suggestions as never
+        }
+        appliedFilters={{ business: { state: ["fl"] } }}
+      />,
+    );
+
+    const [harbor] = screen.getAllByTestId("business-line");
+    expect(squares(harbor!)).toEqual([
+      ["FL", true],
+      ["DE", false],
+      ["PA", false],
+    ]);
+  });
+
   it("marks nothing without the filters the rows were fetched with", () => {
     render(
       <PersonAutocompleteView
         {...view}
         id="person"
         value="dana"
-        suggestions={PEOPLE.suggestions as never}
+        suggestions={filtered().suggestions as never}
       />,
     );
 
@@ -920,23 +980,40 @@ describe("the states a filter matched on a business line", () => {
   });
 
   it("marks none of an address's businesses' states by the address's own state", () => {
+    const matched = structuredClone(ADDRESSES);
+    for (const item of matched.suggestions[0]!.related.businesses.items) {
+      item.matched = true;
+    }
     render(
       <AddressAutocompleteView
         {...view}
         id="address"
         value="45 corvel"
-        suggestions={ADDRESSES.suggestions as never}
+        suggestions={matched.suggestions as never}
         appliedFilters={{ state: ["DE"] }}
       />,
     );
 
     for (const line of screen.getAllByTestId("business-line")) {
-      expect(squares(line).some(([, matched]) => matched)).toBe(false);
+      expect(squares(line).some(([, marked]) => marked)).toBe(false);
     }
   });
 
   it("marks what the person search sent, from the component", async () => {
-    const { client, fetch } = setup();
+    const fetch = vi.fn<FetchLike>(async url =>
+      reply(
+        200,
+        answer(
+          filtered(),
+          (new URL(url).searchParams.get("include") ?? "businesses").split(","),
+        ),
+      ),
+    );
+    const client = createAutocompleteClient({
+      baseUrl: BASE_URL,
+      mint: async () => grant(SCOPE),
+      fetch,
+    });
     const { dana } = await typeDana(client, {
       filters: { business: { state: ["fl"] } },
     });
