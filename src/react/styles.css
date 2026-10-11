@@ -309,6 +309,33 @@
 }
 
 /*
+ * On a highlighted row or line the highlight is the pills' own fill, so the
+ * structure's flag and the +N take a faint edge of their own ink, which
+ * moves nothing: the flag colours the border it already has, the +N an inset
+ * ring. `--bl-ac-highlighted-pill-border` sets one edge for both.
+ */
+:is(.bl-ac-row, .bl-ac-group-head, .bl-ac-group-line)[data-highlighted]
+  .bl-ac-structure {
+  border-color: var(
+    --bl-ac-highlighted-pill-border,
+    color-mix(in srgb, var(--bl-ac-structure-fg) 22%, var(--bl-ac-structure-bg))
+  );
+}
+
+:is(.bl-ac-row, .bl-ac-group-head, .bl-ac-group-line)[data-highlighted]
+  .bl-ac-more-states {
+  box-shadow: inset 0 0 0 1px
+    var(
+      --bl-ac-highlighted-pill-border,
+      color-mix(
+        in srgb,
+        var(--bl-ac-more-fg) 22%,
+        var(--bl-ac-pill-secondary-bg)
+      )
+    );
+}
+
+/*
  * A person or an address, as a group of lines: its head, the row's name
  * marked as a business's is, then a line for each business, address or
  * person listed under it, indented. Each line is its lead (the name, then its

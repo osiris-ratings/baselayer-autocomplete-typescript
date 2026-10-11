@@ -72,39 +72,40 @@ sends it:
 
 Set them on `.bl-ac` or any ancestor selector more specific than it:
 
-| Variable                       | Default                            | Paints                                       |
-| ------------------------------ | ---------------------------------- | -------------------------------------------- |
-| `--bl-ac-bg`                   | `#ffffff`                          | the menu                                     |
-| `--bl-ac-title`                | `#1a202c`                          | a row's name                                 |
-| `--bl-ac-subtitle`             | `#718096`                          | the address, the people and `also …`         |
-| `--bl-ac-pill-bg`              | `#c6f6d5`                          | the state squares                            |
-| `--bl-ac-pill-fg`              | `#22543d`                          | their letters                                |
-| `--bl-ac-pill-primary-border`  | `#48bb78`                          | the domicile's border                        |
-| `--bl-ac-pill-secondary-bg`    | `#edf2f7`                          | the `+N` square                              |
-| `--bl-ac-structure-bg`         | `#edf2f7`                          | the structure's flag                         |
-| `--bl-ac-structure-fg`         | `#4a5568`                          | its letters                                  |
-| `--bl-ac-more-fg`              | `#2d3748`                          | the `+N` square's text                       |
-| `--bl-ac-highlight-bg`         | `#edf2f7`                          | the highlighted row                          |
-| `--bl-ac-border`               | `#edf2f7`                          | the menu border, the footer rule             |
-| `--bl-ac-mark`                 | unset                              | every mark, when set                         |
-| `--bl-ac-underline`            | `#38a169`                          | the underline mark                           |
-| `--bl-ac-marker`               | `#c6f6d5`                          | the background mark                          |
-| `--bl-ac-ink-mark`             | unset: the title's color           | a matched word, under `ink`                  |
-| `--bl-ac-ink-base`             | `#4a5568`                          | the name's unmatched text, under `ink`       |
-| `--bl-ac-also-mark`            | `#2d3748`                          | the `also …` marks, under `weight` and `ink` |
-| `--bl-ac-radius`               | `0.5rem`                           | the menu                                     |
-| `--bl-ac-pill-radius`          | `0.25rem`                          | the state and `+N` squares, and the flag     |
-| `--bl-ac-shadow`               | `0 4px 8px rgba(16, 24, 40, 0.08)` | the menu                                     |
-| `--bl-ac-z`                    | `1000`                             | the menu's stacking                          |
-| `--bl-ac-menu-width`           | `560px`                            | a menu that keeps its own width              |
-| `--bl-ac-list-max-height`      | `24rem`                            | the scrolling list                           |
-| `--bl-ac-line-height`          | `1.5`                              | every line in the menu                       |
-| `--bl-ac-font`                 | unset: the page's font             | the component's font family                  |
-| `--bl-ac-name-weight`          | `600`                              | the name, under every emphasis but `weight`  |
-| `--bl-ac-weight-base`          | `500`                              | the name's unmatched text, under `weight`    |
-| `--bl-ac-weight-mark`          | `700`                              | every matched word, under `weight`           |
-| `--bl-ac-disabled-head-weight` | unset: `min(400, base)`            | a disabled head's name                       |
-| `--bl-ac-disabled-line-weight` | unset: `min(400, base)`            | a disabled line's name                       |
+| Variable                          | Default                            | Paints                                              |
+| --------------------------------- | ---------------------------------- | --------------------------------------------------- |
+| `--bl-ac-bg`                      | `#ffffff`                          | the menu                                            |
+| `--bl-ac-title`                   | `#1a202c`                          | a row's name                                        |
+| `--bl-ac-subtitle`                | `#718096`                          | the address, the people and `also …`                |
+| `--bl-ac-pill-bg`                 | `#c6f6d5`                          | the state squares                                   |
+| `--bl-ac-pill-fg`                 | `#22543d`                          | their letters                                       |
+| `--bl-ac-pill-primary-border`     | `#48bb78`                          | the domicile's border                               |
+| `--bl-ac-pill-secondary-bg`       | `#edf2f7`                          | the `+N` square                                     |
+| `--bl-ac-structure-bg`            | `#edf2f7`                          | the structure's flag                                |
+| `--bl-ac-structure-fg`            | `#4a5568`                          | its letters                                         |
+| `--bl-ac-more-fg`                 | `#2d3748`                          | the `+N` square's text                              |
+| `--bl-ac-highlight-bg`            | `#edf2f7`                          | the highlighted row                                 |
+| `--bl-ac-highlighted-pill-border` | unset: each pill's ink, faintly    | the flag's and the `+N`'s edge on a highlighted row |
+| `--bl-ac-border`                  | `#edf2f7`                          | the menu border, the footer rule                    |
+| `--bl-ac-mark`                    | unset                              | every mark, when set                                |
+| `--bl-ac-underline`               | `#38a169`                          | the underline mark                                  |
+| `--bl-ac-marker`                  | `#c6f6d5`                          | the background mark                                 |
+| `--bl-ac-ink-mark`                | unset: the title's color           | a matched word, under `ink`                         |
+| `--bl-ac-ink-base`                | `#4a5568`                          | the name's unmatched text, under `ink`              |
+| `--bl-ac-also-mark`               | `#2d3748`                          | the `also …` marks, under `weight` and `ink`        |
+| `--bl-ac-radius`                  | `0.5rem`                           | the menu                                            |
+| `--bl-ac-pill-radius`             | `0.25rem`                          | the state and `+N` squares, and the flag            |
+| `--bl-ac-shadow`                  | `0 4px 8px rgba(16, 24, 40, 0.08)` | the menu                                            |
+| `--bl-ac-z`                       | `1000`                             | the menu's stacking                                 |
+| `--bl-ac-menu-width`              | `560px`                            | a menu that keeps its own width                     |
+| `--bl-ac-list-max-height`         | `24rem`                            | the scrolling list                                  |
+| `--bl-ac-line-height`             | `1.5`                              | every line in the menu                              |
+| `--bl-ac-font`                    | unset: the page's font             | the component's font family                         |
+| `--bl-ac-name-weight`             | `600`                              | the name, under every emphasis but `weight`         |
+| `--bl-ac-weight-base`             | `500`                              | the name's unmatched text, under `weight`           |
+| `--bl-ac-weight-mark`             | `700`                              | every matched word, under `weight`                  |
+| `--bl-ac-disabled-head-weight`    | unset: `min(400, base)`            | a disabled head's name                              |
+| `--bl-ac-disabled-line-weight`    | unset: `min(400, base)`            | a disabled line's name                              |
 
 A weight the font does not have is drawn in the nearest one it does, so a
 heavier `--bl-ac-weight-mark` needs the font loaded in that weight. To use a
@@ -616,7 +617,10 @@ empty label hides that value's flag:
 for rows of your own. The flag is a neutral grey by default
 (`structurePillBackgroundColor` and `structurePillForegroundColor` in
 `look`), so it does not read as a state square. A row whose structure is not
-known leaves the badge's place empty.
+known leaves the badge's place empty. On a highlighted row, whose highlight is
+the flag's grey by default, the flag and the `+N` take a faint edge of their own
+ink so they keep their shape (`--bl-ac-highlighted-pill-border` sets it); the
+edge moves nothing.
 
 ## 6. Previewing a style
 
