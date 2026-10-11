@@ -37,6 +37,15 @@ breaking change bumps the minor version.
   picked; in a business, a person or an address search alike. Typing in the
   field or changing a filter searches as before.
 
+### Fixed
+
+- The site's pages stay within a phone's width. Between 421px and 580px the
+  header's demo button and Menu ran past the screen, so a large phone scrolled
+  sideways: the button now says "Try" there, and the brand tightens below
+  500px. Below 360px the product's name beside the logo gives way. The home
+  page's hero and styling section, whose code lines never wrap, scroll those
+  lines in their own boxes instead of widening the page.
+
 ## [0.5.0] - 2026-10-08
 
 Narrow a person or an address search by what it is tied to: the people search
