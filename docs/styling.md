@@ -534,12 +534,13 @@ The row says so where it already shows them, and adds no line:
 
 The marks follow `look.matchEmphasis`, drawn on the whole officer, address or
 square, since the autocomplete service sends no parts for them; `plain` draws
-none, and `matchEmphasisRegion` does not apply. A square already has a fill and
-a weight, so under every other emphasis a matched one is ringed in
-`--bl-ac-pill-primary-border` (`--bl-ac-mark`, when `matchEmphasisColor` is
-set), and `underline` and `weight` add their own. The suffix after a matched
-address is one of `messages`: `officerAddressSuffix` or `agentAddressSuffix`; an
-address the business filed itself has none.
+none, and `matchEmphasisRegion` does not apply. A matched square keeps its
+size, and the domicile keeps the only border: `underline` draws a line a little
+under the square, `background` lays the highlight over it as a border of the
+highlight's colour, `weight` sets its letters bolder and `ink` sets them in the
+mark's ink, each in `--bl-ac-mark` when `matchEmphasisColor` is set. The
+suffix after a matched address is one of `messages`: `officerAddressSuffix` or
+`agentAddressSuffix`; an address the business filed itself has none.
 
 The core says the same in data. `matchedOn(suggestion, { state })` returns
 what matched besides the name, in this order:
@@ -570,6 +571,16 @@ send no `officer_names`, the officer.
 `orderedStates(suggestion, matched)`, `peopleLineOf` (matched people first, and
 `matched`, how many of the names) and `addressLineOf` (the lead address,
 whether it matched, and whose it is) are the readers the row draws from.
+
+A person search narrowed by its businesses' states (`business.state`) does the
+same on each business line under a person that the service says matched: the
+states the filter named move up behind the domicile, never behind the `+N`,
+and are marked as a business row marks them. A business that did not match,
+listed as another of the person's, is not why they are here, and its states
+are not marked. `<PersonAutocomplete>` passes the filters its rows were
+fetched with; with `PersonAutocompleteView`, pass `appliedFilters` from
+`useEntityAutocomplete`. An address search's own `state` is the address's, and
+marks none of the businesses filed at it.
 
 ### The structure's flag
 

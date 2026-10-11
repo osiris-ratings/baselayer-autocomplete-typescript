@@ -30,6 +30,7 @@ import {
 
 import {
   AddressAutocomplete,
+  AddressAutocompleteView,
   DEFAULT_MESSAGES,
   PersonAutocomplete,
   PersonAutocompleteView,
@@ -827,6 +828,206 @@ describe("AddressAutocomplete", () => {
       token: "tok-p-ada",
       label: "Ada Fox",
     });
+  });
+});
+
+// A person search filtered by its businesses' states says which of a
+// business's states the filter matched, as a business row does: right after
+// the domicile, never behind the +N, and marked, on a business the service
+// says is why the person is here. The filters are the ones the rows were
+// fetched with; an address's own state filter says nothing of the businesses
+// filed at it.
+describe("the states a filter matched on a business line", () => {
+  const view = {
+    onInputChange: () => {},
+    onSelect: () => {},
+    found: 1,
+    foundCapped: false,
+    truncated: false,
+    indexTag: null,
+    roundTripMs: null,
+    isSearching: false,
+    error: null,
+    open: true,
+  };
+  const squares = (line: HTMLElement) =>
+    within(line)
+      .queryAllByTestId("business-suggestion-state")
+      .map(state => [state.textContent, state.hasAttribute("data-matched")]);
+
+  /**
+   * `PEOPLE` as a `business.state` and `business.name` search answers it:
+   * Dana's Harbor, in FL, matched both; Cobalt, in FL too, matched neither,
+   * and is listed only as another of Dana's businesses.
+   */
+  function filtered(harbor: object = {}) {
+    const copy = structuredClone(PEOPLE);
+    const [harborItem, , cobaltItem] =
+      copy.suggestions[0]!.related.businesses.items;
+    Object.assign(harborItem!, { matched: true, ...harbor });
+    Object.assign(cobaltItem!, { states: ["FL"], domicile_state: "FL" });
+    return copy;
+  }
+
+  it("moves the business.state a matched business has behind its domicile, and marks it", () => {
+    render(
+      <PersonAutocompleteView
+        {...view}
+        id="person"
+        value="dana"
+        suggestions={filtered().suggestions as never}
+        appliedFilters={{ business: { state: ["fl"], name: "harbor" } }}
+      />,
+    );
+
+    const [harbor, , cobalt] = screen.getAllByTestId("business-line");
+    // Domicile PA first, then the matched FL, then the rest.
+    expect(squares(harbor!)).toEqual([
+      ["PA", false],
+      ["FL", true],
+      ["DE", false],
+    ]);
+    // Cobalt is in FL too, but the service does not say it matched.
+    expect(squares(cobalt!)).toEqual([["FL", false]]);
+  });
+
+  it("never leaves a matched state behind the +N", () => {
+    const wide = filtered({
+      states: ["AZ", "CA", "DE", "NV", "NY", "OR"],
+      domicile_state: "DE",
+    });
+    render(
+      <PersonAutocompleteView
+        {...view}
+        id="person"
+        value="dana"
+        suggestions={wide.suggestions as never}
+        appliedFilters={{ business: { state: ["NY"] } }}
+      />,
+    );
+
+    const [harbor] = screen.getAllByTestId("business-line");
+    expect(squares(harbor!)).toEqual([
+      ["DE", false],
+      ["NY", true],
+      ["AZ", false],
+    ]);
+    expect(
+      within(harbor!).getByTestId("business-suggestion-more-states"),
+    ).toHaveTextContent("+3");
+  });
+
+  it("matches a state without regard to case or space on either side", () => {
+    render(
+      <PersonAutocompleteView
+        {...view}
+        id="person"
+        value="dana"
+        suggestions={
+          filtered({ states: ["de", "fl", "pa"], domicile_state: "pa" })
+            .suggestions as never
+        }
+        appliedFilters={{ business: { state: [" Fl "] } }}
+      />,
+    );
+
+    const [harbor] = screen.getAllByTestId("business-line");
+    expect(squares(harbor!)).toEqual([
+      ["pa", false],
+      ["fl", true],
+      ["de", false],
+    ]);
+  });
+
+  it("marks a domicile the filter named, though the wire leaves it out of the states", () => {
+    render(
+      <PersonAutocompleteView
+        {...view}
+        id="person"
+        value="dana"
+        suggestions={
+          filtered({ states: ["DE", "PA"], domicile_state: "FL" })
+            .suggestions as never
+        }
+        appliedFilters={{ business: { state: ["fl"] } }}
+      />,
+    );
+
+    const [harbor] = screen.getAllByTestId("business-line");
+    expect(squares(harbor!)).toEqual([
+      ["FL", true],
+      ["DE", false],
+      ["PA", false],
+    ]);
+  });
+
+  it("marks nothing without the filters the rows were fetched with", () => {
+    render(
+      <PersonAutocompleteView
+        {...view}
+        id="person"
+        value="dana"
+        suggestions={filtered().suggestions as never}
+      />,
+    );
+
+    const [harbor] = screen.getAllByTestId("business-line");
+    expect(squares(harbor!)).toEqual([
+      ["PA", false],
+      ["DE", false],
+      ["FL", false],
+    ]);
+  });
+
+  it("marks none of an address's businesses' states by the address's own state", () => {
+    const matched = structuredClone(ADDRESSES);
+    for (const item of matched.suggestions[0]!.related.businesses.items) {
+      item.matched = true;
+    }
+    render(
+      <AddressAutocompleteView
+        {...view}
+        id="address"
+        value="45 corvel"
+        suggestions={matched.suggestions as never}
+        appliedFilters={{ state: ["DE"] }}
+      />,
+    );
+
+    for (const line of screen.getAllByTestId("business-line")) {
+      expect(squares(line).some(([, marked]) => marked)).toBe(false);
+    }
+  });
+
+  it("marks what the person search sent, from the component", async () => {
+    const fetch = vi.fn<FetchLike>(async url =>
+      reply(
+        200,
+        answer(
+          filtered(),
+          (new URL(url).searchParams.get("include") ?? "businesses").split(","),
+        ),
+      ),
+    );
+    const client = createAutocompleteClient({
+      baseUrl: BASE_URL,
+      mint: async () => grant(SCOPE),
+      fetch,
+    });
+    const { dana } = await typeDana(client, {
+      filters: { business: { state: ["fl"] } },
+    });
+
+    // Sent as the host gave it, and matched without regard to case.
+    expect(
+      new URL(fetch.mock.calls.at(-1)![0]).searchParams.get("business.state"),
+    ).toBe("fl");
+    const [harbor] = within(dana).getAllByTestId("business-line");
+    expect(squares(harbor!)).toEqual([
+      ["PA", false],
+      ["FL", true],
+      ["DE", false],
+    ]);
   });
 });
 

@@ -6,6 +6,24 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+### Added
+
+- A person search narrowed by its businesses' states (`business.state`) moves
+  the states it named up behind the domicile on each business line the service
+  says matched, never behind the `+N`, and marks them, as a business row does
+  for `state`. The grouped views take `appliedFilters`, which
+  `<PersonAutocomplete>` and `<AddressAutocomplete>` pass from
+  `useEntityAutocomplete`.
+
+### Changed
+
+- A matched state's square is no longer ringed, which read as a second
+  domicile. It keeps its size, the domicile keeps the only border, and the
+  square takes the emphasis's own mark: a line a little under it under
+  `underline`, the highlight laid over it under `background`, bolder letters
+  under `weight`, the mark's ink under `ink`. On a business row and on a line
+  alike.
+
 ## [0.5.0] - 2026-10-08
 
 Narrow a person or an address search by what it is tied to: the people search
