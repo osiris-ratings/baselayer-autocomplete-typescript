@@ -28,6 +28,10 @@ breaking change bumps the minor version.
   more of it before it scrolls. A request's URL sits in the same navy box, its
   host, its path and each query parameter's name and value in colours of their
   own, and the escapes (`%2C`, `+`) muted.
+- On a highlighted row or line, the structure's flag and the `+N` square take
+  a faint edge of their own ink, where the highlight, the same grey as their
+  fill by default, hid them. Nothing moves; `--bl-ac-highlighted-pill-border`
+  sets the edge.
 
 ## [0.5.0] - 2026-10-08
 
