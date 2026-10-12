@@ -2537,6 +2537,12 @@ html[data-dragging] * {
 
 /* ---- Connect: apply, and what the test said ------------------------------ */
 
+/* The API key, masked as a password field masks it, which it is not to the
+   browser: see the field. */
+.demo input.secret-input {
+  -webkit-text-security: disc;
+}
+
 .apply-row {
   display: flex;
   flex-wrap: wrap;

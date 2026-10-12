@@ -399,6 +399,12 @@ function parseStates(text: string): string[] {
 }
 
 /** A pick in a search's field, and the business step 03 searches for. */
+/** Whether a text field can be masked with CSS, as a password field is. */
+const MASKS_TEXT =
+  typeof CSS !== "undefined" &&
+  typeof CSS.supports === "function" &&
+  CSS.supports("-webkit-text-security", "disc");
+
 /** The filters panel folded: nothing of it left, margin and padding too. */
 const FOLDED = {
   height: "0px",
@@ -890,8 +896,21 @@ export function App() {
             </p>
             <Field label="API key">
               <input
-                type="password"
+                // Masked by the page, not by `type="password"`: a password
+                // field is a login to Chrome and Safari, which offer to keep
+                // its value and to fill it, and so do the password managers.
+                // Where the engine cannot mask a text field, it is a password
+                // field after all, which keeps the key out of sight.
+                type={MASKS_TEXT ? "text" : "password"}
+                className="secret-input"
                 autoComplete="off"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+                data-1p-ignore
+                data-lpignore="true"
+                data-bwignore
+                data-form-type="other"
                 value={draft}
                 onChange={e => {
                   setDraft(e.target.value);
