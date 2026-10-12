@@ -518,7 +518,7 @@
 .try-table thead th {
   padding: 0 6px 4px;
   vertical-align: bottom;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   color: #6f7fa6;
   font-size: 10.5px;
   font-weight: 400;
