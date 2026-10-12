@@ -399,6 +399,29 @@ function parseStates(text: string): string[] {
 }
 
 /** A pick in a search's field, and the business step 03 searches for. */
+/** The filters panel folded: nothing of it left, margin and padding too. */
+const FOLDED = {
+  height: "0px",
+  marginBottom: "0px",
+  paddingBlock: "0px",
+  opacity: 0,
+  overflow: "hidden",
+};
+
+const FOLD_ANIMATION = {
+  duration: 280,
+  easing: "cubic-bezier(0.2, 0.7, 0.2, 1)",
+};
+
+/** Whether the filters panel can be animated: not under a reduced-motion setting. */
+function canAnimate(): boolean {
+  return (
+    typeof Element !== "undefined" &&
+    typeof Element.prototype.animate === "function" &&
+    !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
 interface Picked {
   /** The business step 03 searches for. */
   toSearch: PickToSearch;
@@ -554,35 +577,38 @@ export function App() {
     // The field's own way to open: a click toggles a closed menu open.
     input?.click();
   }, [mode]);
-  // Opening the filters unfolds the panel downwards: its height grows from
-  // nothing to what it is, the page below making room as it does. The panel is
-  // shown again each time, so this runs each time; not under a reduced-motion
-  // setting, nor where there is nothing to animate with.
+  // Opening the filters unfolds the panel downwards, and closing them folds it
+  // up: its height runs between nothing and what it is, the page below making
+  // room as it does. The panel stays on the page until it has folded, which is
+  // `filtersShown`. Not under a reduced-motion setting, nor where there is
+  // nothing to animate with: there it is shown and hidden at once.
   const filtersPanel = useRef<HTMLDivElement>(null);
+  const [filtersShown, setFiltersShown] = useState(false);
+  if (filtersOpen && !filtersShown) setFiltersShown(true);
+  if (!filtersOpen && filtersShown && !canAnimate()) setFiltersShown(false);
   useEffect(() => {
     const panel = filtersPanel.current;
-    if (!filtersOpen || panel === null || typeof panel.animate !== "function") {
+    if (panel === null || !canAnimate() || (!filtersOpen && !filtersShown)) {
       return;
     }
-    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-    const unfold = panel.animate(
-      [
-        {
-          height: "0px",
-          marginBottom: "0px",
-          paddingBlock: "0px",
-          opacity: 0,
-          overflow: "hidden",
-        },
-        {
-          height: `${panel.getBoundingClientRect().height}px`,
-          overflow: "hidden",
-        },
-      ],
-      { duration: 280, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)" },
-    );
-    return () => unfold.cancel();
-  }, [filtersOpen]);
+    const full = {
+      height: `${panel.getBoundingClientRect().height}px`,
+      overflow: "hidden",
+    };
+    if (filtersOpen) {
+      const unfold = panel.animate([FOLDED, full], FOLD_ANIMATION);
+      return () => unfold.cancel();
+    }
+    const fold = panel.animate([full, FOLDED], {
+      ...FOLD_ANIMATION,
+      fill: "forwards",
+    });
+    // Held at nothing until the panel is hidden: cancelling it here would
+    // show the panel whole for a frame. The cleanup cancels it, the render
+    // after this having hidden the panel by then.
+    fold.onfinish = () => setFiltersShown(false);
+    return () => fold.cancel();
+  }, [filtersOpen, filtersShown]);
   const picked = picks[mode];
   const setPicked = (pick: Picked | null) =>
     setPicks(all => ({ ...all, [mode]: pick }));
@@ -939,7 +965,7 @@ export function App() {
               id="demo-filters"
               ref={filtersPanel}
               className="filters-panel"
-              hidden={!filtersOpen}
+              hidden={!filtersShown}
               {...filterFocus}
             >
               <p className="hint" data-testid="demo-filters-hint">
