@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { parseCurl } from "../../site/api/curl";
+import { Code } from "../../site/shared/Code";
 import type { JsonSchema } from "../../site/api/spec/assemble";
 import { buildReference } from "../../site/api/spec/plugin";
 import { TryIt, type LiveResponse } from "../../site/api/TryIt";
@@ -27,19 +28,31 @@ function editor(path: string) {
     operation["requestBody"] as
       { content: Record<string, { schema: JsonSchema }> } | undefined
   )?.content["application/json"]?.schema;
-  const onCode = vi.fn<(code: string) => void>();
+  const onCode = vi.fn<(codes: Readonly<Record<string, string>>) => void>();
   const onResponse = vi.fn<(response: LiveResponse) => void>();
   render(
     <TryIt
       method={method}
       sample={parseCurl(source)!}
       body={body}
+      labels={(operation["x-codeSamples"] ?? []).map(
+        sample => sample.label ?? sample.lang,
+      )}
+      required={[
+        ...(path === "/autocomplete/sessions" ? ["X-API-Key"] : []),
+        ...(operation.parameters ?? [])
+          .filter(parameter => parameter.required === true)
+          .map(parameter => parameter.name),
+      ]}
+      parameters={(operation.parameters ?? [])
+        .filter(parameter => parameter.in === "query")
+        .map(parameter => parameter.name)}
       schemas={reference.components?.schemas ?? {}}
       onCode={onCode}
       onResponse={onResponse}
     />,
   );
-  const code = () => onCode.mock.lastCall![0];
+  const code = () => onCode.mock.lastCall![0].curl!;
   return { code, onResponse, user: userEvent.setup() };
 }
 
@@ -71,6 +84,22 @@ describe("Try it here, on the mint", () => {
     const origin = screen.getByRole("textbox", { name: "Header Origin" });
     expect((origin as HTMLInputElement).value).toBe(window.location.origin);
     expect((origin as HTMLInputElement).readOnly).toBe(true);
+    // Nor is the body's type.
+    expect(
+      (
+        screen.getByRole("textbox", {
+          name: "Header Content-Type",
+        }) as HTMLInputElement
+      ).readOnly,
+    ).toBe(true);
+    // What the operation requires says so.
+    const names = screen
+      .getAllByRole("rowheader")
+      .map(cell => cell.textContent);
+    expect(names).toContain("X-API-Key* (required)");
+    // Filled in already, Origin asks nothing of the reader.
+    expect(names).toContain("Origin");
+    expect(names).toContain("Content-Type");
   });
 
   it("is a flat table: a row for each field the body holds, by its whole path", () => {
@@ -257,13 +286,21 @@ describe("Try it here, sent", () => {
 });
 
 describe("Try it here, on a search", () => {
-  it("edits, adds and removes query parameters, the URL following", async () => {
+  it("takes a parameter's value, adds the parameters the route names, and takes one out, the URL following", async () => {
     const { code, user } = editor("/autocomplete/people");
     const url = () => screen.getByTestId("try-url").textContent;
 
     expect(url()).toBe(
       "https://api.baselayer.com/autocomplete/people?q=dana%20whit&limit=5",
     );
+    // `q` is required, so it says so, and stays.
+    expect(
+      screen.queryByRole("button", { name: "Remove query parameter q" }),
+    ).toBeNull();
+    // A parameter's name is the route's, never typed.
+    expect(
+      screen.queryByRole("textbox", { name: /Name of query parameter/ }),
+    ).toBeNull();
     const q = screen.getByRole("textbox", {
       name: "Value of query parameter q",
     });
@@ -271,13 +308,13 @@ describe("Try it here, on a search", () => {
     await user.type(q, "harbor");
     expect(url()).toContain("?q=harbor&limit=5");
 
-    await user.click(
-      screen.getByRole("button", { name: "Add a query parameter" }),
+    const add = within(
+      screen.getByRole("group", { name: "Add a query parameter" }),
     );
-    await user.type(
-      screen.getByRole("textbox", { name: "Name of query parameter 3" }),
-      "business.state",
-    );
+    expect(
+      add.getAllByRole("button").map(button => button.textContent),
+    ).toEqual(["include", "business.state", "business.name", "address.text"]);
+    await user.click(add.getByRole("button", { name: "business.state" }));
     await user.type(
       screen.getByRole("textbox", {
         name: "Value of query parameter business.state",
@@ -293,7 +330,68 @@ describe("Try it here, on a search", () => {
       "https://api.baselayer.com/autocomplete/people?q=harbor&business.state=PA",
     );
     expect(code()).toContain(`curl -s "${url()}"`);
+    // Taken out, it is offered again.
+    expect(
+      within(screen.getByRole("group", { name: "Add a query parameter" }))
+        .getAllByRole("button")
+        .map(button => button.textContent),
+    ).toContain("limit");
     // A GET has no body to edit.
     expect(screen.queryByRole("columnheader", { name: "Body" })).toBeNull();
+  });
+});
+
+describe("the curl sample, beside Try it here", () => {
+  it("shows the request the form would send, as it is edited", async () => {
+    const [method, operation] = Object.entries(
+      reference.paths["/autocomplete/sessions"]!,
+    )[0]!;
+    const source = (operation["x-codeSamples"] ?? []).find(
+      sample => sample.lang === "shell",
+    )!.source;
+    const body = (
+      operation["requestBody"] as {
+        content: Record<string, { schema: JsonSchema }>;
+      }
+    ).content["application/json"]!.schema;
+    const user = userEvent.setup();
+    render(
+      <Code
+        title="Request"
+        snippets={[{ label: "curl", lang: "shell", code: source }]}
+        tool={{
+          label: "Try it here",
+          copies: "curl",
+          render: onCode => (
+            <TryIt
+              method={method}
+              sample={parseCurl(source)!}
+              body={body}
+              labels={["curl"]}
+              required={[]}
+              parameters={[]}
+              schemas={reference.components?.schemas ?? {}}
+              onCode={onCode}
+              onResponse={() => {}}
+            />
+          ),
+        }}
+      />,
+    );
+    const curlTab = () =>
+      document.getElementById(
+        screen
+          .getByRole("tab", { name: "curl" })
+          .getAttribute("aria-controls")!,
+      )!.textContent;
+
+    await user.click(screen.getByRole("tab", { name: "Try it here" }));
+    const limit = screen.getByRole("spinbutton", { name: "scope.max_limit" });
+    await user.clear(limit);
+    await user.type(limit, "9");
+    await user.click(screen.getByRole("tab", { name: "curl" }));
+
+    expect(curlTab()).toContain('"max_limit": 9');
+    expect(curlTab()).not.toContain('"max_limit": 5');
   });
 });

@@ -38,11 +38,17 @@ breaking change bumps the minor version.
   sits in a read-only box, each part in a colour of its own, beside Send; the
   headers, the query parameters and the body are tables as wide as the block,
   the body flat, a row for each field by its whole path, a list of choices a
-  row of chips, and the fields it does not hold yet offered in its last row.
-  `Origin` is this page's, as the browser sends it. A bar under the form says
+  row of chips, and the fields and query parameters it does not hold yet
+  offered by name in each table's last row.
+  `Origin` is this page's, as the browser sends it, and it and `Content-Type`
+  are shown but fixed; what the operation requires is starred. A bar under the
+  form says
   how the last send ended, a refusal's code and message included, and unfolds
   on the request as it goes out, headers and body. The answer shows in the
-  response block as a Live tab, after a rule. Copy takes the request as curl.
+  response block as a Live tab, after a rule. Every sample beside it (curl,
+  Node, fetch, the SDK) follows the form as it is edited, and Copy on the tab
+  takes it as curl. Each block has a small caption above it, Request and
+  Response.
 - The API reference shows what `POST /autocomplete/sessions` takes: a Request
   body section, optional like the body, with its fields marked optional. Where
   a field is a choice it says the choices, which routes a scope may name and

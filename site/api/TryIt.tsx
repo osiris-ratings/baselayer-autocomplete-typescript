@@ -13,8 +13,9 @@ import { useEffect, useId, useState } from "react";
 
 import { NO_FILL_ATTRIBUTES } from "../../src/react/inputAttributes";
 import { Icon } from "../shared/icons";
-import { curlOf, urlOf, type Pair, type Sample } from "./curl";
+import { urlOf, type Pair, type Sample } from "./curl";
 import { resolveIn, type Schemas } from "./schema";
+import { samplesOf } from "./snippets";
 import type { JsonSchema } from "./spec/assemble";
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
@@ -407,6 +408,27 @@ export interface LiveResponse {
 const BROWSER_HEADERS = new Set(["origin", "host", "content-length", "cookie"]);
 
 /**
+ * Headers the form shows but does not take: the browser's own, and the body's
+ * type, which is the API's.
+ */
+const FIXED_HEADERS: Readonly<Record<string, string>> = {
+  origin: "Your browser sends this page's own",
+  "content-type": "The API takes JSON",
+};
+
+/** A required row's asterisk, which a screen reader hears as a word. */
+function Required() {
+  return (
+    <>
+      <span className="try-required" aria-hidden="true">
+        *
+      </span>
+      <span className="visually-hidden"> (required)</span>
+    </>
+  );
+}
+
+/**
  * Where the page sends a request: in `pnpm site` through the dev server, which
  * forwards it (or answers it, on made-up data), as the demo's calls go; built,
  * to the URL it shows.
@@ -506,6 +528,9 @@ export function TryIt({
   method,
   sample,
   body: bodySchema,
+  parameters,
+  labels,
+  required,
   schemas,
   onCode,
   onResponse,
@@ -514,9 +539,16 @@ export function TryIt({
   sample: Sample;
   /** The body's schema, for a request that takes one. */
   body: JsonSchema | undefined;
+  /** The query parameters the operation names, which the form offers. */
+  parameters: readonly string[];
+  /** The samples' labels, each written from the form as it is edited. */
+  labels: readonly string[];
+  /** The headers and query parameters the operation requires, by name. */
+  required: readonly string[];
   /** The document's schemas, which the body's `$ref`s point into. */
   schemas: Schemas;
-  onCode(code: string): void;
+  /** The samples, by label, written from the form. */
+  onCode(codes: Readonly<Record<string, string>>): void;
   /** What a sent request came back with. */
   onResponse(response: LiveResponse): void;
 }) {
@@ -537,16 +569,27 @@ export function TryIt({
   const [showRequest, setShowRequest] = useState(false);
   const previewId = useId();
   const url = urlOf(sample.url, query);
-  const takesQuery = method.toLowerCase() === "get" || sample.query.length > 0;
+  const takesQuery = parameters.length > 0 || sample.query.length > 0;
+  const isRequired = (name: string) =>
+    required.some(each => each.toLowerCase() === name.toLowerCase());
+  const absentParameters = parameters.filter(
+    name => !query.some(pair => pair.name === name),
+  );
   const slots = bodySchema === undefined ? [] : slotsOf(schemas, bodySchema);
   const held = slots.filter(slot => getAt(body, slot.path) !== undefined);
   const free = slots.filter(slot => getAt(body, slot.path) === undefined);
   const sentBody = body === undefined ? null : JSON.stringify(body, null, 2);
   const sentHeaders = headers.filter(header => header.name.trim() !== "");
 
+  const labelsKey = labels.join("\n");
   useEffect(() => {
-    onCode(curlOf({ method, url, headers, body }));
-  }, [onCode, method, url, headers, body]);
+    onCode(
+      samplesOf(
+        { method, url: sample.url, headers, query, body },
+        labelsKey.split("\n"),
+      ),
+    );
+  }, [onCode, method, sample.url, headers, query, body, labelsKey]);
 
   const send = async () => {
     setSending(true);
@@ -632,6 +675,11 @@ export function TryIt({
             <tr key={header.name}>
               <th scope="row" className="try-name">
                 <span className="try-key">{header.name}</span>
+                {/* A fixed header is filled in already: nothing to require. */}
+                {isRequired(header.name) &&
+                  FIXED_HEADERS[header.name.toLowerCase()] === undefined && (
+                    <Required />
+                  )}
               </th>
               <td>
                 <input
@@ -639,12 +687,10 @@ export function TryIt({
                   className="try-input"
                   aria-label={`Header ${header.name}`}
                   {...NO_FILL_ATTRIBUTES}
-                  readOnly={BROWSER_HEADERS.has(header.name.toLowerCase())}
-                  title={
-                    BROWSER_HEADERS.has(header.name.toLowerCase())
-                      ? "Your browser sends this page's own"
-                      : undefined
+                  readOnly={
+                    FIXED_HEADERS[header.name.toLowerCase()] !== undefined
                   }
+                  title={FIXED_HEADERS[header.name.toLowerCase()]}
                   value={header.value}
                   onChange={event =>
                     setHeaders(
@@ -665,31 +711,17 @@ export function TryIt({
         <table className="try-table">
           <Head title="Query" />
           <tbody>
-            {query.map((pair, index) => (
+            {query.map(pair => (
               <tr key={pair.id}>
-                <td className="try-name">
-                  <input
-                    type="text"
-                    className="try-input try-input-name"
-                    aria-label={`Name of query parameter ${index + 1}`}
-                    {...NO_FILL_ATTRIBUTES}
-                    value={pair.name}
-                    onChange={event =>
-                      setQuery(
-                        query.map(p =>
-                          p.id === pair.id
-                            ? { ...p, name: event.target.value }
-                            : p,
-                        ),
-                      )
-                    }
-                  />
-                </td>
+                <th scope="row" className="try-name">
+                  <span className="try-key">{pair.name}</span>
+                  {isRequired(pair.name) && <Required />}
+                </th>
                 <td>
                   <input
                     type="text"
                     className="try-input"
-                    aria-label={`Value of query parameter ${pair.name || index + 1}`}
+                    aria-label={`Value of query parameter ${pair.name}`}
                     {...NO_FILL_ATTRIBUTES}
                     value={pair.value}
                     onChange={event =>
@@ -704,30 +736,46 @@ export function TryIt({
                   />
                 </td>
                 <td className="try-actions">
-                  <Remove
-                    label={`Remove query parameter ${pair.name || index + 1}`}
-                    onRemove={() =>
-                      setQuery(query.filter(p => p.id !== pair.id))
-                    }
-                  />
+                  {!isRequired(pair.name) && (
+                    <Remove
+                      label={`Remove query parameter ${pair.name}`}
+                      onRemove={() =>
+                        setQuery(query.filter(p => p.id !== pair.id))
+                      }
+                    />
+                  )}
                 </td>
               </tr>
             ))}
-            <tr className="try-addrow">
-              <td colSpan={3}>
-                <button
-                  type="button"
-                  className="try-add"
-                  aria-label="Add a query parameter"
-                  onClick={() =>
-                    setQuery([...query, ...withIds([{ name: "", value: "" }])])
-                  }
-                >
-                  <Icon name="plus" size={12} />
-                  parameter
-                </button>
-              </td>
-            </tr>
+            {absentParameters.length > 0 && (
+              <tr className="try-addrow">
+                <td />
+                <td colSpan={2}>
+                  <span
+                    className="try-chips"
+                    role="group"
+                    aria-label="Add a query parameter"
+                  >
+                    {absentParameters.map(name => (
+                      <button
+                        key={name}
+                        type="button"
+                        className="try-add"
+                        onClick={() =>
+                          setQuery([
+                            ...query,
+                            ...withIds([{ name, value: "" }]),
+                          ])
+                        }
+                      >
+                        <Icon name="plus" size={12} />
+                        {name}
+                      </button>
+                    ))}
+                  </span>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       )}
@@ -742,6 +790,7 @@ export function TryIt({
                 <tr key={path}>
                   <th scope="row" className="try-name">
                     <FieldPath path={slot.path} />
+                    {slot.required && <Required />}
                   </th>
                   <td>
                     <Editor
@@ -764,7 +813,8 @@ export function TryIt({
             })}
             {free.length > 0 && (
               <tr className="try-addrow">
-                <td colSpan={3}>
+                <td />
+                <td colSpan={2}>
                   <span
                     className="try-chips"
                     role="group"

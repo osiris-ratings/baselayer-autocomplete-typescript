@@ -13,7 +13,14 @@ export interface Snippet {
  */
 export interface CodeTool {
   label: string;
-  render(onCode: (code: string) => void): ReactNode;
+  /**
+   * The tool's panel. What it hands back, by snippet label, is what those
+   * snippets show from then on, so the two never disagree: the samples
+   * following an editor, say.
+   */
+  render(onCode: (codes: Readonly<Record<string, string>>) => void): ReactNode;
+  /** The label of the code the tool's own tab copies. */
+  copies: string;
 }
 
 /**
@@ -39,7 +46,9 @@ export function Code({
 }) {
   const [index, setIndex] = useState(0);
   const [copied, setCopied] = useState(false);
-  const [toolCode, setToolCode] = useState("");
+  const [toolCodes, setToolCodes] = useState<Readonly<Record<string, string>>>(
+    {},
+  );
   const id = useId();
   const toolIndex = tool === undefined ? -1 : snippets.length;
   const liveIndex =
@@ -48,7 +57,9 @@ export function Code({
       : snippets.length + (tool === undefined ? 0 : 1);
   const onTool = index === toolIndex;
   const onLive = index === liveIndex;
-  const snippet = onLive && live ? live : (snippets[index] ?? snippets[0]!);
+  const shown = onLive && live ? live : (snippets[index] ?? snippets[0]!);
+  const followed = onLive ? undefined : toolCodes[shown.label];
+  const snippet = followed === undefined ? shown : { ...shown, code: followed };
   const tabbed =
     snippets.length > 1 || tool !== undefined || (live ?? null) !== null;
   const liveKey = live?.key;
@@ -59,7 +70,11 @@ export function Code({
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(onTool ? toolCode : snippet.code);
+      await navigator.clipboard.writeText(
+        onTool && tool !== undefined
+          ? (toolCodes[tool.copies] ?? "")
+          : snippet.code,
+      );
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1500);
     } catch {
@@ -147,7 +162,7 @@ export function Code({
           className="code-tool"
           hidden={!onTool}
         >
-          {tool.render(setToolCode)}
+          {tool.render(setToolCodes)}
         </div>
       )}
     </div>

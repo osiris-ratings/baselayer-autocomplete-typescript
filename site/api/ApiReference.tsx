@@ -324,11 +324,23 @@ function OperationSection({
       ? undefined
       : {
           label: "Try it here",
+          // The tab copies curl; every sample follows the form as it is edited.
+          copies: curl?.label ?? curl?.lang ?? "curl",
           render: onCode => (
             <TryIt
               method={method}
               sample={sample}
               body={requestBody?.schema}
+              labels={request.map(snippet => snippet.label)}
+              required={[
+                ...headers.filter(each => each.required === true),
+                ...(operation.parameters ?? []).filter(
+                  each => each.in === "query" && each.required === true,
+                ),
+              ].map(each => each.name)}
+              parameters={(operation.parameters ?? [])
+                .filter(parameter => parameter.in === "query")
+                .map(parameter => parameter.name)}
               schemas={document.components?.schemas ?? {}}
               onCode={onCode}
               onResponse={response =>
@@ -364,11 +376,21 @@ function OperationSection({
           </div>
           <div className="endpoint-code">
             {request.length > 0 && (
+              <p className="code-caption" aria-hidden="true">
+                Request
+              </p>
+            )}
+            {request.length > 0 && (
               <Code
                 title="Request"
                 snippets={request}
                 {...(tryIt !== undefined ? { tool: tryIt } : {})}
               />
+            )}
+            {(examples.length > 0 || live !== null) && (
+              <p className="code-caption" aria-hidden="true">
+                Response
+              </p>
             )}
             {(examples.length > 0 || live !== null) && (
               <Code
