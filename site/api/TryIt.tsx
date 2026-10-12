@@ -18,7 +18,7 @@ import { Icon } from "../shared/icons";
 import { jsonHtml } from "../shared/json";
 import { urlOf, type Pair, type Sample } from "./curl";
 import { resolveIn, type Schemas } from "./schema";
-import { samplesOf } from "./snippets";
+import { BROWSER_HEADERS, samplesOf } from "./snippets";
 import type { JsonSchema } from "./spec/assemble";
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
@@ -442,9 +442,6 @@ export interface LiveResponse {
   json: boolean;
 }
 
-/** Headers a page may not set: the browser sends its own. */
-const BROWSER_HEADERS = new Set(["origin", "host", "content-length", "cookie"]);
-
 /**
  * Headers the form shows but does not take: the browser's own, and the body's
  * type, which is the API's.
@@ -638,9 +635,10 @@ function useResizeEased(
   }, [element, key]);
 }
 
-let nextRow = 0;
-const withIds = (pairs: readonly Pair[]) =>
-  pairs.map(pair => ({ ...pair, id: (nextRow += 1) }));
+/** A query row, which keeps its identity as it is renamed and others go. */
+interface QueryRow extends Pair {
+  id: number;
+}
 
 export function TryIt({
   method,
@@ -679,7 +677,13 @@ export function TryIt({
     ),
   );
   const [result, setResult] = useState<Outcome | null>(null);
-  const [query, setQuery] = useState(() => withIds(sample.query));
+  // Rows are numbered from the sample's own order, with no counter outside
+  // the component, so an initializer run twice makes the same rows; the
+  // counter for the rows added after is this component's own.
+  const [query, setQuery] = useState<QueryRow[]>(() =>
+    sample.query.map((pair, index) => ({ ...pair, id: index + 1 })),
+  );
+  const lastRow = useRef(sample.query.length);
   // A body that may be left out whole starts empty: for the mint, no scope,
   // which the API reads as everything the caller may search, and which the
   // form says. Fields are added to narrow it. A body that must hold something
@@ -901,7 +905,7 @@ export function TryIt({
                         onClick={() =>
                           setQuery([
                             ...query,
-                            ...withIds([{ name, value: "" }]),
+                            { name, value: "", id: (lastRow.current += 1) },
                           ])
                         }
                       >

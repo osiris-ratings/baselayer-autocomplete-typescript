@@ -18,8 +18,16 @@ export interface FormRequest {
   body: unknown;
 }
 
-/** The headers a browser sets itself, which page code never sends. */
-const BROWSER_HEADERS = new Set(["origin", "host", "content-length", "cookie"]);
+/**
+ * The headers a browser sets itself, which page code never sends: the form
+ * shows them, the samples leave them out, and a send does not set them.
+ */
+export const BROWSER_HEADERS: ReadonlySet<string> = new Set([
+  "origin",
+  "host",
+  "content-length",
+  "cookie",
+]);
 
 /** The filters that take a list, sent comma-joined, by their SDK path. */
 const LIST_FILTERS = new Set(["state", "business.state"]);

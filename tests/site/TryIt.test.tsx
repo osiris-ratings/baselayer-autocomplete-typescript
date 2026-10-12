@@ -8,6 +8,7 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { StrictMode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { parseCurl } from "../../site/api/curl";
@@ -431,5 +432,47 @@ describe("the curl sample, beside Try it here", () => {
 
     expect(curlTab()).toContain('"max_limit": 9');
     expect(curlTab()).not.toContain('"max_limit": 5');
+  });
+});
+
+describe("Try it here, under StrictMode", () => {
+  it("numbers its query rows the same however often an initializer runs, so no two share a key", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const user = userEvent.setup();
+    render(
+      <StrictMode>
+        <TryIt
+          method="get"
+          sample={parseCurl(
+            'curl -s "https://api.baselayer.com/autocomplete/people?q=dana&limit=5" -H "X-Autocomplete-Session: $SESSION"',
+          )!}
+          body={undefined}
+          parameters={["q", "limit", "include", "business.state"]}
+          labels={["curl"]}
+          required={["q"]}
+          schemas={{}}
+          onCode={() => {}}
+          onResponse={() => {}}
+        />
+      </StrictMode>,
+    );
+    await user.click(screen.getByRole("button", { name: "include" }));
+    await user.click(screen.getByRole("button", { name: "business.state" }));
+
+    expect(
+      screen
+        .getAllByRole("textbox", { name: /^Value of query parameter/ })
+        .map(box => box.getAttribute("aria-label")),
+    ).toEqual([
+      "Value of query parameter q",
+      "Value of query parameter limit",
+      "Value of query parameter include",
+      "Value of query parameter business.state",
+    ]);
+    // React says so, on the console, of two children with one key.
+    expect(
+      error.mock.calls.filter(call => String(call[0]).includes("same key")),
+    ).toEqual([]);
+    error.mockRestore();
   });
 });
