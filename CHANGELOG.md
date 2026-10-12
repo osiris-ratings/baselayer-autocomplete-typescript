@@ -38,7 +38,9 @@ breaking change bumps the minor version.
   sits in a read-only box, each part in a colour of its own, beside Send; the
   headers, the query parameters and the body are tables as wide as the block,
   the body flat, a row for each field by its whole path, a list of choices a
-  row of chips, and the fields and query parameters it does not hold yet
+  row of chips (a scope's route offers only the relations it carries, never
+  itself, and says they are what its requests may include or filter by), and
+  the fields and query parameters it does not hold yet
   offered by name in each table's last row.
   `Origin` is this page's, as the browser sends it, and it and `Content-Type`
   are shown but fixed; what the operation requires is starred. A bar under the

@@ -11,6 +11,8 @@
 
 import { useEffect, useId, useState } from "react";
 
+import { LEGAL_RELATIONS, type Route } from "@baselayer-sdk/autocomplete";
+
 import { NO_FILL_ATTRIBUTES } from "../../src/react/inputAttributes";
 import { Icon } from "../shared/icons";
 import { urlOf, type Pair, type Sample } from "./curl";
@@ -249,6 +251,16 @@ function FieldPath({ path }: { path: readonly string[] }) {
   );
 }
 
+/** The route a scope's `routes.<route>` names, or null for any other field. */
+function routeKey(path: readonly string[]): Route | null {
+  const key = path[path.length - 1];
+  return path[path.length - 2] === "routes" &&
+    key !== undefined &&
+    key in LEGAL_RELATIONS
+    ? (key as Route)
+    : null;
+}
+
 /** The editor for a field's value: a field, a list, or chips. */
 function Editor({
   slot,
@@ -267,32 +279,52 @@ function Editor({
     const items = Array.isArray(value) ? value : [];
     const itemShape = shapeOf(schemas, shape.items);
     if (itemShape.kind === "enum") {
+      // A scope's route lists the relations its requests may include or
+      // filter by. The spec types that list as any relation; the scope's own
+      // contract, which the SDK holds, says which ones each route carries, and
+      // a route never relates to itself.
+      const route = routeKey(slot.path);
+      const choices =
+        route === null
+          ? itemShape.values
+          : itemShape.values.filter(choice =>
+              (LEGAL_RELATIONS[route] as readonly string[]).includes(choice),
+            );
       // Chips, one for each choice, on where the list has it.
       return (
-        <span className="try-chips" role="group" aria-label={label}>
-          {itemShape.values.map(choice => {
-            const on = items.includes(choice);
-            return (
-              <button
-                key={choice}
-                type="button"
-                className="try-chip"
-                aria-pressed={on}
-                style={{ ["--hue" as string]: hueOf(itemShape.values, choice) }}
-                onClick={() =>
-                  onChange(
-                    on
-                      ? items.filter(item => item !== choice)
-                      : itemShape.values.filter(
-                          each => each === choice || items.includes(each),
-                        ),
-                  )
-                }
-              >
-                {choice}
-              </button>
-            );
-          })}
+        <span className="try-chips-row">
+          <span className="try-chips" role="group" aria-label={label}>
+            {choices.map(choice => {
+              const on = items.includes(choice);
+              return (
+                <button
+                  key={choice}
+                  type="button"
+                  className="try-chip"
+                  aria-pressed={on}
+                  style={{
+                    ["--hue" as string]: hueOf(itemShape.values, choice),
+                  }}
+                  onClick={() =>
+                    onChange(
+                      on
+                        ? items.filter(item => item !== choice)
+                        : choices.filter(
+                            each => each === choice || items.includes(each),
+                          ),
+                    )
+                  }
+                >
+                  {choice}
+                </button>
+              );
+            })}
+          </span>
+          {route !== null && (
+            <span className="try-hint try-hint-line">
+              may include / filter by
+            </span>
+          )}
         </span>
       );
     }

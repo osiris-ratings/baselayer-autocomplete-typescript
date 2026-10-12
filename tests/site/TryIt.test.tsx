@@ -117,7 +117,7 @@ describe("Try it here, on the mint", () => {
     expect(
       chips.map(chip => [chip.textContent, chip.getAttribute("aria-pressed")]),
     ).toEqual([
-      ["businesses", "false"],
+      // A route lists only the relations it carries: never itself.
       ["people", "false"],
       ["addresses", "true"],
     ]);

@@ -617,6 +617,18 @@ select.try-input {
   gap: 4px;
 }
 
+/* A route's relations, then, always on a line of its own, what they are for:
+   each route's row reads the same, however wide its chips. */
+.try-chips-row {
+  display: grid;
+  gap: 3px;
+  padding: 2px 0;
+}
+
+.try-hint-line {
+  font-size: 11px;
+}
+
 /* A choice: its hue as an outline while off, filled while on. */
 .try-chip {
   --hue: #a5b4fc;
