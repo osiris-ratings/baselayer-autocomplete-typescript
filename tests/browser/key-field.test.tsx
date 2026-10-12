@@ -49,25 +49,31 @@ function drawn() {
     root.unmount();
     host.remove();
   };
-  return document.querySelector<HTMLInputElement>('[data-testid="demo-key"]')!;
+  return document.querySelector<HTMLTextAreaElement>(
+    '[data-testid="demo-key"]',
+  )!;
 }
 
 // The key is no password to a browser: Chrome and Safari offer to keep a
 // password field's value and to fill it, and so do the password managers.
 describe("the API key field", () => {
-  it("is a masked search field the browsers and the password managers leave alone", () => {
+  it("is a masked one-row textarea the browsers and the password managers leave alone", () => {
     const key = drawn();
 
-    // This engine masks a field, so the key is not a password field; nor a
-    // plain text one, which Safari takes for a password field once it is
-    // masked. A search field it leaves alone.
-    expect(key.type).toBe("search");
-    expect(key.getAttribute("role")).toBe("textbox");
+    // This engine masks a field, so the key is not a password field. Nor is
+    // it an input of any type: Safari takes a masked text field, and a masked
+    // search field too, for a password field, and offers its passwords on it,
+    // where it offers nothing on a textarea.
+    expect(key.tagName).toBe("TEXTAREA");
+    expect(key.rows).toBe(1);
     expect(
       getComputedStyle(key).getPropertyValue("-webkit-text-security"),
     ).toBe("disc");
+    // Drawn as the page's other fields are: one line, 40px, no handle.
+    const style = getComputedStyle(key);
+    expect(style.height).toBe("40px");
+    expect(style.resize).toBe("none");
     expect(key.autocomplete).toBe("off");
-    expect(key.getAttribute("autocapitalize")).toBe("off");
     expect(key.getAttribute("autocorrect")).toBe("off");
     expect(key.spellcheck).toBe(false);
     for (const attribute of [
@@ -78,6 +84,19 @@ describe("the API key field", () => {
       expect(key.hasAttribute(attribute)).toBe(true);
     }
     expect(key.closest("form")).toBeNull();
+  });
+
+  it("takes no line break: Enter applies the key, and a pasted break is dropped", async () => {
+    vi.stubGlobal("fetch", sampleFetch());
+    const key = drawn();
+    await userEvent.fill(key, "any-\nkey");
+    expect(key.value).toBe("any-key");
+    await userEvent.click(key);
+    await userEvent.keyboard("{Enter}");
+    await expect
+      .poll(() => document.body.textContent?.match(/key accepted/i))
+      .not.toBeNull();
+    expect(key.value).toBe("any-key");
   });
 
   it("is not the only field a browser is told to leave alone: the three searches and the filters are too", async () => {

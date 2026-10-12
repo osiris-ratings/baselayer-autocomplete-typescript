@@ -418,7 +418,6 @@
 }
 
 .demo input[type="text"],
-.demo input[type="search"],
 .demo input[type="password"],
 .demo input[type="number"],
 .demo input:not([type]):not(.bl-ac-input),
@@ -437,6 +436,7 @@
 }
 
 .demo input:not(.bl-ac-input):focus,
+.demo textarea.secret-input:focus,
 .demo .select select:focus {
   border-color: var(--blue);
   outline: 1px solid var(--blue);
@@ -2539,18 +2539,28 @@ html[data-dragging] * {
 /* ---- Connect: apply, and what the test said ------------------------------ */
 
 /* The API key, masked as a password field masks it, which it is not to the
-   browser: see the field. A search field is drawn as a field, with no rounded
-   native look and no clear button. */
-.demo input.secret-input {
-  -webkit-appearance: none;
-  appearance: none;
+   browser: see the field. A textarea drawn as a one-line field. */
+.demo .secret-input {
   -webkit-text-security: disc;
 }
 
-.demo input.secret-input::-webkit-search-cancel-button,
-.demo input.secret-input::-webkit-search-decoration {
-  display: none;
-  -webkit-appearance: none;
+.demo textarea.secret-input {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: 40px;
+  margin: 0;
+  padding: 0 12px;
+  overflow: hidden;
+  background: var(--paper);
+  border: 1px solid #cfd0d6;
+  border-radius: 2px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14.5px;
+  line-height: 38px;
+  white-space: pre;
+  resize: none;
 }
 
 .apply-row {

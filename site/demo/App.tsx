@@ -896,27 +896,52 @@ export function App() {
               <code>@baselayer-sdk/autocomplete/server</code>).
             </p>
             <Field label="API key">
-              <input
-                // Masked by the page, not by `type="password"`: a password
-                // field is a login to Chrome and Safari, which offer to keep
-                // its value and to fill it, and so do the password managers.
-                // Safari takes a plain text field with a mask for a password
-                // field too; a search field with one it leaves alone, so it
-                // is `type="search"`, a textbox to a screen reader. Where the
-                // engine cannot mask a field, it is a password field after
-                // all, which keeps the key out of sight.
-                type={MASKS_TEXT ? "search" : "password"}
-                role={MASKS_TEXT ? "textbox" : undefined}
-                enterKeyHint="go"
-                className="secret-input"
-                {...NO_FILL_ATTRIBUTES}
-                value={draft}
-                onChange={e => {
-                  setDraft(e.target.value);
-                  setCheck(null);
-                }}
-                data-testid="demo-key"
-              />
+              {MASKS_TEXT ? (
+                // Masked by the page, and a textarea, not an input: Chrome and
+                // Safari offer a password field's passwords, and Safari takes
+                // any input with a mask, a search field too, for one. It
+                // offers nothing on a textarea. One row, no wrap, and Enter
+                // applies the key instead of breaking the line.
+                <textarea
+                  className="secret-input"
+                  rows={1}
+                  wrap="off"
+                  aria-multiline="false"
+                  enterKeyHint="go"
+                  {...NO_FILL_ATTRIBUTES}
+                  value={draft}
+                  onChange={e => {
+                    setDraft(e.target.value.replace(/[\r\n]+/g, ""));
+                    setCheck(null);
+                  }}
+                  onKeyDown={e => {
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    if (
+                      check !== "testing" &&
+                      draft.trim() !== "" &&
+                      !isApplied
+                    ) {
+                      void apply();
+                    }
+                  }}
+                  data-testid="demo-key"
+                />
+              ) : (
+                // Where the engine cannot mask a field, it is a password field,
+                // which keeps the key out of sight.
+                <input
+                  type="password"
+                  className="secret-input"
+                  {...NO_FILL_ATTRIBUTES}
+                  value={draft}
+                  onChange={e => {
+                    setDraft(e.target.value);
+                    setCheck(null);
+                  }}
+                  data-testid="demo-key"
+                />
+              )}
             </Field>
             <div className="apply-row">
               <button
