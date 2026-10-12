@@ -390,11 +390,6 @@
 }
 
 .try {
-  --try-hue-1: #5eead4;
-  --try-hue-2: #f9a8d4;
-  --try-hue-3: #fcd34d;
-  --try-hue-4: #a5b4fc;
-  --try-hue-5: #86efac;
   --try-good: #86efac;
   --try-bad: #fca5a5;
   display: grid;
@@ -652,22 +647,26 @@ select.try-input {
   font-size: 11px;
 }
 
-/* A choice: its hue as an outline while off, filled while on. */
+/* A choice, in the values' own ink: an outline while off, filled while on. */
 .try-chip {
-  --hue: #a5b4fc;
   padding: 1px 9px;
-  border: 1px solid var(--hue);
+  border: 1px solid rgba(232, 238, 251, 0.45);
   border-radius: 999px;
   background: transparent;
-  color: var(--hue);
+  color: #e8eefb;
   font: inherit;
   font-size: 12px;
   line-height: 20px;
   cursor: pointer;
 }
 
+.try-chip:hover {
+  border-color: #e8eefb;
+}
+
 .try-chip[aria-pressed="true"] {
-  background: var(--hue);
+  background: #e8eefb;
+  border-color: #e8eefb;
   color: var(--navy-deep);
 }
 

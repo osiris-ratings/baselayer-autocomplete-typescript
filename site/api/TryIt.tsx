@@ -181,10 +181,6 @@ function removeAt(value: Json | undefined, path: readonly string[]): Json {
     : { ...record, [key]: inner };
 }
 
-/** A choice's colour, by its place among the choices: the same everywhere. */
-const hueOf = (choices: readonly string[], choice: string) =>
-  `var(--try-hue-${(Math.max(0, choices.indexOf(choice)) % 5) + 1})`;
-
 /** The URL as read-only text, each part in its colour. */
 function UrlParts({ url }: { url: string }) {
   const match = /^(\w+:\/\/)([^/?#]+)([^?#]*)(?:\?(.*))?$/.exec(url);
@@ -302,9 +298,6 @@ function Editor({
                   type="button"
                   className="try-chip"
                   aria-pressed={on}
-                  style={{
-                    ["--hue" as string]: hueOf(itemShape.values, choice),
-                  }}
                   onClick={() =>
                     onChange(
                       on
