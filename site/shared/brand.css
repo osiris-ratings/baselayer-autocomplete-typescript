@@ -532,6 +532,16 @@ h3 code {
   color: #ffffff;
 }
 
+/* Sets a tool's tab apart from the snippets' tabs. */
+.code-sep {
+  flex: none;
+  align-self: center;
+  width: 1px;
+  height: 16px;
+  margin: 0 8px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
 .code-tab[aria-selected="true"] {
   border-bottom-color: #7d8cff;
   color: #ffffff;

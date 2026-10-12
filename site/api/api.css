@@ -361,3 +361,121 @@
     transition: none;
   }
 }
+
+/* ---- Try it here --------------------------------------------------------- */
+
+/* The request as an editor, in the code block's own type and colours: keys
+   and signs as the highlighter draws them, every value a white field. */
+.code-tool {
+  padding: 18px 20px 20px;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+
+.try-url {
+  margin: 0 0 6px;
+  color: #e8eefb;
+  overflow-wrap: anywhere;
+}
+
+.try-method {
+  color: var(--sh-keyword);
+}
+
+.try-label {
+  margin: 16px 0 4px;
+  color: var(--sh-comment);
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* A line of the editor flows as text, so a nested object's block starts on
+   a line of its own and its closing brace on the next. */
+.try-line {
+  min-height: 30px;
+  line-height: 30px;
+  white-space: nowrap;
+}
+
+.try-line > *,
+.try-url > * {
+  vertical-align: middle;
+}
+
+.try-block {
+  padding-left: 2ch;
+}
+
+.try-key {
+  color: var(--sh-property);
+}
+
+.try-sign {
+  color: var(--sh-sign);
+}
+
+.try-input {
+  box-sizing: content-box;
+  height: 20px;
+  margin: 0 1px;
+  padding: 1px 6px;
+  background: #ffffff;
+  border: 1px solid #9fb8e6;
+  border-radius: 2px;
+  color: var(--navy);
+  font: inherit;
+  font-size: 13px;
+}
+
+select.try-input {
+  height: 24px;
+  padding: 0 4px;
+  box-sizing: border-box;
+}
+
+.try-input:focus {
+  border-color: #7d8cff;
+  outline: 2px solid #7d8cff;
+  outline-offset: 0;
+}
+
+.try-number {
+  width: 6ch;
+}
+
+.try-add,
+.try-remove,
+.try-choice {
+  margin: 0 4px;
+  padding: 0 4px;
+  background: none;
+  border: 0;
+  color: #9fb0d6;
+  font: inherit;
+  font-size: 12.5px;
+  line-height: 22px;
+  cursor: pointer;
+}
+
+.try-add {
+  padding: 0 6px;
+  border: 1px dashed rgba(255, 255, 255, 0.24);
+  border-radius: 2px;
+}
+
+.try-choice {
+  margin: 0 2px;
+  padding: 0 6px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 2px;
+  color: var(--sh-string);
+}
+
+.try-add:hover,
+.try-remove:hover,
+.try-choice:hover {
+  color: #ffffff;
+}

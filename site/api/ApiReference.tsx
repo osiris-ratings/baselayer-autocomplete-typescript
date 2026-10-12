@@ -6,7 +6,7 @@
 import { Fragment, useState } from "react";
 import { document, html } from "virtual:api-reference";
 
-import { Code, type Snippet } from "../shared/Code";
+import { Code, type CodeTool, type Snippet } from "../shared/Code";
 import { SiteFooter } from "../shared/SiteFooter";
 import { SiteHeader } from "../shared/SiteHeader";
 import { useScrollSpy } from "../shared/useScrollSpy";
@@ -22,6 +22,8 @@ import {
   type OperationEntry,
   type Section,
 } from "./model";
+import { TryIt } from "./TryIt";
+import { parseCurl } from "./curl";
 import type {
   JsonSchema,
   Operation,
@@ -307,6 +309,26 @@ function OperationSection({
   const refusals = responses.filter(([status]) => !status.startsWith("2"));
   const request = requestSnippets(operation);
   const examples = responseSnippets(operation);
+  // The editor starts from the curl sample, so it asks what the sample asks.
+  const curl = (operation["x-codeSamples"] ?? []).find(
+    sample => snippetLang(sample.lang) === "shell",
+  );
+  const sample = curl === undefined ? null : parseCurl(curl.source);
+  const tryIt: CodeTool | undefined =
+    sample === null
+      ? undefined
+      : {
+          label: "Try it here",
+          render: onCode => (
+            <TryIt
+              method={method}
+              sample={sample}
+              body={requestBody?.schema}
+              schemas={document.components?.schemas ?? {}}
+              onCode={onCode}
+            />
+          ),
+        };
 
   return (
     <section
@@ -330,7 +352,13 @@ function OperationSection({
             <Markdown text={operation.description} />
           </div>
           <div className="endpoint-code">
-            {request.length > 0 && <Code title="Request" snippets={request} />}
+            {request.length > 0 && (
+              <Code
+                title="Request"
+                snippets={request}
+                {...(tryIt !== undefined ? { tool: tryIt } : {})}
+              />
+            )}
             {examples.length > 0 && (
               <Code title="Response" snippets={examples} />
             )}

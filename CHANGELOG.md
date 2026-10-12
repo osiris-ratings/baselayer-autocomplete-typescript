@@ -33,6 +33,12 @@ breaking change bumps the minor version.
   alone. Enter applies the key. It falls back to a password field where the
   engine cannot mask one.
 
+- The API reference's request block has a third tab, Try it here, set apart by
+  a rule: the request as an editor, started from its curl sample. The URL on
+  top follows every edit; the headers take values; query parameters can be
+  renamed, added and removed; and a body reads as its JSON, highlighted, with a
+  field for each value and `+ add` for the keys the schema names and the body
+  does not have yet. Copy takes it as curl. It sends nothing.
 - The API reference shows what `POST /autocomplete/sessions` takes: a Request
   body section, optional like the body, with its fields marked optional. Where
   a field is a choice it says the choices, which routes a scope may name and
