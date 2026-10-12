@@ -79,6 +79,11 @@ breaking change bumps the minor version.
   API reference (the examples, the Live tab, Try it here's request body),
   whose URL takes the network panel's colours too.
 
+- The documentation's screenshots of the demo and of the API reference show
+  what they now are: the title's segmented button, the Autocomplete route
+  names and Try it here. `docs/demo.md` describes the title and the line under
+  a picked business as they are.
+
 ### Fixed
 
 - A name or an address field of the components (`BusinessAutocomplete`,
