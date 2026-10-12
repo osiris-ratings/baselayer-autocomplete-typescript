@@ -378,6 +378,39 @@
   font-size: 11.5px;
 }
 
+/* Under a person's or an address's field once a business is picked from under
+   it: that it is the business, and what it was found through. The paragraph is
+   the live region and keeps no space of its own while it is empty. */
+.demo-picked {
+  margin: 0;
+}
+
+.demo-picked-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+.demo-picked-tag {
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.demo-picked-name {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.demo-picked-about {
+  color: var(--muted);
+}
+
 .field-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
@@ -2581,55 +2614,59 @@ html[data-dragging] * {
   border-color: var(--blue);
 }
 
-/* What the field searches for, in the title's own sentence: each search a
-   word, the selected one underlined and the others muted, still a tab each.
-   A word never breaks; the sentence wraps between words. */
+/* What the field searches for, in the title: "Autocomplete" and a segmented
+   button of the searches, each a tab, drawn as the side pane's switch is (its
+   rules, further down, take both). A segment never breaks, and the button
+   wraps below the title's word before it does. Its height is paint: its
+   margins give back what its padding takes, so the title keeps its line. */
 .search-title {
   min-width: 0;
 }
 
-/* Each word carries room for its tint, given back by its margin, so a tint
-   moves nothing. */
-.search-by-word {
-  margin: 0 -0.2em;
-  padding: 0 0.2em;
-  background: none;
-  border: 0;
-  border-radius: 4px;
-  color: var(--muted);
-  font: inherit;
-  white-space: nowrap;
-  cursor: pointer;
+.search-by {
+  margin-block: -0.3em;
+  vertical-align: baseline;
 }
 
-/* A word the pointer or the keys are on, and the selected one, speak in the
-   accent, as the filters toggle beside them does. */
-.search-by-word:not([aria-selected="true"]):hover,
-.search-by-word:not([aria-selected="true"]):focus-visible {
-  background: var(--faded);
+/* A gap before the button that a wrapped button leaves behind, at the line's
+   end, rather than as an indent. */
+.search-lead {
+  margin-right: 0.25em;
+}
+
+/* A segment's baseline is its word's, so the button stands on the title's line
+   as a word does; its glyph, out of that alignment, is centred on the word. */
+.search-by .search-by-word {
+  align-items: baseline;
+}
+
+/* The glyph takes its segment's text colour, the selected one's in the accent. */
+.search-by-icon {
+  display: inline-flex;
+  align-self: center;
+  font-size: 16px;
+}
+
+.search-by-word[aria-selected="true"] .search-by-icon {
   color: var(--blue);
 }
 
-.search-by-word[aria-selected="true"] {
-  color: var(--blue);
+/* A narrow head drops the glyphs and tightens the segments, so the button
+   keeps to one line, down to a small phone's. */
+.demo-card-head:has(.search-by) {
+  container-type: inline-size;
 }
 
-/* The underline is the noun's; its article stays plain. */
-.search-by-word[aria-selected="true"] .search-by-noun {
-  text-decoration: underline;
-  text-decoration-color: var(--blue);
-  text-decoration-thickness: 1px;
-  text-underline-offset: 5px;
-}
+@container (max-width: 350px) {
+  .search-by-icon {
+    display: none;
+  }
 
-/* The ring hugs the word's own room, clear of the dots between words. */
-.search-by-word:focus-visible {
-  outline: 2px solid var(--blue);
-  outline-offset: 0;
-}
-
-.search-by-sep {
-  color: var(--muted);
+  .search-by .search-by-word {
+    padding-inline: 6px;
+    font-size: 11.5px;
+    letter-spacing: 0.04em;
+  }
 }
 
 .fold-chevron[data-open="true"] {
@@ -3083,7 +3120,8 @@ html[data-dragging] * {
   border-radius: 2px;
 }
 
-.side-switch {
+.side-switch,
+.search-by {
   display: inline-flex;
   gap: 2px;
   padding: 3px;
@@ -3093,6 +3131,7 @@ html[data-dragging] * {
 }
 
 .side-switch button,
+.search-by-word,
 .side-hide {
   display: inline-flex;
   align-items: center;
@@ -3110,11 +3149,13 @@ html[data-dragging] * {
 }
 
 .side-switch button:hover,
+.search-by-word:hover,
 .side-hide:hover {
   color: var(--ink);
 }
 
-.side-switch button[aria-pressed="true"] {
+.side-switch button[aria-pressed="true"],
+.search-by-word[aria-selected="true"] {
   background: var(--paper);
   box-shadow: 0 1px 2px rgba(9, 35, 79, 0.14);
   color: var(--ink);

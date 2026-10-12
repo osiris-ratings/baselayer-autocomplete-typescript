@@ -40,7 +40,7 @@ const selected = () =>
     .map(tab => tab.textContent);
 
 describe("the test form's title", () => {
-  it("finishes its sentence with the search, each other search a word to switch to", () => {
+  it("names the search, each other search a segment to switch to", () => {
     render(<Title />);
 
     expect(screen.getByRole("heading").getAttribute("aria-label")).toBe(
@@ -50,14 +50,19 @@ describe("the test form's title", () => {
     expect(
       screen.getAllByRole("tab", { hidden: false }).map(tab => tab.textContent),
     ).toEqual(["a business", "a person", "an address"]);
-    expect(tabs.textContent).toBe("a business, a person, or an address");
+    // Each segment draws its noun, and has its article for a screen reader.
+    expect(
+      [...tabs.querySelectorAll(".search-by-noun")].map(
+        noun => noun.textContent,
+      ),
+    ).toEqual(["business", "person", "address"]);
     expect(selected()).toEqual(["a business"]);
     for (const tab of screen.getAllByRole("tab")) {
       expect(tab.getAttribute("aria-controls")).toBe("panel");
     }
   });
 
-  it("reads as a sentence whichever word is selected, each with its own article", () => {
+  it("reads as a sentence whichever segment is selected, each with its own article", () => {
     render(<Title />);
 
     for (const [word, name] of [
@@ -67,19 +72,16 @@ describe("the test form's title", () => {
     ] as const) {
       fireEvent.click(screen.getByRole("tab", { name: word }));
 
-      expect(screen.getByRole("heading").textContent).toBe(
-        "02Autocomplete a business, a person, or an address",
-      );
       expect(screen.getByRole("heading").getAttribute("aria-label")).toBe(name);
       expect(selected()).toEqual([word]);
     }
   });
 
-  it("moves between the words with the arrow keys, Home and End, focus with it", () => {
+  it("moves between the segments with the arrow keys, Home and End, focus with it", () => {
     render(<Title />);
     const tab = (name: string) => screen.getByRole("tab", { name });
 
-    // Only the selected word is in the tab order.
+    // Only the selected segment is in the tab order.
     expect(
       screen.getAllByRole("tab").map(each => each.getAttribute("tabindex")),
     ).toEqual(["0", "-1", "-1"]);
@@ -100,24 +102,22 @@ describe("the test form's title", () => {
     expect(document.activeElement).toBe(tab("a business"));
   });
 
-  it("reads as a sentence for every set of searches the scope can allow", () => {
-    const sentences: [readonly Route[], string][] = [
+  it("offers a segment for each search the scope can allow, and none for a single search", () => {
+    const sets: [readonly Route[], string][] = [
       [["businesses"], "Autocomplete a business"],
       [["people"], "Autocomplete a person"],
       [["addresses"], "Autocomplete an address"],
-      [["businesses", "people"], "Autocomplete a business or a person"],
-      [["businesses", "addresses"], "Autocomplete a business or an address"],
-      [["people", "addresses"], "Autocomplete a person or an address"],
-      [
-        ["businesses", "people", "addresses"],
-        "Autocomplete a business, a person, or an address",
-      ],
+      [["businesses", "people"], "Autocomplete"],
+      [["businesses", "addresses"], "Autocomplete"],
+      [["people", "addresses"], "Autocomplete"],
+      [["businesses", "people", "addresses"], "Autocomplete"],
     ];
-    for (const [routes, sentence] of sentences) {
+    for (const [routes, lead] of sets) {
       const { unmount } = render(<Title routes={routes} start={routes[0]!} />);
 
-      expect(screen.getByRole("heading").textContent).toBe(`02${sentence}`);
-      // The commas and the "or" are the sentence's, never a tab's.
+      // A single search is named in the sentence; several are the segments,
+      // after the word that leads them.
+      expect(screen.getByRole("heading").textContent).toContain(`02${lead}`);
       expect(screen.queryAllByRole("tab").map(tab => tab.textContent)).toEqual(
         routes.length > 1
           ? routes.map(route =>

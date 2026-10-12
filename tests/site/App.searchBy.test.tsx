@@ -175,9 +175,14 @@ describe("searching by person or address", () => {
     // the business under it.
     expect(checked("a person")).toBe("true");
     expect(field("demo-person").value).toBe("Dana Whitfield");
-    expect(screen.getByTestId("grouped-selection").textContent).toBe(
-      "HARBOR CONCRETE SUPPLY, INC.",
+    // It says it is the business picked and what it was found through, in a
+    // live region, where the component's own line would name it alone.
+    const picked = screen.getByTestId("demo-picked-business");
+    expect(picked.textContent).toBe(
+      "Business HARBOR CONCRETE SUPPLY, INC. Found through Dana Whitfield, an officer.",
     );
+    expect(picked.parentElement?.getAttribute("role")).toBe("status");
+    expect(screen.queryByTestId("grouped-selection")).toBeNull();
     expect(screen.queryByTestId("demo-through")).toBeNull();
     await waitFor(() => expect(step()).not.toBeNull());
     expect(step()!.textContent).toContain(
@@ -217,9 +222,10 @@ describe("searching by person or address", () => {
     expect(field("demo-address").value).toBe(
       "77 Quillfeather Ln Ste 300, Dover, DE 19904",
     );
-    expect(screen.getByTestId("grouped-selection").textContent).toBe(
-      "NORTHSHORE PUMPING, LLC",
+    expect(screen.getByTestId("demo-picked-business").textContent).toBe(
+      "Business NORTHSHORE PUMPING, LLC Found at 77 Quillfeather Ln Ste 300, Dover, DE 19904, its registered agent's office.",
     );
+    expect(screen.queryByTestId("grouped-selection")).toBeNull();
     await waitFor(() => expect(step()).not.toBeNull());
     expect(step()!.textContent).toContain(
       "Found at 77 Quillfeather Ln Ste 300, Dover, DE 19904, its registered agent's office.",
@@ -248,7 +254,7 @@ describe("searching by person or address", () => {
 
     await user.type(field("demo-person"), "{Backspace}");
 
-    expect(screen.queryByTestId("grouped-selection")).toBeNull();
+    expect(screen.queryByTestId("demo-picked-business")).toBeNull();
     await waitFor(() => expect(step()).toBeNull(), { timeout: 1500 });
   });
 });

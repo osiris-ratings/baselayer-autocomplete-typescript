@@ -52,13 +52,20 @@ function box(element: Element) {
   return element.getBoundingClientRect();
 }
 
-/** How many lines an element's text runs over, by the tops of its boxes. */
+/**
+ * How many lines an element's text runs over, by the tops of its text.
+ */
 function linesOf(element: Element): number {
-  const range = document.createRange();
-  range.selectNodeContents(element);
-  const tops = new Set(
-    [...range.getClientRects()].map(rect => Math.round(rect.top)),
-  );
+  const tops = new Set<number>();
+  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+  for (let text = walker.nextNode(); text; text = walker.nextNode()) {
+    if ((text.textContent ?? "").trim() === "") continue;
+    // The article a screen reader hears is out of the flow, and has no line.
+    if (text.parentElement?.closest(".visually-hidden")) continue;
+    const range = document.createRange();
+    range.selectNodeContents(text);
+    for (const rect of range.getClientRects()) tops.add(Math.round(rect.top));
+  }
   return tops.size;
 }
 
@@ -100,14 +107,22 @@ function faults(host: HTMLElement): string[] {
 describe("the test form's title", () => {
   for (const width of WIDTHS) {
     for (const route of ["businesses", "addresses"] as const) {
-      it(`wraps between words, never under the toggle, at ${width}px on ${route}`, () => {
+      it(`keeps the button whole, never under the toggle, at ${width}px on ${route}`, () => {
         const { host, done } = draw(width, route);
         try {
           expect(host.querySelectorAll(".search-by-word")).toHaveLength(3);
-          // The whole sentence, its longest form, at every width.
-          expect(host.querySelector(".search-title")!.textContent).toBe(
-            "Autocomplete a business, a person, or an address",
-          );
+          // The whole title, its longest form, at every width: the nouns as
+          // drawn, and each tab's name, which carries its article.
+          expect(
+            [...host.querySelectorAll(".search-by-noun")].map(
+              noun => noun.textContent,
+            ),
+          ).toEqual(["business", "person", "address"]);
+          expect(
+            [...host.querySelectorAll(".search-by-word")].map(
+              word => word.textContent,
+            ),
+          ).toEqual(["a business", "a person", "an address"]);
           expect(faults(host)).toEqual([]);
         } finally {
           done();
@@ -129,27 +144,88 @@ function computed(property: "color" | "background-color", value: string) {
 
 const TRANSPARENT = "rgba(0, 0, 0, 0)";
 
-describe("the title's words, drawn", () => {
-  it("draws the selected noun in the accent, underlined in it, and the others muted", () => {
+describe("the title's segmented button", () => {
+  it("raises the selected segment on the paper, in the ink, and mutes the others", () => {
     const { host, done } = draw(560, "people");
     try {
-      const blue = computed("color", "var(--blue)");
-      const [business, person] = host.querySelectorAll(".search-by-word");
-      const noun = getComputedStyle(person!.querySelector(".search-by-noun")!);
+      const [business, person, address] = [
+        ...host.querySelectorAll<HTMLElement>(".search-by-word"),
+      ].map(word => getComputedStyle(word));
 
-      expect(noun.color).toBe(blue);
-      expect(noun.textDecorationLine).toBe("underline");
-      expect(noun.textDecorationColor).toBe(blue);
-      expect(getComputedStyle(business!).color).toBe(
-        computed("color", "var(--muted)"),
+      expect(person!.backgroundColor).toBe(
+        computed("background-color", "var(--paper)"),
       );
-      expect(getComputedStyle(business!).backgroundColor).toBe(TRANSPARENT);
+      expect(person!.color).toBe(computed("color", "var(--ink)"));
+      for (const style of [business!, address!]) {
+        expect(style.backgroundColor).toBe(TRANSPARENT);
+        expect(style.color).toBe(computed("color", "var(--muted)"));
+      }
     } finally {
       done();
     }
   });
 
-  it("tints a word under the pointer and draws it in the accent, moving no word", async () => {
+  it("draws the component's glyph before each word, the selected one's in the accent and the rest in the word's colour", () => {
+    const { host, done } = draw(560, "people");
+    try {
+      const icons = [...host.querySelectorAll<HTMLElement>(".search-by-icon")];
+      expect(icons.map(icon => icon.dataset.entity)).toEqual([
+        "business",
+        "person",
+        "address",
+      ]);
+      for (const icon of icons) {
+        expect(icon.getAttribute("aria-hidden")).toBe("true");
+        expect(icon.querySelector("svg")).not.toBeNull();
+      }
+      const [business, person, address] = icons.map(icon =>
+        getComputedStyle(icon),
+      );
+      expect(person!.color).toBe(computed("color", "var(--blue)"));
+      expect(business!.color).toBe(computed("color", "var(--muted)"));
+      expect(address!.color).toBe(computed("color", "var(--muted)"));
+    } finally {
+      done();
+    }
+  });
+
+  it("stands the button on the baseline of the title's own word, glyphs or none", () => {
+    for (const width of [900, 320]) {
+      const { host, done } = draw(width, "people");
+      try {
+        // A zero-sized box sits on the baseline of whatever it is put in.
+        const probe = () => {
+          const mark = document.createElement("span");
+          mark.style.cssText = "display:inline-block;width:0;height:0";
+          return mark;
+        };
+        const lead = probe();
+        const title = host.querySelector(".search-title")!;
+        title.prepend(lead);
+        const words = [
+          ...host.querySelectorAll<HTMLElement>(".search-by-noun"),
+        ].map(noun => {
+          const mark = probe();
+          noun.append(mark);
+          return mark;
+        });
+        const line = lead.getBoundingClientRect().bottom;
+        const lines = new Set(
+          words.map(mark => mark.getBoundingClientRect().bottom),
+        );
+        // The segments share one baseline, and where the button has room on
+        // the title's line it is the title's. A narrow head wraps it below.
+        expect(lines.size).toBe(1);
+        if (width > 600) {
+          expect(Math.abs([...lines][0]! - line)).toBeLessThan(0.5);
+        }
+      } finally {
+        done();
+      }
+    }
+  });
+
+  it("darkens a segment under the pointer, moving no segment", async () => {
     const { host, done } = draw(560, "people");
     try {
       const words = [...host.querySelectorAll<HTMLElement>(".search-by-word")];
@@ -162,11 +238,9 @@ describe("the title's words, drawn", () => {
 
       await userEvent.hover(words[0]!);
 
-      const style = getComputedStyle(words[0]!);
-      expect(style.backgroundColor).toBe(
-        computed("background-color", "var(--faded)"),
+      expect(getComputedStyle(words[0]!).color).toBe(
+        computed("color", "var(--ink)"),
       );
-      expect(style.color).toBe(computed("color", "var(--blue)"));
       expect(boxes()).toEqual(before);
       await userEvent.unhover(words[0]!);
     } finally {
@@ -174,10 +248,10 @@ describe("the title's words, drawn", () => {
     }
   });
 
-  it("gives a word the keys reach the same tint, and a focus ring", async () => {
+  it("moves between the segments with the arrow keys, and shows the ring where the focus is", async () => {
     const { host, done } = draw(560, "people");
     try {
-      // The selected word is the one in the tab order; the arrow moves the
+      // The selected segment is the one in the tab order; the arrow moves the
       // focus to the next, which this title's host never selects.
       await userEvent.tab();
       await userEvent.keyboard("{ArrowRight}");
@@ -185,12 +259,23 @@ describe("the title's words, drawn", () => {
       expect(document.activeElement).toBe(address);
 
       const style = getComputedStyle(address);
-      expect(style.backgroundColor).toBe(
-        computed("background-color", "var(--faded)"),
-      );
-      expect(style.color).toBe(computed("color", "var(--blue)"));
       expect(style.outlineStyle).toBe("solid");
       expect(style.outlineColor).toBe(computed("color", "var(--blue)"));
+    } finally {
+      done();
+    }
+  });
+
+  it("drops the glyphs and tightens the segments in a head too narrow for them, keeping the button on one line", () => {
+    const { host, done } = draw(320, "businesses");
+    try {
+      for (const icon of host.querySelectorAll(".search-by-icon")) {
+        expect(getComputedStyle(icon).display).toBe("none");
+      }
+      const control = box(host.querySelector(".search-by")!);
+      const head = box(host.querySelector(".demo-card-head")!);
+      expect(control.right).toBeLessThanOrEqual(head.right + 0.5);
+      expect(control.left).toBeGreaterThanOrEqual(head.left - 0.5);
     } finally {
       done();
     }
