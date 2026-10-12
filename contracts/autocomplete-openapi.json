@@ -495,12 +495,29 @@
               "null"
             ]
           },
+          "highlight": {
+            "description": "How the name this item matched on (`matched_name` when that is it, else `label`) reads\nagainst the typed text of the filter that matched it, drawn as a suggestion's own\n`highlight` is: a business item by the business name, a person item by the person name,\nan address item by the address text. An item with a `matched_name` always carries an\narray, which may mark nothing where the name matched in a way no word of it shows;\notherwise it is null on an item no filter matched, and on a matched item whose\nhighlight marks nothing.",
+            "items": {
+              "$ref": "#/components/schemas/HighlightPart"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
           "label": {
             "type": "string"
           },
           "matched": {
             "description": "This item is why the row is here.",
             "type": "boolean"
+          },
+          "matched_name": {
+            "description": "A business item's other name that fits the business name filtering the answer better\nthan `label` does, as a business suggestion's `matched_name` means it; null when\n`label` fits at least as well, when no business name filters, and on a person or an\naddress item.",
+            "type": [
+              "string",
+              "null"
+            ]
           },
           "role": {
             "oneOf": [
@@ -848,7 +865,7 @@
             }
           },
           {
-            "description": "A business name, matched as on the businesses route; keeps the addresses a\nbusiness it fits filed at. At most 256 characters.",
+            "description": "A business name, matched as on the businesses route; keeps the addresses a\nbusiness it fits filed as its own principal or mailing address, never as its\nregistered agent's office. At most 256 characters.",
             "in": "query",
             "name": "business.name",
             "required": false,
