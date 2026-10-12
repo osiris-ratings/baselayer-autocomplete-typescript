@@ -100,6 +100,12 @@ describe("Try it here, on the mint", () => {
     // Filled in already, Origin asks nothing of the reader.
     expect(names).toContain("Origin");
     expect(names).toContain("Content-Type");
+    // The fixed ones first, so the one to fill in sits by the body's fields.
+    expect(names.slice(0, 3)).toEqual([
+      "Content-Type",
+      "Origin",
+      "X-API-Key* (required)",
+    ]);
   });
 
   it("is a flat table: a row for each field the body holds, by its whole path", () => {

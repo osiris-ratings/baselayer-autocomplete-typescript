@@ -511,12 +511,13 @@
 .try-table td {
   padding: 3px 6px;
   text-align: left;
-  vertical-align: middle;
+  vertical-align: top;
 }
 
 /* The head is the section's title: what the rows are, then their values. */
 .try-table thead th {
   padding: 0 6px 4px;
+  vertical-align: bottom;
   border-bottom: 1px solid rgba(255, 255, 255, 0.14);
   color: #6f7fa6;
   font-size: 10.5px;
@@ -527,6 +528,11 @@
 
 .try-table thead th:first-child {
   color: #c3cde6;
+}
+
+/* Value starts where the values' text does, inside their fields. */
+.try-table thead th:nth-child(2) {
+  padding-left: 14px;
 }
 
 .try-table tbody tr:first-child > * {
@@ -542,9 +548,16 @@
   text-align: right;
 }
 
+/* A name stands on its value's first line, a field's or a row of chips', as
+   does a row's remove button. */
 .try-name {
   font-weight: 400;
+  line-height: 26px;
   overflow-wrap: anywhere;
+}
+
+.try-actions .try-remove {
+  height: 26px;
 }
 
 .try-key {
@@ -555,45 +568,55 @@
   color: #6f7fa6;
 }
 
+/* A value is an underline on a faint fill, no box: typed in light ink, the
+   line lit in the accent while it has the focus. */
 .try-input {
   box-sizing: border-box;
   width: 100%;
   height: 26px;
   padding: 0 8px;
-  background: #ffffff;
-  border: 1px solid #9fb8e6;
-  border-radius: 2px;
-  color: var(--navy);
+  background: rgba(255, 255, 255, 0.06);
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.26);
+  border-radius: 0;
+  color: #e8eefb;
   font: inherit;
   font-size: 12.5px;
+  color-scheme: dark;
 }
 
-/* A value the form shows but does not take: sunk into the block, faint. */
-.try-input[readonly] {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.12);
+.try-input:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-bottom-color: rgba(255, 255, 255, 0.45);
+}
+
+.try-input:focus {
+  background: rgba(255, 255, 255, 0.1);
+  border-bottom-color: #7d8cff;
+  outline: none;
+  box-shadow: 0 1px 0 #7d8cff;
+}
+
+select.try-input {
+  padding-right: 4px;
+  cursor: pointer;
+}
+
+/* A value the form shows but does not take: no line, only faint ink, as a
+   label reads. */
+.try-input[readonly],
+.try-input[readonly]:hover,
+.try-input[readonly]:focus {
+  background: transparent;
+  border-bottom-color: transparent;
+  box-shadow: none;
   color: #6f7fa6;
   cursor: default;
-}
-
-.try-input[readonly]:focus {
-  border-color: rgba(255, 255, 255, 0.24);
-  outline: none;
 }
 
 .try-required {
   margin-left: 3px;
   color: #f9a8d4;
-}
-
-select.try-input {
-  padding-right: 4px;
-}
-
-.try-input:focus {
-  border-color: #7d8cff;
-  outline: 2px solid #7d8cff;
-  outline-offset: 0;
 }
 
 .try-number {

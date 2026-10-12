@@ -448,6 +448,16 @@ const FIXED_HEADERS: Readonly<Record<string, string>> = {
   "content-type": "The API takes JSON",
 };
 
+/** Where a header's row goes: Content-Type, Origin, then the rest as sent. */
+function headerRank(name: string): number {
+  const fixed = Object.keys(FIXED_HEADERS);
+  const at = [
+    "content-type",
+    ...fixed.filter(each => each !== "content-type"),
+  ].indexOf(name.toLowerCase());
+  return at === -1 ? fixed.length : at;
+}
+
 /** A required row's asterisk, which a screen reader hears as a word. */
 function Required() {
   return (
@@ -602,6 +612,11 @@ export function TryIt({
   const previewId = useId();
   const url = urlOf(sample.url, query);
   const takesQuery = parameters.length > 0 || sample.query.length > 0;
+  // The fixed headers first, then the ones to fill in, so those sit by the
+  // fields below; the request itself keeps the sample's order.
+  const shownHeaders = [...headers].sort(
+    (a, b) => headerRank(a.name) - headerRank(b.name),
+  );
   const isRequired = (name: string) =>
     required.some(each => each.toLowerCase() === name.toLowerCase());
   const absentParameters = parameters.filter(
@@ -703,7 +718,7 @@ export function TryIt({
       <table className="try-table">
         <Head title="Headers" />
         <tbody>
-          {headers.map((header, index) => (
+          {shownHeaders.map(header => (
             <tr key={header.name}>
               <th scope="row" className="try-name">
                 <span className="try-key">{header.name}</span>
@@ -726,8 +741,10 @@ export function TryIt({
                   value={header.value}
                   onChange={event =>
                     setHeaders(
-                      headers.map((h, i) =>
-                        i === index ? { ...h, value: event.target.value } : h,
+                      headers.map(h =>
+                        h.name === header.name
+                          ? { ...h, value: event.target.value }
+                          : h,
                       ),
                     )
                   }
