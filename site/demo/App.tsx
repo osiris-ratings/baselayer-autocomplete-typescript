@@ -900,9 +900,14 @@ export function App() {
                 // Masked by the page, not by `type="password"`: a password
                 // field is a login to Chrome and Safari, which offer to keep
                 // its value and to fill it, and so do the password managers.
-                // Where the engine cannot mask a text field, it is a password
-                // field after all, which keeps the key out of sight.
-                type={MASKS_TEXT ? "text" : "password"}
+                // Safari takes a plain text field with a mask for a password
+                // field too; a search field with one it leaves alone, so it
+                // is `type="search"`, a textbox to a screen reader. Where the
+                // engine cannot mask a field, it is a password field after
+                // all, which keeps the key out of sight.
+                type={MASKS_TEXT ? "search" : "password"}
+                role={MASKS_TEXT ? "textbox" : undefined}
+                enterKeyHint="go"
                 className="secret-input"
                 {...NO_FILL_ATTRIBUTES}
                 value={draft}

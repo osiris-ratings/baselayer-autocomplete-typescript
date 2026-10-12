@@ -418,6 +418,7 @@
 }
 
 .demo input[type="text"],
+.demo input[type="search"],
 .demo input[type="password"],
 .demo input[type="number"],
 .demo input:not([type]):not(.bl-ac-input),
@@ -2538,9 +2539,18 @@ html[data-dragging] * {
 /* ---- Connect: apply, and what the test said ------------------------------ */
 
 /* The API key, masked as a password field masks it, which it is not to the
-   browser: see the field. */
+   browser: see the field. A search field is drawn as a field, with no rounded
+   native look and no clear button. */
 .demo input.secret-input {
+  -webkit-appearance: none;
+  appearance: none;
   -webkit-text-security: disc;
+}
+
+.demo input.secret-input::-webkit-search-cancel-button,
+.demo input.secret-input::-webkit-search-decoration {
+  display: none;
+  -webkit-appearance: none;
 }
 
 .apply-row {

@@ -55,11 +55,14 @@ function drawn() {
 // The key is no password to a browser: Chrome and Safari offer to keep a
 // password field's value and to fill it, and so do the password managers.
 describe("the API key field", () => {
-  it("is a masked text field the browsers and the password managers leave alone", () => {
+  it("is a masked search field the browsers and the password managers leave alone", () => {
     const key = drawn();
 
-    // This engine masks a text field, so the key is not a password field.
-    expect(key.type).toBe("text");
+    // This engine masks a field, so the key is not a password field; nor a
+    // plain text one, which Safari takes for a password field once it is
+    // masked. A search field it leaves alone.
+    expect(key.type).toBe("search");
+    expect(key.getAttribute("role")).toBe("textbox");
     expect(
       getComputedStyle(key).getPropertyValue("-webkit-text-security"),
     ).toBe("disc");

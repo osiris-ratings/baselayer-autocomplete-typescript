@@ -27,9 +27,10 @@ breaking change bumps the minor version.
   keeps still under a reduced-motion setting.
 
 - The demo's API key field no longer looks like a login to Chrome and Safari,
-  which offered to keep it as a password and to fill it. It is a masked text
-  field, with the attributes password managers are told to leave alone, and
-  falls back to a password field where the engine cannot mask a text one.
+  which offered to keep it as a password and to fill it. It is a masked search
+  field (Safari takes a masked text field for a password field), with the
+  attributes password managers are told to leave alone, and falls back to a
+  password field where the engine cannot mask one.
 
 ### Fixed
 
