@@ -398,9 +398,11 @@
   width: 100%;
 }
 
+/* The method, the URL's first line and Send share the box's top row; a URL
+   that wraps runs on below. */
 .try-url-box {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 10px;
   width: 100%;
   box-sizing: border-box;
@@ -412,6 +414,7 @@
 
 .try-method {
   flex: none;
+  margin-top: 4px;
   padding: 1px 7px;
   border-radius: 2px;
   background: #a5b4fc;
@@ -437,6 +440,7 @@
   padding: 0;
   background: none;
   color: #e8eefb;
+  padding-top: 4px;
   font-size: 13px;
   line-height: 22px;
   overflow-wrap: anywhere;

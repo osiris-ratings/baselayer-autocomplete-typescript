@@ -9,7 +9,7 @@
 // the session mint takes an API key, which belongs on a backend, and the
 // autocomplete routes take a session.
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
 import { LEGAL_RELATIONS, type Route } from "@baselayer-sdk/autocomplete";
 
@@ -557,6 +557,73 @@ function refusalOf(body: unknown): string | null {
   return null;
 }
 
+/** How long the typing rests before the URL box shows what it made. */
+const URL_SETTLES_MS = 450;
+
+/** A value as it was once it last stopped changing for `ms`. */
+function useSettled<T>(value: T, ms: number): T {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), ms);
+    return () => clearTimeout(timer);
+  }, [value, ms]);
+  return settled;
+}
+
+/**
+ * An element that changes height as `key` changes grows or shrinks to it in a
+ * stroke, from the height it had just before to the height it has now. The
+ * height before is kept by watching the element, so one shown only later (in
+ * a tab not yet opened) starts from what it is when seen, not from nothing.
+ * Not under a reduced-motion setting, nor where there is no `animate`.
+ */
+function useResizeEased(
+  element: { readonly current: HTMLElement | null },
+  key: unknown,
+) {
+  const last = useRef(0);
+  const easing = useRef(false);
+  useEffect(() => {
+    const box = element.current;
+    if (box === null || typeof ResizeObserver === "undefined") return;
+    const watch = new ResizeObserver(() => {
+      if (!easing.current) last.current = box.getBoundingClientRect().height;
+    });
+    watch.observe(box);
+    return () => watch.disconnect();
+  }, [element]);
+  useLayoutEffect(() => {
+    const box = element.current;
+    if (box === null) return;
+    const now = box.getBoundingClientRect().height;
+    const before = last.current;
+    if (
+      before === 0 ||
+      now === 0 ||
+      Math.abs(before - now) < 1 ||
+      typeof box.animate !== "function" ||
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+    ) {
+      last.current = now;
+      return;
+    }
+    easing.current = true;
+    const ease = box.animate(
+      [
+        { height: `${before}px`, overflow: "hidden" },
+        { height: `${now}px`, overflow: "hidden" },
+      ],
+      { duration: 240, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)" },
+    );
+    const settle = () => {
+      easing.current = false;
+      last.current = box.getBoundingClientRect().height;
+    };
+    ease.onfinish = settle;
+    ease.oncancel = settle;
+  }, [element, key]);
+}
+
 let nextRow = 0;
 const withIds = (pairs: readonly Pair[]) =>
   pairs.map(pair => ({ ...pair, id: (nextRow += 1) }));
@@ -606,6 +673,12 @@ export function TryIt({
   const [showRequest, setShowRequest] = useState(false);
   const previewId = useId();
   const url = urlOf(sample.url, query);
+  // The URL box follows the typing once it rests, and grows or shrinks to the
+  // new URL's lines in a stroke rather than a jump; what is sent, and what the
+  // samples say, follow every keystroke.
+  const shownUrl = useSettled(url, URL_SETTLES_MS);
+  const urlBox = useRef<HTMLDivElement>(null);
+  useResizeEased(urlBox, shownUrl);
   const takesQuery = parameters.length > 0 || sample.query.length > 0;
   // The fixed headers first, then the ones to fill in, so those sit by the
   // fields below; the request itself keeps the sample's order.
@@ -691,12 +764,12 @@ export function TryIt({
 
   return (
     <div className="try">
-      <div className="try-url-box">
+      <div className="try-url-box" ref={urlBox}>
         <span className={`try-method try-method-${method.toLowerCase()}`}>
           {method.toUpperCase()}
         </span>
         <code className="try-url" data-testid="try-url">
-          <UrlParts url={url} />
+          <UrlParts url={shownUrl} />
         </code>
         <button
           type="button"

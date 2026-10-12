@@ -35,7 +35,9 @@ breaking change bumps the minor version.
 
 - The API reference's request block has a third tab, Try it here, set apart by
   a rule: the request as a short form, started from its curl sample. The URL
-  sits in a read-only box, each part in a colour of its own, beside Send; each
+  sits in a read-only box, each part in a colour of its own, the method and
+  Send on its first line; it follows the typing once it rests, growing or
+  shrinking to the new URL in a stroke; each
   value is an underline on the block, a fixed one faint, with no line; the
   headers, the query parameters and the body are tables as wide as the block,
   the body flat, a row for each field by its whole path, a list of choices a

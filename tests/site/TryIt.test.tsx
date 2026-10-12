@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -321,7 +327,8 @@ describe("Try it here, on a search", () => {
     });
     await user.clear(q);
     await user.type(q, "harbor");
-    expect(url()).toContain("?q=harbor&limit=5");
+    // The URL box shows it once the typing rests.
+    await waitFor(() => expect(url()).toContain("?q=harbor&limit=5"));
 
     const add = within(
       screen.getByRole("group", { name: "Add a query parameter" }),
@@ -336,13 +343,15 @@ describe("Try it here, on a search", () => {
       }),
       "PA",
     );
-    expect(url()).toContain("&business.state=PA");
+    await waitFor(() => expect(url()).toContain("&business.state=PA"));
 
     await user.click(
       screen.getByRole("button", { name: "Remove query parameter limit" }),
     );
-    expect(url()).toBe(
-      "https://api.baselayer.com/autocomplete/people?q=harbor&business.state=PA",
+    await waitFor(() =>
+      expect(url()).toBe(
+        "https://api.baselayer.com/autocomplete/people?q=harbor&business.state=PA",
+      ),
     );
     expect(code()).toContain(`curl -s "${url()}"`);
     // Taken out, it is offered again.
