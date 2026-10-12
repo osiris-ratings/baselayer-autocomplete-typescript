@@ -75,16 +75,42 @@ function answering(status: number, body: unknown) {
   return fetch;
 }
 
+/** A body field added from the table's last row, as a reader adds it. */
+async function addField(
+  user: ReturnType<typeof userEvent.setup>,
+  path: string,
+) {
+  await user.click(
+    within(screen.getByRole("group", { name: "Add a body field" })).getByRole(
+      "button",
+      { name: path },
+    ),
+  );
+}
+
+const offered = () =>
+  within(screen.getByRole("group", { name: "Add a body field" }))
+    .getAllByRole("button")
+    .map(button => button.textContent);
+
 describe("Try it here, on the mint", () => {
-  it("starts from the sample, every scope route on with every relation it carries, and the page's own origin", () => {
+  it("starts with no scope, which reaches everything, and says so, with the page's own origin", () => {
     const { code } = editor("/autocomplete/sessions");
 
     expect(screen.getByTestId("try-url").textContent).toBe(
       "https://api.baselayer.com/autocomplete/sessions",
     );
-    expect(code()).toContain(
-      `-d '{"scope": {"routes": {"businesses": ["people", "addresses"], "people": ["businesses", "addresses"], "addresses": ["businesses", "people"]}, "max_limit": 5}}'`,
-    );
+    // Left out, the scope narrows nothing: every route, every relation.
+    expect(code()).toContain("-d '{}'");
+    expect(
+      screen.getByRole("row", { name: /No route listed/ }).textContent,
+    ).toContain("every route your organization may, with every relation");
+    expect(offered()).toEqual([
+      "scope.routes.businesses",
+      "scope.routes.people",
+      "scope.routes.addresses",
+      "scope.max_limit",
+    ]);
     expect(code()).toContain('-H "X-API-Key: $BASELAYER_API_KEY"');
     // The browser sends its own Origin: the field says which, and is not typed.
     const origin = screen.getByRole("textbox", { name: "Header Origin" });
@@ -98,14 +124,10 @@ describe("Try it here, on the mint", () => {
         }) as HTMLInputElement
       ).readOnly,
     ).toBe(true);
-    // What the operation requires says so.
+    // What the operation requires says so; what is filled in already does not.
     const names = screen
       .getAllByRole("rowheader")
       .map(cell => cell.textContent);
-    expect(names).toContain("X-API-Key* (required)");
-    // Filled in already, Origin asks nothing of the reader.
-    expect(names).toContain("Origin");
-    expect(names).toContain("Content-Type");
     // The fixed ones first, so the one to fill in sits by the body's fields.
     expect(names.slice(0, 3)).toEqual([
       "Content-Type",
@@ -114,42 +136,38 @@ describe("Try it here, on the mint", () => {
     ]);
   });
 
-  it("is a flat table: a row for each field the body holds, by its whole path", () => {
-    editor("/autocomplete/sessions");
+  it("is a flat table: a row for each field added, by its whole path, a route with every relation it carries", async () => {
+    const { code, user } = editor("/autocomplete/sessions");
+
+    await addField(user, "scope.routes.businesses");
+    await addField(user, "scope.max_limit");
 
     const rows = screen
       .getAllByRole("rowheader")
       .map(cell => cell.textContent)
       .filter(text => text?.startsWith("scope"));
-    expect(rows).toEqual([
-      "scope.routes.businesses",
-      "scope.routes.people",
-      "scope.routes.addresses",
-      "scope.max_limit",
-    ]);
+    expect(rows).toEqual(["scope.routes.businesses", "scope.max_limit"]);
     // A list of relations is chips, each on where the list has it; a route
     // lists only the relations it carries, never itself.
-    const chips = (route: string) =>
-      within(screen.getByRole("group", { name: `scope.routes.${route}` }))
+    expect(
+      within(screen.getByRole("group", { name: "scope.routes.businesses" }))
         .getAllByRole("button")
-        .map(chip => [chip.textContent, chip.getAttribute("aria-pressed")]);
-    expect(chips("businesses")).toEqual([
+        .map(chip => [chip.textContent, chip.getAttribute("aria-pressed")]),
+    ).toEqual([
       ["people", "true"],
       ["addresses", "true"],
     ]);
-    expect(chips("people")).toEqual([
-      ["businesses", "true"],
-      ["addresses", "true"],
-    ]);
-    // With every field held, there is nothing to add.
-    expect(
-      screen.queryByRole("group", { name: "Add a body field" }),
-    ).toBeNull();
+    // A number starts at its example.
+    expect(code()).toContain(
+      `-d '{"scope": {"routes": {"businesses": ["people", "addresses"]}, "max_limit": 5}}'`,
+    );
+    expect(screen.queryByRole("row", { name: /No route listed/ })).toBeNull();
   });
 
   it("follows an edited value and header into the curl", async () => {
     const { code, user } = editor("/autocomplete/sessions");
 
+    await addField(user, "scope.max_limit");
     const limit = screen.getByRole("spinbutton", { name: "scope.max_limit" });
     await user.clear(limit);
     await user.type(limit, "12");
@@ -161,18 +179,10 @@ describe("Try it here, on the mint", () => {
     expect(code()).toContain('-H "X-API-Key: sk_test_example"');
   });
 
-  it("adds the fields the schema names from the table's last row, and takes out a field and what it leaves empty", async () => {
+  it("switches a route's relations, and takes out a field and what it leaves empty", async () => {
     const { code, user } = editor("/autocomplete/sessions");
 
-    // A route taken out is offered again, and comes back with every relation.
-    await user.click(
-      screen.getByRole("button", { name: "Remove scope.routes.people" }),
-    );
-    const add = within(screen.getByRole("group", { name: "Add a body field" }));
-    expect(
-      add.getAllByRole("button").map(button => button.textContent),
-    ).toEqual(["scope.routes.people"]);
-    await user.click(add.getByRole("button", { name: "scope.routes.people" }));
+    await addField(user, "scope.routes.people");
     expect(code()).toContain('"people": ["businesses", "addresses"]');
 
     // A route with nothing on still searches, with nothing related.
@@ -189,33 +199,17 @@ describe("Try it here, on the mint", () => {
     await user.click(people.getByRole("button", { name: "businesses" }));
     expect(code()).toContain('"people": ["businesses"]');
 
-    await user.click(
-      screen.getByRole("button", { name: "Remove scope.max_limit" }),
-    );
-    await user.click(
-      screen.getByRole("button", { name: "Remove scope.routes.businesses" }),
-    );
+    // The last route out takes `routes` and then `scope` with it.
     await user.click(
       screen.getByRole("button", { name: "Remove scope.routes.people" }),
     );
-    await user.click(
-      screen.getByRole("button", { name: "Remove scope.routes.addresses" }),
-    );
-    // No route left, so no `routes`, and so no `scope`; which the API reads
-    // as every route, and the form says so.
     expect(code()).toContain("-d '{}'");
-    expect(
-      screen.getByRole("row", { name: /No route listed/ }).textContent,
-    ).toContain("every route your organization may, with every relation");
-    expect(
-      within(screen.getByRole("group", { name: "Add a body field" }))
-        .getAllByRole("button")
-        .map(button => button.textContent),
-    ).toContain("scope.max_limit");
+    expect(offered()).toContain("scope.routes.people");
   });
 
   it("opens the status bar, which says it holds the headers and the body, on the request as it goes out", async () => {
     const { user } = editor("/autocomplete/sessions");
+    await addField(user, "scope.max_limit");
     const bar = screen.getByRole("button", {
       name: /^Request POST \/autocomplete\/sessions .*Show headers and body$/,
     });
@@ -261,16 +255,8 @@ describe("Try it here, sent", () => {
       "X-API-Key",
       "Content-Type",
     ]);
-    expect(JSON.parse(init.body as string)).toEqual({
-      scope: {
-        routes: {
-          businesses: ["people", "addresses"],
-          people: ["businesses", "addresses"],
-          addresses: ["businesses", "people"],
-        },
-        max_limit: 5,
-      },
-    });
+    // No scope: everything the key may search.
+    expect(JSON.parse(init.body as string)).toEqual({});
     const outcome = await screen.findByRole("status");
     expect(outcome.getAttribute("data-ok")).toBe("true");
     expect(outcome.textContent).toContain("201");
@@ -437,6 +423,7 @@ describe("the curl sample, beside Try it here", () => {
       )!.textContent;
 
     await user.click(screen.getByRole("tab", { name: "Try it here" }));
+    await addField(user, "scope.max_limit");
     const limit = screen.getByRole("spinbutton", { name: "scope.max_limit" });
     await user.clear(limit);
     await user.type(limit, "9");

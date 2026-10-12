@@ -676,17 +676,14 @@ export function TryIt({
   );
   const [result, setResult] = useState<Outcome | null>(null);
   const [query, setQuery] = useState(() => withIds(sample.query));
-  // The sample's body, with every route a scope may name, each with every
-  // relation it carries: a session that may search everything, to narrow.
+  // A body that may be left out whole starts empty: for the mint, no scope,
+  // which the API reads as everything the caller may search, and which the
+  // form says. Fields are added to narrow it. A body that must hold something
+  // starts from the sample's.
   const [body, setBody] = useState<Json | undefined>(() => {
     if (bodySchema === undefined) return undefined;
-    let start: Json = (sample.body as Json | undefined) ?? {};
-    for (const slot of slotsOf(schemas, bodySchema)) {
-      if (routeKey(slot.path) !== null) {
-        start = setAt(start, slot.path, defaultFor(schemas, slot));
-      }
-    }
-    return start;
+    const optional = slotsOf(schemas, bodySchema).every(slot => !slot.required);
+    return optional ? {} : ((sample.body as Json | undefined) ?? {});
   });
   const [sending, setSending] = useState(false);
   const [showRequest, setShowRequest] = useState(false);
@@ -957,7 +954,7 @@ export function TryIt({
                   <td colSpan={2}>
                     No route listed, so <code>scope.routes</code> is left out:
                     the session may search every route your organization may,
-                    with every relation.
+                    with every relation. Add one to narrow it.
                   </td>
                 </tr>
               )}
