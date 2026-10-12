@@ -315,7 +315,9 @@ function Editor({
           </span>
           {route !== null && (
             <span className="try-hint try-hint-line">
-              may include / filter by
+              {items.length === 0
+                ? "none on: searches it, with nothing related"
+                : "may include / filter by"}
             </span>
           )}
         </span>
@@ -853,6 +855,20 @@ export function TryIt({
                 </tr>
               );
             })}
+            {/* With no route listed the body leaves `routes` out, which the
+                API reads as every route, not none (an empty `routes` is a
+                422): said where the routes would be. */}
+            {free.some(slot => routeKey(slot.path) !== null) &&
+              !held.some(slot => routeKey(slot.path) !== null) && (
+                <tr className="try-note">
+                  <td />
+                  <td colSpan={2}>
+                    No route listed, so <code>scope.routes</code> is left out:
+                    the session may search every route your organization may,
+                    with every relation.
+                  </td>
+                </tr>
+              )}
             {free.length > 0 && (
               <tr className="try-addrow">
                 <td />

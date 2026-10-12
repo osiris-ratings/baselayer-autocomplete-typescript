@@ -151,6 +151,11 @@ describe("Try it here, on the mint", () => {
       add.getAllByRole("button").map(button => button.textContent),
     ).toEqual(["scope.routes.people", "scope.routes.addresses"]);
     await user.click(add.getByRole("button", { name: "scope.routes.people" }));
+    // A route with nothing on still searches, with nothing related.
+    expect(
+      screen.getByRole("group", { name: "scope.routes.people" }).parentElement!
+        .textContent,
+    ).toContain("none on: searches it, with nothing related");
     expect(code()).toContain(
       '"routes": {"businesses": ["addresses"], "people": []}',
     );
@@ -170,8 +175,12 @@ describe("Try it here, on the mint", () => {
     await user.click(
       screen.getByRole("button", { name: "Remove scope.routes.people" }),
     );
-    // No route left, so no `routes`, and so no `scope`.
+    // No route left, so no `routes`, and so no `scope`; which the API reads
+    // as every route, and the form says so.
     expect(code()).toContain("-d '{}'");
+    expect(
+      screen.getByRole("row", { name: /No route listed/ }).textContent,
+    ).toContain("every route your organization may, with every relation");
     expect(
       within(screen.getByRole("group", { name: "Add a body field" }))
         .getAllByRole("button")

@@ -40,7 +40,9 @@ breaking change bumps the minor version.
   headers, the query parameters and the body are tables as wide as the block,
   the body flat, a row for each field by its whole path, a list of choices a
   row of chips in the values' own ink (a scope's route offers only the relations it carries, never
-  itself, and says they are what its requests may include or filter by), and
+  itself, and says they are what its requests may include or filter by, or,
+  with none on, that it searches with nothing related; with no route listed,
+  the form says that leaves `routes` out, which is every route), and
   the fields and query parameters it does not hold yet
   offered by name in each table's last row.
   `Origin` is this page's, as the browser sends it, and it and `Content-Type`
