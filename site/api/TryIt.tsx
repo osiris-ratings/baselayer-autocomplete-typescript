@@ -1,28 +1,25 @@
-// An operation's "Try it here" tab: its request as an editor, inside the code
-// block. The URL on top follows every edit; the headers take values; the query
-// parameters can be renamed, added and removed; and the body reads as its JSON,
-// highlighted, with a field for every value. A body's keys are the schema's,
-// never typed: `+ add` offers the ones it does not have yet. The copy button
-// takes the request as curl. It sends nothing: the session mint takes an API
-// key, which belongs on a backend, and the autocomplete routes take a session.
+// An operation's "Try it here" tab: its request as a form, inside the code
+// block. On top, the URL it calls, read-only but selectable, coloured part by
+// part; then the headers, the query parameters and the body, each a table as
+// wide as the block. The body is flat: a row for every field it holds, named
+// by its whole path (`scope.routes.businesses`), with a field for its value;
+// a list of choices is a row of chips to switch on and off. The fields the
+// schema names and the body does not hold yet are offered in the table's last
+// row, to add. The copy button takes the request as curl. It sends nothing:
+// the session mint takes an API key, which belongs on a backend, and the
+// autocomplete routes take a session.
 
-import {
-  createContext,
-  Fragment,
-  useContext,
-  useEffect,
-  useState,
-  type ReactNode,
-} from "react";
+import { useEffect, useId, useState } from "react";
 
 import { NO_FILL_ATTRIBUTES } from "../../src/react/inputAttributes";
-import type { JsonSchema } from "./spec/assemble";
+import { Icon } from "../shared/icons";
 import { curlOf, urlOf, type Pair, type Sample } from "./curl";
 import { resolveIn, type Schemas } from "./schema";
+import type { JsonSchema } from "./spec/assemble";
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
-/** What the editor draws for a schema. */
+/** What the form draws for a schema. */
 type Shape =
   | {
       kind: "object";
@@ -77,31 +74,59 @@ function shapeOf(schemas: Schemas, schema: JsonSchema | undefined): Shape {
   return { kind: "string" };
 }
 
-/** A new value for a schema: an example where it has one, else its least. */
-function defaultFor(
+/** A field of the body the form has a row for: a value, at its whole path. */
+interface Slot {
+  path: string[];
+  schema: JsonSchema | undefined;
+  shape: Shape;
+  /** Every object on its way names it required: it cannot be taken out. */
+  required: boolean;
+}
+
+/**
+ * Every field a body may hold, in the schema's order: an object's fields, a
+ * map's fields by each key its schema names, down to what holds a value.
+ */
+function slotsOf(
   schemas: Schemas,
   schema: JsonSchema | undefined,
-  taken: string[] = [],
-): Json {
+  path: string[] = [],
+  required = true,
+): Slot[] {
   const shape = shapeOf(schemas, schema);
+  if (shape.kind === "object") {
+    return Object.entries(shape.properties).flatMap(([key, child]) =>
+      slotsOf(
+        schemas,
+        child,
+        [...path, key],
+        required && shape.required.includes(key),
+      ),
+    );
+  }
+  if (shape.kind === "map" && shape.keys.length > 0) {
+    return shape.keys.flatMap(key =>
+      slotsOf(schemas, shape.holds, [...path, key], false),
+    );
+  }
+  return [{ path, schema, shape, required }];
+}
+
+/** A new value for a field: an example where it has one, else its least. */
+function defaultFor(schemas: Schemas, slot: Slot): Json {
+  const { schema, shape } = slot;
   const example =
     schema === undefined
       ? undefined
       : (schema.examples?.[0] ?? resolveIn(schemas, schema).examples?.[0]);
   switch (shape.kind) {
     case "object":
-      return Object.fromEntries(
-        shape.required.map(key => [
-          key,
-          defaultFor(schemas, shape.properties[key]),
-        ]),
-      );
     case "map":
       return {};
     case "array":
       return [];
     case "enum":
-      return shape.values.find(value => !taken.includes(value)) ?? "";
+      return shape.values[0] ?? "";
     case "number":
       return typeof example === "number" ? example : (shape.min ?? 0);
     case "boolean":
@@ -111,14 +136,88 @@ function defaultFor(
   }
 }
 
-/** The document's schemas, which a body's `$ref`s point into. */
-const SchemasOf = createContext<Schemas>({});
+const isRecord = (value: Json | undefined): value is Record<string, Json> =>
+  value !== null &&
+  value !== undefined &&
+  typeof value === "object" &&
+  !Array.isArray(value);
 
-/** Room for what a field holds, so a short value keeps a short field. */
-const sizeOf = (text: string) => Math.max(4, Math.min(48, text.length + 1));
+function getAt(value: Json | undefined, path: readonly string[]) {
+  let at: Json | undefined = value;
+  for (const key of path) {
+    at = isRecord(at) ? at[key] : undefined;
+  }
+  return at;
+}
 
-function Sign({ children }: { children: ReactNode }) {
-  return <span className="try-sign">{children}</span>;
+function setAt(
+  value: Json | undefined,
+  path: readonly string[],
+  next: Json,
+): Json {
+  if (path.length === 0) {
+    return next;
+  }
+  const record = isRecord(value) ? value : {};
+  const [key, ...rest] = path as [string, ...string[]];
+  return { ...record, [key]: setAt(record[key], rest, next) };
+}
+
+/** The body without a field, and without an object it leaves empty. */
+function removeAt(value: Json | undefined, path: readonly string[]): Json {
+  const record = isRecord(value) ? value : {};
+  const [key, ...rest] = path as [string, ...string[]];
+  if (rest.length === 0) {
+    return Object.fromEntries(
+      Object.entries(record).filter(([k]) => k !== key),
+    );
+  }
+  const inner = removeAt(record[key], rest);
+  return isRecord(inner) && Object.keys(inner).length === 0
+    ? Object.fromEntries(Object.entries(record).filter(([k]) => k !== key))
+    : { ...record, [key]: inner };
+}
+
+/** A choice's colour, by its place among the choices: the same everywhere. */
+const hueOf = (choices: readonly string[], choice: string) =>
+  `var(--try-hue-${(Math.max(0, choices.indexOf(choice)) % 5) + 1})`;
+
+/** The URL as read-only text, each part in its colour. */
+function UrlParts({ url }: { url: string }) {
+  const match = /^(\w+:\/\/)([^/?#]+)([^?#]*)(?:\?(.*))?$/.exec(url);
+  if (match === null) {
+    return <>{url}</>;
+  }
+  const [, protocol, host, path, query] = match;
+  const segments = (path ?? "").split("/").filter(Boolean);
+  const pairs = query === undefined ? [] : query.split("&");
+  return (
+    <>
+      <span className="url-protocol">{protocol}</span>
+      <span className="url-host">{host}</span>
+      {segments.map((segment, index) => (
+        <span key={index}>
+          <span className="url-sign">/</span>
+          <span className="url-path">{segment}</span>
+        </span>
+      ))}
+      {pairs.map((pair, index) => {
+        const [key, ...rest] = pair.split("=");
+        return (
+          <span key={index}>
+            <span className="url-sign">{index === 0 ? "?" : "&"}</span>
+            <span className="url-key">{key}</span>
+            {rest.length > 0 && (
+              <>
+                <span className="url-sign">=</span>
+                <span className="url-value">{rest.join("=")}</span>
+              </>
+            )}
+          </span>
+        );
+      })}
+    </>
+  );
 }
 
 function Remove({ label, onRemove }: { label: string; onRemove(): void }) {
@@ -130,257 +229,273 @@ function Remove({ label, onRemove }: { label: string; onRemove(): void }) {
       title={label}
       onClick={onRemove}
     >
-      ×
+      <Icon name="cross" size={14} />
     </button>
   );
 }
 
-/**
- * `+ add`: a button, which adds at once where anything may be added, and
- * otherwise opens the choices in line, each a button, until one is taken.
- */
-function Add({
-  label,
-  choices,
-  onAdd,
-}: {
-  label: string;
-  choices: string[] | null;
-  onAdd(choice: string): void;
-}) {
-  const [open, setOpen] = useState(false);
-  if (choices !== null && choices.length === 0) {
-    return null;
-  }
-  if (!open || choices === null) {
-    return (
-      <button
-        type="button"
-        className="try-add"
-        aria-label={label}
-        aria-expanded={choices === null ? undefined : false}
-        onClick={() => (choices === null ? onAdd("") : setOpen(true))}
-      >
-        + add
-      </button>
-    );
-  }
+/** A field's whole path, the parents quiet and its own key bright. */
+function FieldPath({ path }: { path: readonly string[] }) {
   return (
-    <span className="try-choices" role="group" aria-label={label}>
-      {choices.map(choice => (
-        <button
-          key={choice}
-          type="button"
-          className="try-choice"
-          onClick={() => {
-            setOpen(false);
-            onAdd(choice);
-          }}
-        >
-          {choice}
-        </button>
+    <>
+      {path.slice(0, -1).map((key, index) => (
+        <span key={index} className="try-parent">
+          {key}.
+        </span>
       ))}
-      <button
-        type="button"
-        className="try-remove"
-        aria-label="Cancel"
-        title="Cancel"
-        onClick={() => setOpen(false)}
-      >
-        ×
-      </button>
-    </span>
+      <span className="try-key">{path[path.length - 1]}</span>
+    </>
   );
 }
 
-/** A value of the body, drawn as its JSON with a field for each scalar. */
-function Value({
-  schema,
+/** The editor for a field's value: a field, a list, or chips. */
+function Editor({
+  slot,
+  schemas,
   value,
-  path,
   onChange,
 }: {
-  schema: JsonSchema | undefined;
+  slot: Slot;
+  schemas: Schemas;
   value: Json;
-  path: string;
   onChange(value: Json): void;
 }) {
-  const schemas = useContext(SchemasOf);
-  const shape = shapeOf(schemas, schema);
-  const at = (key: string) => (path === "" ? key : `${path}.${key}`);
-
-  if (shape.kind === "object" || shape.kind === "map") {
-    const entries = Object.entries(
-      value !== null && typeof value === "object" && !Array.isArray(value)
-        ? value
-        : {},
-    );
-    const present = entries.map(([key]) => key);
-    const addable =
-      shape.kind === "object"
-        ? Object.keys(shape.properties).filter(key => !present.includes(key))
-        : shape.keys.filter(key => !present.includes(key));
-    const childSchema = (key: string) =>
-      shape.kind === "object" ? shape.properties[key] : shape.holds;
-    const set = (next: [string, Json][]) => onChange(Object.fromEntries(next));
-    return (
-      <>
-        <Sign>{"{"}</Sign>
-        <div className="try-block">
-          {entries.map(([key, entry], index) => (
-            <div className="try-line" key={key}>
-              <span className="try-key">{JSON.stringify(key)}</span>
-              <Sign>: </Sign>
-              <Value
-                schema={childSchema(key)}
-                value={entry}
-                path={at(key)}
-                onChange={next =>
-                  set(entries.map(([k, v]) => [k, k === key ? next : v]))
-                }
-              />
-              {index < entries.length - 1 && <Sign>,</Sign>}
-              {(shape.kind === "map" || !shape.required.includes(key)) && (
-                <Remove
-                  label={`Remove ${at(key)}`}
-                  onRemove={() => set(entries.filter(([k]) => k !== key))}
-                />
-              )}
-            </div>
-          ))}
-          {addable.length > 0 && (
-            <div className="try-line">
-              <Add
-                label={`Add a key to ${path === "" ? "the body" : path}`}
-                choices={addable}
-                onAdd={key =>
-                  set([
-                    ...entries,
-                    [key, defaultFor(schemas, childSchema(key))],
-                  ])
-                }
-              />
-            </div>
-          )}
-        </div>
-        <Sign>{"}"}</Sign>
-      </>
-    );
-  }
-
+  const { shape } = slot;
+  const label = slot.path.join(".");
   if (shape.kind === "array") {
     const items = Array.isArray(value) ? value : [];
     const itemShape = shapeOf(schemas, shape.items);
-    const taken = items.map(String);
-    const choices =
-      itemShape.kind === "enum"
-        ? itemShape.values.filter(choice => !taken.includes(choice))
-        : null;
+    if (itemShape.kind === "enum") {
+      // Chips, one for each choice, on where the list has it.
+      return (
+        <span className="try-chips" role="group" aria-label={label}>
+          {itemShape.values.map(choice => {
+            const on = items.includes(choice);
+            return (
+              <button
+                key={choice}
+                type="button"
+                className="try-chip"
+                aria-pressed={on}
+                style={{ ["--hue" as string]: hueOf(itemShape.values, choice) }}
+                onClick={() =>
+                  onChange(
+                    on
+                      ? items.filter(item => item !== choice)
+                      : itemShape.values.filter(
+                          each => each === choice || items.includes(each),
+                        ),
+                  )
+                }
+              >
+                {choice}
+              </button>
+            );
+          })}
+        </span>
+      );
+    }
     return (
-      <>
-        <Sign>[</Sign>
-        {items.map((item, index) => (
-          <Fragment key={index}>
-            <Value
-              schema={shape.items}
-              value={item}
-              path={`${path}[${index}]`}
-              onChange={next =>
-                onChange(items.map((v, i) => (i === index ? next : v)))
-              }
-            />
-            <Remove
-              label={`Remove ${path}[${index}]`}
-              onRemove={() => onChange(items.filter((_, i) => i !== index))}
-            />
-            {index < items.length - 1 && <Sign>, </Sign>}
-          </Fragment>
-        ))}
-        <Add
-          label={`Add to ${path}`}
-          choices={choices}
-          onAdd={choice =>
-            onChange([
-              ...items,
-              choice === "" ? defaultFor(schemas, shape.items, taken) : choice,
-            ])
-          }
-        />
-        <Sign>]</Sign>
-      </>
-    );
-  }
-
-  if (shape.kind === "enum") {
-    return (
-      <>
-        <Sign>&quot;</Sign>
-        <select
-          className="try-input"
-          aria-label={path}
-          value={String(value)}
-          onChange={event => onChange(event.target.value)}
-        >
-          {shape.values.map(choice => (
-            <option key={choice} value={choice}>
-              {choice}
-            </option>
-          ))}
-        </select>
-        <Sign>&quot;</Sign>
-      </>
-    );
-  }
-
-  if (shape.kind === "boolean") {
-    return (
-      <select
-        className="try-input"
-        aria-label={path}
-        value={String(value)}
-        onChange={event => onChange(event.target.value === "true")}
-      >
-        <option value="true">true</option>
-        <option value="false">false</option>
-      </select>
-    );
-  }
-
-  if (shape.kind === "number") {
-    return (
-      <input
-        type="number"
-        className="try-input try-number"
-        aria-label={path}
-        {...NO_FILL_ATTRIBUTES}
-        {...(shape.min !== undefined ? { min: shape.min } : {})}
-        {...(shape.max !== undefined ? { max: shape.max } : {})}
-        size={sizeOf(String(value))}
-        value={value === null ? "" : String(value)}
-        onChange={event => {
-          const text = event.target.value;
-          const number = Number(text);
-          onChange(text === "" || Number.isNaN(number) ? text : number);
-        }}
-      />
-    );
-  }
-
-  return (
-    <>
-      <Sign>&quot;</Sign>
       <input
         type="text"
         className="try-input"
-        aria-label={path}
+        aria-label={label}
         {...NO_FILL_ATTRIBUTES}
-        size={sizeOf(String(value ?? ""))}
-        value={String(value ?? "")}
-        onChange={event => onChange(event.target.value)}
+        value={items.map(String).join(", ")}
+        onChange={event =>
+          onChange(
+            event.target.value
+              .split(",")
+              .map(item => item.trim())
+              .filter(Boolean),
+          )
+        }
       />
-      <Sign>&quot;</Sign>
-    </>
+    );
+  }
+  if (shape.kind === "enum" || shape.kind === "boolean") {
+    const choices = shape.kind === "enum" ? shape.values : ["true", "false"];
+    return (
+      <select
+        className="try-input"
+        aria-label={label}
+        value={String(value)}
+        onChange={event =>
+          onChange(
+            shape.kind === "boolean"
+              ? event.target.value === "true"
+              : event.target.value,
+          )
+        }
+      >
+        {choices.map(choice => (
+          <option key={choice} value={choice}>
+            {choice}
+          </option>
+        ))}
+      </select>
+    );
+  }
+  if (shape.kind === "number") {
+    return (
+      <span className="try-number">
+        <input
+          type="number"
+          className="try-input"
+          aria-label={label}
+          {...NO_FILL_ATTRIBUTES}
+          {...(shape.min !== undefined ? { min: shape.min } : {})}
+          {...(shape.max !== undefined ? { max: shape.max } : {})}
+          value={value === null ? "" : String(value)}
+          onChange={event => {
+            const text = event.target.value;
+            const number = Number(text);
+            onChange(text === "" || Number.isNaN(number) ? text : number);
+          }}
+        />
+        {shape.min !== undefined && shape.max !== undefined && (
+          <span className="try-hint">
+            {shape.min} to {shape.max}
+          </span>
+        )}
+      </span>
+    );
+  }
+  return (
+    <input
+      type="text"
+      className="try-input"
+      aria-label={label}
+      {...NO_FILL_ATTRIBUTES}
+      value={typeof value === "string" ? value : JSON.stringify(value ?? "")}
+      onChange={event => onChange(event.target.value)}
+    />
   );
+}
+
+/**
+ * A table's head, which is its section's title too: the first column says what
+ * the rows are (Headers, Query, Body), the second that each holds a value.
+ */
+function Head({ title }: { title: string }) {
+  return (
+    <thead>
+      <tr>
+        <th scope="col" className="try-col-name">
+          {title}
+        </th>
+        <th scope="col">Value</th>
+        <th scope="col" className="try-actions">
+          <span className="visually-hidden">Remove</span>
+        </th>
+      </tr>
+    </thead>
+  );
+}
+
+/** What a sent request came back with, for the response block's live tab. */
+export interface LiveResponse {
+  /** The HTTP status, or null where the request never completed. */
+  status: number | null;
+  ms: number;
+  /** The body, as JSON laid out where it is JSON, else as it came. */
+  body: string;
+  json: boolean;
+}
+
+/** Headers a page may not set: the browser sends its own. */
+const BROWSER_HEADERS = new Set(["origin", "host", "content-length", "cookie"]);
+
+/**
+ * Where the page sends a request: in `pnpm site` through the dev server, which
+ * forwards it (or answers it, on made-up data), as the demo's calls go; built,
+ * to the URL it shows.
+ */
+function sendTarget(url: string): string {
+  return import.meta.env.DEV
+    ? url.replace(/^https?:\/\/[^/]+/, "/_baselayer")
+    : url;
+}
+
+/** The request as HTTP writes it: the line, the headers, then the body. */
+function HttpRequest({
+  method,
+  url,
+  headers,
+  body,
+}: {
+  method: string;
+  url: string;
+  headers: readonly Pair[];
+  body: string | null;
+}) {
+  const at = new URL(url);
+  return (
+    <pre className="try-request">
+      <span className="http-method">{method.toUpperCase()}</span>{" "}
+      <span className="http-path">
+        {at.pathname}
+        {at.search}
+      </span>{" "}
+      <span className="http-version">HTTP/1.1</span>
+      {"\n"}
+      <span className="http-name">Host</span>
+      {": "}
+      {at.host}
+      {"\n"}
+      {headers.map(header => (
+        <span key={header.name}>
+          <span className="http-name">{header.name}</span>
+          {": "}
+          {BROWSER_HEADERS.has(header.name.toLowerCase()) ? (
+            <span className="http-note">
+              {typeof window === "undefined" ? "" : window.location.origin} (set
+              by your browser)
+            </span>
+          ) : (
+            header.value
+          )}
+          {"\n"}
+        </span>
+      ))}
+      {body !== null && (
+        <>
+          {"\n"}
+          <span className="http-body">{body}</span>
+        </>
+      )}
+    </pre>
+  );
+}
+
+/** How a sent request ended, as the status bar says it. */
+interface Outcome {
+  status: number | null;
+  ms: number;
+  ok: boolean;
+  /** For a refusal, its code and message; for a failure, what failed. */
+  detail: string | null;
+}
+
+/** A refusal's reason, from its body: the code and the message, or a 422's. */
+function refusalOf(body: unknown): string | null {
+  if (body === null || typeof body !== "object") {
+    return null;
+  }
+  const record = body as Record<string, unknown>;
+  if (typeof record.message === "string") {
+    return record.code === undefined || record.code === null
+      ? record.message
+      : `${String(record.code)} · ${record.message}`;
+  }
+  const first = Array.isArray(record.detail) ? record.detail[0] : undefined;
+  if (first !== null && typeof first === "object") {
+    const { loc, msg } = first as { loc?: unknown[]; msg?: string };
+    return [Array.isArray(loc) ? loc.join(".") : null, msg]
+      .filter(Boolean)
+      .join(": ");
+  }
+  return null;
 }
 
 let nextRow = 0;
@@ -393,123 +508,355 @@ export function TryIt({
   body: bodySchema,
   schemas,
   onCode,
+  onResponse,
 }: {
   method: string;
   sample: Sample;
-  /** The document's schemas, which the body's `$ref`s point into. */
-  schemas: Schemas;
   /** The body's schema, for a request that takes one. */
   body: JsonSchema | undefined;
+  /** The document's schemas, which the body's `$ref`s point into. */
+  schemas: Schemas;
   onCode(code: string): void;
+  /** What a sent request came back with. */
+  onResponse(response: LiveResponse): void;
 }) {
-  const [headers, setHeaders] = useState(() => sample.headers);
+  // The browser sends its own Origin, this page's, so that is what it shows.
+  const [headers, setHeaders] = useState(() =>
+    sample.headers.map(header =>
+      header.name.toLowerCase() === "origin" && typeof window !== "undefined"
+        ? { ...header, value: window.location.origin }
+        : header,
+    ),
+  );
+  const [result, setResult] = useState<Outcome | null>(null);
   const [query, setQuery] = useState(() => withIds(sample.query));
   const [body, setBody] = useState<Json | undefined>(() =>
-    bodySchema === undefined
-      ? undefined
-      : ((sample.body as Json | undefined) ?? defaultFor(schemas, bodySchema)),
+    bodySchema === undefined ? undefined : ((sample.body as Json) ?? {}),
   );
+  const [sending, setSending] = useState(false);
+  const [showRequest, setShowRequest] = useState(false);
+  const previewId = useId();
   const url = urlOf(sample.url, query);
+  const takesQuery = method.toLowerCase() === "get" || sample.query.length > 0;
+  const slots = bodySchema === undefined ? [] : slotsOf(schemas, bodySchema);
+  const held = slots.filter(slot => getAt(body, slot.path) !== undefined);
+  const free = slots.filter(slot => getAt(body, slot.path) === undefined);
+  const sentBody = body === undefined ? null : JSON.stringify(body, null, 2);
+  const sentHeaders = headers.filter(header => header.name.trim() !== "");
 
   useEffect(() => {
     onCode(curlOf({ method, url, headers, body }));
   }, [onCode, method, url, headers, body]);
 
+  const send = async () => {
+    setSending(true);
+    const started = performance.now();
+    const elapsed = () => Math.round(performance.now() - started);
+    try {
+      const response = await fetch(sendTarget(url), {
+        method: method.toUpperCase(),
+        headers: Object.fromEntries(
+          sentHeaders
+            .filter(header => !BROWSER_HEADERS.has(header.name.toLowerCase()))
+            .map(header => [header.name, header.value]),
+        ),
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        credentials: "omit",
+      });
+      const text = await response.text();
+      let json = false;
+      let shown = text;
+      try {
+        shown = JSON.stringify(JSON.parse(text), null, 2);
+        json = true;
+      } catch {
+        // Not JSON: shown as it came.
+      }
+      const ms = elapsed();
+      let parsed: unknown = null;
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        parsed = null;
+      }
+      setResult({
+        status: response.status,
+        ms,
+        ok: response.ok,
+        detail: response.ok ? null : refusalOf(parsed),
+      });
+      onResponse({ status: response.status, ms, body: shown, json });
+    } catch (error) {
+      setResult({
+        status: null,
+        ms: elapsed(),
+        ok: false,
+        detail: `Did not reach the API: ${String(error)}`,
+      });
+      onResponse({
+        status: null,
+        ms: elapsed(),
+        body: `The request did not complete: ${String(error)}\n\nA browser keeps an answer from a page the API does not admit, and drops a request it cannot send.`,
+        json: false,
+      });
+    } finally {
+      setSending(false);
+    }
+  };
+
   return (
     <div className="try">
-      <p className="try-url">
-        <span className="try-method">{method.toUpperCase()}</span>{" "}
-        <span data-testid="try-url">{url}</span>
-      </p>
-
-      <p className="try-label">Headers</p>
-      {headers.map((header, index) => (
-        <div className="try-line" key={header.name}>
-          <span className="try-key">{header.name}</span>
-          <Sign>: </Sign>
-          <input
-            type="text"
-            className="try-input"
-            aria-label={`Header ${header.name}`}
-            {...NO_FILL_ATTRIBUTES}
-            size={sizeOf(header.value)}
-            value={header.value}
-            onChange={event =>
-              setHeaders(
-                headers.map((h, i) =>
-                  i === index ? { ...h, value: event.target.value } : h,
-                ),
-              )
-            }
-          />
-        </div>
-      ))}
-
-      <p className="try-label">Query parameters</p>
-      {query.map((pair, index) => (
-        <div className="try-line" key={pair.id}>
-          <input
-            type="text"
-            className="try-input"
-            aria-label={`Name of query parameter ${index + 1}`}
-            {...NO_FILL_ATTRIBUTES}
-            size={sizeOf(pair.name)}
-            value={pair.name}
-            onChange={event =>
-              setQuery(
-                query.map(p =>
-                  p.id === pair.id ? { ...p, name: event.target.value } : p,
-                ),
-              )
-            }
-          />
-          <Sign>=</Sign>
-          <input
-            type="text"
-            className="try-input"
-            aria-label={`Value of query parameter ${pair.name || index + 1}`}
-            {...NO_FILL_ATTRIBUTES}
-            size={sizeOf(pair.value)}
-            value={pair.value}
-            onChange={event =>
-              setQuery(
-                query.map(p =>
-                  p.id === pair.id ? { ...p, value: event.target.value } : p,
-                ),
-              )
-            }
-          />
-          <Remove
-            label={`Remove query parameter ${pair.name || index + 1}`}
-            onRemove={() => setQuery(query.filter(p => p.id !== pair.id))}
-          />
-        </div>
-      ))}
-      <div className="try-line">
-        <Add
-          label="Add a query parameter"
-          choices={null}
-          onAdd={() =>
-            setQuery([...query, ...withIds([{ name: "", value: "" }])])
-          }
-        />
+      <div className="try-url-box">
+        <span className={`try-method try-method-${method.toLowerCase()}`}>
+          {method.toUpperCase()}
+        </span>
+        <code className="try-url" data-testid="try-url">
+          <UrlParts url={url} />
+        </code>
+        <button
+          type="button"
+          className="try-send"
+          onClick={() => void send()}
+          aria-disabled={sending || undefined}
+          disabled={sending}
+        >
+          <Icon name="send" size={14} />
+          {sending ? "Sending…" : "Send"}
+        </button>
       </div>
 
-      {bodySchema !== undefined && body !== undefined && (
-        <>
-          <p className="try-label">Body</p>
-          <div className="try-body">
-            <SchemasOf.Provider value={schemas}>
-              <Value
-                schema={bodySchema}
-                value={body}
-                path=""
-                onChange={setBody}
-              />
-            </SchemasOf.Provider>
-          </div>
-        </>
+      <table className="try-table">
+        <Head title="Headers" />
+        <tbody>
+          {headers.map((header, index) => (
+            <tr key={header.name}>
+              <th scope="row" className="try-name">
+                <span className="try-key">{header.name}</span>
+              </th>
+              <td>
+                <input
+                  type="text"
+                  className="try-input"
+                  aria-label={`Header ${header.name}`}
+                  {...NO_FILL_ATTRIBUTES}
+                  readOnly={BROWSER_HEADERS.has(header.name.toLowerCase())}
+                  title={
+                    BROWSER_HEADERS.has(header.name.toLowerCase())
+                      ? "Your browser sends this page's own"
+                      : undefined
+                  }
+                  value={header.value}
+                  onChange={event =>
+                    setHeaders(
+                      headers.map((h, i) =>
+                        i === index ? { ...h, value: event.target.value } : h,
+                      ),
+                    )
+                  }
+                />
+              </td>
+              <td className="try-actions" />
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {takesQuery && (
+        <table className="try-table">
+          <Head title="Query" />
+          <tbody>
+            {query.map((pair, index) => (
+              <tr key={pair.id}>
+                <td className="try-name">
+                  <input
+                    type="text"
+                    className="try-input try-input-name"
+                    aria-label={`Name of query parameter ${index + 1}`}
+                    {...NO_FILL_ATTRIBUTES}
+                    value={pair.name}
+                    onChange={event =>
+                      setQuery(
+                        query.map(p =>
+                          p.id === pair.id
+                            ? { ...p, name: event.target.value }
+                            : p,
+                        ),
+                      )
+                    }
+                  />
+                </td>
+                <td>
+                  <input
+                    type="text"
+                    className="try-input"
+                    aria-label={`Value of query parameter ${pair.name || index + 1}`}
+                    {...NO_FILL_ATTRIBUTES}
+                    value={pair.value}
+                    onChange={event =>
+                      setQuery(
+                        query.map(p =>
+                          p.id === pair.id
+                            ? { ...p, value: event.target.value }
+                            : p,
+                        ),
+                      )
+                    }
+                  />
+                </td>
+                <td className="try-actions">
+                  <Remove
+                    label={`Remove query parameter ${pair.name || index + 1}`}
+                    onRemove={() =>
+                      setQuery(query.filter(p => p.id !== pair.id))
+                    }
+                  />
+                </td>
+              </tr>
+            ))}
+            <tr className="try-addrow">
+              <td colSpan={3}>
+                <button
+                  type="button"
+                  className="try-add"
+                  aria-label="Add a query parameter"
+                  onClick={() =>
+                    setQuery([...query, ...withIds([{ name: "", value: "" }])])
+                  }
+                >
+                  <Icon name="plus" size={12} />
+                  parameter
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       )}
+
+      {bodySchema !== undefined && body !== undefined && (
+        <table className="try-table">
+          <Head title="Body" />
+          <tbody>
+            {held.map(slot => {
+              const path = slot.path.join(".");
+              return (
+                <tr key={path}>
+                  <th scope="row" className="try-name">
+                    <FieldPath path={slot.path} />
+                  </th>
+                  <td>
+                    <Editor
+                      slot={slot}
+                      schemas={schemas}
+                      value={getAt(body, slot.path) ?? null}
+                      onChange={next => setBody(setAt(body, slot.path, next))}
+                    />
+                  </td>
+                  <td className="try-actions">
+                    {!slot.required && (
+                      <Remove
+                        label={`Remove ${path}`}
+                        onRemove={() => setBody(removeAt(body, slot.path))}
+                      />
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+            {free.length > 0 && (
+              <tr className="try-addrow">
+                <td colSpan={3}>
+                  <span
+                    className="try-chips"
+                    role="group"
+                    aria-label="Add a body field"
+                  >
+                    {free.map(slot => (
+                      <button
+                        key={slot.path.join(".")}
+                        type="button"
+                        className="try-add"
+                        onClick={() =>
+                          setBody(
+                            setAt(body, slot.path, defaultFor(schemas, slot)),
+                          )
+                        }
+                      >
+                        <Icon name="plus" size={12} />
+                        {slot.path.join(".")}
+                      </button>
+                    ))}
+                  </span>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      )}
+
+      <div className="try-status">
+        <button
+          type="button"
+          className="try-status-bar"
+          aria-expanded={showRequest}
+          aria-controls={previewId}
+          onClick={() => setShowRequest(open => !open)}
+        >
+          {result !== null && (
+            <span
+              className="try-outcome"
+              data-ok={result.ok ? "true" : "false"}
+              role="status"
+            >
+              <span className="try-outcome-status">
+                {result.status ?? "Failed"}
+              </span>
+              {result.detail !== null && (
+                <span className="try-outcome-detail">{result.detail}</span>
+              )}
+              <span className="try-outcome-ms">{result.ms} ms</span>
+            </span>
+          )}
+          <span className="try-status-text">
+            <Icon name="code" size={15} />
+            <span className="try-status-what">Request</span>
+            <span className="try-status-summary">
+              {method.toUpperCase()} {new URL(url).pathname}
+              {" · "}
+              {sentHeaders.length} header{sentHeaders.length === 1 ? "" : "s"}
+              {sentBody !== null &&
+                ` · body ${new TextEncoder().encode(JSON.stringify(body)).length} B`}
+            </span>
+          </span>
+          <span className="try-status-open">
+            {showRequest ? "Hide" : "Show"}{" "}
+            {sentBody !== null ? "headers and body" : "headers"}
+            <span
+              className="try-chevron"
+              data-open={showRequest ? "true" : "false"}
+            >
+              <Icon name="chevron" size={16} />
+            </span>
+          </span>
+        </button>
+        {/* Unfolds as a grid row grows from nothing to its content, so it
+            animates without a measured height; out of reach while folded. */}
+        <div
+          id={previewId}
+          className="try-preview"
+          data-open={showRequest ? "true" : "false"}
+          inert={!showRequest}
+          aria-hidden={!showRequest}
+        >
+          <div className="try-preview-inner">
+            <HttpRequest
+              method={method}
+              url={url}
+              headers={sentHeaders}
+              body={sentBody}
+            />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

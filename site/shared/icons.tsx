@@ -25,9 +25,17 @@ export type IconName =
   | "building"
   | "home"
   | "mail"
-  | "hand";
+  | "hand"
+  | "plus"
+  | "send"
+  | "chevron"
+  | "code";
 
 const PATHS: Record<IconName, string> = {
+  plus: "M12 5v14M5 12h14",
+  send: "M4.5 12L20 4.5 14.5 20l-2.75-6.25zM11.75 13.75L20 4.5",
+  chevron: "M6 9.5l6 6 6-6",
+  code: "M8.5 7.5L4 12l4.5 4.5M15.5 7.5L20 12l-4.5 4.5M13.5 5l-3 14",
   caret: "M9 6h6M9 18h6M12 6v12",
   name: "M4 20V9l8-5 8 5v11M4 20h16M9 20v-6h6v6",
   states: "M3 5h7v7H3zM14 5h7v7h-7zM3 16h7v3H3zM14 16h7v3h-7z",

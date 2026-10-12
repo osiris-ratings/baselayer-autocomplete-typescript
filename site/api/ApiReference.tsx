@@ -22,7 +22,7 @@ import {
   type OperationEntry,
   type Section,
 } from "./model";
-import { TryIt } from "./TryIt";
+import { TryIt, type LiveResponse } from "./TryIt";
 import { parseCurl } from "./curl";
 import type {
   JsonSchema,
@@ -314,6 +314,11 @@ function OperationSection({
     sample => snippetLang(sample.lang) === "shell",
   );
   const sample = curl === undefined ? null : parseCurl(curl.source);
+  // What the last request sent from Try it here came back with, numbered so
+  // the response block shows each one as it arrives.
+  const [live, setLive] = useState<(LiveResponse & { key: number }) | null>(
+    null,
+  );
   const tryIt: CodeTool | undefined =
     sample === null
       ? undefined
@@ -326,6 +331,12 @@ function OperationSection({
               body={requestBody?.schema}
               schemas={document.components?.schemas ?? {}}
               onCode={onCode}
+              onResponse={response =>
+                setLive(previous => ({
+                  ...response,
+                  key: (previous?.key ?? 0) + 1,
+                }))
+              }
             />
           ),
         };
@@ -359,8 +370,21 @@ function OperationSection({
                 {...(tryIt !== undefined ? { tool: tryIt } : {})}
               />
             )}
-            {examples.length > 0 && (
-              <Code title="Response" snippets={examples} />
+            {(examples.length > 0 || live !== null) && (
+              <Code
+                title="Response"
+                snippets={examples}
+                live={
+                  live === null
+                    ? null
+                    : {
+                        key: live.key,
+                        label: `Live · ${live.status ?? "failed"}`,
+                        lang: live.json ? "json" : "plaintext",
+                        code: live.body,
+                      }
+                }
+              />
             )}
           </div>
 

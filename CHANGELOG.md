@@ -34,11 +34,15 @@ breaking change bumps the minor version.
   engine cannot mask one.
 
 - The API reference's request block has a third tab, Try it here, set apart by
-  a rule: the request as an editor, started from its curl sample. The URL on
-  top follows every edit; the headers take values; query parameters can be
-  renamed, added and removed; and a body reads as its JSON, highlighted, with a
-  field for each value and `+ add` for the keys the schema names and the body
-  does not have yet. Copy takes it as curl. It sends nothing.
+  a rule: the request as a short form, started from its curl sample. The URL
+  sits in a read-only box, each part in a colour of its own, beside Send; the
+  headers, the query parameters and the body are tables as wide as the block,
+  the body flat, a row for each field by its whole path, a list of choices a
+  row of chips, and the fields it does not hold yet offered in its last row.
+  `Origin` is this page's, as the browser sends it. A bar under the form says
+  how the last send ended, a refusal's code and message included, and unfolds
+  on the request as it goes out, headers and body. The answer shows in the
+  response block as a Live tab, after a rule. Copy takes the request as curl.
 - The API reference shows what `POST /autocomplete/sessions` takes: a Request
   body section, optional like the body, with its fields marked optional. Where
   a field is a choice it says the choices, which routes a scope may name and

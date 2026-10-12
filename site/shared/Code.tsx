@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { highlight, type LanguageName } from "sugar-high";
 
 export interface Snippet {
@@ -26,18 +26,36 @@ export function Code({
   snippets,
   title,
   tool,
+  live,
 }: {
   snippets: Snippet[];
   title?: string;
   tool?: CodeTool;
+  /**
+   * A snippet that arrives later, such as a sent request's answer: a tab of
+   * its own after a rule, there only once it is, and shown as it arrives.
+   */
+  live?: (Snippet & { key: number }) | null;
 }) {
   const [index, setIndex] = useState(0);
   const [copied, setCopied] = useState(false);
   const [toolCode, setToolCode] = useState("");
   const id = useId();
-  const onTool = tool !== undefined && index === snippets.length;
-  const snippet = snippets[index] ?? snippets[0]!;
-  const tabbed = snippets.length > 1 || tool !== undefined;
+  const toolIndex = tool === undefined ? -1 : snippets.length;
+  const liveIndex =
+    live === undefined || live === null
+      ? -1
+      : snippets.length + (tool === undefined ? 0 : 1);
+  const onTool = index === toolIndex;
+  const onLive = index === liveIndex;
+  const snippet = onLive && live ? live : (snippets[index] ?? snippets[0]!);
+  const tabbed =
+    snippets.length > 1 || tool !== undefined || (live ?? null) !== null;
+  const liveKey = live?.key;
+  // Each new answer is shown as it arrives.
+  useEffect(() => {
+    if (liveKey !== undefined && liveIndex >= 0) setIndex(liveIndex);
+  }, [liveKey, liveIndex]);
 
   const copy = async () => {
     try {
@@ -81,6 +99,22 @@ export function Code({
                   onClick={() => setIndex(snippets.length)}
                 >
                   {tool.label}
+                </button>
+              </>
+            )}
+            {live !== undefined && live !== null && (
+              <>
+                <span className="code-sep" aria-hidden="true" />
+                <button
+                  type="button"
+                  role="tab"
+                  id={`${id}-tab-${liveIndex}`}
+                  aria-selected={onLive}
+                  aria-controls={`${id}-panel`}
+                  className="code-tab code-tab-live"
+                  onClick={() => setIndex(liveIndex)}
+                >
+                  {live.label}
                 </button>
               </>
             )}

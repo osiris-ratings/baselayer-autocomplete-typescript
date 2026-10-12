@@ -532,6 +532,17 @@ h3 code {
   color: #ffffff;
 }
 
+/* A live answer's tab: a dot says it came from a request just sent. */
+.code-tab-live::before {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 0 6px 1px 0;
+  border-radius: 50%;
+  background: #86efac;
+  content: "";
+}
+
 /* Sets a tool's tab apart from the snippets' tabs. */
 .code-sep {
   flex: none;
