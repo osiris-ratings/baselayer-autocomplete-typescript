@@ -61,6 +61,7 @@ import {
   type EntityAutocompleteState,
 } from "./useBusinessAutocomplete";
 import { useSuggestionCombobox } from "./useBusinessCombobox";
+import { NO_FILL_ATTRIBUTES } from "./inputAttributes";
 import {
   StateSquares,
   classes,
@@ -785,7 +786,7 @@ function GroupedView<R extends GroupedRoute>({
     name: inputName,
     onFocus: onInputFocus,
     onBlur: onInputBlur,
-    autoComplete: "off",
+    ...NO_FILL_ATTRIBUTES,
     "aria-describedby": selection !== null ? selectionId : undefined,
   });
 

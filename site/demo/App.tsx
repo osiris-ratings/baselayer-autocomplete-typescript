@@ -44,6 +44,7 @@ import { Collapsible, FOLD_MS, Field, Select } from "./controls";
 import { keyMint, readClaims } from "./credentials";
 import { useExit } from "./exit";
 import { useFocusWithin } from "./focus";
+import { NO_FILL_ATTRIBUTES } from "../../src/react/inputAttributes";
 import { PickedBusiness } from "./PickedBusiness";
 import { pickFromRow, pickThrough, type PickToSearch } from "./search-view";
 import { NetworkLog } from "./network";
@@ -903,14 +904,7 @@ export function App() {
                 // field after all, which keeps the key out of sight.
                 type={MASKS_TEXT ? "text" : "password"}
                 className="secret-input"
-                autoComplete="off"
-                autoCapitalize="off"
-                autoCorrect="off"
-                spellCheck={false}
-                data-1p-ignore
-                data-lpignore="true"
-                data-bwignore
-                data-form-type="other"
+                {...NO_FILL_ATTRIBUTES}
                 value={draft}
                 onChange={e => {
                   setDraft(e.target.value);
@@ -1023,7 +1017,7 @@ export function App() {
                       setPicks(NO_PICKS);
                     }}
                     placeholder="dana"
-                    autoComplete="off"
+                    {...NO_FILL_ATTRIBUTES}
                     maxLength={MAX_FILTER_CHARS}
                   />
                 </Field>
@@ -1043,7 +1037,7 @@ export function App() {
                       setPicks(NO_PICKS);
                     }}
                     placeholder="PA, OH"
-                    autoComplete="off"
+                    {...NO_FILL_ATTRIBUTES}
                   />
                 </Field>
               )}
@@ -1064,7 +1058,7 @@ export function App() {
                       setPicks(NO_PICKS);
                     }}
                     placeholder="harbor concrete"
-                    autoComplete="off"
+                    {...NO_FILL_ATTRIBUTES}
                     maxLength={MAX_FILTER_CHARS}
                   />
                 </Field>
@@ -1086,7 +1080,7 @@ export function App() {
                       setPicks(NO_PICKS);
                     }}
                     placeholder="1200 Tallowmere Rd"
-                    autoComplete="off"
+                    {...NO_FILL_ATTRIBUTES}
                     maxLength={MAX_FILTER_CHARS}
                   />
                 </Field>

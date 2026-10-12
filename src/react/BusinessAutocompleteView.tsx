@@ -46,6 +46,7 @@ import { SegmentIcon, type IconSet } from "./icons";
 import { resolveMessages, type AutocompleteMessages } from "./messages";
 import type { GroupedSelection } from "./selection";
 import { useSuggestionCombobox } from "./useBusinessCombobox";
+import { NO_FILL_ATTRIBUTES } from "./inputAttributes";
 import {
   StateSquares,
   classes,
@@ -603,7 +604,7 @@ export function BusinessAutocompleteView({
     name: inputName,
     onFocus: onInputFocus,
     onBlur: onInputBlur,
-    autoComplete: "off",
+    ...NO_FILL_ATTRIBUTES,
     ...(selection !== null ? { "aria-describedby": selectionId } : {}),
   });
 
