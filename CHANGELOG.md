@@ -21,6 +21,9 @@ breaking change bumps the minor version.
   title's baseline and keeps the title's height. A card too narrow for the
   icons drops them. A screen reader still hears "a person" and "an address".
 
+- The demo's filters panel unfolds when Add filters opens it, instead of
+  appearing at once, and keeps still under a reduced-motion setting.
+
 ## [0.6.0] - 2026-10-11
 
 ### Added
