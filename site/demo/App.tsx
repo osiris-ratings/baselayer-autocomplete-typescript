@@ -44,6 +44,7 @@ import { Collapsible, FOLD_MS, Field, Select } from "./controls";
 import { keyMint, readClaims } from "./credentials";
 import { useExit } from "./exit";
 import { useFocusWithin } from "./focus";
+import { NO_FILL_ATTRIBUTES } from "../../src/react/inputAttributes";
 import { PickedBusiness } from "./PickedBusiness";
 import { pickFromRow, pickThrough, type PickToSearch } from "./search-view";
 import { NetworkLog } from "./network";
@@ -399,6 +400,12 @@ function parseStates(text: string): string[] {
 }
 
 /** A pick in a search's field, and the business step 03 searches for. */
+/** Whether a text field can be masked with CSS, as a password field is. */
+const MASKS_TEXT =
+  typeof CSS !== "undefined" &&
+  typeof CSS.supports === "function" &&
+  CSS.supports("-webkit-text-security", "disc");
+
 /** The filters panel folded: nothing of it left, margin and padding too. */
 const FOLDED = {
   height: "0px",
@@ -889,16 +896,52 @@ export function App() {
               <code>@baselayer-sdk/autocomplete/server</code>).
             </p>
             <Field label="API key">
-              <input
-                type="password"
-                autoComplete="off"
-                value={draft}
-                onChange={e => {
-                  setDraft(e.target.value);
-                  setCheck(null);
-                }}
-                data-testid="demo-key"
-              />
+              {MASKS_TEXT ? (
+                // Masked by the page, and a textarea, not an input: Chrome and
+                // Safari offer a password field's passwords, and Safari takes
+                // any input with a mask, a search field too, for one. It
+                // offers nothing on a textarea. One row, no wrap, and Enter
+                // applies the key instead of breaking the line.
+                <textarea
+                  className="secret-input"
+                  rows={1}
+                  wrap="off"
+                  aria-multiline="false"
+                  enterKeyHint="go"
+                  {...NO_FILL_ATTRIBUTES}
+                  value={draft}
+                  onChange={e => {
+                    setDraft(e.target.value.replace(/[\r\n]+/g, ""));
+                    setCheck(null);
+                  }}
+                  onKeyDown={e => {
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    if (
+                      check !== "testing" &&
+                      draft.trim() !== "" &&
+                      !isApplied
+                    ) {
+                      void apply();
+                    }
+                  }}
+                  data-testid="demo-key"
+                />
+              ) : (
+                // Where the engine cannot mask a field, it is a password field,
+                // which keeps the key out of sight.
+                <input
+                  type="password"
+                  className="secret-input"
+                  {...NO_FILL_ATTRIBUTES}
+                  value={draft}
+                  onChange={e => {
+                    setDraft(e.target.value);
+                    setCheck(null);
+                  }}
+                  data-testid="demo-key"
+                />
+              )}
             </Field>
             <div className="apply-row">
               <button
@@ -1004,7 +1047,7 @@ export function App() {
                       setPicks(NO_PICKS);
                     }}
                     placeholder="dana"
-                    autoComplete="off"
+                    {...NO_FILL_ATTRIBUTES}
                     maxLength={MAX_FILTER_CHARS}
                   />
                 </Field>
@@ -1024,7 +1067,7 @@ export function App() {
                       setPicks(NO_PICKS);
                     }}
                     placeholder="PA, OH"
-                    autoComplete="off"
+                    {...NO_FILL_ATTRIBUTES}
                   />
                 </Field>
               )}
@@ -1045,7 +1088,7 @@ export function App() {
                       setPicks(NO_PICKS);
                     }}
                     placeholder="harbor concrete"
-                    autoComplete="off"
+                    {...NO_FILL_ATTRIBUTES}
                     maxLength={MAX_FILTER_CHARS}
                   />
                 </Field>
@@ -1067,7 +1110,7 @@ export function App() {
                       setPicks(NO_PICKS);
                     }}
                     placeholder="1200 Tallowmere Rd"
-                    autoComplete="off"
+                    {...NO_FILL_ATTRIBUTES}
                     maxLength={MAX_FILTER_CHARS}
                   />
                 </Field>

@@ -26,6 +26,26 @@ breaking change bumps the minor version.
   so the page below makes room, instead of appearing and vanishing at once. It
   keeps still under a reduced-motion setting.
 
+- The demo's API key field no longer looks like a login to Chrome and Safari,
+  which offered to keep it as a password and to fill it. It is a one-row
+  textarea, masked (Safari takes any masked input, a search field too, for a
+  password field), with the attributes password managers are told to leave
+  alone. Enter applies the key. It falls back to a password field where the
+  engine cannot mask one.
+
+### Fixed
+
+- A name or an address field of the components (`BusinessAutocomplete`,
+  `PersonAutocomplete`, `AddressAutocomplete`, and their views) is told to
+  every browser and password manager that it is no form field to fill:
+  Safari and Chrome offered the visitor's contacts for a person's or a
+  business's name, in a popup over the menu. The field carries
+  `autocomplete="off"` as before, now with no autocorrect, autocapitalize or
+  spellcheck, and the attributes 1Password, LastPass and Bitwarden read
+  (`data-1p-ignore`, `data-lpignore`, `data-bwignore`, `data-form-type`).
+  Typing on a phone no longer capitalizes the first letter, which the search
+  ignores. The demo's filter fields carry them too.
+
 ## [0.6.0] - 2026-10-11
 
 ### Added
