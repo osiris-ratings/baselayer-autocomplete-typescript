@@ -118,6 +118,16 @@ function slotsOf(
 /** A new value for a field: an example where it has one, else its least. */
 function defaultFor(schemas: Schemas, slot: Slot): Json {
   const { schema, shape } = slot;
+  // A scope's route comes with every relation it carries.
+  const route = routeKey(slot.path);
+  if (route !== null && shape.kind === "array") {
+    const relations = shapeOf(schemas, shape.items);
+    return relations.kind === "enum"
+      ? relations.values.filter(value =>
+          (LEGAL_RELATIONS[route] as readonly string[]).includes(value),
+        )
+      : [...LEGAL_RELATIONS[route]];
+  }
   const example =
     schema === undefined
       ? undefined
@@ -666,9 +676,18 @@ export function TryIt({
   );
   const [result, setResult] = useState<Outcome | null>(null);
   const [query, setQuery] = useState(() => withIds(sample.query));
-  const [body, setBody] = useState<Json | undefined>(() =>
-    bodySchema === undefined ? undefined : ((sample.body as Json) ?? {}),
-  );
+  // The sample's body, with every route a scope may name, each with every
+  // relation it carries: a session that may search everything, to narrow.
+  const [body, setBody] = useState<Json | undefined>(() => {
+    if (bodySchema === undefined) return undefined;
+    let start: Json = (sample.body as Json | undefined) ?? {};
+    for (const slot of slotsOf(schemas, bodySchema)) {
+      if (routeKey(slot.path) !== null) {
+        start = setAt(start, slot.path, defaultFor(schemas, slot));
+      }
+    }
+    return start;
+  });
   const [sending, setSending] = useState(false);
   const [showRequest, setShowRequest] = useState(false);
   const previewId = useId();

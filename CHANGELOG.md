@@ -34,7 +34,9 @@ breaking change bumps the minor version.
   engine cannot mask one.
 
 - The API reference's request block has a third tab, Try it here, set apart by
-  a rule: the request as a short form, started from its curl sample. The URL
+  a rule: the request as a short form, started from its curl sample (the
+  mint's with every scope route on, each with every relation it carries, and a
+  route added back the same way). The URL
   sits in a read-only box, each part in a colour of its own, the method and
   Send on its first line; it follows the typing once it rests, growing or
   shrinking to the new URL in a stroke; each

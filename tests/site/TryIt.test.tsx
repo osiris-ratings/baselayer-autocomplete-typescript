@@ -76,14 +76,14 @@ function answering(status: number, body: unknown) {
 }
 
 describe("Try it here, on the mint", () => {
-  it("starts from the sample, with the page's own origin", () => {
+  it("starts from the sample, every scope route on with every relation it carries, and the page's own origin", () => {
     const { code } = editor("/autocomplete/sessions");
 
     expect(screen.getByTestId("try-url").textContent).toBe(
       "https://api.baselayer.com/autocomplete/sessions",
     );
     expect(code()).toContain(
-      `-d '{"scope": {"routes": {"businesses": ["addresses"]}, "max_limit": 5}}'`,
+      `-d '{"scope": {"routes": {"businesses": ["people", "addresses"], "people": ["businesses", "addresses"], "addresses": ["businesses", "people"]}, "max_limit": 5}}'`,
     );
     expect(code()).toContain('-H "X-API-Key: $BASELAYER_API_KEY"');
     // The browser sends its own Origin: the field says which, and is not typed.
@@ -121,18 +121,30 @@ describe("Try it here, on the mint", () => {
       .getAllByRole("rowheader")
       .map(cell => cell.textContent)
       .filter(text => text?.startsWith("scope"));
-    expect(rows).toEqual(["scope.routes.businesses", "scope.max_limit"]);
-    // A list of relations is chips, each on where the list has it.
-    const chips = within(
-      screen.getByRole("group", { name: "scope.routes.businesses" }),
-    ).getAllByRole("button");
-    expect(
-      chips.map(chip => [chip.textContent, chip.getAttribute("aria-pressed")]),
-    ).toEqual([
-      // A route lists only the relations it carries: never itself.
-      ["people", "false"],
+    expect(rows).toEqual([
+      "scope.routes.businesses",
+      "scope.routes.people",
+      "scope.routes.addresses",
+      "scope.max_limit",
+    ]);
+    // A list of relations is chips, each on where the list has it; a route
+    // lists only the relations it carries, never itself.
+    const chips = (route: string) =>
+      within(screen.getByRole("group", { name: `scope.routes.${route}` }))
+        .getAllByRole("button")
+        .map(chip => [chip.textContent, chip.getAttribute("aria-pressed")]);
+    expect(chips("businesses")).toEqual([
+      ["people", "true"],
       ["addresses", "true"],
     ]);
+    expect(chips("people")).toEqual([
+      ["businesses", "true"],
+      ["addresses", "true"],
+    ]);
+    // With every field held, there is nothing to add.
+    expect(
+      screen.queryByRole("group", { name: "Add a body field" }),
+    ).toBeNull();
   });
 
   it("follows an edited value and header into the curl", async () => {
@@ -152,24 +164,29 @@ describe("Try it here, on the mint", () => {
   it("adds the fields the schema names from the table's last row, and takes out a field and what it leaves empty", async () => {
     const { code, user } = editor("/autocomplete/sessions");
 
+    // A route taken out is offered again, and comes back with every relation.
+    await user.click(
+      screen.getByRole("button", { name: "Remove scope.routes.people" }),
+    );
     const add = within(screen.getByRole("group", { name: "Add a body field" }));
     expect(
       add.getAllByRole("button").map(button => button.textContent),
-    ).toEqual(["scope.routes.people", "scope.routes.addresses"]);
+    ).toEqual(["scope.routes.people"]);
     await user.click(add.getByRole("button", { name: "scope.routes.people" }));
+    expect(code()).toContain('"people": ["businesses", "addresses"]');
+
     // A route with nothing on still searches, with nothing related.
+    const people = within(
+      screen.getByRole("group", { name: "scope.routes.people" }),
+    );
+    await user.click(people.getByRole("button", { name: "businesses" }));
+    await user.click(people.getByRole("button", { name: "addresses" }));
+    expect(code()).toContain('"people": []');
     expect(
       screen.getByRole("group", { name: "scope.routes.people" }).parentElement!
         .textContent,
     ).toContain("none on: searches it, with nothing related");
-    expect(code()).toContain(
-      '"routes": {"businesses": ["addresses"], "people": []}',
-    );
-    await user.click(
-      within(
-        screen.getByRole("group", { name: "scope.routes.people" }),
-      ).getByRole("button", { name: "businesses" }),
-    );
+    await user.click(people.getByRole("button", { name: "businesses" }));
     expect(code()).toContain('"people": ["businesses"]');
 
     await user.click(
@@ -180,6 +197,9 @@ describe("Try it here, on the mint", () => {
     );
     await user.click(
       screen.getByRole("button", { name: "Remove scope.routes.people" }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Remove scope.routes.addresses" }),
     );
     // No route left, so no `routes`, and so no `scope`; which the API reads
     // as every route, and the form says so.
@@ -242,7 +262,14 @@ describe("Try it here, sent", () => {
       "Content-Type",
     ]);
     expect(JSON.parse(init.body as string)).toEqual({
-      scope: { routes: { businesses: ["addresses"] }, max_limit: 5 },
+      scope: {
+        routes: {
+          businesses: ["people", "addresses"],
+          people: ["businesses", "addresses"],
+          addresses: ["businesses", "people"],
+        },
+        max_limit: 5,
+      },
     });
     const outcome = await screen.findByRole("status");
     expect(outcome.getAttribute("data-ok")).toBe("true");
