@@ -15,6 +15,7 @@ import {
   describeType,
   fieldRows,
   operations,
+  requestBodyOf,
   schemaOf,
   sections,
   snippetLang,
@@ -50,17 +51,67 @@ function Markdown({
   );
 }
 
+/** What a field may be, written out: a lead, then each value. */
+function Choices({ lead, values }: { lead: string; values: string[] }) {
+  return (
+    <p className="field-values">
+      {lead}{" "}
+      {values.map((value, i) => (
+        <Fragment key={value}>
+          {i > 0 && ", "}
+          <code>{value}</code>
+        </Fragment>
+      ))}
+      .
+    </p>
+  );
+}
+
+/** A schema this small is shown whole: a long one folds its nested models. */
+const SHOWN_WHOLE = 12;
+
+/** A nested model this small is open to begin with, wherever it sits. */
+const OPEN_BELOW = 3;
+
+/** The rows a long schema opens to begin with: its small nested models. */
+function openToBegin(rows: readonly { path: string; depth: number }[]) {
+  if (rows.length <= SHOWN_WHOLE) {
+    return new Set(rows.map(row => row.path));
+  }
+  const open = new Set<string>();
+  rows.forEach((row, index) => {
+    let beneath = 0;
+    for (let next = index + 1; next < rows.length; next++) {
+      if (rows[next]!.depth <= row.depth) break;
+      beneath += 1;
+    }
+    if (beneath > 0 && beneath <= OPEN_BELOW) open.add(row.path);
+  });
+  return open;
+}
+
 /**
  * A schema's fields, nested models folded under their parent until opened:
  * a response reads as its top level first, and a reader opens what they came
- * for.
+ * for. A small schema, such as a request body, is open to begin with, and a
+ * long one opens its small nested models, so a `scope` of two fields reads
+ * at once. A request's fields say which are optional, where a response's say
+ * which are required.
  */
-function FieldList({ schema }: { schema: JsonSchema | undefined }) {
-  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
+function FieldList({
+  schema,
+  request = false,
+}: {
+  schema: JsonSchema | undefined;
+  request?: boolean;
+}) {
+  const rows = schema === undefined ? [] : fieldRows(schema);
+  const [open, setOpen] = useState<ReadonlySet<string>>(() =>
+    openToBegin(rows),
+  );
   if (schema === undefined) {
     return null;
   }
-  const rows = fieldRows(schema);
   const tree = fieldTree(rows);
   const childCount = new Map(
     rows.map((row, i) => [row.path, tree[i]!.childCount]),
@@ -89,6 +140,9 @@ function FieldList({ schema }: { schema: JsonSchema | undefined }) {
               <code className="field-name">{row.name}</code>
               <span className="field-type">{row.type}</span>
               {row.required && <span className="pill">required</span>}
+              {request && !row.required && (
+                <span className="pill pill-quiet">optional</span>
+              )}
               {row.depth > 0 && <span className="field-path">{row.path}</span>}
               {children > 0 && (
                 <button
@@ -110,15 +164,25 @@ function FieldList({ schema }: { schema: JsonSchema | undefined }) {
             <dd>
               <Markdown text={row.description} inline />
               {row.values.length > 0 && (
+                <Choices lead="One of" values={row.values} />
+              )}
+              {row.keys.length > 0 && (
+                <Choices lead="Each key is one of" values={row.keys} />
+              )}
+              {row.itemValues.length > 0 && (
+                <Choices
+                  lead={
+                    row.keys.length > 0
+                      ? "Each value is a list of any of"
+                      : "Any of"
+                  }
+                  values={row.itemValues}
+                />
+              )}
+              {row.range !== null && (
                 <p className="field-values">
-                  One of{" "}
-                  {row.values.map((value, i) => (
-                    <Fragment key={value}>
-                      {i > 0 && ", "}
-                      <code>{value}</code>
-                    </Fragment>
-                  ))}
-                  .
+                  From <code>{row.range.split(" to ")[0]}</code> to{" "}
+                  <code>{row.range.split(" to ")[1]}</code>.
                 </p>
               )}
               {row.sameAs !== null && (
@@ -238,6 +302,7 @@ function OperationSection({
     },
   ].filter(group => group.parameters.length > 0);
   const responses = Object.entries(operation.responses);
+  const requestBody = requestBodyOf(operation);
   const successes = responses.filter(([status]) => status.startsWith("2"));
   const refusals = responses.filter(([status]) => !status.startsWith("2"));
   const request = requestSnippets(operation);
@@ -279,6 +344,18 @@ function OperationSection({
           ))}
           {method !== "get" && operation["requestBody"] === undefined && (
             <p className="note">No request body.</p>
+          )}
+          {requestBody !== undefined && (
+            <>
+              <h3 className="subhead">
+                Request body{" "}
+                {requestBody.optional && (
+                  <span className="pill pill-quiet">optional</span>
+                )}
+              </h3>
+              <Markdown text={requestBody.description} />
+              <FieldList schema={requestBody.schema} request />
+            </>
           )}
 
           {successes.map(([status, response]) => (

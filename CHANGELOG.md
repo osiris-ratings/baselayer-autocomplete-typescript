@@ -33,6 +33,13 @@ breaking change bumps the minor version.
   alone. Enter applies the key. It falls back to a password field where the
   engine cannot mask one.
 
+- The API reference shows what `POST /autocomplete/sessions` takes: a Request
+  body section, optional like the body, with its fields marked optional. Where
+  a field is a choice it says the choices, which routes a scope may name and
+  which relations each lists ("Each key is one of …", "Each value is a list of
+  any of …"), and a number its range ("From 1 to 20"). A model of three fields
+  or fewer, such as the grant's `scope`, is open to begin with.
+
 ### Fixed
 
 - A name or an address field of the components (`BusinessAutocomplete`,

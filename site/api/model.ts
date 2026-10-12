@@ -144,8 +144,75 @@ export interface FieldRow {
   type: string;
   required: boolean;
   description: string | undefined;
+  /** The values an enum field takes. */
   values: string[];
+  /** For a map, the keys it may have, when a schema says which. */
+  keys: string[];
+  /** For a list, or the lists a map holds, the values its items take. */
+  itemValues: string[];
+  /** The bounds of a number, as "1 to 20". */
+  range: string | null;
   sameAs: string | null;
+}
+
+/** The values of the enum a schema is, or points at: none if it is not one. */
+function enumValues(schema: JsonSchema | undefined): string[] {
+  return (schema === undefined ? [] : (resolve(schema).enum ?? [])).map(String);
+}
+
+/**
+ * What a map says of itself, where its schema names the keys and the lists it
+ * holds: an object with no fixed fields, `additionalProperties` for what each
+ * key holds and `propertyNames` for which keys there may be.
+ */
+function mapChoices(property: JsonSchema): {
+  keys: string[];
+  itemValues: string[];
+} {
+  const map = resolve(held(property));
+  const holds = map["additionalProperties"] as JsonSchema | undefined;
+  const names = map["propertyNames"] as JsonSchema | undefined;
+  if (
+    map.properties !== undefined ||
+    (holds === undefined && names === undefined)
+  ) {
+    return { keys: [], itemValues: [] };
+  }
+  const inner = holds === undefined ? undefined : resolve(holds);
+  return {
+    keys: enumValues(names),
+    itemValues: enumValues(inner?.items),
+  };
+}
+
+function rangeOf(schema: JsonSchema): string | null {
+  return schema.minimum !== undefined && schema.maximum !== undefined
+    ? `${schema.minimum} to ${schema.maximum}`
+    : null;
+}
+
+/** The body a POST takes, past a `T | null`, and whether it may be left out. */
+export function requestBodyOf(
+  operation: Operation,
+):
+  | { schema: JsonSchema; optional: boolean; description: string | undefined }
+  | undefined {
+  const body = operation["requestBody"] as
+    | {
+        required?: boolean;
+        content?: Record<string, { schema?: JsonSchema }>;
+      }
+    | undefined;
+  const schema = body?.content?.["application/json"]?.schema;
+  if (schema === undefined) {
+    return undefined;
+  }
+  const inner = held(schema);
+  return {
+    schema: inner,
+    optional: body?.required !== true,
+    description: resolve(inner).description,
+  };
 }
 
 /** What a property holds, past a `T | null` written as `anyOf` or `oneOf`. */
@@ -203,7 +270,21 @@ export function fieldRows(
         target.description ??
         inner.description ??
         resolve(inner).description,
-      values: (resolve(inner).enum ?? []).map(String),
+      values: enumValues(inner),
+      // A list of enums says its items' values; so does a map of lists, and
+      // says its keys' too.
+      ...(() => {
+        const map = mapChoices(property);
+        const items =
+          resolve(inner).type === "array"
+            ? enumValues(resolve(inner).items)
+            : [];
+        return {
+          keys: map.keys,
+          itemValues: map.itemValues.length > 0 ? map.itemValues : items,
+        };
+      })(),
+      range: rangeOf(resolve(inner)),
       sameAs: repeat,
     });
     if (nested === null || repeat !== null) {

@@ -217,6 +217,13 @@
   color: var(--ink-soft);
 }
 
+/* A request's optional field, quieter than the required ones. */
+.pill-quiet {
+  background: transparent;
+  border: 1px solid var(--line-soft);
+  color: var(--muted);
+}
+
 .facts-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
