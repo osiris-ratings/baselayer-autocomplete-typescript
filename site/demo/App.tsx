@@ -554,6 +554,35 @@ export function App() {
     // The field's own way to open: a click toggles a closed menu open.
     input?.click();
   }, [mode]);
+  // Opening the filters unfolds the panel downwards: its height grows from
+  // nothing to what it is, the page below making room as it does. The panel is
+  // shown again each time, so this runs each time; not under a reduced-motion
+  // setting, nor where there is nothing to animate with.
+  const filtersPanel = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const panel = filtersPanel.current;
+    if (!filtersOpen || panel === null || typeof panel.animate !== "function") {
+      return;
+    }
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const unfold = panel.animate(
+      [
+        {
+          height: "0px",
+          marginBottom: "0px",
+          paddingBlock: "0px",
+          opacity: 0,
+          overflow: "hidden",
+        },
+        {
+          height: `${panel.getBoundingClientRect().height}px`,
+          overflow: "hidden",
+        },
+      ],
+      { duration: 280, easing: "cubic-bezier(0.2, 0.7, 0.2, 1)" },
+    );
+    return () => unfold.cancel();
+  }, [filtersOpen]);
   const picked = picks[mode];
   const setPicked = (pick: Picked | null) =>
     setPicks(all => ({ ...all, [mode]: pick }));
@@ -908,6 +937,7 @@ export function App() {
             </div>
             <div
               id="demo-filters"
+              ref={filtersPanel}
               className="filters-panel"
               hidden={!filtersOpen}
               {...filterFocus}
