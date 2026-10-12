@@ -34,30 +34,29 @@ breaking change bumps the minor version.
   engine cannot mask one.
 
 - The API reference's request block has a third tab, Try it here, set apart by
-  a rule: the request as a short form, started from its curl sample (the
-  mint's with no scope, which reaches everything the key may search, and says
-  so; a route added comes with every relation it carries). The URL
-  sits in a read-only box, each part in a colour of its own, the method and
-  Send on its first line; it follows the typing once it rests, growing or
-  shrinking to the new URL in a stroke; each
-  value is an underline on the block, a fixed one faint, with no line; the
-  headers, the query parameters and the body are tables as wide as the block,
-  the body flat, a row for each field by its whole path, a list of choices a
-  row of chips in the values' own ink (a scope's route offers only the relations it carries, never
-  itself, and says they are what its requests may include or filter by, or,
-  with none on, that it searches with nothing related; with no route listed,
-  the form says that leaves `routes` out, which is every route), and
-  the fields and query parameters it does not hold yet
-  offered by name in each table's last row.
-  `Origin` is this page's, as the browser sends it, and it and `Content-Type`
-  are shown but fixed; what the operation requires is starred. A bar under the
-  form says
-  how the last send ended, a refusal's code and message included, and unfolds
-  on the request as it goes out, headers and body. The answer shows in the
-  response block as a Live tab, after a rule. Every sample beside it (curl,
-  Node, fetch, the SDK) follows the form as it is edited, and Copy on the tab
-  takes it as curl. Each block has a small caption above it, Request and
-  Response.
+  a rule: the request as a short form, started from its curl sample. The mint
+  starts with no scope, which reaches everything the key may search, and says
+  so; a route added comes with every relation it carries.
+  - The URL sits in a read-only box, each part in a colour of its own, with the
+    method and Send on its first line. It follows the typing once it rests,
+    growing or shrinking to the new URL in a stroke.
+  - The headers, the query parameters and the body are tables as wide as the
+    block, each value an underline on a faint fill. The body is flat: a row for
+    each field by its whole path, a list of choices a row of chips in the
+    values' own ink, and what the schema names and the body does not hold yet
+    offered by name in the table's last row. A scope's route offers only the
+    relations it carries, never itself, and says they are what its requests may
+    include or filter by, or, with none on, that it searches with nothing
+    related. With no route listed, the form says that leaves `routes` out,
+    which is every route.
+  - `Origin` is this page's, as the browser sends it, and it and `Content-Type`
+    are shown but fixed. What the operation requires is starred.
+  - A bar under the form says how the last send ended, a refusal's code and
+    message included, and unfolds on the request as it goes out, headers and
+    body. The answer shows in the response block as a Live tab, after a rule.
+  - Every sample beside it (curl, Node, fetch, the SDK) follows the form as it
+    is edited, and Copy on the tab takes it as curl. Each block has a small
+    caption above it, Request and Response.
 - The API reference shows what `POST /autocomplete/sessions` takes: a Request
   body section, optional like the body, with its fields marked optional. Where
   a field is a choice it says the choices, which routes a scope may name and
