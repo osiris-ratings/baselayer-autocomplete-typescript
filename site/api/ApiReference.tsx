@@ -13,6 +13,7 @@ import { useScrollSpy } from "../shared/useScrollSpy";
 import { fieldTree, visibleRows } from "./fieldTree";
 import {
   describeType,
+  FORMER_IDS,
   fieldRows,
   operations,
   requestBodyOf,
@@ -359,6 +360,10 @@ function OperationSection({
       id={entry.id}
       aria-labelledby={`${entry.id}-title`}
     >
+      {FORMER_IDS[entry.id] !== undefined && (
+        // Where a link to the section's former id still lands.
+        <span id={FORMER_IDS[entry.id]} aria-hidden="true" />
+      )}
       <div className="panel-num">{String(index).padStart(2, "0")}</div>
       <div className="panel-body endpoint">
         <div className="endpoint-docs">

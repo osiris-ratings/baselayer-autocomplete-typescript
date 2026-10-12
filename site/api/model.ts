@@ -22,6 +22,17 @@ export function slug(text: string): string {
     .replace(/^-|-$/g, "");
 }
 
+/**
+ * The ids sections went by before, which links out there still use: the
+ * autocomplete routes were "Search …" until a search came to mean the one a
+ * business token runs.
+ */
+export const FORMER_IDS: Readonly<Record<string, string>> = {
+  "autocomplete-businesses": "search-businesses",
+  "autocomplete-people": "search-people",
+  "autocomplete-addresses": "search-addresses",
+};
+
 export interface OperationEntry {
   id: string;
   path: string;

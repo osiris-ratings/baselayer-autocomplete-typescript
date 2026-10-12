@@ -4,6 +4,7 @@ import { BUSINESS_STRUCTURES } from "@baselayer-sdk/autocomplete";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  FORMER_IDS,
   fieldRows,
   operations,
   requestBodyOf,
@@ -87,5 +88,30 @@ describe("the reference's mint", () => {
     expect(token?.keys).toEqual([]);
     expect(token?.itemValues).toEqual([]);
     expect(token?.range).toBeNull();
+  });
+});
+
+describe("the reference's autocomplete routes", () => {
+  it("are named for what they do, autocomplete, a search being what a business token runs", () => {
+    expect(
+      operations
+        .filter(
+          entry =>
+            entry.path.startsWith("/autocomplete/") && entry.method === "get",
+        )
+        .map(entry => [entry.id, entry.operation.summary]),
+    ).toEqual([
+      ["autocomplete-businesses", "Autocomplete businesses"],
+      ["autocomplete-people", "Autocomplete people"],
+      ["autocomplete-addresses", "Autocomplete addresses"],
+    ]);
+  });
+
+  it("keeps each one's former id for the links that still use it", () => {
+    const ids = new Set(operations.map(entry => entry.id));
+    for (const [id, former] of Object.entries(FORMER_IDS)) {
+      expect(ids.has(id)).toBe(true);
+      expect(former).toMatch(/^search-/);
+    }
   });
 });

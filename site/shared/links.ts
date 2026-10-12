@@ -10,7 +10,7 @@ export const links = {
   security: `${base}#security`,
   api: `${base}api/`,
   apiSessions: `${base}api/#create-a-session`,
-  apiBusinesses: `${base}api/#search-businesses`,
+  apiBusinesses: `${base}api/#autocomplete-businesses`,
   apiErrors: `${base}api/#errors`,
   demo: `${base}demo/`,
   baselayer: "https://baselayer.com/",

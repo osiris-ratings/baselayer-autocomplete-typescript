@@ -63,6 +63,11 @@ breaking change bumps the minor version.
   any of …"), and a number its range ("From 1 to 20"). A model of three fields
   or fewer, such as the grant's `scope`, is open to begin with.
 
+- The API reference names the autocomplete routes Autocomplete businesses,
+  Autocomplete people and Autocomplete addresses, where they were Search …: a
+  search is what a business token runs. Their anchors follow
+  (`#autocomplete-businesses`, …), and the former ones still land on them.
+
 ### Fixed
 
 - A name or an address field of the components (`BusinessAutocomplete`,

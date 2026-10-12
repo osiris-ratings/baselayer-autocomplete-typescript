@@ -45,7 +45,7 @@ export function SiteFooter() {
                 <a href={links.apiSessions}>Create a session</a>
               </li>
               <li>
-                <a href={links.apiBusinesses}>Search businesses</a>
+                <a href={links.apiBusinesses}>Autocomplete businesses</a>
               </li>
               <li>
                 <a href={links.apiErrors}>Errors</a>
