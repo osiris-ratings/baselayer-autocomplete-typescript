@@ -1,15 +1,29 @@
 // The test form's title, which says what the field searches for:
-// "Autocomplete a business, a person, or an address". Each search, its article
-// with it, is a tab over the field, the selected one's noun underlined; the
-// commas and the "or" are the sentence's. Only the searches the session may
-// make are offered; with one, the title just names it.
+// "Autocomplete" and a segmented button of the searches, business, person and
+// address, each with the glyph the component draws for it, in the look of the
+// side pane's Debug and Styling switch. Each search is a tab over the field;
+// its article is there for a screen reader ("a person") and not drawn, so the
+// title never says "a address". Only the searches the session may make are
+// offered; with one, the title just names it.
 
-import { Fragment, useRef, type KeyboardEvent } from "react";
+import { useRef, type KeyboardEvent } from "react";
 
-import type { Route } from "@baselayer-sdk/autocomplete";
+import type { EntityType, Route } from "@baselayer-sdk/autocomplete";
+
+import { SegmentIcon } from "../../src/react/icons";
 
 /** Each search's word in the title. */
 export const SEARCH_WORDS: Record<Route, string> = {
+  businesses: "business",
+  people: "person",
+  addresses: "address",
+};
+
+/** A search has no row to read a role off, so a segment draws its entity's glyph. */
+const NO_ROLE = null;
+
+/** What each search finds, which the component's own glyphs are drawn for. */
+const ENTITIES: Record<Route, EntityType> = {
   businesses: "business",
   people: "person",
   addresses: "address",
@@ -20,12 +34,6 @@ const ARTICLES: Record<Route, string> = {
   people: "a",
   addresses: "an",
 };
-
-/** What joins the search at `index` to the one before it, as a sentence does. */
-function joiner(index: number, count: number): string {
-  if (count === 2) return " or ";
-  return index === count - 1 ? ", or " : ", ";
-}
 
 export function SearchTitle({
   id,
@@ -73,17 +81,13 @@ export function SearchTitle({
     >
       <span className="demo-num">02</span>
       <span className="search-title">
-        Autocomplete{" "}
         {routes.length > 1 ? (
-          <span role="tablist" aria-label="Search by" className="search-by">
-            {routes.map((each, index) => (
-              <Fragment key={each}>
-                {index > 0 && (
-                  <span className="search-by-sep" aria-hidden="true">
-                    {joiner(index, routes.length)}
-                  </span>
-                )}
+          <>
+            <span className="search-lead">Autocomplete</span>{" "}
+            <span role="tablist" aria-label="Search by" className="search-by">
+              {routes.map(each => (
                 <button
+                  key={each}
                   type="button"
                   role="tab"
                   id={`${id}-tab-${each}`}
@@ -98,14 +102,20 @@ export function SearchTitle({
                   onClick={() => onRoute(each)}
                   onKeyDown={onKeyDown}
                 >
-                  {ARTICLES[each]}{" "}
+                  <span className="visually-hidden">{ARTICLES[each]} </span>
+                  <SegmentIcon
+                    icons={undefined}
+                    entity={ENTITIES[each]}
+                    role={NO_ROLE}
+                    className="search-by-icon"
+                  />
                   <span className="search-by-noun">{SEARCH_WORDS[each]}</span>
                 </button>
-              </Fragment>
-            ))}
-          </span>
+              ))}
+            </span>
+          </>
         ) : (
-          `${ARTICLES[route]} ${SEARCH_WORDS[route]}`
+          `Autocomplete ${ARTICLES[route]} ${SEARCH_WORDS[route]}`
         )}
       </span>
     </h2>

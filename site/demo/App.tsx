@@ -44,6 +44,7 @@ import { Collapsible, FOLD_MS, Field, Select } from "./controls";
 import { keyMint, readClaims } from "./credentials";
 import { useExit } from "./exit";
 import { useFocusWithin } from "./focus";
+import { PickedBusiness } from "./PickedBusiness";
 import { pickFromRow, pickThrough, type PickToSearch } from "./search-view";
 import { NetworkLog } from "./network";
 import { NetworkCount, NetworkTimeline } from "./NetworkTimeline";
@@ -1111,6 +1112,10 @@ export function App() {
                         value={names.people}
                         onChange={editNameOf("people")}
                         onPick={pickedThrough}
+                        // The component's line names a person or an address
+                        // picked. For a business it would name it alone: the
+                        // demo's own line below says what it was found through.
+                        showSelection={picks.people === null}
                         // A person or an address picked: nothing redeems its
                         // token, so there is no business for step 03 to search.
                         onPickEntity={() => setPicked(null)}
@@ -1131,6 +1136,7 @@ export function App() {
                           ? { filters: heldPeopleFilters }
                           : {})}
                       />
+                      <PickedBusiness pick={picks.people?.toSearch ?? null} />
                     </div>
                   )}
                   {offered.includes("addresses") && (
@@ -1143,6 +1149,7 @@ export function App() {
                         value={names.addresses}
                         onChange={editNameOf("addresses")}
                         onPick={pickedThrough}
+                        showSelection={picks.addresses === null}
                         onPickEntity={() => setPicked(null)}
                         {...componentProps(style, "addresses")}
                         look={{ ...changedLook(style) }}
@@ -1160,6 +1167,9 @@ export function App() {
                         {...(heldAddressFilters !== undefined
                           ? { filters: heldAddressFilters }
                           : {})}
+                      />
+                      <PickedBusiness
+                        pick={picks.addresses?.toSearch ?? null}
                       />
                     </div>
                   )}

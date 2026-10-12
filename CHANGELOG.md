@@ -6,6 +6,21 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+### Changed
+
+- The demo's person and address searches say what a pick is. Under the field, a
+  business picked from under a person or an address is named as the business,
+  with what it was found through, as step 03 words it ("Found through Dana
+  Whitfield, an officer." or "Found at 77 Quillfeather Ln, its registered
+  agent's office."), where the component's line named it alone. A person or an
+  address picked from under a business reads as before.
+- The demo's title offers its searches as a segmented button, so they look like
+  buttons: "Autocomplete" and business, person and address in the look of the
+  side pane's Debug and Styling switch, each with the component's own icon,
+  the selected one raised and its icon in the accent. The button stands on the
+  title's baseline and keeps the title's height. A card too narrow for the
+  icons drops them. A screen reader still hears "a person" and "an address".
+
 ## [0.6.0] - 2026-10-11
 
 ### Added
