@@ -84,7 +84,7 @@ function Url({ url }: { url: string }) {
 function Body({ text }: { text: string }) {
   const html = useMemo(() => bodyHtml(text), [text]);
   return (
-    <pre className="net-body">
+    <pre className="net-body json-rich">
       <code dangerouslySetInnerHTML={{ __html: html }} />
     </pre>
   );

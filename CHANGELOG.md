@@ -70,6 +70,13 @@ breaking change bumps the minor version.
   search is what a business token runs. Their anchors follow
   (`#autocomplete-businesses`, …), and the former ones still land on them.
 
+- JSON on the site is drawn in one rich palette, the one the demo's network
+  panel had: keys pink, strings mint, numbers and true or false orange, null
+  grey, the punctuation muted. It now colours the demo's raw response under a
+  finished business search, which was plain text, and every JSON block in the
+  API reference (the examples, the Live tab, Try it here's request body),
+  whose URL takes the network panel's colours too.
+
 ### Fixed
 
 - A name or an address field of the components (`BusinessAutocomplete`,

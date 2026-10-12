@@ -15,6 +15,7 @@ import { LEGAL_RELATIONS, type Route } from "@baselayer-sdk/autocomplete";
 
 import { NO_FILL_ATTRIBUTES } from "../../src/react/inputAttributes";
 import { Icon } from "../shared/icons";
+import { jsonHtml } from "../shared/json";
 import { urlOf, type Pair, type Sample } from "./curl";
 import { resolveIn, type Schemas } from "./schema";
 import { samplesOf } from "./snippets";
@@ -530,7 +531,10 @@ function HttpRequest({
       {body !== null && (
         <>
           {"\n"}
-          <span className="http-body">{body}</span>
+          <span
+            className="http-body json-rich"
+            dangerouslySetInnerHTML={{ __html: jsonHtml(body) }}
+          />
         </>
       )}
     </pre>

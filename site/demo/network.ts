@@ -4,7 +4,10 @@
 // aborted it. Credentials are redacted before anything is kept.
 
 import { ROUTES, ROUTE_NAMES, type Route } from "@baselayer-sdk/autocomplete";
-import { highlight } from "sugar-high";
+
+import { indentJson, jsonHtml } from "../shared/json";
+
+export { indentJson };
 
 export type NetworkKind = "mint" | "autocomplete" | "search" | "other";
 export type NetworkOutcome = "pending" | "done" | "aborted" | "failed";
@@ -81,15 +84,6 @@ export function redactTokens(text: string): string {
   );
 }
 
-/** A body as indented JSON. A body that is not JSON (or was cut off) stays as it is. */
-export function indentJson(text: string): string {
-  try {
-    return JSON.stringify(JSON.parse(text), null, 2);
-  } catch {
-    return text;
-  }
-}
-
 export type UrlPart =
   "scheme" | "host" | "path" | "sign" | "key" | "value" | "escape";
 
@@ -153,21 +147,9 @@ export function urlParts(url: string): { text: string; part: UrlPart }[] {
   return parts;
 }
 
-/**
- * A body as the network panel draws it: indented and marked up as JSON, null
- * in a colour of its own, which the highlighter gives `true` and `false` too.
- * The highlighter escapes the text it marks up, which here is whatever the
- * server sent.
- */
+/** A body as the network panel draws it: indented and marked up as JSON. */
 export function bodyHtml(text: string): string {
-  return highlight(indentJson(text), {
-    lang: "json",
-    mark: token => {
-      if (token.type === "keyword" && token.value === "null") {
-        token.style = { color: "var(--net-null)" };
-      }
-    },
-  });
+  return jsonHtml(text);
 }
 
 /** A request's body as the panels show it: tokens cut short, JSON indented. */

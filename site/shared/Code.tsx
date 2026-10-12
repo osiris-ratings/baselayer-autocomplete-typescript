@@ -1,6 +1,8 @@
 import { useEffect, useId, useState, type ReactNode } from "react";
 import { highlight, type LanguageName } from "sugar-high";
 
+import { jsonHtml } from "./json";
+
 export interface Snippet {
   label: string;
   lang: LanguageName;
@@ -149,8 +151,14 @@ export function Code({
         hidden={onTool}
       >
         <code
+          // JSON in the site's rich palette; anything else as the
+          // highlighter colours it.
+          className={snippet.lang === "json" ? "json-rich" : undefined}
           dangerouslySetInnerHTML={{
-            __html: highlight(snippet.code, { lang: snippet.lang }),
+            __html:
+              snippet.lang === "json"
+                ? jsonHtml(snippet.code)
+                : highlight(snippet.code, { lang: snippet.lang }),
           }}
         />
       </pre>

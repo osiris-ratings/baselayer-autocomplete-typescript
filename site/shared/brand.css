@@ -597,6 +597,24 @@ h3 code {
   white-space: pre;
 }
 
+/* JSON in the rich palette the demo's network panel set, on a code block's
+   navy: keys pink, strings mint, numbers and true or false orange, null grey,
+   the punctuation muted. The highlighter's colours, retold: a key is a
+   property, a number a class, true and false keywords (null is given its own
+   by `jsonHtml`). */
+.json-rich {
+  --json-key: #ff9fd6;
+  --json-string: #bef9b6;
+  --json-literal: #ffb86c;
+  --json-null: #8a97b8;
+  --json-sign: #93a6cf;
+  --sh-property: var(--json-key);
+  --sh-string: var(--json-string);
+  --sh-class: var(--json-literal);
+  --sh-keyword: var(--json-literal);
+  --sh-sign: var(--json-sign);
+}
+
 /* ---- Tables ---------------------------------------------------------- */
 
 .table-wrap {

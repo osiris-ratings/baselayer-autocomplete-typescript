@@ -447,24 +447,25 @@
   user-select: text;
 }
 
+/* The URL's parts in the demo network panel's colours. */
 .url-protocol {
   color: #93a6cf;
 }
 
 .url-host {
-  color: #5eead4;
+  color: #8fd3ff;
 }
 
 .url-path {
-  color: #e8eefb;
+  color: #c9b8ff;
 }
 
 .url-sign {
-  color: #7d8cff;
+  color: #93a6cf;
 }
 
 .url-key {
-  color: #fcd34d;
+  color: #ff9fd6;
 }
 
 .url-value {
@@ -886,5 +887,5 @@ select.try-input {
 }
 
 .http-body {
-  color: #bef9b6;
+  color: #e8eefb;
 }

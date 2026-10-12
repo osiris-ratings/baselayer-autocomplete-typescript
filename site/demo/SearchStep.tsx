@@ -8,6 +8,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 
 import { Icon } from "../shared/icons";
+import { jsonHtml } from "../shared/json";
 import { useNow } from "./clock";
 import { formatRemaining } from "./connection";
 import { FOLD_MS } from "./controls";
@@ -356,8 +357,12 @@ export function SearchStep({
           <footer className="sr-foot">
             <details className="sr-raw">
               <summary>View raw response</summary>
-              <pre className="demo-code">
-                {JSON.stringify(phase.search, null, 2)}
+              <pre className="demo-code json-rich">
+                <code
+                  dangerouslySetInnerHTML={{
+                    __html: jsonHtml(JSON.stringify(phase.search)),
+                  }}
+                />
               </pre>
             </details>
             <p className="sr-after">
