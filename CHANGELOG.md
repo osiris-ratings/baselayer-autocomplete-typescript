@@ -57,6 +57,9 @@ breaking change bumps the minor version.
   - Every sample beside it (curl, Node, fetch, the SDK) follows the form as it
     is edited, and Copy on the tab takes it as curl. Each block has a small
     caption above it, Request and Response.
+  - Under `pnpm site`, Send goes through the dev server as the demo's calls
+    do, so `DEMO_API=sample` or a real API answers it from localhost
+    (`docs/site.md`).
 - The API reference shows what `POST /autocomplete/sessions` takes: a Request
   body section, optional like the body, with its fields marked optional. Where
   a field is a choice it says the choices, which routes a scope may name and

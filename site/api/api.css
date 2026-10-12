@@ -742,10 +742,13 @@ select.try-input {
   background: rgba(0, 0, 0, 0.18);
 }
 
+/* After a send the bar has two rows: how it ended, the whole width of it, and
+   under it the request and what opening it shows. Before, only the second. */
 .try-status-bar {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 2px 10px;
   width: 100%;
   min-height: 34px;
   padding: 0 16px;
@@ -769,6 +772,8 @@ select.try-input {
   align-items: center;
   gap: 8px;
   min-width: 0;
+  min-height: 34px;
+  overflow: hidden;
   white-space: nowrap;
 }
 
@@ -827,11 +832,12 @@ select.try-input {
 }
 
 .try-outcome {
-  display: inline-flex;
-  flex: none;
+  display: flex;
+  flex: 1 1 100%;
   align-items: center;
   gap: 8px;
-  max-width: 60%;
+  min-width: 0;
+  padding-top: 6px;
 }
 
 .try-outcome-status {
@@ -848,6 +854,8 @@ select.try-input {
 }
 
 .try-outcome-detail {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   color: var(--try-bad);
   text-overflow: ellipsis;
@@ -855,7 +863,9 @@ select.try-input {
 }
 
 .try-outcome-ms {
+  margin-left: auto;
   color: #6f7fa6;
+  white-space: nowrap;
 }
 
 /* The request as it goes out, as HTTP writes it. */
