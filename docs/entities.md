@@ -88,13 +88,13 @@ cooldown and event works the same on each, and each `RequestEvent` names its
 
 ## Rows
 
-Every row has `type`, `token`, `label`, `matched_name`, `match`, `related`
-and `highlight`. Each type adds its own fields:
+Every row has `type`, `token`, `label`, `match`, `related` and `highlight`.
+Each type adds its own fields:
 
 | Type       | Adds                                                                                                        |
 | ---------- | ----------------------------------------------------------------------------------------------------------- |
-| `business` | `domicile_state`, `states`, `structure`                                                                     |
-| `person`   | nothing: a person has no jurisdiction of its own                                                            |
+| `business` | `matched_name`, `domicile_state`, `states`, `structure`                                                     |
+| `person`   | `states`: the states of the businesses they hold a role on; a person has no jurisdiction of its own         |
 | `address`  | `components`: `line1`, `line2`, `city`, `state`, `postal_code`, each null where the filing did not carry it |
 
 `related` and `sources` carry one key per relation the route expands. Read
@@ -109,24 +109,34 @@ officers and addresses a person or an address filter matched lead the lists.
 `matchedOn` reads those flags, with `matched_name` and the state filter, into
 what a row matched on (see [Styling](styling.md#what-matched)).
 
-A related item's `role` is how it stands to the row. A business's people and
-a person's businesses: `officer` or `agent`. An address and a business: the
-role the business filed it under (`principal`, `mailing`, `agent`,
-`officer`). A business's `structure` is its legal structure, one of
-`BUSINESS_STRUCTURES` (`LLC`, `C_CORPORATION`, …), or null when it is not
-known.
+What a row lists is typed by what it holds, so a related item carries the
+keys of its own kind: a business (`RelatedBusiness`), a person
+(`RelatedPerson`) or an address (`RelatedAddress`), each with its fixed
+`type`. The role a relationship has is on the item. `role` is the role a
+person holds on a business, `officer` or `agent`: on a business's people and
+on a person's businesses (`PersonOfBusiness`, `BusinessOfPerson`). `listed_as`
+is how an address is listed on a business: its `principal` or `mailing`
+address, the office of its registered agent (`registered_office`), or an
+`officer`'s: on a business's addresses and on an address's businesses
+(`AddressOfBusiness`, `BusinessOfAddress`). A person and an address stand in
+no role to each other, so a person's addresses and an address's people carry
+none. The key is null when the filing names none. A business's `structure` is
+its legal structure, one of `BUSINESS_STRUCTURES` (`LLC`, `C_CORPORATION`, …),
+or null when it is not known.
 
 A business under a person or an address carries what its own row leads
-with: `address`, its lead address (on an address row, still the business's
-own, which need not be the row's), `states`, sorted by code, and
-`domicile_state`. `orderedStates(item)` puts the domicile first, as a
-business row draws them. On a person or an address item all three are null.
+with: its `token`, a business token (see below), `address`, its lead address
+(on an address row, still the business's own, which need not be the row's),
+`states`, sorted by code, and `domicile_state`. `orderedStates(item)` puts
+the domicile first, as a business row draws them. A person or an address
+under a row has none of them, and no token.
 
 A business that a business name filter reached through another name it goes
 by (a DBA, or a former name) says which in its `matched_name`, as a business
 row's own `matched_name` does, and the grouped components draw it after the
 business's name: `also` and that name, muted. It is null when the label fit
-as well, when no business name filters, and on a person or an address.
+as well, or when no business name filters. A person or an address has no
+`matched_name`, as a row or as a related item.
 
 A related item a filter matched carries `highlight`, the parts of the name it
 matched on, as a row's own `highlight` does: its `matched_name` when it has
@@ -147,12 +157,17 @@ their businesses instead. Each of those carries a business token, sealed with
 the person or address it was reached through, which `POST /searches` redeems
 as any other.
 
-Every closed value (`match`, `type`, `role`, `structure`, a source's
-`status`) is a typed union pinned to the API's contract, and the parser
-refuses a value it does not know as a `contract` error. The SDK learns a new
-value before the API sends it, so update the SDK when its release notes say
-so. A related item must be the entity its relation holds, a business under
-`businesses`, and unknown fields are dropped.
+The enums that describe a row (`match`, `structure`, `role`, `listed_as`,
+a source's `status`) are open. Their types are `Open<…>`: the values the SDK
+lists, or any other string, and a value it does not list is kept as the API
+sent it, never refused. Compare a value to the ones you handle, treat the
+rest as "other", and show it as it came: the components draw an unknown role
+as the API's own word. What stays closed is each `type`. A row and a related
+item must be the entity they say, a business under `businesses`, and a
+response missing a key the contract requires is refused, both as a `contract`
+error; unknown fields are dropped. A response that still names a related
+item's role `role` is the contract before this one, and is refused with a
+message that says so.
 
 ## Filters
 
@@ -180,7 +195,8 @@ businesses route's `state`).
 `BusinessAutocomplete`, `PersonAutocomplete` and `AddressAutocomplete` are
 the styled components, one per route. A person or an address shows in the
 menu as a group: its name with its counts, and a line for each business
-under it, with the business's address, its states and the role there.
+under it, with the business's address, its states and, under a person, the
+role they hold there.
 
 ```tsx
 <PersonAutocomplete
@@ -235,22 +251,21 @@ before their businesses, and the keys move through them in that order.
 Dana Whitfield  48 Wrenmoor St, Pittsburgh, PA … 2 businesses · 1 address
   HARBOR CONCRETE PUMPING CO., INC.  1200 Tallow… ..... [PA][OH]  officer
   NORTHSHORE PUMPING, LLC  300 Corvale Way, Erie… ........... [PA]  agent
-  48 Wrenmoor St, Pittsburgh, PA 15206 ........................... officer
+  48 Wrenmoor St, Pittsburgh, PA 15206
 ```
 
 That is `list={["businesses", "addresses"]}` on a person: each business with
-its address, states and the person's role there, then each address with
-theirs. Every name starts with its icon.
+its address, states and the person's role there, then each address. Every
+name starts with its icon.
 
 ### What can be picked
 
 `enabledLines` names the entities whose lines are enabled, the lines a visitor
 can pick: `business`, and `person` or `address`, whether the line is the row
-itself or one it lists. A line is enabled only when its entity is named and the
-autocomplete service sealed it a token; any other line is disabled: drawn,
-faded, and an option a screen reader calls unavailable (`aria-disabled`),
-which the keys pass over and a click does not pick. What a pick hands depends
-on what it is:
+itself or one it lists. A line is enabled only when its entity is named; any
+other line is disabled: drawn, faded, and an option a screen reader calls
+unavailable (`aria-disabled`), which the keys pass over and a click does not
+pick. What a pick hands depends on what it is:
 
 | Picked                                  | Hands                                 |
 | --------------------------------------- | ------------------------------------- |
@@ -261,8 +276,12 @@ on what it is:
 ```ts
 interface EntityPick {
   type: "person" | "address";
-  /** Opaque: nothing redeems it yet, so keep it as the handle it is. */
-  token: string;
+  /**
+   * The row's own token, opaque: nothing redeems it yet, so keep it as the
+   * handle it is. Null for a person or an address a row lists: the
+   * autocomplete service seals none for those.
+   */
+  token: string | null;
   /** The name or the address, as its line drew it. */
   label: string;
 }
@@ -322,17 +341,20 @@ the fields of the same names. The glyph follows the data, by its role
 wherever the row knows one, so the same officer or address draws the same
 glyph in any segment:
 
-| Entity     | Glyph                                                                                  |
-| ---------- | -------------------------------------------------------------------------------------- |
-| a business | an office building                                                                     |
-| a person   | a person; an agent, a briefcase                                                        |
-| an address | a map pin; a mailing address an envelope, an agent's a briefcase, an officer's a house |
+| Entity     | Glyph                                                                                         |
+| ---------- | --------------------------------------------------------------------------------------------- |
+| a business | an office building                                                                            |
+| a person   | a person; an agent, a briefcase                                                               |
+| an address | a map pin; a mailing address an envelope, an agent's office a briefcase, an officer's a house |
 
 `icons` replaces any of them with a node of your own, keyed by the entity
 (`address`) or by the entity in a role (`address:mailing`), the role's
-winning. `false` or `null` hides that one, and `icons={false}` hides them
-all. An icon is decorative: it is drawn inside an `aria-hidden` wrapper, so
-pass nothing focusable or meant to be read, no link or button:
+winning: `person:officer` and `person:agent` for the role a person holds,
+`address:principal`, `address:mailing`, `address:registered_office` and
+`address:officer` for how a business filed an address. `false` or `null`
+hides that one, and `icons={false}` hides them all. An icon is decorative: it
+is drawn inside an `aria-hidden` wrapper, so pass nothing focusable or meant
+to be read, no link or button:
 
 ```tsx
 <BusinessAutocomplete
@@ -380,9 +402,9 @@ HARBOR CONCRETE PUMPING CO., INC. [C-Corp] ..................... [PA][OH]
 
 An officer picked here hands `onPickEntity` its `EntityPick`, puts the
 business's name in the field and names the officer under it; the business
-itself picked hands `onPick` its pick, as it always has. A line the
-autocomplete service sealed no token for is drawn and disabled, whatever
-`enabledLines` names. Each line's places and fields are under
+itself picked hands `onPick` its pick, as it always has. Its `EntityPick` has
+no token, since the autocomplete service seals none for a person or an address
+a row lists. Each line's places and fields are under
 [A business row's lines](styling.md#a-business-rows-lines).
 
 ### Without the styled components

@@ -6,6 +6,7 @@ import { queryTokens } from "@baselayer-sdk/autocomplete";
 import type {
   BusinessSuggestion,
   HighlightPart,
+  PersonOfBusiness,
   RelatedSet,
 } from "@baselayer-sdk/autocomplete";
 import { MIN_QUERY_CHARS } from "@baselayer-sdk/autocomplete/react";
@@ -27,7 +28,7 @@ function business(
     BusinessSuggestion,
     "domicile_state" | "states" | "structure"
   > & {
-    people: RelatedSet;
+    people: RelatedSet<PersonOfBusiness>;
     address: string;
   },
 ): BusinessSuggestion {

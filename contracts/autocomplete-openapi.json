@@ -37,17 +37,41 @@
             ]
           }
         },
+        "required": [
+          "line1",
+          "line2",
+          "city",
+          "state",
+          "postal_code"
+        ],
         "type": "object"
+      },
+      "AddressKind": {
+        "description": "The `type` of everything about an address: always `address`.",
+        "enum": [
+          "address"
+        ],
+        "type": "string"
+      },
+      "AddressListing": {
+        "description": "How an address is listed on a business: `principal` and `mailing` are the addresses\nthe business filed as such; `registered_office` is its registered agent's office and\n`officer` an officer's address, each either filed or reached only through the agent or\nthe officer (so the business did not file it itself). The set is open: a client treats\na value it does not know as `other`.",
+        "enum": [
+          "principal",
+          "mailing",
+          "registered_office",
+          "officer"
+        ],
+        "type": "string"
       },
       "AddressRelated": {
         "properties": {
           "businesses": {
-            "$ref": "#/components/schemas/RelatedSet",
-            "description": "The businesses filed at the address, the ones filed as their principal or\nmailing address first: each item's `token` is a `business_token`\n`POST /searches` redeems, pinned to this address. `count` is every business."
+            "$ref": "#/components/schemas/RelatedBusinesses",
+            "description": "The businesses filed at the address, the ones filed as their principal or\nmailing address first: each item carries `listed_as`, how the business filed it,\nand never `role`; each item's `token` is a `business_token` `POST /searches`\nredeems, pinned to this address. `count` is every business."
           },
           "people": {
-            "$ref": "#/components/schemas/RelatedSet",
-            "description": "The people who filed from the address, best known first, leaving out a\nregistered agent's company. `count` is everyone who serves a business."
+            "$ref": "#/components/schemas/RelatedPeople",
+            "description": "The people who filed from the address, best known first, leaving out a\nregistered agent's company. A person is at an address with no role of its own\nthere, so an item carries no role key. `count` is everyone who serves a business."
           }
         },
         "required": [
@@ -74,13 +98,6 @@
           "match": {
             "$ref": "#/components/schemas/MatchGrade"
           },
-          "matched_name": {
-            "description": "Always null: an address is matched by the label it is shown under.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "related": {
             "$ref": "#/components/schemas/AddressRelated"
           },
@@ -89,7 +106,7 @@
             "type": "string"
           },
           "type": {
-            "$ref": "#/components/schemas/EntityType"
+            "$ref": "#/components/schemas/AddressKind"
           }
         },
         "required": [
@@ -160,6 +177,29 @@
         ],
         "type": "object"
       },
+      "BusinessKind": {
+        "description": "The `type` of everything about a business, a suggestion or a related item: always\n`business`. A client tells the three kinds of entity apart by this key alone.",
+        "enum": [
+          "business"
+        ],
+        "type": "string"
+      },
+      "BusinessRelated": {
+        "description": "What a business is related to: the people who hold a role on it and the addresses it\nfiled.",
+        "properties": {
+          "addresses": {
+            "$ref": "#/components/schemas/RelatedAddresses"
+          },
+          "people": {
+            "$ref": "#/components/schemas/RelatedPeople"
+          }
+        },
+        "required": [
+          "people",
+          "addresses"
+        ],
+        "type": "object"
+      },
       "BusinessStructure": {
         "description": "A business's legal structure.",
         "enum": [
@@ -211,7 +251,7 @@
             ]
           },
           "related": {
-            "$ref": "#/components/schemas/Related"
+            "$ref": "#/components/schemas/BusinessRelated"
           },
           "states": {
             "items": {
@@ -235,15 +275,17 @@
             "type": "string"
           },
           "type": {
-            "$ref": "#/components/schemas/EntityType"
+            "$ref": "#/components/schemas/BusinessKind"
           }
         },
         "required": [
           "type",
           "token",
           "label",
+          "matched_name",
           "match",
           "domicile_state",
+          "structure",
           "states",
           "related",
           "highlight"
@@ -291,14 +333,6 @@
         ],
         "type": "object"
       },
-      "EntityType": {
-        "enum": [
-          "business",
-          "person",
-          "address"
-        ],
-        "type": "string"
-      },
       "ErrorEnvelope": {
         "description": "The error envelope the API answers with: a numeric `code`, a `message`, and\n`metadata` that names the reason.",
         "properties": {
@@ -320,6 +354,7 @@
         "required": [
           "code",
           "message",
+          "uri",
           "metadata"
         ],
         "type": "object"
@@ -340,7 +375,7 @@
         "type": "object"
       },
       "MatchGrade": {
-        "description": "How the best of a business's names fits the typed name: `exact` is the name itself,\n`strong` starts with it or has it at a later word, and `partial` has every word of it,\nin another order or spread over the business's names.",
+        "description": "How the best of a business's names fits the typed name: `exact` is the name itself,\n`strong` starts with it or has it at a later word, and `partial` has every word of it,\nin another order or spread over the business's names. The set is open: a client treats\na value it does not know as `partial`.",
         "enum": [
           "exact",
           "strong",
@@ -405,14 +440,22 @@
         ],
         "type": "object"
       },
+      "PersonKind": {
+        "description": "The `type` of everything about a person: always `person`.",
+        "enum": [
+          "person"
+        ],
+        "type": "string"
+      },
       "PersonRelated": {
         "properties": {
           "addresses": {
-            "$ref": "#/components/schemas/RelatedSet"
+            "$ref": "#/components/schemas/RelatedAddresses",
+            "description": "The addresses the person filed from. A person is at an address with no role of its\nown there, so an item carries no role key."
           },
           "businesses": {
-            "$ref": "#/components/schemas/RelatedSet",
-            "description": "The businesses the person holds a role on: each item's `token` is a\n`business_token` `POST /searches` redeems, reached through this person."
+            "$ref": "#/components/schemas/RelatedBusinesses",
+            "description": "The businesses the person holds a role on: each item carries `role`, the role\nthe person holds there, and never `listed_as`; each item's `token` is a\n`business_token` `POST /searches` redeems, reached through this person."
           }
         },
         "required": [
@@ -420,6 +463,14 @@
           "addresses"
         ],
         "type": "object"
+      },
+      "PersonRole": {
+        "description": "The role a person holds on a business, as the index's `people_roles.role` has it:\n`officer` or `agent` (the registered agent). The set is open: a client treats a value it does not know as `other`.",
+        "enum": [
+          "officer",
+          "agent"
+        ],
+        "type": "string"
       },
       "PersonSuggestion": {
         "properties": {
@@ -436,22 +487,22 @@
           "match": {
             "$ref": "#/components/schemas/MatchGrade"
           },
-          "matched_name": {
-            "description": "Always null: a person is matched by the name they are shown under.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "related": {
             "$ref": "#/components/schemas/PersonRelated"
+          },
+          "states": {
+            "description": "The states of the businesses the person holds a role on, listed as a business\nsuggestion's `states` is.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           },
           "token": {
             "description": "Opaque handle for the person, sealed like a business's and bound to the same\norganization and fifteen minutes. Nothing redeems one yet: pick one of the\nperson's businesses instead.",
             "type": "string"
           },
           "type": {
-            "$ref": "#/components/schemas/EntityType"
+            "$ref": "#/components/schemas/PersonKind"
           }
         },
         "required": [
@@ -459,44 +510,17 @@
           "token",
           "label",
           "match",
+          "states",
           "highlight",
           "related"
         ],
         "type": "object"
       },
-      "Related": {
+      "RelatedAddress": {
+        "description": "An address listed under a business or under a person.",
         "properties": {
-          "addresses": {
-            "$ref": "#/components/schemas/RelatedSet"
-          },
-          "people": {
-            "$ref": "#/components/schemas/RelatedSet"
-          }
-        },
-        "required": [
-          "people",
-          "addresses"
-        ],
-        "type": "object"
-      },
-      "RelatedItem": {
-        "properties": {
-          "address": {
-            "description": "A business item's lead address, the one its own row leads with; null when the\nfamily has none, and on a person or an address item.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "domicile_state": {
-            "description": "A business item's domicile state; null on a person or an address item.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "highlight": {
-            "description": "How the name this item matched on (`matched_name` when that is it, else `label`) reads\nagainst the typed text of the filter that matched it, drawn as a suggestion's own\n`highlight` is: a business item by the business name, a person item by the person name,\nan address item by the address text. An item with a `matched_name` always carries an\narray, which may mark nothing where the name matched in a way no word of it shows;\notherwise it is null on an item no filter matched, and on a matched item whose\nhighlight marks nothing.",
+            "description": "How this address reads against the typed text of the address filter, drawn as a\nsuggestion's own `highlight` is; null on an address no filter matched, and on a\nmatched one whose highlight marks nothing.",
             "items": {
               "$ref": "#/components/schemas/HighlightPart"
             },
@@ -508,69 +532,31 @@
           "label": {
             "type": "string"
           },
+          "listed_as": {
+            "$ref": "#/components/schemas/AddressListing",
+            "description": "How this address is on the business, on an address listed under a business; see\n`AddressListing` for `officer` and `registered_office`, which also cover an address reached only\nthrough the business's officers or registered agent. Absent under a person: a\nperson is at an address with no role of its own there, and absent where the filing\nnames none."
+          },
           "matched": {
             "description": "This item is why the row is here.",
             "type": "boolean"
           },
-          "matched_name": {
-            "description": "A business item's other name that fits the business name filtering the answer better\nthan `label` does, as a business suggestion's `matched_name` means it; null when\n`label` fits at least as well, when no business name filters, and on a person or an\naddress item.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "role": {
-            "oneOf": [
-              {
-                "type": "null"
-              },
-              {
-                "$ref": "#/components/schemas/RelatedRole"
-              }
-            ]
-          },
-          "states": {
-            "description": "A business item's states, listed as its own row lists them; null on a person or\nan address item.",
-            "items": {
-              "type": "string"
-            },
-            "type": [
-              "array",
-              "null"
-            ]
-          },
-          "token": {
-            "description": "Opaque handle for this row, sealed the way the suggestion's own `token` is\nand bound to the same organization and fifteen minutes. A business's handle,\non whatever row it is, is a `business_token` `POST /searches` redeems; nothing\nredeems a person's or an address's handle yet. Null when the autocomplete service cannot\nname the row: its id was unreadable, or it is a kind of row this service\nversion cannot seal yet.",
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "type": {
-            "$ref": "#/components/schemas/EntityType"
+            "$ref": "#/components/schemas/AddressKind"
           }
         },
         "required": [
           "type",
           "label",
+          "highlight",
           "matched"
         ],
         "type": "object"
       },
-      "RelatedRole": {
-        "description": "The role a related item stands in. A business row's people and a person row's\nbusinesses: `officer` or `agent`. An address: the role the family filed it under\n(`principal`, `mailing`, `agent`, `officer`), or the role of the person standing\nat it. Null when the filing names none.",
-        "enum": [
-          "officer",
-          "agent",
-          "principal",
-          "mailing"
-        ],
-        "type": "string"
-      },
-      "RelatedSet": {
+      "RelatedAddresses": {
+        "description": "The addresses related to a business or a person.",
         "properties": {
           "count": {
-            "description": "Total before the head cap; null when the relation's status is not ok. For\naddresses it counts the business's own filings: the head also ranks in the\naddresses of its officers and agents, so `items` can outnumber it.",
+            "description": "Total before the head cap; null when the relation's status is not ok. For\nthe addresses of a business it counts the business's own filings: the head\nalso ranks in the addresses of its officers and agents, so `items` can\noutnumber it.",
             "format": "int64",
             "minimum": 0,
             "type": [
@@ -580,7 +566,7 @@
           },
           "items": {
             "items": {
-              "$ref": "#/components/schemas/RelatedItem"
+              "$ref": "#/components/schemas/RelatedAddress"
             },
             "type": "array"
           },
@@ -598,8 +584,219 @@
           }
         },
         "required": [
+          "count",
+          "matched",
           "truncated",
           "items"
+        ],
+        "type": "object"
+      },
+      "RelatedBusiness": {
+        "description": "A business listed under a person (`role`) or under an address (`listed_as`).",
+        "properties": {
+          "address": {
+            "description": "The lead address, the one the business's own row leads with; null when the family\nhas none.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "domicile_state": {
+            "type": "string"
+          },
+          "highlight": {
+            "description": "How the name this item matched on (`matched_name` when that is it, else `label`)\nreads against the typed text of the business name filter, drawn as a suggestion's\nown `highlight` is. An item with a `matched_name` always carries an array, which\nmay mark nothing where the name matched in a way no word of it shows; otherwise it\nis null on an item no filter matched, and on a matched item whose highlight marks\nnothing.",
+            "items": {
+              "$ref": "#/components/schemas/HighlightPart"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "listed_as": {
+            "$ref": "#/components/schemas/AddressListing",
+            "description": "How the address is on this business, on a business listed under an address; see\n`AddressListing` for `officer` and `registered_office`, which also cover an address reached only\nthrough the business's officers or registered agent. Absent elsewhere, and where\nthe filing names none."
+          },
+          "matched": {
+            "description": "This item is why the row is here.",
+            "type": "boolean"
+          },
+          "matched_name": {
+            "description": "Another of the business's names that fits the business name filtering the answer\nbetter than `label` does, as a business suggestion's `matched_name` means it; null\nwhen `label` fits at least as well or no business name filters.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role": {
+            "$ref": "#/components/schemas/PersonRole",
+            "description": "The role the related person holds on this business, on a business listed under a\nperson. Absent elsewhere, and where the filing names none."
+          },
+          "states": {
+            "description": "The states, listed as the business's own row lists them.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "token": {
+            "description": "Opaque handle for this business, sealed the way a suggestion's own `token` is and\nbound to the same organization and fifteen minutes: a `business_token` that\n`POST /searches` redeems, pinned to the row it was reached through.",
+            "type": "string"
+          },
+          "type": {
+            "$ref": "#/components/schemas/BusinessKind"
+          }
+        },
+        "required": [
+          "type",
+          "token",
+          "label",
+          "matched_name",
+          "highlight",
+          "address",
+          "states",
+          "domicile_state",
+          "matched"
+        ],
+        "type": "object"
+      },
+      "RelatedBusinesses": {
+        "description": "The businesses related to a person or an address.",
+        "properties": {
+          "count": {
+            "description": "Total before the head cap; null when the relation's status is not ok. For\nthe addresses of a business it counts the business's own filings: the head\nalso ranks in the addresses of its officers and agents, so `items` can\noutnumber it.",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RelatedBusiness"
+            },
+            "type": "array"
+          },
+          "matched": {
+            "description": "How many satisfied a relation filter; null when none applies.",
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "count",
+          "matched",
+          "truncated",
+          "items"
+        ],
+        "type": "object"
+      },
+      "RelatedItem": {
+        "description": "A related item of any kind, told apart by its `type`. Each relation holds one kind,\nso no response field has this type; it is the union a generic client can decode any\nrelated item as. `type` is the discriminator and is fixed by the relation, which holds\none kind, so it is not an open enum and an item of another kind in a relation is a\ncontract violation. A new kind of entity would arrive as a new relation, which a client\nthat does not know it ignores.",
+        "discriminator": {
+          "mapping": {
+            "address": "#/components/schemas/RelatedAddress",
+            "business": "#/components/schemas/RelatedBusiness",
+            "person": "#/components/schemas/RelatedPerson"
+          },
+          "propertyName": "type"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/RelatedBusiness"
+          },
+          {
+            "$ref": "#/components/schemas/RelatedPerson"
+          },
+          {
+            "$ref": "#/components/schemas/RelatedAddress"
+          }
+        ]
+      },
+      "RelatedPeople": {
+        "description": "The people related to a business or an address.",
+        "properties": {
+          "count": {
+            "description": "Total before the head cap; null when the relation's status is not ok. For\nthe addresses of a business it counts the business's own filings: the head\nalso ranks in the addresses of its officers and agents, so `items` can\noutnumber it.",
+            "format": "int64",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/RelatedPerson"
+            },
+            "type": "array"
+          },
+          "matched": {
+            "description": "How many satisfied a relation filter; null when none applies.",
+            "format": "int32",
+            "minimum": 0,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "count",
+          "matched",
+          "truncated",
+          "items"
+        ],
+        "type": "object"
+      },
+      "RelatedPerson": {
+        "description": "A person listed under a business or under an address.",
+        "properties": {
+          "highlight": {
+            "description": "How the name this person matched on reads against the typed text of the person\nname filter, drawn as a suggestion's own `highlight` is; null on a person no filter\nmatched, and on a matched one whose highlight marks nothing.",
+            "items": {
+              "$ref": "#/components/schemas/HighlightPart"
+            },
+            "type": [
+              "array",
+              "null"
+            ]
+          },
+          "label": {
+            "type": "string"
+          },
+          "matched": {
+            "description": "This item is why the row is here.",
+            "type": "boolean"
+          },
+          "role": {
+            "$ref": "#/components/schemas/PersonRole",
+            "description": "The role this person holds on the business, on a person listed under a business.\nAbsent under an address: a person is at an address with no role of its own there."
+          },
+          "type": {
+            "$ref": "#/components/schemas/PersonKind"
+          }
+        },
+        "required": [
+          "type",
+          "label",
+          "highlight",
+          "matched"
         ],
         "type": "object"
       },
@@ -626,6 +823,7 @@
         "required": [
           "code",
           "message",
+          "uri",
           "metadata"
         ],
         "type": "object"
@@ -674,6 +872,7 @@
         "type": "object"
       },
       "SourceStatus": {
+        "description": "Whether a relation was read. The set is open: a client treats a value it does not know\nas `unavailable`.",
         "enum": [
           "ok",
           "not_requested",
@@ -696,22 +895,36 @@
         ],
         "type": "object"
       },
-      "ValidationEnvelope": {
-        "description": "The API's request validation envelope (`{\"detail\": [...]}`).",
+      "ValidationErrorEnvelope": {
+        "description": "The error envelope of a 422: a request whose parameters do not validate. What a\nframework default answered as `{\"detail\": [...]}` is `metadata.errors`.",
         "properties": {
-          "detail": {
-            "items": {
-              "$ref": "#/components/schemas/ValidationItem"
-            },
-            "type": "array"
+          "code": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "message": {
+            "type": "string"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/ValidationMetadata"
+          },
+          "uri": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "required": [
-          "detail"
+          "code",
+          "message",
+          "uri",
+          "metadata"
         ],
         "type": "object"
       },
       "ValidationItem": {
+        "description": "One parameter that failed validation. The `type` is open: a client treats one it does\nnot know as a generic failure.",
         "properties": {
           "ctx": {},
           "loc": {
@@ -731,6 +944,26 @@
           "type",
           "loc",
           "msg"
+        ],
+        "type": "object"
+      },
+      "ValidationMetadata": {
+        "description": "The `metadata` of a 422: the reason, and every parameter that failed.",
+        "properties": {
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationItem"
+            },
+            "type": "array"
+          },
+          "reason": {
+            "description": "Always `request_invalid`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason",
+          "errors"
         ],
         "type": "object"
       },
@@ -787,7 +1020,10 @@
           "schema_version",
           "recipe_version",
           "schema_sha256",
-          "ingestion_id"
+          "ingestion_id",
+          "recipe_sha256",
+          "image_digest",
+          "built_at"
         ],
         "type": "object"
       }
@@ -924,7 +1160,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationEnvelope"
+                  "$ref": "#/components/schemas/ValidationErrorEnvelope"
                 }
               }
             },
@@ -1040,12 +1276,12 @@
             }
           },
           {
-            "description": "`officer` or `agent`.",
+            "description": "The role the person holds on the business: `officer` or `agent` (`PersonRole`).",
             "in": "query",
             "name": "person.role",
             "required": false,
             "schema": {
-              "type": "string"
+              "$ref": "#/components/schemas/PersonRole"
             }
           },
           {
@@ -1135,7 +1371,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationEnvelope"
+                  "$ref": "#/components/schemas/ValidationErrorEnvelope"
                 }
               }
             },
@@ -1286,7 +1522,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ValidationEnvelope"
+                  "$ref": "#/components/schemas/ValidationErrorEnvelope"
                 }
               }
             },

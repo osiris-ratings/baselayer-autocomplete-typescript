@@ -4,10 +4,19 @@
 
 import type { ReactNode } from "react";
 
-import type { EntityType, RelatedRole } from "@baselayer-sdk/autocomplete";
+import type {
+  EntityType,
+  AddressListing,
+  PersonRole,
+} from "@baselayer-sdk/autocomplete";
 
-/** What a host keys an icon by: an entity, or an entity in a role. */
-export type IconKey = EntityType | `${EntityType}:${RelatedRole}`;
+/**
+ * What a host keys an icon by: an entity, or an entity in a role: a person by
+ * the role they hold on a business (`person:agent`), an address by how a
+ * business lists it (`address:mailing`).
+ */
+export type IconKey =
+  EntityType | `person:${PersonRole}` | `address:${AddressListing}`;
 
 /**
  * A host's own icons, by entity or by entity and role, the role's winning;
@@ -85,7 +94,7 @@ const GLYPHS: Readonly<Record<Glyph, ReactNode>> = Object.freeze({
  * person by whether they are an officer or an agent, a business always a
  * building. With no role, the entity's own.
  */
-export function glyphFor(entity: EntityType, role: RelatedRole | null): Glyph {
+export function glyphFor(entity: EntityType, role: string | null): Glyph {
   switch (entity) {
     case "business":
       return "building";
@@ -95,12 +104,11 @@ export function glyphFor(entity: EntityType, role: RelatedRole | null): Glyph {
       switch (role) {
         case "mailing":
           return "envelope";
-        case "agent":
+        case "registered_office":
           return "briefcase";
         case "officer":
           return "house";
-        case "principal":
-        case null:
+        default:
           return "pin";
       }
   }
@@ -113,7 +121,7 @@ export function glyphFor(entity: EntityType, role: RelatedRole | null): Glyph {
 function iconFor(
   icons: IconSet | undefined,
   entity: EntityType,
-  role: RelatedRole | null,
+  role: string | null,
 ): { node: ReactNode; glyph: Glyph | null } | null {
   if (icons === false) {
     return null;
@@ -140,7 +148,7 @@ export function SegmentIcon({
 }: {
   icons: IconSet | undefined;
   entity: EntityType;
-  role: RelatedRole | null;
+  role: string | null;
   className: string | undefined;
 }) {
   const icon = iconFor(icons, entity, role);

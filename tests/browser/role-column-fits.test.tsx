@@ -5,8 +5,10 @@ import { describe, expect, it } from "vitest";
 
 import type {
   AddressSuggestion,
+  AddressListing,
+  PersonRole,
   PersonSuggestion,
-  RelatedItem,
+  RelatedAddress,
 } from "@baselayer-sdk/autocomplete";
 import {
   AddressAutocompleteView,
@@ -14,61 +16,43 @@ import {
 } from "@baselayer-sdk/autocomplete/react";
 
 import "../../src/react/styles.css";
+import {
+  businessOfAddress,
+  businessOfPerson,
+  relatedAddress,
+  relatedSet as set,
+} from "./support/related";
 
-// Made-up businesses and addresses, each line in a role.
-const business = (
-  label: string,
-  states: string[],
-  role: RelatedItem["role"],
-): RelatedItem => ({
-  type: "business",
-  token: `tok-${label}`,
-  label,
-  role,
-  matched: false,
-  matched_name: null,
-  highlight: null,
+// Made-up businesses and addresses, each business line in a role.
+const details = (states: string[]) => ({
   address: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
   states,
   domicile_state: states[0]!,
 });
 
-const address = (label: string, role: RelatedItem["role"]): RelatedItem => ({
-  type: "address",
-  token: `tok-${label}`,
-  label,
-  role,
-  matched: false,
-  matched_name: null,
-  highlight: null,
-  address: null,
-  states: null,
-  domicile_state: null,
-});
-
-const set = (items: RelatedItem[]) => ({
-  count: items.length,
-  matched: null,
-  truncated: false,
-  items,
-});
+const heldBusiness = (label: string, states: string[], role: PersonRole) =>
+  businessOfPerson(label, role, details(states));
 
 const none = { count: null, matched: null, truncated: false, items: [] };
 
 /** A person whose businesses hold them as an officer or an agent. */
-function person(addresses: RelatedItem[] = []): PersonSuggestion {
+function person(addresses: RelatedAddress[] = []): PersonSuggestion {
   return {
     type: "person",
     token: "tok-dana",
     label: "Dana Whitfield",
-    matched_name: null,
     match: "strong",
+    states: ["AZ", "CA", "NJ", "NV", "OH", "PA"],
     highlight: [],
     related: {
       businesses: set([
-        business("HARBOR CONCRETE SUPPLY, INC.", ["NJ"], "officer"),
-        business("BAYSIDE HARBOR CONCRETE, INC.", ["CA", "AZ", "NV"], "agent"),
-        business("NORTHSHORE PUMPING, LLC", ["OH", "PA"], "officer"),
+        heldBusiness("HARBOR CONCRETE SUPPLY, INC.", ["NJ"], "officer"),
+        heldBusiness(
+          "BAYSIDE HARBOR CONCRETE, INC.",
+          ["CA", "AZ", "NV"],
+          "agent",
+        ),
+        heldBusiness("NORTHSHORE PUMPING, LLC", ["OH", "PA"], "officer"),
       ]),
       addresses: addresses.length === 0 ? none : set(addresses),
     },
@@ -76,12 +60,11 @@ function person(addresses: RelatedItem[] = []): PersonSuggestion {
 }
 
 /** An address its businesses hold in `roles`, one business each. */
-function place(roles: RelatedItem["role"][]): AddressSuggestion {
+function place(roles: AddressListing[]): AddressSuggestion {
   return {
     type: "address",
     token: "tok-quill",
     label: "77 QUILLBACK LN, FARRELTON, OR 97433",
-    matched_name: null,
     match: "strong",
     highlight: [],
     components: {
@@ -94,7 +77,11 @@ function place(roles: RelatedItem["role"][]): AddressSuggestion {
     related: {
       businesses: set(
         roles.map((role, at) =>
-          business(`QUILLBACK HOLDINGS ${at + 1}, LLC`, ["OR", "WA"], role),
+          businessOfAddress(
+            `QUILLBACK HOLDINGS ${at + 1}, LLC`,
+            role,
+            details(["OR", "WA"]),
+          ),
         ),
       ),
       people: none,
@@ -220,11 +207,11 @@ describe("the role column on a person's or an address's lines", () => {
       }
     });
 
-    it(`is never wider than the widest person's role shown on a person search, its addresses' lines included, at ${width}px`, () => {
-      const { lines, done } = draw(width, {
+    it(`is never wider than the widest person's role shown on a person search, an address listed beside the businesses drawing none, at ${width}px`, () => {
+      const { host, lines, done } = draw(width, {
         route: "people",
         suggestion: person([
-          address("12 FERNHOLLOW CT, ASHGROVE, OH 43011", "mailing"),
+          relatedAddress("12 FERNHOLLOW CT, ASHGROVE, OH 43011"),
         ]),
         list: ["businesses", "addresses"],
       });
@@ -232,9 +219,15 @@ describe("the role column on a person's or an address's lines", () => {
         const drawn = lines();
         const { texts, widest, width: wide, spread } = column(drawn);
         // A person's roles, never how a business holds an address.
+        expect(texts).toEqual(["officer", "agent", "officer"]);
         expect(texts).not.toContain("principal office");
         expect(texts).not.toContain("mailing address");
-        expect(texts).toContain("mailing");
+        // A person is at an address with no role of its own.
+        const place = host.querySelector(
+          '.bl-ac-group-line[data-line="address"]',
+        )!;
+        expect(place.textContent).toContain("12 FERNHOLLOW CT");
+        expect(place.querySelector(".bl-ac-role")).toBeNull();
         expect(spread).toBeLessThanOrEqual(0.5);
         expect(wide).toBeLessThanOrEqual(Math.ceil(widest) + 0.5);
       } finally {
@@ -245,7 +238,11 @@ describe("the role column on a person's or an address's lines", () => {
     it(`widens to fit a principal office an address search shows, every role starting at one x, at ${width}px`, () => {
       const { lines, done } = draw(width, {
         route: "addresses",
-        suggestion: place(["agent", "principal", "agent"]),
+        suggestion: place([
+          "registered_office",
+          "principal",
+          "registered_office",
+        ]),
       });
       try {
         const drawn = lines();
@@ -273,7 +270,9 @@ describe("the role column on a person's or an address's lines", () => {
       <AddressAutocompleteView
         id="addresses"
         value="x"
-        suggestions={[place(["agent", "principal", "agent"])]}
+        suggestions={[
+          place(["registered_office", "principal", "registered_office"]),
+        ]}
         {...COMMON}
       />,
     );
@@ -311,7 +310,11 @@ describe("the role column on a person's or an address's lines", () => {
   it("fits the roles when a menu closed as its answer came is opened on that answer", () => {
     const answer: Answer = {
       route: "addresses",
-      suggestion: place(["agent", "principal", "agent"]),
+      suggestion: place([
+        "registered_office",
+        "principal",
+        "registered_office",
+      ]),
     };
     const { render, lines, done } = draw(560, answer, false);
     try {
@@ -330,7 +333,11 @@ describe("the role column on a person's or an address's lines", () => {
   it("fits the roles again when the page's font changes under one answer", () => {
     const answer: Answer = {
       route: "addresses",
-      suggestion: place(["agent", "principal", "agent"]),
+      suggestion: place([
+        "registered_office",
+        "principal",
+        "registered_office",
+      ]),
     };
     const { host, render, lines, done } = draw(560, answer);
     try {
@@ -352,14 +359,17 @@ describe("the role column on a person's or an address's lines", () => {
   it("fits the roles under a zoomed ancestor, as wide as their words are drawn", () => {
     const answer: Answer = {
       route: "addresses",
-      suggestion: place(["principal", "agent"]),
+      suggestion: place(["principal", "registered_office"]),
     };
     const { host, render, lines, done } = draw(560, answer);
     try {
       host.style.zoom = "2";
       render(answer, "xy");
       render(
-        { route: "addresses", suggestion: place(["agent", "principal"]) },
+        {
+          route: "addresses",
+          suggestion: place(["registered_office", "principal"]),
+        },
         "xy",
       );
       const { width, widest } = column(lines());
@@ -375,7 +385,7 @@ describe("the role column on a person's or an address's lines", () => {
   it("holds still while the text changes over one answer, and fits the next answer once it comes", () => {
     const answer: Answer = {
       route: "addresses",
-      suggestion: place(["agent", "principal"]),
+      suggestion: place(["registered_office", "principal"]),
     };
     const { render, lines, done } = draw(560, answer);
     try {
@@ -384,7 +394,10 @@ describe("the role column on a person's or an address's lines", () => {
       render(answer, "xyz");
       expect(column(lines()).left).toBe(wide);
       render(
-        { route: "addresses", suggestion: place(["agent", "agent"]) },
+        {
+          route: "addresses",
+          suggestion: place(["registered_office", "registered_office"]),
+        },
         "xyz",
       );
       const narrow = column(lines());

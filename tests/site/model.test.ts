@@ -31,7 +31,8 @@ describe("the reference's fields for a suggestion", () => {
     const structure = row("suggestions[].structure");
 
     expect(structure?.type).toBe("enum or null");
-    expect(structure?.required).toBe(false);
+    // Always sent: `null` is how a row says it has no structure.
+    expect(structure?.required).toBe(true);
     expect(structure?.description).toMatch(/legal structure/);
     expect(structure?.values).toEqual([...BUSINESS_STRUCTURES]);
   });
@@ -43,6 +44,49 @@ describe("the reference's fields for a suggestion", () => {
       "strong",
       "partial",
     ]);
+  });
+});
+
+describe("the reference's fields for each route's own entity", () => {
+  const rowsOf = (path: string) => {
+    const route = operations.find(entry => entry.path === path)!;
+    return fieldRows(schemaOf(route.operation.responses["200"]!)!);
+  };
+  const paths = (rows: ReturnType<typeof rowsOf>) =>
+    new Set(rows.map(row => row.path));
+
+  it("gives a person its states and no matched name, and an address its components", () => {
+    const people = paths(rowsOf("/autocomplete/people"));
+    const addresses = paths(rowsOf("/autocomplete/addresses"));
+
+    expect(people.has("suggestions[].states")).toBe(true);
+    expect(people.has("suggestions[].matched_name")).toBe(false);
+    expect(addresses.has("suggestions[].components.postal_code")).toBe(true);
+    expect(addresses.has("suggestions[].matched_name")).toBe(false);
+  });
+
+  it("gives a related business a token and a related person or address none", () => {
+    const people = rowsOf("/autocomplete/people");
+    const addresses = rowsOf("/autocomplete/addresses");
+    const row = (rows: typeof people, path: string) =>
+      rows.find(candidate => candidate.path === path);
+
+    expect(
+      row(people, "suggestions[].related.businesses.items[].token")?.required,
+    ).toBe(true);
+    expect(
+      paths(people).has("suggestions[].related.addresses.items[].token"),
+    ).toBe(false);
+    expect(
+      paths(addresses).has("suggestions[].related.people.items[].token"),
+    ).toBe(false);
+    // The keys a relationship may lack are the ones left out of `required`.
+    expect(
+      row(people, "suggestions[].related.businesses.items[].role")?.required,
+    ).toBe(false);
+    expect(
+      row(addresses, "suggestions[].related.people.items[].role")?.required,
+    ).toBe(false);
   });
 });
 

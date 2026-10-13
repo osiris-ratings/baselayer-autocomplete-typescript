@@ -1,14 +1,14 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import type { EntityType, RelatedRole } from "@baselayer-sdk/autocomplete";
+import type { EntityType } from "@baselayer-sdk/autocomplete";
 
 import { SegmentIcon, glyphFor, type IconSet } from "../../src/react/icons";
 
 function drawn(
   icons: IconSet | undefined,
   entity: EntityType,
-  role: RelatedRole | null,
+  role: string | null,
 ) {
   const { container } = render(
     <SegmentIcon
@@ -31,8 +31,15 @@ describe("the glyph a segment draws", () => {
     expect(glyphFor("address", null)).toBe("pin");
     expect(glyphFor("address", "principal")).toBe("pin");
     expect(glyphFor("address", "mailing")).toBe("envelope");
-    expect(glyphFor("address", "agent")).toBe("briefcase");
+    expect(glyphFor("address", "registered_office")).toBe("briefcase");
     expect(glyphFor("address", "officer")).toBe("house");
+  });
+
+  it("draws a role this build does not know as its entity's own", () => {
+    // The roles are an open enum: a value the service sends ahead of this
+    // build must not leave a segment without an icon.
+    expect(glyphFor("address", "head_office")).toBe("pin");
+    expect(glyphFor("person", "director")).toBe("person");
   });
 
   it("is drawn hidden from screen readers, naming its entity, role and glyph", () => {
@@ -61,9 +68,20 @@ describe("a host's icons", () => {
     const mailing = drawn(icons, "address", "mailing")!;
     expect(mailing.textContent).toBe("mailing");
     expect(mailing).not.toHaveAttribute("data-glyph");
-    expect(drawn(icons, "address", "agent")!.textContent).toBe("any-address");
+    expect(drawn(icons, "address", "registered_office")!.textContent).toBe(
+      "any-address",
+    );
     expect(drawn(icons, "address", null)!.textContent).toBe("any-address");
     expect(drawn(icons, "person", "agent")!.dataset.glyph).toBe("briefcase");
+  });
+
+  it("key an address's office of an agent by the contract's name for it", () => {
+    const icons: IconSet = { "address:registered_office": own("agent-office") };
+
+    expect(drawn(icons, "address", "registered_office")!.textContent).toBe(
+      "agent-office",
+    );
+    expect(drawn(icons, "address", "agent")!.dataset.glyph).toBe("pin");
   });
 
   it("hide the one set to false or null, the entity's or the role's, and every one when off", () => {

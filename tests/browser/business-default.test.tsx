@@ -11,6 +11,7 @@ import type {
 import { BusinessAutocompleteView } from "@baselayer-sdk/autocomplete/react";
 
 import "../../src/react/styles.css";
+import { addressOfBusiness, personOfBusiness } from "./support/related";
 
 // The business typeahead a host gets with no layout, lists or picks of its
 // own must draw exactly as it always has, and so must one a host has laid
@@ -129,27 +130,10 @@ function drawsOn(element: Element, selector: string): boolean {
 }
 
 // Made-up businesses, people and addresses, one of each field among them.
-function item(
-  type: RelatedItem["type"],
-  label: string,
-  role: RelatedItem["role"],
-  matched = false,
-): RelatedItem {
-  return {
-    type,
-    token: `tok-${label}`,
-    label,
-    role,
-    matched,
-    matched_name: null,
-    highlight: null,
-    address: null,
-    states: null,
-    domicile_state: null,
-  };
-}
-
-function set(items: RelatedItem[], count = items.length): RelatedSet {
+function set<Item extends RelatedItem>(
+  items: Item[],
+  count = items.length,
+): RelatedSet<Item> {
   return {
     count,
     matched: items.some(each => each.matched) ? 1 : null,
@@ -171,14 +155,13 @@ const ROWS: BusinessSuggestion[] = [
     related: {
       people: set(
         [
-          item("person", "Dana Whitfield", "officer"),
-          item("person", "Luis Ortega", "officer"),
+          personOfBusiness("Dana Whitfield", "officer"),
+          personOfBusiness("Luis Ortega", "officer"),
         ],
         4,
       ),
       addresses: set([
-        item(
-          "address",
+        addressOfBusiness(
           "1200 Tallowmere Rd, Pittsburgh, PA 15212",
           "principal",
         ),
@@ -201,9 +184,13 @@ const ROWS: BusinessSuggestion[] = [
     states: ["OH", "PA"],
     structure: "LLC",
     related: {
-      people: set([item("person", "MERIDIAN REGISTERED AGENTS, LLC", "agent")]),
+      people: set([
+        personOfBusiness("MERIDIAN REGISTERED AGENTS, LLC", "agent"),
+      ]),
       addresses: set([
-        item("address", "88 Velloway St, Akron, OH 44308", "officer", true),
+        addressOfBusiness("88 Velloway St, Akron, OH 44308", "officer", {
+          matched: true,
+        }),
       ]),
     },
     highlight: [

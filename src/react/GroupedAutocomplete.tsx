@@ -41,7 +41,6 @@ import {
   type PersonRowLayoutInput,
   type PersonSuggestion,
   type RelatedItem,
-  type RelatedRole,
   type Relation,
   type SuggestionByRelation,
 } from "@baselayer-sdk/autocomplete";
@@ -62,6 +61,7 @@ import {
 } from "./useBusinessAutocomplete";
 import { useSuggestionCombobox } from "./useBusinessCombobox";
 import { NO_FILL_ATTRIBUTES } from "./inputAttributes";
+import { roleLabel, roleOf } from "./roles";
 import {
   StateSquares,
   classes,
@@ -552,11 +552,7 @@ function GroupedView<R extends GroupedRoute>({
     iconSegments ?? DEFAULT_ICON_SEGMENTS[route],
   );
   /** The icon `segment` carries, for an entity in a role; none where it carries none. */
-  const iconOf = (
-    segment: string,
-    entity: EntityType,
-    role: RelatedRole | null,
-  ) =>
+  const iconOf = (segment: string, entity: EntityType, role: string | null) =>
     withIcon.has(segment) && (
       <SegmentIcon
         icons={icons}
@@ -661,14 +657,21 @@ function GroupedView<R extends GroupedRoute>({
 
   /** The role an item's line draws, read the way its line reads it. */
   function roleText(of: LineOf): string | null {
-    if (of.line === "head" || of.item.role === null) {
+    if (of.line === "head") {
+      return null;
+    }
+    const role = roleOf(of.item);
+    if (role === null) {
       return null;
     }
     // Under an address, a business holds it in some role; everywhere else
     // the role is a person's.
-    return route === "addresses" && of.line === "business"
-      ? text.addressRoles[of.item.role]
-      : text.personRoles[of.item.role];
+    return roleLabel(
+      route === "addresses" && of.line === "business"
+        ? text.addressRoles
+        : text.personRoles,
+      role,
+    );
   }
 
   /** A field as drawn in `place` on a line, or nothing where the line has no value for it. */
@@ -697,7 +700,7 @@ function GroupedView<R extends GroupedRoute>({
             data-testid="grouped-firstAddress"
             data-emphasis={look.matchEmphasis}
           >
-            {iconOf("firstAddress", "address", first.role)}
+            {iconOf("firstAddress", "address", null)}
             {marked(
               first.label,
               relatedParts(first.label, first),
@@ -727,6 +730,7 @@ function GroupedView<R extends GroupedRoute>({
       case "address":
         return (
           of.line !== "head" &&
+          of.item.type === "business" &&
           of.item.address !== null && (
             <span
               className={cx("address", "bl-ac-address")}
@@ -741,7 +745,8 @@ function GroupedView<R extends GroupedRoute>({
       case "states":
         return (
           of.line !== "head" &&
-          (of.item.states?.length ?? 0) > 0 && (
+          of.item.type === "business" &&
+          of.item.states.length > 0 && (
             <StateSquares
               business={of.item}
               matched={
@@ -843,27 +848,29 @@ function GroupedView<R extends GroupedRoute>({
         <span className={cx("corner", "bl-ac-group-lead")} data-corner="lead">
           {of.line === "head"
             ? iconOf("name", of.row.type, null)
-            : iconOf(`${of.line}Name`, of.item.type, of.item.role)}
+            : iconOf(`${of.line}Name`, of.item.type, roleOf(of.item))}
           {name}
           {/* The other name a business matched on, right after its own, as a
               business row's title says it, and before the badge: a business
               line's is its address. The service sends no marks for it, so it
               is plain, as the line's own name is. */}
-          {of.line !== "head" && of.item.matched_name !== null && (
-            <span
-              className={cx("also", "bl-ac-also")}
-              data-testid="grouped-also"
-              data-emphasis={look.matchEmphasis}
-            >
-              also{" "}
-              {marked(
-                of.item.matched_name,
-                relatedParts(of.item.matched_name, of.item),
-                markClass,
-                "grouped-match",
-              )}
-            </span>
-          )}
+          {of.line !== "head" &&
+            of.item.type === "business" &&
+            of.item.matched_name !== null && (
+              <span
+                className={cx("also", "bl-ac-also")}
+                data-testid="grouped-also"
+                data-emphasis={look.matchEmphasis}
+              >
+                also{" "}
+                {marked(
+                  of.item.matched_name,
+                  relatedParts(of.item.matched_name, of.item),
+                  markClass,
+                  "grouped-match",
+                )}
+              </span>
+            )}
           {badge}
         </span>
         {(trailingBadge || trailing) && (

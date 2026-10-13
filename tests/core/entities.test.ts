@@ -38,10 +38,25 @@ const base = (type: string, relations: string[]) => ({
   type,
   token: `tok-${type}`,
   label: "Label",
-  matched_name: null,
   match: "strong",
   related: Object.fromEntries(relations.map(r => [r, related(0)])),
   highlight: [{ text: "Label", matched: true }],
+});
+
+// What each kind of row carries beyond the base: a business its names, its
+// states and its structure; a person the states of its businesses; an address
+// its components. Only a business has a `matched_name`.
+const businessRow = (relations: string[]) => ({
+  ...base("business", relations),
+  matched_name: null,
+  domicile_state: "DE",
+  states: ["DE"],
+  structure: null,
+});
+
+const personRow = (relations: string[]) => ({
+  ...base("person", relations),
+  states: ["DE"],
 });
 
 describe("the entity model", () => {
@@ -71,9 +86,10 @@ describe("parseSuggestResponse", () => {
     const relations = ["businesses", "addresses"];
     const parsed = parseSuggestResponse(
       "people",
-      envelope(relations, [base("person", relations)]),
+      envelope(relations, [personRow(relations)]),
     );
     expect(parsed.suggestions[0]!.type).toBe("person");
+    expect(parsed.suggestions[0]!.states).toEqual(["DE"]);
     expect(Object.keys(parsed.suggestions[0]!.related).sort()).toEqual(
       [...relations].sort(),
     );
@@ -97,6 +113,7 @@ describe("parseSuggestResponse", () => {
       envelope(relations, [row]),
     );
     expect(parsed.suggestions[0]!.components).toEqual(row.components);
+    expect(parsed.suggestions[0]).not.toHaveProperty("matched_name");
   });
 
   it("refuses a row of another type on a route", () => {
@@ -104,7 +121,7 @@ describe("parseSuggestResponse", () => {
     expect(() =>
       parseSuggestResponse(
         "people",
-        envelope(relations, [base("business", relations)]),
+        envelope(relations, [businessRow(relations)]),
       ),
     ).toThrow(ContractViolation);
   });
@@ -112,7 +129,7 @@ describe("parseSuggestResponse", () => {
   it("drops fields it has never seen", () => {
     const relations = ["businesses", "addresses"];
     const row = {
-      ...base("person", relations),
+      ...personRow(relations),
       a_field_from_a_later_release: true,
     };
     const parsed = parseSuggestResponse("people", envelope(relations, [row]));
@@ -123,9 +140,7 @@ describe("parseSuggestResponse", () => {
 
   it("is what parseBusinessesResponse is, for businesses", () => {
     const relations = ["people", "addresses"];
-    const body = envelope(relations, [
-      { ...base("business", relations), domicile_state: "DE", states: ["DE"] },
-    ]);
+    const body = envelope(relations, [businessRow(relations)]);
     expect(parseSuggestResponse("businesses", body)).toEqual(
       parseBusinessesResponse(body),
     );
@@ -153,6 +168,11 @@ describe("buildSuggestUrl", () => {
     expect(buildSuggestUrl("https://api.test", "businesses", query)).toBe(
       buildBusinessesUrl("https://api.test", query),
     );
+    expect(
+      new URL(
+        buildSuggestUrl("https://api.test", "businesses", query),
+      ).searchParams.get("person.role"),
+    ).toBe("officer");
   });
 
   it("sends the people route's business state, comma list joined", () => {
@@ -180,7 +200,7 @@ describe("client.search", () => {
         ok: true,
         status: 200,
         headers: { get: () => null },
-        json: async () => envelope(relations, [base("person", relations)]),
+        json: async () => envelope(relations, [personRow(relations)]),
       }),
     );
     const mint: MintFunction = async () => ({
@@ -218,14 +238,7 @@ describe("client.search", () => {
       ok: true,
       status: 200,
       headers: { get: () => null },
-      json: async () =>
-        envelope(relations, [
-          {
-            ...base("business", relations),
-            domicile_state: "DE",
-            states: ["DE"],
-          },
-        ]),
+      json: async () => envelope(relations, [businessRow(relations)]),
     }));
     const mint: MintFunction = async () => ({
       kind: "granted",

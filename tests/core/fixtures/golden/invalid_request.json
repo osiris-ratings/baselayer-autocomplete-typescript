@@ -1,0 +1,18 @@
+{
+  "code": 422,
+  "message": "The request is invalid.",
+  "metadata": {
+    "errors": [
+      {
+        "ctx": {
+          "expected": "'officer' or 'agent'"
+        },
+        "loc": ["query", "person.role"],
+        "msg": "Input should be 'officer' or 'agent', not \"debtor\"",
+        "type": "enum"
+      }
+    ],
+    "reason": "request_invalid"
+  },
+  "uri": null
+}

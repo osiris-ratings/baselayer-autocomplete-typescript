@@ -5,7 +5,6 @@ import { describe, expect, it } from "vitest";
 import type {
   BusinessSuggestion,
   PersonSuggestion,
-  RelatedItem,
 } from "@baselayer-sdk/autocomplete";
 import {
   BusinessAutocompleteView,
@@ -13,6 +12,7 @@ import {
 } from "@baselayer-sdk/autocomplete/react";
 
 import "../../src/react/styles.css";
+import { businessOfPerson } from "./support/related";
 
 // Made-up businesses: a corporation in five states, so its row draws the
 // structure's flag and a +2.
@@ -32,25 +32,19 @@ const ROW: BusinessSuggestion = {
   },
 };
 
-const business: RelatedItem = {
-  type: "business",
+const business = businessOfPerson("BAYSIDE HARBOR CONCRETE, INC.", "officer", {
   token: "tok-bayside",
-  label: "BAYSIDE HARBOR CONCRETE, INC.",
-  role: "officer",
-  matched: false,
-  matched_name: null,
-  highlight: null,
   address: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
   states: ["AZ", "CA", "NV", "OR", "WA"],
   domicile_state: "CA",
-};
+});
 
 const DANA: PersonSuggestion = {
   type: "person",
   token: "tok-dana",
   label: "Dana Whitfield",
-  matched_name: null,
   match: "strong",
+  states: ["AZ", "CA", "NV", "OR", "WA"],
   highlight: [],
   related: {
     businesses: {

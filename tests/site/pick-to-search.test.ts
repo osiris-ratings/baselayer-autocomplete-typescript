@@ -84,6 +84,41 @@ describe("a pick through a person", () => {
   });
 });
 
+describe("a pick through a person, in a role of another kind", () => {
+  const through = (role: string, row = SAMPLE_PEOPLE[0]!) =>
+    pickThrough(
+      businessPickFrom(
+        row,
+        { ...pickableBusinesses(row)[0]!, role },
+        PICKED_AT,
+      ),
+      { typed: "dana", asked: [] },
+    );
+
+  it("names a registered agent as one, and counts no officer", () => {
+    const meridian = SAMPLE_PEOPLE.find(row =>
+      row.label.startsWith("Meridian"),
+    )!;
+    const toSearch = through("agent", meridian);
+
+    expect(toSearch.about).toBe(
+      "Found through Meridian Registered Agents, LLC, its registered agent.",
+    );
+    expect(toSearch.matched.officers).toEqual([]);
+    expect(toSearch.matched.through).toMatchObject({ role: "agent" });
+  });
+
+  it("leaves a role this build has no words for out of the sentence, and keeps it as the service sent it", () => {
+    // `constructor` names a member of every object, not a role.
+    for (const role of ["trustee", "constructor"]) {
+      const toSearch = through(role);
+
+      expect(toSearch.about, role).toBe("Found through Dana Whitfield.");
+      expect(toSearch.matched.through, role).toMatchObject({ role });
+    }
+  });
+});
+
 describe("a pick through an address", () => {
   const agent = SAMPLE_ADDRESSES[1]!;
   const [northshore] = pickableBusinesses(agent);
@@ -105,7 +140,8 @@ describe("a pick through an address", () => {
       through: {
         route: "addresses",
         label: "77 Quillfeather Ln Ste 300, Dover, DE 19904",
-        role: "agent",
+        // As the service sends how it filed the address.
+        role: "registered_office",
       },
     });
   });

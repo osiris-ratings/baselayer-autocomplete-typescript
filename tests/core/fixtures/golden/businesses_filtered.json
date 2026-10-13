@@ -1,0 +1,173 @@
+{
+  "found": 2,
+  "found_capped": false,
+  "query": "halcyon",
+  "sources": {
+    "addresses": {
+      "status": "ok"
+    },
+    "people": {
+      "status": "ok"
+    }
+  },
+  "suggestions": [
+    {
+      "domicile_state": "DE",
+      "highlight": [
+        {
+          "matched": true,
+          "text": "HALCYON"
+        },
+        {
+          "matched": false,
+          "text": " FERRY WORKS LLC"
+        }
+      ],
+      "label": "HALCYON FERRY WORKS LLC",
+      "match": "strong",
+      "matched_name": null,
+      "related": {
+        "addresses": {
+          "count": 3,
+          "items": [
+            {
+              "highlight": [
+                {
+                  "matched": true,
+                  "text": "12 Pier"
+                },
+                {
+                  "matched": false,
+                  "text": " Road, Port Calder, WA 98300"
+                }
+              ],
+              "label": "12 Pier Road, Port Calder, WA 98300",
+              "listed_as": "mailing",
+              "matched": true,
+              "type": "address"
+            },
+            {
+              "highlight": null,
+              "label": "400 Lantern Ave, Wilmington, DE 19801",
+              "listed_as": "principal",
+              "matched": false,
+              "type": "address"
+            },
+            {
+              "highlight": null,
+              "label": "7 Mill Race Way, Bracken, OR 97000",
+              "listed_as": "registered_office",
+              "matched": false,
+              "type": "address"
+            }
+          ],
+          "matched": 1,
+          "truncated": false
+        },
+        "people": {
+          "count": 3,
+          "items": [
+            {
+              "highlight": [
+                {
+                  "matched": true,
+                  "text": "Marisol"
+                },
+                {
+                  "matched": false,
+                  "text": " Quennell"
+                }
+              ],
+              "label": "Marisol Quennell",
+              "matched": true,
+              "role": "officer",
+              "type": "person"
+            }
+          ],
+          "matched": 1,
+          "truncated": true
+        }
+      },
+      "states": ["DE", "WA"],
+      "structure": "LLC",
+      "token": "<sealed token>",
+      "type": "business"
+    },
+    {
+      "domicile_state": "WA",
+      "highlight": [
+        {
+          "matched": true,
+          "text": "HALCYON"
+        },
+        {
+          "matched": false,
+          "text": " TIDE PARTNERS LP"
+        }
+      ],
+      "label": "HALCYON TIDE PARTNERS LP",
+      "match": "strong",
+      "matched_name": null,
+      "related": {
+        "addresses": {
+          "count": 2,
+          "items": [
+            {
+              "highlight": [
+                {
+                  "matched": true,
+                  "text": "12 Pier"
+                },
+                {
+                  "matched": false,
+                  "text": " Road, Port Calder, WA 98300"
+                }
+              ],
+              "label": "12 Pier Road, Port Calder, WA 98300",
+              "listed_as": "principal",
+              "matched": true,
+              "type": "address"
+            },
+            {
+              "highlight": null,
+              "label": "400 Lantern Ave, Wilmington, DE 19801",
+              "listed_as": "registered_office",
+              "matched": false,
+              "type": "address"
+            }
+          ],
+          "matched": 1,
+          "truncated": false
+        },
+        "people": {
+          "count": 2,
+          "items": [
+            {
+              "highlight": [
+                {
+                  "matched": true,
+                  "text": "Marisol"
+                },
+                {
+                  "matched": false,
+                  "text": " Quennell"
+                }
+              ],
+              "label": "Marisol Quennell",
+              "matched": true,
+              "role": "officer",
+              "type": "person"
+            }
+          ],
+          "matched": 1,
+          "truncated": true
+        }
+      },
+      "states": ["WA"],
+      "structure": null,
+      "token": "<sealed token>",
+      "type": "business"
+    }
+  ],
+  "truncated": false
+}

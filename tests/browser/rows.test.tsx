@@ -8,14 +8,19 @@ import {
   ROW_PLACES,
   drawnRowLayout,
   resolveRowLayout,
+  type AddressOfBusiness,
   type BusinessSuggestion,
-  type RelatedItem,
+  type AddressListing,
+  type PersonRole,
+  type PersonOfBusiness,
+  type RelatedSet,
   type RowLayout,
   type RowLayoutInput,
 } from "@baselayer-sdk/autocomplete";
 import { BusinessAutocompleteView } from "@baselayer-sdk/autocomplete/react";
 
 import "../../src/react/styles.css";
+import { addressOfBusiness, personOfBusiness } from "./support/related";
 
 /** The menu widths the rows must hold at: a wide form, a narrow one, a phone. */
 const WIDTHS = [560, 400, 320] as const;
@@ -56,24 +61,31 @@ function changes(layout: RowLayout): Partial<RowLayout> {
   );
 }
 
-/** A business row's people or addresses, which carry no business fields. */
-function related(
-  type: RelatedItem["type"],
-  items: Pick<RelatedItem, "token" | "label" | "role" | "matched">[],
-) {
+/** A business row's people, who carry a name and the role they hold, no business fields. */
+function people(
+  items: { label: string; role: PersonRole; matched: boolean }[],
+): RelatedSet<PersonOfBusiness> {
   return {
     count: items.length,
     matched: null,
     truncated: false,
-    items: items.map(item => ({
-      type,
-      ...item,
-      matched_name: null,
-      highlight: null,
-      address: null,
-      states: null,
-      domicile_state: null,
-    })),
+    items: items.map(({ label, role, matched }) =>
+      personOfBusiness(label, role, { matched }),
+    ),
+  };
+}
+
+/** A business row's addresses, which carry a label and how the business filed it. */
+function addresses(
+  items: { label: string; role: AddressListing; matched: boolean }[],
+): RelatedSet<AddressOfBusiness> {
+  return {
+    count: items.length,
+    matched: null,
+    truncated: false,
+    items: items.map(({ label, role, matched }) =>
+      addressOfBusiness(label, role, { matched }),
+    ),
   };
 }
 
@@ -88,8 +100,8 @@ function row(overrides: Partial<BusinessSuggestion>): BusinessSuggestion {
     states: ["DE"],
     structure: null,
     related: {
-      people: related("person", []),
-      addresses: related("address", []),
+      people: people([]),
+      addresses: addresses([]),
     },
     highlight: [],
     ...overrides,
@@ -108,13 +120,12 @@ const ROWS: BusinessSuggestion[] = [
     structure: "C_CORPORATION",
     states: ["CA", "DE", "FL", "IL", "NY", "TX", "WA"],
     related: {
-      people: related("person", [
-        { token: null, label: "Wesley Crane", role: "officer", matched: false },
-        { token: null, label: "Ada Fox", role: "officer", matched: false },
+      people: people([
+        { label: "Wesley Crane", role: "officer", matched: false },
+        { label: "Ada Fox", role: "officer", matched: false },
       ]),
-      addresses: related("address", [
+      addresses: addresses([
         {
-          token: "tok-a1",
           label: "4120 Wrenmoor Lane Suite 1400, Springfield, MO 65806",
           role: "principal",
           matched: false,
@@ -132,19 +143,17 @@ const ROWS: BusinessSuggestion[] = [
   row({
     label: "CINDER HOLDINGS",
     related: {
-      people: related("person", [
+      people: people([
         {
-          token: null,
           label: "NORTHGATE REGISTERED AGENT SERVICES, INC",
           role: "agent",
           matched: false,
         },
       ]),
-      addresses: related("address", [
+      addresses: addresses([
         {
-          token: "tok-a2",
           label: "88 Thistlecrest Drive, Building C, Tempe, AZ 85281",
-          role: "agent",
+          role: "registered_office",
           matched: false,
         },
       ]),
@@ -156,10 +165,9 @@ const ROWS: BusinessSuggestion[] = [
     states: ["NV", "UT", "ID"],
     domicile_state: "NV",
     related: {
-      people: related("person", []),
-      addresses: related("address", [
+      people: people([]),
+      addresses: addresses([
         {
-          token: "tok-a3",
           label: "PO Box 4417, Durham, NC 27702",
           role: "mailing",
           matched: false,
@@ -171,17 +179,16 @@ const ROWS: BusinessSuggestion[] = [
     label: "CINDER",
     structure: "TRADE_NAME",
     related: {
-      people: related("person", [
+      people: people([
         {
-          token: null,
           label: "Marguerite Okonkwo-Lindqvist",
           role: "officer",
           matched: false,
         },
-        { token: null, label: "Ada Fox", role: "officer", matched: false },
-        { token: null, label: "Wesley Crane", role: "officer", matched: false },
+        { label: "Ada Fox", role: "officer", matched: false },
+        { label: "Wesley Crane", role: "officer", matched: false },
       ]),
-      addresses: related("address", []),
+      addresses: addresses([]),
     },
   }),
   row({
@@ -190,16 +197,14 @@ const ROWS: BusinessSuggestion[] = [
     states: ["CA", "DE", "FL", "IL", "NY", "TX", "WA"],
     related: {
       people: {
-        ...related("person", [
+        ...people([
           {
-            token: null,
             label: "Marguerite Okonkwo-Lindqvist",
             role: "officer",
             matched: true,
           },
-          { token: null, label: "Ada Fox", role: "officer", matched: true },
+          { label: "Ada Fox", role: "officer", matched: true },
           {
-            token: null,
             label: "Wesley Crane",
             role: "officer",
             matched: false,
@@ -208,9 +213,8 @@ const ROWS: BusinessSuggestion[] = [
         matched: 4,
       },
       addresses: {
-        ...related("address", [
+        ...addresses([
           {
-            token: "tok-a5",
             label: "4120 Wrenmoor Lane Suite 1400, Springfield, MO 65806",
             role: "officer",
             matched: true,

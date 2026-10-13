@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type {
   BusinessSuggestion,
+  RelatedItem,
   RelatedSet,
   RowLayoutInput,
 } from "@baselayer-sdk/autocomplete";
@@ -14,7 +15,9 @@ import {
 
 // A made-up business; only its counts matter here.
 function harbor(people: number | null, addresses: number | null) {
-  const set = (count: number | null): RelatedSet => ({
+  const set = <Item extends RelatedItem>(
+    count: number | null,
+  ): RelatedSet<Item> => ({
     count,
     matched: null,
     truncated: false,

@@ -12,8 +12,12 @@ import {
   DEFAULT_LOOK,
   ROW_FIELDS,
   ROW_PLACES,
+  type AddressOfBusiness,
   type BusinessSuggestion,
-  type RelatedRole,
+  type AddressListing,
+  type PersonRole,
+  type Open,
+  type PersonOfBusiness,
   type RowField,
   type RowLayoutInput,
   type RowPlace,
@@ -24,6 +28,32 @@ import {
   STATE_SQUARES,
   type BusinessAutocompleteViewProps,
 } from "../../src/react";
+
+/** A person listed under a business, with the role they hold on it. */
+const person = (
+  label: string,
+  role: PersonRole,
+  matched = false,
+): PersonOfBusiness => ({
+  type: "person",
+  label,
+  role: role,
+  matched,
+  highlight: null,
+});
+
+/** An address listed under a business, with how the business filed it. */
+const address = (
+  label: string,
+  listedAs: AddressListing,
+  matched = false,
+): AddressOfBusiness => ({
+  type: "address",
+  label,
+  listed_as: listedAs,
+  matched,
+  highlight: null,
+});
 
 const cinder: BusinessSuggestion = {
   type: "business",
@@ -42,42 +72,9 @@ const cinder: BusinessSuggestion = {
       matched: null,
       truncated: false,
       items: [
-        {
-          type: "person",
-          token: null,
-          label: "NORTHGATE AGENT SERVICES, INC",
-          role: "agent",
-          matched: false,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
-        {
-          type: "person",
-          token: null,
-          label: "Wesley Crane",
-          role: "officer",
-          matched: false,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
-        {
-          type: "person",
-          token: null,
-          label: "Ada Fox",
-          role: "officer",
-          matched: false,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
+        person("NORTHGATE AGENT SERVICES, INC", "agent"),
+        person("Wesley Crane", "officer"),
+        person("Ada Fox", "officer"),
       ],
     },
     addresses: {
@@ -88,42 +85,9 @@ const cinder: BusinessSuggestion = {
       // ladder runs through the other states, own filings by role before the
       // agent's.
       items: [
-        {
-          type: "address",
-          token: "tok-7f1a2c3d",
-          label: "412 Wrenmoor Ln, Springfield, MO 65806",
-          role: "principal",
-          matched: false,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
-        {
-          type: "address",
-          token: "tok-6f1a2c3d",
-          label: "PO Box 4417, Durham, NC 27702",
-          role: "mailing",
-          matched: false,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
-        {
-          type: "address",
-          token: "tok-8f1a2c3d",
-          label: "88 Thistlecrest Dr, Tempe, AZ 85281",
-          role: "agent",
-          matched: false,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
+        address("412 Wrenmoor Ln, Springfield, MO 65806", "principal"),
+        address("PO Box 4417, Durham, NC 27702", "mailing"),
+        address("88 Thistlecrest Dr, Tempe, AZ 85281", "registered_office"),
       ],
     },
   },
@@ -158,18 +122,7 @@ const filtered: BusinessSuggestion = {
       matched: 1,
       truncated: false,
       items: [
-        {
-          type: "person",
-          token: null,
-          label: "Ada Fox",
-          role: "officer",
-          matched: true,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
+        person("Ada Fox", "officer", true),
         ...cinder.related.people.items.filter(item => item.label !== "Ada Fox"),
       ],
     },
@@ -178,18 +131,7 @@ const filtered: BusinessSuggestion = {
       matched: 1,
       truncated: false,
       items: [
-        {
-          type: "address",
-          token: "tok-9f1a2c3d",
-          label: "301 Quenby St, San Francisco, CA 94105",
-          role: "officer",
-          matched: true,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
+        address("301 Quenby St, San Francisco, CA 94105", "officer", true),
         ...cinder.related.addresses.items,
       ],
     },
@@ -360,42 +302,9 @@ describe("BusinessAutocompleteView", () => {
           matched: null,
           truncated: true,
           items: [
-            {
-              type: "person",
-              token: null,
-              label: "Wesley Crane",
-              role: "officer",
-              matched: false,
-              matched_name: null,
-              highlight: null,
-              address: null,
-              states: null,
-              domicile_state: null,
-            },
-            {
-              type: "person",
-              token: null,
-              label: "Ada Fox",
-              role: "officer",
-              matched: false,
-              matched_name: null,
-              highlight: null,
-              address: null,
-              states: null,
-              domicile_state: null,
-            },
-            {
-              type: "person",
-              token: null,
-              label: "Sam Lee",
-              role: "officer",
-              matched: false,
-              matched_name: null,
-              highlight: null,
-              address: null,
-              states: null,
-              domicile_state: null,
-            },
+            person("Wesley Crane", "officer"),
+            person("Ada Fox", "officer"),
+            person("Sam Lee", "officer"),
           ],
         },
       },
@@ -757,30 +666,8 @@ const agentsOnly: BusinessSuggestion = {
       matched: null,
       truncated: false,
       items: [
-        {
-          type: "person",
-          token: null,
-          label: "NORTHGATE AGENT SERVICES, INC",
-          role: "agent",
-          matched: false,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
-        {
-          type: "person",
-          token: null,
-          label: "LAKESIDE FILING AGENTS",
-          role: "agent",
-          matched: false,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
+        person("NORTHGATE AGENT SERVICES, INC", "agent"),
+        person("LAKESIDE FILING AGENTS", "agent"),
       ],
     },
   },
@@ -1727,14 +1614,33 @@ describe("the row's places and fields", () => {
       suggestions: [
         { ...cinder, token: "tok-other", structure: "OTHER" },
         { ...cinder, token: "tok-none", structure: null },
+        // The contract's enum is open: a structure the service sends ahead of
+        // this build is kept as sent, and has no flag to draw.
+        { ...cinder, token: "tok-grown", structure: "FOUNDATION" },
       ],
-      found: 2,
+      found: 3,
     });
 
-    expect(screen.getAllByTestId("business-suggestion")).toHaveLength(2);
+    expect(screen.getAllByTestId("business-suggestion")).toHaveLength(3);
     expect(
       screen.queryAllByTestId("business-suggestion-structure"),
     ).toHaveLength(0);
+  });
+
+  it("draws a flag for a structure this build does not list when the host labels it", () => {
+    renderTypeahead({
+      suggestions: [{ ...cinder, token: "tok-grown", structure: "FOUNDATION" }],
+      found: 1,
+      // A host's table is typed by the structures this build lists; one that
+      // knows the service's newer value says it as untyped data.
+      messages: {
+        structures: { FOUNDATION: "Foundation" } as Record<string, string>,
+      },
+    });
+
+    expect(
+      screen.getByTestId("business-suggestion-structure"),
+    ).toHaveTextContent("Foundation");
   });
 
   it("draws the host's structure labels over its own, and no flag for one set empty", () => {
@@ -1765,7 +1671,7 @@ describe("what a row matched on", () => {
   const marks = (element: Element) =>
     [...element.querySelectorAll(".bl-ac-mark")].map(mark => mark.textContent);
   const addressesOf = (
-    role: RelatedRole,
+    listedAs: Open<AddressListing>,
     matched: boolean,
   ): BusinessSuggestion => ({
     ...cinder,
@@ -1774,7 +1680,13 @@ describe("what a row matched on", () => {
       addresses: {
         ...cinder.related.addresses,
         matched: matched ? 1 : null,
-        items: [{ ...cinder.related.addresses.items[0]!, role, matched }],
+        items: [
+          {
+            ...cinder.related.addresses.items[0]!,
+            listed_as: listedAs,
+            matched,
+          },
+        ],
       },
     },
   });
@@ -1890,7 +1802,7 @@ describe("what a row matched on", () => {
     const addressOf = (row: BusinessSuggestion) =>
       within(rowOf(row)).getByTestId("business-suggestion-address");
 
-    expect(addressOf(addressesOf("agent", true))).toHaveTextContent(
+    expect(addressOf(addressesOf("registered_office", true))).toHaveTextContent(
       "412 Wrenmoor Ln, Springfield, MO 65806 · agent's address",
     );
     const own = addressOf(addressesOf("principal", true));
@@ -1907,6 +1819,18 @@ describe("what a row matched on", () => {
     expect(address).not.toHaveTextContent("·");
     expect(address).not.toHaveAttribute("data-matched");
     expect(marks(address)).toEqual([]);
+  });
+
+  it("says nothing of whose a matched address is that was filed in a way this build does not list", () => {
+    // `listed_as` is an open enum: the service may name a way ahead of this
+    // build, and the address is still the one that matched.
+    const own = within(rowOf(addressesOf("head_office", true))).getByTestId(
+      "business-suggestion-address",
+    );
+
+    expect(own).toHaveTextContent("412 Wrenmoor Ln, Springfield, MO 65806");
+    expect(own).not.toHaveTextContent("·");
+    expect(own).toHaveAttribute("data-matched", "true");
   });
 
   it("draws the matched fields plain under the plain emphasis", () => {

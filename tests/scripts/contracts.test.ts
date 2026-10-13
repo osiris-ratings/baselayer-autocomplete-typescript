@@ -117,15 +117,11 @@ describe("vendoredJson", () => {
 });
 
 describe("the vendored autocomplete spec", () => {
-  // The two descriptions upstream once wrote for its own readers. Held to
-  // their public text exactly, so any change to them is a deliberate update
-  // here, read before it ships.
-  const vendored = JSON.parse(
-    readFileSync(
-      join(__dirname, "../../contracts/autocomplete-openapi.json"),
-      "utf8",
-    ),
-  ) as {
+  // The descriptions upstream wrote for its own readers, held to their public
+  // text exactly, so any change to them is a deliberate update here, read
+  // before it ships.
+  const path = join(__dirname, "../../contracts/autocomplete-openapi.json");
+  const vendored = JSON.parse(readFileSync(path, "utf8")) as {
     components: {
       schemas: Record<
         string,
@@ -138,22 +134,27 @@ describe("the vendored autocomplete spec", () => {
   };
   const { schemas } = vendored.components;
 
-  it("describes a related item's token in exactly its public words", () => {
-    expect(schemas.RelatedItem?.properties?.token?.description).toBe(
+  it("describes a related business's token in exactly its public words", () => {
+    // Only a business listed under a person or an address has one: a person or
+    // an address listed carries none.
+    expect(schemas.RelatedBusiness?.properties?.token?.description).toBe(
       [
-        "Opaque handle for this row, sealed the way the suggestion's own `token` is",
-        "and bound to the same organization and fifteen minutes. A business's handle,",
-        "on whatever row it is, is a `business_token` `POST /searches` redeems; nothing",
-        "redeems a person's or an address's handle yet. Null when the autocomplete service cannot",
-        "name the row: its id was unreadable, or it is a kind of row this service",
-        "version cannot seal yet.",
+        "Opaque handle for this business, sealed the way a suggestion's own `token` is and",
+        "bound to the same organization and fifteen minutes: a `business_token` that",
+        "`POST /searches` redeems, pinned to the row it was reached through.",
       ].join("\n"),
     );
+    expect(schemas.RelatedPerson?.properties).not.toHaveProperty("token");
+    expect(schemas.RelatedAddress?.properties).not.toHaveProperty("token");
   });
 
   it("describes the error envelope in exactly its public words", () => {
     expect(schemas.ErrorEnvelope?.description).toBe(
       "The error envelope the API answers with: a numeric `code`, a `message`, and\n`metadata` that names the reason.",
     );
+  });
+
+  it("names no server-side class", () => {
+    expect(readFileSync(path, "utf8")).not.toMatch(/\.APIError/);
   });
 });

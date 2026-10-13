@@ -71,10 +71,10 @@ function wireSuggestion(
         items: [
           {
             type: "address",
-            token: "tok-address",
             label: "1 Dunmarrow St, Dover, DE 19901",
-            role: "principal",
+            listed_as: "principal",
             matched: false,
+            highlight: null,
           },
         ],
       },

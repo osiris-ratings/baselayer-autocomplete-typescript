@@ -22,6 +22,8 @@ import {
   type ResponseLike,
 } from "@baselayer-sdk/autocomplete";
 
+import { golden } from "./fixtures/golden";
+
 const {
   authBrakeMs: AUTH_BRAKE_MS,
   authFailuresBeforeBrake: AUTH_FAILURES_BEFORE_BRAKE,
@@ -82,6 +84,7 @@ const suggestion = {
   match: "strong",
   domicile_state: "DE",
   states: ["DE", "CA"],
+  structure: null,
   related: {
     people: {
       count: 3,
@@ -90,10 +93,10 @@ const suggestion = {
       items: [
         {
           type: "person",
-          id: null,
           label: "Wesley Crane",
           role: "officer",
           matched: true,
+          highlight: null,
         },
       ],
     },
@@ -106,6 +109,7 @@ const okBody = {
   query: "cind",
   found: 1,
   found_capped: false,
+  truncated: false,
   sources: {
     people: { status: "ok" },
     addresses: { status: "not_requested" },
@@ -119,6 +123,22 @@ function envelope(code: number, reason?: string) {
     message: `code ${code}`,
     uri: null,
     metadata: reason ? { reason } : {},
+  };
+}
+
+/**
+ * The catalog envelope the autocomplete service answers a 422 with: the
+ * message is generic, and `metadata.errors` says which parameter failed.
+ */
+function invalid(msg = "String should have at least 2 characters") {
+  return {
+    code: 422,
+    message: "The request is invalid.",
+    uri: null,
+    metadata: {
+      reason: "request_invalid",
+      errors: [{ type: "string_too_short", loc: ["query", "q"], msg }],
+    },
   };
 }
 
@@ -687,9 +707,9 @@ describe("client.suggest", () => {
       const clock = frozenAt(T0);
       const { client, fetchImpl } = setup({ now: clock.now });
       fetchImpl
-        .mockResolvedValueOnce(reply(422, { detail: [{ msg: "too short" }] }))
-        .mockResolvedValueOnce(reply(422, { detail: [{ msg: "too short" }] }))
-        .mockResolvedValueOnce(reply(422, { detail: [{ msg: "too short" }] }))
+        .mockResolvedValueOnce(reply(422, invalid("too short")))
+        .mockResolvedValueOnce(reply(422, invalid("too short")))
+        .mockResolvedValueOnce(reply(422, invalid("too short")))
         .mockResolvedValue(reply(200, okBody));
 
       for (let call = 0; call < 3; call += 1) {
@@ -724,30 +744,138 @@ describe("client.suggest", () => {
     });
   });
 
-  it("surfaces a validation detail as the error message", async () => {
-    const { client, fetchImpl } = setup();
-    fetchImpl.mockResolvedValue(
-      reply(422, {
-        detail: [
-          {
-            type: "string_too_short",
-            loc: ["query", "q"],
-            msg: "String should have at least 2 characters",
+  describe("a 422", () => {
+    it("surfaces the first error it names as the message", async () => {
+      const { client, fetchImpl } = setup();
+      fetchImpl.mockResolvedValue(
+        reply(422, {
+          ...invalid(),
+          metadata: {
+            reason: "request_invalid",
+            errors: [
+              {
+                type: "string_too_short",
+                loc: ["query", "q"],
+                msg: "String should have at least 2 characters",
+              },
+              {
+                type: "less_than_equal",
+                loc: ["query", "limit"],
+                msg: "Input should be less than or equal to 20",
+              },
+            ],
           },
-        ],
-      }),
-    );
+        }),
+      );
 
-    const failure = client.suggest({ q: "cind" });
+      const failure = client.suggest({ q: "cind" });
 
-    await expect(failure).rejects.toThrow(
-      "String should have at least 2 characters",
-    );
-    await expect(failure).rejects.toMatchObject({
-      kind: "request_failed",
-      status: 422,
-      code: null,
-      userMessage: "String should have at least 2 characters",
+      await expect(failure).rejects.toThrow(
+        "String should have at least 2 characters",
+      );
+      await expect(failure).rejects.toMatchObject({
+        kind: "request_failed",
+        status: 422,
+        code: 422,
+        reason: "request_invalid",
+        userMessage: "String should have at least 2 characters",
+      });
+    });
+
+    it("surfaces what the service says of a role it refuses, as the golden 422 has it", async () => {
+      const { client, fetchImpl } = setup();
+      fetchImpl.mockResolvedValue(reply(422, golden("invalid_request")));
+
+      const failure = client.suggest({ q: "cind" });
+
+      await expect(failure).rejects.toMatchObject({
+        kind: "request_failed",
+        status: 422,
+        code: 422,
+        reason: "request_invalid",
+        message: `Input should be 'officer' or 'agent', not "debtor"`,
+        userMessage: `Input should be 'officer' or 'agent', not "debtor"`,
+      });
+    });
+
+    it("says what the envelope says when it names no error", async () => {
+      const { client, fetchImpl } = setup();
+      fetchImpl.mockResolvedValue(
+        reply(422, {
+          code: 422,
+          message: "The request is invalid.",
+          uri: null,
+          metadata: { reason: "request_invalid", errors: [] },
+        }),
+      );
+
+      await expect(client.suggest({ q: "cind" })).rejects.toMatchObject({
+        status: 422,
+        code: 422,
+        reason: "request_invalid",
+        message: "The request is invalid.",
+        userMessage: "The request is invalid.",
+      });
+    });
+
+    it("is reported by its status alone when it is a framework's own `detail`", async () => {
+      // The autocomplete routes answer the catalog envelope; the pydantic shape
+      // is what the mint and `POST /searches` still answer, and nothing here
+      // reads it, so what a user would see is not taken from it.
+      const { client, fetchImpl } = setup();
+      fetchImpl.mockResolvedValue(
+        reply(422, {
+          detail: [
+            {
+              type: "string_too_short",
+              loc: ["query", "q"],
+              msg: "String should have at least 2 characters",
+            },
+          ],
+        }),
+      );
+
+      const failure = client.suggest({ q: "cind" });
+
+      await expect(failure).rejects.toThrow(
+        "Autocomplete unavailable (HTTP 422)",
+      );
+      await expect(failure).rejects.toMatchObject({
+        kind: "request_failed",
+        status: 422,
+        code: null,
+        reason: null,
+        userMessage: null,
+      });
+    });
+
+    it("is read on the people and addresses routes the same way", async () => {
+      const { client, fetchImpl } = setup(
+        {},
+        {
+          scope: {
+            routes: {
+              businesses: ["people", "addresses"],
+              people: ["businesses", "addresses"],
+              addresses: ["businesses", "people"],
+            },
+            maxLimit: 20,
+          },
+        },
+      );
+      fetchImpl.mockResolvedValue(reply(422, invalid("Field required")));
+
+      for (const route of ["people", "addresses"] as const) {
+        await expect(client.search(route, { q: "pier" })).rejects.toMatchObject(
+          {
+            kind: "request_failed",
+            status: 422,
+            code: 422,
+            reason: "request_invalid",
+            userMessage: "Field required",
+          },
+        );
+      }
     });
   });
 
@@ -1049,7 +1177,7 @@ describe("client.suggest", () => {
       const events = recordRequests(client);
       fetchImpl
         .mockResolvedValueOnce(reply(200, okBody))
-        .mockResolvedValueOnce(reply(422, { detail: [{ msg: "too short" }] }));
+        .mockResolvedValueOnce(reply(422, invalid("too short")));
 
       const snapshots: ClientSnapshot[] = [];
       client.on("stateChange", snapshot => {

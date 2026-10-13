@@ -244,8 +244,9 @@ officer, agent and address under it, and let an officer be picked too:
 ```
 
 The business is picked from its row as it always was. An officer picked
-hands `onPickEntity` `{ type: "person", token, label }`, puts the business's
-name in the field, and is named on a line under it. See
+hands `onPickEntity` `{ type: "person", token: null, label }` (a person a row
+lists has no token), puts the business's name in the field, and is named on a
+line under it. See
 [Businesses, people and addresses](docs/entities.md).
 
 A session searches what its scope allows, which your mint endpoint can narrow

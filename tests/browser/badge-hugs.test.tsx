@@ -10,7 +10,6 @@ import {
   type AddressSuggestion,
   type BusinessSuggestion,
   type PersonSuggestion,
-  type RelatedItem,
 } from "@baselayer-sdk/autocomplete";
 import {
   AddressAutocompleteView,
@@ -19,43 +18,36 @@ import {
 } from "@baselayer-sdk/autocomplete/react";
 
 import "../../src/react/styles.css";
+import {
+  addressOfBusiness,
+  businessOfAddress,
+  businessOfPerson,
+  personOfBusiness,
+  relatedAddress,
+  relatedPerson,
+  relatedSet as set,
+} from "./support/related";
 
 // Made-up businesses, people and addresses: a row of each search, listing
 // every kind of line it can.
-const item = (
-  type: RelatedItem["type"],
-  label: string,
-  role: RelatedItem["role"],
-): RelatedItem => ({
-  type,
-  token: `tok-${label}`,
-  label,
-  role,
-  matched: false,
-  matched_name: null,
-  highlight: null,
-  address: type === "business" ? "1200 Tallowmere Rd, Pittsburgh, PA" : null,
-  states: type === "business" ? ["PA", "OH"] : null,
-  domicile_state: type === "business" ? "PA" : null,
-});
-
-const set = (items: RelatedItem[]) => ({
-  count: items.length,
-  matched: null,
-  truncated: false,
-  items,
-});
+// The business a person or an address lists, with a lead address and two states.
+const lead = {
+  address: "1200 Tallowmere Rd, Pittsburgh, PA",
+  states: ["PA", "OH"],
+};
 
 const DANA: PersonSuggestion = {
   type: "person",
   token: "tok-dana",
   label: "Dana Whitfield",
-  matched_name: null,
   match: "strong",
+  states: ["PA", "OH"],
   highlight: [],
   related: {
-    businesses: set([item("business", "NORTHSHORE PUMPING, LLC", "officer")]),
-    addresses: set([item("address", "48 Wrenmoor St, Pittsburgh", "officer")]),
+    businesses: set([
+      businessOfPerson("NORTHSHORE PUMPING, LLC", "officer", lead),
+    ]),
+    addresses: set([relatedAddress("48 Wrenmoor St, Pittsburgh")]),
   },
 };
 
@@ -63,7 +55,6 @@ const PIER: AddressSuggestion = {
   type: "address",
   token: "tok-pier",
   label: "77 Quillfeather Ln, Dover, DE",
-  matched_name: null,
   match: "strong",
   highlight: [],
   components: {
@@ -74,8 +65,10 @@ const PIER: AddressSuggestion = {
     postal_code: null,
   },
   related: {
-    businesses: set([item("business", "NORTHSHORE PUMPING, LLC", "principal")]),
-    people: set([item("person", "Dana Whitfield", "officer")]),
+    businesses: set([
+      businessOfAddress("NORTHSHORE PUMPING, LLC", "principal", lead),
+    ]),
+    people: set([relatedPerson("Dana Whitfield")]),
   },
 };
 
@@ -90,8 +83,10 @@ const HARBOR: BusinessSuggestion = {
   structure: "LLC",
   highlight: [],
   related: {
-    people: set([item("person", "Dana Whitfield", "officer")]),
-    addresses: set([item("address", "48 Wrenmoor St, Pittsburgh", "mailing")]),
+    people: set([personOfBusiness("Dana Whitfield", "officer")]),
+    addresses: set([
+      addressOfBusiness("48 Wrenmoor St, Pittsburgh", "mailing"),
+    ]),
   },
 };
 
@@ -117,6 +112,15 @@ const LINES: Record<Search, Record<string, readonly string[]>> = {
   address: ADDRESS_LINE_FIELDS,
   business: BUSINESS_LINE_FIELDS,
 };
+
+/**
+ * The role fields a line has no value for: a person holds no role at an
+ * address, nor an address on a person, so a field that draws it draws nothing.
+ */
+const ROLELESS = new Set([
+  "person:address:addressRole",
+  "address:person:personRole",
+]);
 
 function view(search: Search, layout: Record<string, string>): ReactElement {
   switch (search) {
@@ -173,6 +177,7 @@ describe("a field in the place right after a line's name", () => {
   for (const search of ["person", "address", "business"] as const) {
     for (const [line, fields] of Object.entries(LINES[search])) {
       for (const field of fields) {
+        if (ROLELESS.has(`${search}:${line}:${field}`)) continue;
         for (const width of [560, 400, 320]) {
           it(`sits one gap after the name: ${search}'s ${line} line, ${field}, at ${width}px`, () => {
             const place = `${line}Badge`;
@@ -205,5 +210,20 @@ describe("a field in the place right after a line's name", () => {
         }
       }
     }
+  }
+});
+
+describe("a role field on a line whose relationship has no role", () => {
+  for (const key of ROLELESS) {
+    const [search, line, field] = key.split(":") as [Search, string, string];
+    it(`draws nothing: ${search}'s ${line} line, ${field}`, () => {
+      const place = `${line}Badge`;
+      const { host, done } = draw(560, view(search, { [place]: field }));
+      try {
+        expect(host.querySelector(`[data-place="${place}"]`)).toBeNull();
+      } finally {
+        done();
+      }
+    });
   }
 });

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   BUSINESS_STRUCTURES,
+  addressLineOf,
   formatFound,
   leadAddressOf,
   officersOf,
@@ -12,9 +13,38 @@ import {
   queryTokens,
   structureLabel,
   typedPrefixLength,
+  type AddressOfBusiness,
   type BusinessStructure,
   type BusinessSuggestion,
+  type AddressListing,
+  type PersonRole,
+  type Open,
+  type PersonOfBusiness,
 } from "@baselayer-sdk/autocomplete";
+
+/** A person listed under a business: no token, no jurisdiction, a role. */
+const person = (
+  label: string,
+  role: Open<PersonRole> | null,
+): PersonOfBusiness => ({
+  type: "person",
+  label,
+  role,
+  matched: false,
+  highlight: null,
+});
+
+/** An address listed under a business, and how the business filed it. */
+const address = (
+  label: string,
+  listed_as: Open<AddressListing> | null,
+): AddressOfBusiness => ({
+  type: "address",
+  label,
+  listed_as,
+  matched: false,
+  highlight: null,
+});
 
 const cinder: BusinessSuggestion = {
   type: "business",
@@ -33,42 +63,9 @@ const cinder: BusinessSuggestion = {
       matched: null,
       truncated: false,
       items: [
-        {
-          type: "person",
-          token: null,
-          label: "NORTHGATE AGENT SERVICES, INC",
-          role: "agent",
-          matched: false,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
-        {
-          type: "person",
-          token: null,
-          label: "Wesley Crane",
-          role: "officer",
-          matched: false,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
-        {
-          type: "person",
-          token: null,
-          label: "Ada Fox",
-          role: "officer",
-          matched: false,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
+        person("NORTHGATE AGENT SERVICES, INC", "agent"),
+        person("Wesley Crane", "officer"),
+        person("Ada Fox", "officer"),
       ],
     },
     addresses: {
@@ -79,42 +76,9 @@ const cinder: BusinessSuggestion = {
       // ladder runs through the other states, own filings by role before the
       // agent's.
       items: [
-        {
-          type: "address",
-          token: "tok-7f1a2c3d",
-          label: "412 Wrenmoor Ln, Springfield, MO 65806",
-          role: "principal",
-          matched: false,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
-        {
-          type: "address",
-          token: "tok-6f1a2c3d",
-          label: "PO Box 4417, Durham, NC 27702",
-          role: "mailing",
-          matched: false,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
-        {
-          type: "address",
-          token: "tok-8f1a2c3d",
-          label: "88 Thistlecrest Dr, Tempe, AZ 85281",
-          role: "agent",
-          matched: false,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
+        address("412 Wrenmoor Ln, Springfield, MO 65806", "principal"),
+        address("PO Box 4417, Durham, NC 27702", "mailing"),
+        address("88 Thistlecrest Dr, Tempe, AZ 85281", "registered_office"),
       ],
     },
   },
@@ -145,30 +109,8 @@ const agentsOnly: BusinessSuggestion = {
       matched: null,
       truncated: false,
       items: [
-        {
-          type: "person",
-          token: null,
-          label: "NORTHGATE AGENT SERVICES, INC",
-          role: "agent",
-          matched: false,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
-        {
-          type: "person",
-          token: null,
-          label: "LAKESIDE FILING AGENTS",
-          role: "agent",
-          matched: false,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
+        person("NORTHGATE AGENT SERVICES, INC", "agent"),
+        person("LAKESIDE FILING AGENTS", "agent"),
       ],
     },
   },
@@ -186,42 +128,9 @@ const crowded: BusinessSuggestion = {
       matched: null,
       truncated: true,
       items: [
-        {
-          type: "person",
-          token: null,
-          label: "Wesley Crane",
-          role: "officer",
-          matched: false,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
-        {
-          type: "person",
-          token: null,
-          label: "Ada Fox",
-          role: "officer",
-          matched: false,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
-        {
-          type: "person",
-          token: null,
-          label: "Sam Lee",
-          role: "officer",
-          matched: false,
-          matched_name: null,
-          highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
+        person("Wesley Crane", "officer"),
+        person("Ada Fox", "officer"),
+        person("Sam Lee", "officer"),
       ],
     },
   },
@@ -242,7 +151,7 @@ describe("leadAddressOf", () => {
         addresses: {
           ...cinder.related.addresses,
           items: cinder.related.addresses.items.filter(
-            item => item.role === "agent",
+            item => item.listed_as === "registered_office",
           ),
         },
       },
@@ -258,6 +167,67 @@ describe("officersOf", () => {
   it("lists the officers and leaves the registered agents out", () => {
     expect(officersOf(cinder)).toEqual(["Wesley Crane", "Ada Fox"]);
     expect(officersOf(stable)).toEqual([]);
+  });
+});
+
+describe("a person's role this build does not know", () => {
+  // The service may name a role before this build lists it; the person is
+  // neither an officer nor an agent, so they are on neither line.
+  const withDirector: BusinessSuggestion = {
+    ...cinder,
+    related: {
+      ...cinder.related,
+      people: {
+        count: 2,
+        matched: null,
+        truncated: false,
+        items: [person("Mara Okafor", "director"), person("Ada Fox", null)],
+      },
+    },
+  };
+
+  it("is left out of the officers, and gives no line to a family that has only them", () => {
+    expect(officersOf(withDirector)).toEqual([]);
+    expect(peopleLineOf(withDirector)).toBeNull();
+  });
+
+  it("does not take the place of an officer in a family that has some", () => {
+    expect(
+      officersOf({
+        ...withDirector,
+        related: {
+          ...withDirector.related,
+          people: {
+            ...withDirector.related.people,
+            items: [
+              person("Mara Okafor", "director"),
+              person("Wesley Crane", "officer"),
+            ],
+          },
+        },
+      }),
+    ).toEqual(["Wesley Crane"]);
+  });
+});
+
+describe("an address filed a way this build does not know", () => {
+  it("is still a family's lead address, and says whose it is of nobody", () => {
+    const registered: BusinessSuggestion = {
+      ...cinder,
+      related: {
+        ...cinder.related,
+        addresses: {
+          ...cinder.related.addresses,
+          items: [address("9 Fennel Row, Reno, NV 89501", "head_office")],
+        },
+      },
+    };
+
+    expect(leadAddressOf(registered)).toBe("9 Fennel Row, Reno, NV 89501");
+    expect(addressLineOf(registered)).toMatchObject({
+      label: "9 Fennel Row, Reno, NV 89501",
+      role: null,
+    });
   });
 });
 
@@ -355,10 +325,10 @@ describe("structureLabel", () => {
     expect(structureLabel("PROFESSIONAL_ASSOCIATION")).not.toBe("PA");
   });
 
-  it("draws no flag for no structure, or for a value untyped data slips in", () => {
-    // The parser refuses a structure the contract does not list, but a host
-    // calling this with untyped data still gets no flag, even for a value
-    // that names a member of every object.
+  it("draws no flag for no structure, or for one this build does not list", () => {
+    // The parser keeps a structure it does not list, as sent, so the flag is
+    // where it is held back: no flag, even for a value that names a member of
+    // every object.
     for (const structure of [
       null,
       "FOUNDATION",
@@ -367,10 +337,7 @@ describe("structureLabel", () => {
       "toString",
       "__proto__",
     ]) {
-      expect(
-        structureLabel(structure as BusinessStructure | null),
-        String(structure),
-      ).toBeNull();
+      expect(structureLabel(structure), String(structure)).toBeNull();
     }
   });
 

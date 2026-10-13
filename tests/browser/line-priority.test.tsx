@@ -3,38 +3,37 @@ import { createRoot } from "react-dom/client";
 import { describe, expect, it } from "vitest";
 
 import type {
+  BusinessOfPerson,
   PersonRowLayoutInput,
   PersonSuggestion,
-  RelatedItem,
 } from "@baselayer-sdk/autocomplete";
 import { PersonAutocompleteView } from "@baselayer-sdk/autocomplete/react";
 
 import "../../src/react/styles.css";
+import {
+  businessOfPerson,
+  relatedAddress,
+  relatedSet,
+} from "./support/related";
 
 // Made-up businesses with long names and addresses, so something must give.
 const business = (
   label: string,
   states: string[],
   address: string,
-): RelatedItem => ({
-  type: "business",
-  token: `tok-${label}`,
-  label,
-  role: "officer",
-  matched: false,
-  matched_name: null,
-  highlight: null,
-  address,
-  states,
-  domicile_state: states[0]!,
-});
+): BusinessOfPerson =>
+  businessOfPerson(label, "officer", {
+    address,
+    states,
+    domicile_state: states[0]!,
+  });
 
 const DANA: PersonSuggestion = {
   type: "person",
   token: "tok-dana",
   label: "Dana Whitfield",
-  matched_name: null,
   match: "strong",
+  states: ["AZ", "CA", "MD", "NV", "NY", "OH", "OR", "PA", "WV"],
   highlight: [],
   related: {
     businesses: {
@@ -60,19 +59,10 @@ const DANA: PersonSuggestion = {
       ],
     },
     addresses: {
+      ...relatedSet([
+        relatedAddress("1200 Tallowmere Rd, Pittsburgh, PA 15212"),
+      ]),
       count: 3,
-      matched: null,
-      truncated: false,
-      items: [
-        {
-          ...business("x", [], ""),
-          type: "address",
-          label: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
-      ],
     },
   },
 };

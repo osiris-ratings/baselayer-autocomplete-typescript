@@ -1188,8 +1188,9 @@ export function App() {
                         messages={messages}
                         unstyled={style.unstyled}
                         open={mode === "businesses" && (styling || filtering)}
-                        // A person or an address picked: nothing redeems its
-                        // token, so there is no business for step 03 to search.
+                        // A person or an address picked: nothing redeems a
+                        // token of theirs (one listed under a row has none),
+                        // so there is no business for step 03 to search.
                         onPickEntity={() => setPicked(null)}
                         {...componentProps(style, "businesses")}
                         {...(style.pageInput
@@ -1215,8 +1216,9 @@ export function App() {
                         // picked. For a business it would name it alone: the
                         // demo's own line below says what it was found through.
                         showSelection={picks.people === null}
-                        // A person or an address picked: nothing redeems its
-                        // token, so there is no business for step 03 to search.
+                        // A person or an address picked: nothing redeems a
+                        // token of theirs (one listed under a row has none),
+                        // so there is no business for step 03 to search.
                         onPickEntity={() => setPicked(null)}
                         {...componentProps(style, "people")}
                         look={{ ...changedLook(style) }}

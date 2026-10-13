@@ -1,6 +1,7 @@
 import type {
   BusinessStructure,
-  RelatedRole,
+  AddressListing,
+  PersonRole,
   Relation,
 } from "@baselayer-sdk/autocomplete";
 
@@ -41,12 +42,17 @@ export interface AutocompleteMessages {
   /** Under a list in a person's or an address's row: how many it leaves out. */
   moreNotShown: (count: number) => string;
   /**
-   * A person's role: on a business listed under them, at an address listed
-   * under them, or at the address they are listed under. `officer`, `agent`.
+   * The role a person holds on a business, beside it under the person and
+   * beside them under the business: `officer`, `agent`. A role this build does
+   * not list is drawn as the autocomplete service sent it.
    */
-  personRoles: Record<RelatedRole, string>;
-  /** How a business holds an address, beside it under the address. */
-  addressRoles: Record<RelatedRole, string>;
+  personRoles: Record<PersonRole, string>;
+  /**
+   * How an address is listed on a business, beside it under the business and beside
+   * the business under the address. A way this build does not list is drawn as
+   * the autocomplete service sent it.
+   */
+  addressRoles: Record<AddressListing, string>;
   /** The address field when the index holds no address for the family. */
   noAddress: string;
   /** Appended to a registered agent's name in the people field. */
@@ -97,13 +103,11 @@ export const DEFAULT_MESSAGES: Readonly<AutocompleteMessages> = Object.freeze({
   personRoles: Object.freeze({
     officer: "officer",
     agent: "agent",
-    principal: "principal",
-    mailing: "mailing",
   }),
   addressRoles: Object.freeze({
     principal: "principal office",
     mailing: "mailing address",
-    agent: "agent",
+    registered_office: "agent",
     officer: "officer's address",
   }),
   noAddress: "No address on file",

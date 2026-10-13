@@ -18,6 +18,7 @@ import {
   type BusinessStates,
   type HighlightPart,
   type Look,
+  type RelatedItem,
   type RelatedSet,
   type Relation,
   type Route,
@@ -33,7 +34,7 @@ import type { AutocompleteMessages } from "./messages";
  */
 export function countsText(
   route: Route,
-  related: Partial<Record<Relation, RelatedSet>>,
+  related: Partial<Record<Relation, RelatedSet<RelatedItem>>>,
   text: AutocompleteMessages,
 ): string | null {
   const counts = ROUTES[route].includes.flatMap(relation => {

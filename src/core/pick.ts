@@ -1,9 +1,12 @@
 import type {
   AddressSuggestion,
+  BusinessOfAddress,
+  BusinessOfPerson,
   BusinessSuggestion,
+  AddressListing,
+  PersonRole,
+  Open,
   PersonSuggestion,
-  RelatedItem,
-  RelatedRole,
 } from "./wire";
 
 /**
@@ -44,15 +47,22 @@ export function refusedThePin(status: number, code: number | null): boolean {
 }
 
 /** A business on a person or address row that a pick can spend. */
-export type PickableBusiness = RelatedItem & { token: string };
+export type PickableBusiness = BusinessOfPerson | BusinessOfAddress;
 
-/** The person or address a pick came through, and the business's role there. */
+/**
+ * The person or address a pick came through, and the role there: the one the
+ * person holds on the business, or how the business lists the address.
+ */
 export type PickedThrough =
-  | { route: "people"; person: PersonSuggestion; role: RelatedRole | null }
+  | {
+      route: "people";
+      person: PersonSuggestion;
+      role: Open<PersonRole> | null;
+    }
   | {
       route: "addresses";
       address: AddressSuggestion;
-      role: RelatedRole | null;
+      listedAs: Open<AddressListing> | null;
     };
 
 /**
@@ -71,25 +81,27 @@ export interface BusinessPick {
 }
 
 /**
- * The businesses a person or address row offers to pick, in its order: those
- * the autocomplete service sealed a token for.
+ * The businesses a person or address row offers to pick, in its order: each
+ * carries the sealed token a pick spends.
  */
 export function pickableBusinesses(
   row: PersonSuggestion | AddressSuggestion,
 ): PickableBusiness[] {
-  return row.related.businesses.items.filter(
-    (item): item is PickableBusiness => item.token !== null,
-  );
+  return row.related.businesses.items;
 }
 
 /**
  * A person or an address picked from a person's or an address's row: the row
- * itself, or one it lists. Nothing redeems its token yet; keep it as the
- * opaque handle it is.
+ * itself, or one it lists. Nothing redeems a token yet; keep it as the opaque
+ * handle it is.
  */
 export interface EntityPick {
   type: "person" | "address";
-  token: string;
+  /**
+   * The row's own `token`. Null for a person or an address listed under a row:
+   * the autocomplete service seals no token for those.
+   */
+  token: string | null;
   label: string;
 }
 
@@ -126,7 +138,15 @@ export function businessPickFrom(
     expiresAt: pickedAt + BUSINESS_TOKEN_TTL_SECONDS * 1000,
     through:
       row.type === "person"
-        ? { route: "people", person: row, role: business.role }
-        : { route: "addresses", address: row, role: business.role },
+        ? {
+            route: "people",
+            person: row,
+            role: "role" in business ? business.role : null,
+          }
+        : {
+            route: "addresses",
+            address: row,
+            listedAs: "listed_as" in business ? business.listed_as : null,
+          },
   };
 }

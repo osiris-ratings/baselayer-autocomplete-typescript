@@ -8,6 +8,58 @@ breaking change bumps the minor version.
 
 ### Changed
 
+- **Breaking:** the SDK reads the autocomplete service's new contract, and only
+  that one. Each route answers its own entity, and what a row lists is typed by
+  what it holds, where one shape served every route before. Released 0.4 to
+  0.6 decode the new answers without an error and keep a person's `role`, but
+  not how an address is listed: no "officer's address" suffix on a business
+  row, no principal, mailing or agent badge on a business under an address,
+  and a refused request reads as "The request is invalid." Update the SDK
+  together with the service.
+  - A row and everything it lists carries its entity's fixed `type`.
+    `RelatedItem`, the one shape for all of them, is now the union of
+    `RelatedBusiness`, `RelatedPerson` and `RelatedAddress`, and a related set
+    is `RelatedSet<Item>`. A business row's `related` is a `BusinessRelated`, a
+    person's a `PersonRelated`, an address's an `AddressRelated`.
+  - `RelatedRole` and `RELATED_ROLES` are gone. `role` is the role a person
+    holds on a business (`PersonRole`, `PERSON_ROLES`: `officer`, `agent`), on
+    a business's people (`PersonOfBusiness`) and a person's businesses
+    (`BusinessOfPerson`). `listed_as` is how an address is listed on a
+    business (`AddressListing`, `ADDRESS_LISTINGS`: `principal`, `mailing`,
+    `registered_office`, `officer`), on a business's addresses
+    (`AddressOfBusiness`) and an address's businesses (`BusinessOfAddress`).
+    A person and an address stand in no role to each other, so a person's
+    addresses and an address's people carry none.
+  - Only a related business has a `token`, a business token. A person or an
+    address listed under a row has none, and no `matched_name`, `address`,
+    `states` or `domicile_state`. `EntityPick.token` is null for one picked
+    from under a row, and `enabledLines` enables such a line whenever its
+    entity is named, where it also needed a token before.
+  - `PersonSuggestion` gains `states`, the states of the businesses the person
+    holds a role on. A person row and an address row lose `matched_name`.
+  - `PickedThrough` carries `role` for a person and `listedAs` for an address,
+    where it carried one `role` for both. `Filters.person.role` and the
+    `person.role` it sends stay, now typed `PersonRole`.
+  - `messages.personRoles` holds `officer` and `agent`, and
+    `messages.addressRoles` `principal`, `mailing`, `registered_office` and
+    `officer`. The icon keys follow: `address:agent` is
+    `address:registered_office`, and `person:principal` and `person:mailing`
+    are gone.
+  - The enums `match`, `structure`, `role`, `listed_as` and a source's
+    `status` are open, typed `Open<…>`: a value this build does not list is
+    kept as sent, where it was a `contract` error. A role it does not list is
+    drawn as the service's own word. `type` stays closed.
+  - A response missing a key the contract requires is a `contract` error, as
+    is one that still gives an address, or a person or business under an
+    address, a `role`, which says it is the contract before this one.
+    `truncated` is required.
+  - A 422 from the autocomplete service is the catalog envelope, its
+    parameters in `metadata.errors`. `ErrorEnvelope` gains `uri`, and
+    `validationErrors` and `ValidationItem` read them. The request's error
+    message is the first parameter's, as the pydantic `detail` was before.
+  - The API reference and the demo follow: the reference documents the new
+    shapes, and its examples are decoded by the SDK's own parser in a test.
+
 - The demo's person and address searches say what a pick is. Under the field, a
   business picked from under a person or an address is named as the business,
   with what it was found through, as step 03 words it ("Found through Dana
