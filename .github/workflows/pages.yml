@@ -25,14 +25,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      # The hosted site is pinned to 0.6.0, the release the live service still
-      # matches: 0.7.0 reads the typed contract, which the service has not
+      # The hosted site is built from the last commit before the typed
+      # contract (the API reference's merge): every change to the demo and the
+      # reference up to there, on the SDK source the live service still
+      # matches. 0.7.0 reads the typed contract, which the service has not
       # deployed yet, and its demo would answer every search with an error.
       # Delete `with: ref` (the site builds from main again) the day the
       # service that serves the typed contract is live.
       - uses: actions/checkout@v4
         with:
-          ref: v0.6.0
+          ref: b3d7b3b8a8d46d6b84b6fe33c5adbf80478249c4
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
