@@ -226,6 +226,31 @@ describe("the session the reference's forms share", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
+  it("sends a Create a session as it stands, with no mint before it, though the session held has expired", async () => {
+    const fetchImpl = vi.fn(async () =>
+      reply(201, { session_token: "tok-own", expires_in: 300 }),
+    );
+    vi.stubGlobal("fetch", fetchImpl);
+    const user = userEvent.setup();
+    render(
+      <SessionProvider initial={session({ expiresAt: Date.now() - 1000 })}>
+        {form("/autocomplete/sessions")}
+        {form("/autocomplete/people")}
+      </SessionProvider>,
+    );
+    const mint = screen.getByRole("region", { name: "/autocomplete/sessions" });
+    const people = screen.getByRole("region", { name: "/autocomplete/people" });
+
+    await user.click(within(mint).getByRole("button", { name: "Send" }));
+
+    // The form's own request is the only one: nothing is minted ahead of it,
+    // since it takes no session, and it does not hang on one that has run out.
+    const outcome = await within(mint).findByRole("status");
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(outcome.textContent).not.toContain("new session minted");
+    await waitFor(() => expect(field(people).value).toBe("tok-own"));
+  });
+
   it("leaves a value the reader typed alone, and offers the active session back", async () => {
     const fetchImpl = vi.fn(async () => reply(200, { suggestions: [] }));
     vi.stubGlobal("fetch", fetchImpl);

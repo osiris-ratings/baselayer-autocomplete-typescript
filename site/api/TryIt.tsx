@@ -712,8 +712,11 @@ export function TryIt({
   const free = slots.filter(slot => getAt(body, slot.path) === undefined);
   const sentBody = body === undefined ? null : JSON.stringify(body, null, 2);
   // What each header says now: the session's field is the active session's,
-  // or the reader's own value, before the sample's stand-in.
-  const managed = own === null && session !== null;
+  // or the reader's own value, before the sample's stand-in. Only a form that
+  // takes a session has one to manage: Create a session makes sessions, and
+  // is sent as it stands, with no mint ahead of it.
+  const takesSession = headers.some(header => isSessionHeader(header.name));
+  const managed = takesSession && own === null && session !== null;
   const effective = useMemo(
     () =>
       headers.map(header => ({
