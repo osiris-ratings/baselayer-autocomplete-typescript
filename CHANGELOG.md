@@ -6,6 +6,8 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-12
+
 ### Changed
 
 - **Breaking:** the SDK reads the autocomplete service's new contract, and only
