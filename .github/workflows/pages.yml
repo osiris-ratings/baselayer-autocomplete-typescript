@@ -25,7 +25,14 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
+      # The hosted site is pinned to 0.6.0, the release the live service still
+      # matches: 0.7.0 reads the typed contract, which the service has not
+      # deployed yet, and its demo would answer every search with an error.
+      # Delete `with: ref` (the site builds from main again) the day the
+      # service that serves the typed contract is live.
       - uses: actions/checkout@v4
+        with:
+          ref: v0.6.0
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
