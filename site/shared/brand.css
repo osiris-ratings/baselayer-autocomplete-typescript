@@ -532,6 +532,62 @@ h3 code {
   color: #ffffff;
 }
 
+/* A note beside Copy, about what the tab shows: a session's countdown. */
+.code-note {
+  flex: 0 1 auto;
+  margin-left: auto;
+  min-width: 0;
+  padding: 4px;
+  overflow: hidden;
+  color: #9fb0d6;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-countdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-variant-numeric: tabular-nums;
+}
+
+.session-countdown .try-session-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #86efac;
+  box-shadow: 0 0 0 3px rgba(134, 239, 172, 0.16);
+}
+
+.session-countdown[data-state="expired"] .try-session-dot {
+  background: #fcd34d;
+  box-shadow: 0 0 0 3px rgba(252, 211, 77, 0.16);
+}
+
+/* A live answer's tab: a dot says it came from a request just sent. */
+.code-tab-live::before {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin: 0 6px 1px 0;
+  border-radius: 50%;
+  background: #86efac;
+  content: "";
+}
+
+/* Sets a tool's tab apart from the snippets' tabs. */
+.code-sep {
+  flex: none;
+  align-self: center;
+  width: 1px;
+  height: 16px;
+  margin: 0 8px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
 .code-tab[aria-selected="true"] {
   border-bottom-color: #7d8cff;
   color: #ffffff;
@@ -574,6 +630,24 @@ h3 code {
   line-height: 1.65;
   tab-size: 2;
   white-space: pre;
+}
+
+/* JSON in the rich palette the demo's network panel set, on a code block's
+   navy: keys pink, strings mint, numbers and true or false orange, null grey,
+   the punctuation muted. The highlighter's colours, retold: a key is a
+   property, a number a class, true and false keywords (null is given its own
+   by `jsonHtml`). */
+.json-rich {
+  --json-key: #ff9fd6;
+  --json-string: #bef9b6;
+  --json-literal: #ffb86c;
+  --json-null: #8a97b8;
+  --json-sign: #93a6cf;
+  --sh-property: var(--json-key);
+  --sh-string: var(--json-string);
+  --sh-class: var(--json-literal);
+  --sh-keyword: var(--json-literal);
+  --sh-sign: var(--json-sign);
 }
 
 /* ---- Tables ---------------------------------------------------------- */

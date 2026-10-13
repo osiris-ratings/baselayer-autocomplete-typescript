@@ -24,8 +24,8 @@ appears in them.
 
 The page is the window's height and never scrolls itself. It has three panes,
 side by side, each scrolling on its own: the introduction, the controls (**01
-Connect** and **02 Autocomplete a business**, and **03 Run a business search**
-once a business is picked), and Debug or Styling. The introduction folds to a
+Connect** and **02 Autocomplete**, and **03 Run a business search** once a
+business is picked), and Debug or Styling. The introduction folds to a
 **Live demo** tab with its **Hide**; opening Debug or Styling folds it too, to
 give that pane room, and the tab brings it back. On a narrow screen the panes
 stack and the page scrolls as any other does.
@@ -104,22 +104,23 @@ origin. For another environment, pick **Custom URL** and give its API host.
 
 ## The test form
 
-**02 Autocomplete a business, a person, or an address** is the component on a
-form of its own. Its title says what the field searches for, each search with
-its article: the selected one in blue, its noun underlined, the others muted and
-a click or an arrow key away. It offers only the searches the session's scope
-allows (**Autocomplete a business or a person** with two), and with businesses
-alone it reads **Autocomplete a business**; before you connect it offers all
-three, so Styling can show each. Business is the business name and
-its suggestions. Person and Address find the business another way: each
-person or address that fits comes with its counts (`7 businesses · 3
-addresses`), a person's first address, and a line for each of its first
-businesses, with the business's address, its states and the role there. Each
-business is a pick. A pick stays where it was made: the field takes the
-person's name or the address, and a line under it names the business picked,
-until you edit the field. Each search keeps its own text and its own pick:
-switching to another and back puts them back as they were, and the search
-switched to shows what was last typed in it, not what the other field held.
+**02 Autocomplete** is the component on a form of its own. Its title says what
+the field searches for: "Autocomplete" and a segmented button of the searches,
+each with the icon the component draws for it, the selected one raised and the
+others a click or an arrow key away. It offers only the searches the session's
+scope allows (two buttons with two), and with businesses alone it reads
+**Autocomplete a business**; before you connect it offers all three, so Styling
+can show each. Business is the business name and its suggestions. Person and
+Address find the business another way: each person or address that fits comes
+with its counts (`7 businesses · 3 addresses`), a person's first address, and a
+line for each of its first businesses, with the business's address, its states
+and the role there. Each business is a pick. A pick stays where it was made: the
+field takes the person's name or the address, and a line under it names the
+business picked and what it was found through (`Found through Dana Whitfield,
+an officer.`), until you edit the field. Each search keeps its own text and its
+own pick: switching to another and back puts them back as they were, and the
+search switched to shows what was last typed in it, not what the other field
+held.
 
 ![Searching by person: each person with their first address, their counts and their businesses](images/demo-person.png)
 

@@ -25,9 +25,9 @@ actions:
           | Route | Called from | Credential |
           | --- | --- | --- |
           | [`POST /autocomplete/sessions`](#create-a-session) | Your backend | `X-API-Key` |
-          | [`GET /autocomplete/businesses`](#search-businesses) | The browser | `X-Autocomplete-Session` |
-          | [`GET /autocomplete/people`](#search-people) | The browser | `X-Autocomplete-Session` |
-          | [`GET /autocomplete/addresses`](#search-addresses) | The browser | `X-Autocomplete-Session` |
+          | [`GET /autocomplete/businesses`](#autocomplete-businesses) | The browser | `X-Autocomplete-Session` |
+          | [`GET /autocomplete/people`](#autocomplete-people) | The browser | `X-Autocomplete-Session` |
+          | [`GET /autocomplete/addresses`](#autocomplete-addresses) | The browser | `X-Autocomplete-Session` |
 
           Every route answers JSON. The mint takes an optional body, a `scope` that narrows what the session may search; the search takes none. Your API key is an application's key from Baselayer, with the `autocomplete.read` permission.
       tags:
@@ -230,7 +230,7 @@ actions:
       examples.
     update:
       tags: [Businesses]
-      summary: Search businesses
+      summary: Autocomplete businesses
       description: |
         Suggestions for a business name as someone types it, best first, narrowed by an officer or an address when you have one. Call it from the browser with the session; it never sees your API key.
 
@@ -383,7 +383,7 @@ actions:
       public description, the Origin header and examples.
     update:
       tags: [People]
-      summary: Search people
+      summary: Autocomplete people
       description: |
         The people a typed name fits, best first, each with the businesses they hold a role on. A business under a person is what a pick spends: its `token` is a `business_token` that `POST /searches` redeems, sealed with the person it was reached through. The person's own `token` is redeemed nowhere.
 
@@ -460,7 +460,7 @@ actions:
       public description, the Origin header and examples.
     update:
       tags: [Addresses]
-      summary: Search addresses
+      summary: Autocomplete addresses
       description: |
         The addresses typed text fits, those with the most businesses first, each with the businesses filed there. A business under an address is what a pick spends: its `token` is a `business_token` that `POST /searches` redeems, pinned to that address. The address's own `token` is redeemed nowhere.
 

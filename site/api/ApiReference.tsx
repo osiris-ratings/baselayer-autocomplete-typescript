@@ -6,21 +6,26 @@
 import { Fragment, useState } from "react";
 import { document, html } from "virtual:api-reference";
 
-import { Code, type Snippet } from "../shared/Code";
+import { Code, type CodeTool, type Snippet } from "../shared/Code";
 import { SiteFooter } from "../shared/SiteFooter";
 import { SiteHeader } from "../shared/SiteHeader";
 import { useScrollSpy } from "../shared/useScrollSpy";
 import { fieldTree, visibleRows } from "./fieldTree";
 import {
   describeType,
+  FORMER_IDS,
   fieldRows,
   operations,
+  requestBodyOf,
   schemaOf,
   sections,
   snippetLang,
   type OperationEntry,
   type Section,
 } from "./model";
+import { SessionCountdown, SessionProvider } from "./session";
+import { TryIt, type LiveResponse } from "./TryIt";
+import { parseCurl } from "./curl";
 import type {
   JsonSchema,
   Operation,
@@ -50,17 +55,67 @@ function Markdown({
   );
 }
 
+/** What a field may be, written out: a lead, then each value. */
+function Choices({ lead, values }: { lead: string; values: string[] }) {
+  return (
+    <p className="field-values">
+      {lead}{" "}
+      {values.map((value, i) => (
+        <Fragment key={value}>
+          {i > 0 && ", "}
+          <code>{value}</code>
+        </Fragment>
+      ))}
+      .
+    </p>
+  );
+}
+
+/** A schema this small is shown whole: a long one folds its nested models. */
+const SHOWN_WHOLE = 12;
+
+/** A nested model this small is open to begin with, wherever it sits. */
+const OPEN_BELOW = 3;
+
+/** The rows a long schema opens to begin with: its small nested models. */
+function openToBegin(rows: readonly { path: string; depth: number }[]) {
+  if (rows.length <= SHOWN_WHOLE) {
+    return new Set(rows.map(row => row.path));
+  }
+  const open = new Set<string>();
+  rows.forEach((row, index) => {
+    let beneath = 0;
+    for (let next = index + 1; next < rows.length; next++) {
+      if (rows[next]!.depth <= row.depth) break;
+      beneath += 1;
+    }
+    if (beneath > 0 && beneath <= OPEN_BELOW) open.add(row.path);
+  });
+  return open;
+}
+
 /**
  * A schema's fields, nested models folded under their parent until opened:
  * a response reads as its top level first, and a reader opens what they came
- * for.
+ * for. A small schema, such as a request body, is open to begin with, and a
+ * long one opens its small nested models, so a `scope` of two fields reads
+ * at once. A request's fields say which are optional, where a response's say
+ * which are required.
  */
-function FieldList({ schema }: { schema: JsonSchema | undefined }) {
-  const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
+function FieldList({
+  schema,
+  request = false,
+}: {
+  schema: JsonSchema | undefined;
+  request?: boolean;
+}) {
+  const rows = schema === undefined ? [] : fieldRows(schema);
+  const [open, setOpen] = useState<ReadonlySet<string>>(() =>
+    openToBegin(rows),
+  );
   if (schema === undefined) {
     return null;
   }
-  const rows = fieldRows(schema);
   const tree = fieldTree(rows);
   const childCount = new Map(
     rows.map((row, i) => [row.path, tree[i]!.childCount]),
@@ -89,6 +144,9 @@ function FieldList({ schema }: { schema: JsonSchema | undefined }) {
               <code className="field-name">{row.name}</code>
               <span className="field-type">{row.type}</span>
               {row.required && <span className="pill">required</span>}
+              {request && !row.required && (
+                <span className="pill pill-quiet">optional</span>
+              )}
               {row.depth > 0 && <span className="field-path">{row.path}</span>}
               {children > 0 && (
                 <button
@@ -110,15 +168,25 @@ function FieldList({ schema }: { schema: JsonSchema | undefined }) {
             <dd>
               <Markdown text={row.description} inline />
               {row.values.length > 0 && (
+                <Choices lead="One of" values={row.values} />
+              )}
+              {row.keys.length > 0 && (
+                <Choices lead="Each key is one of" values={row.keys} />
+              )}
+              {row.itemValues.length > 0 && (
+                <Choices
+                  lead={
+                    row.keys.length > 0
+                      ? "Each value is a list of any of"
+                      : "Any of"
+                  }
+                  values={row.itemValues}
+                />
+              )}
+              {row.range !== null && (
                 <p className="field-values">
-                  One of{" "}
-                  {row.values.map((value, i) => (
-                    <Fragment key={value}>
-                      {i > 0 && ", "}
-                      <code>{value}</code>
-                    </Fragment>
-                  ))}
-                  .
+                  From <code>{row.range.split(" to ")[0]}</code> to{" "}
+                  <code>{row.range.split(" to ")[1]}</code>.
                 </p>
               )}
               {row.sameAs !== null && (
@@ -238,10 +306,54 @@ function OperationSection({
     },
   ].filter(group => group.parameters.length > 0);
   const responses = Object.entries(operation.responses);
+  const requestBody = requestBodyOf(operation);
   const successes = responses.filter(([status]) => status.startsWith("2"));
   const refusals = responses.filter(([status]) => !status.startsWith("2"));
   const request = requestSnippets(operation);
   const examples = responseSnippets(operation);
+  // The editor starts from the curl sample, so it asks what the sample asks.
+  const curl = (operation["x-codeSamples"] ?? []).find(
+    sample => snippetLang(sample.lang) === "shell",
+  );
+  const sample = curl === undefined ? null : parseCurl(curl.source);
+  // What the last request sent from Try it here came back with, numbered so
+  // the response block shows each one as it arrives.
+  const [live, setLive] = useState<(LiveResponse & { key: number }) | null>(
+    null,
+  );
+  const tryIt: CodeTool | undefined =
+    sample === null
+      ? undefined
+      : {
+          label: "Try it here",
+          // The tab copies curl; every sample follows the form as it is edited.
+          copies: curl?.label ?? curl?.lang ?? "curl",
+          render: onCode => (
+            <TryIt
+              method={method}
+              sample={sample}
+              body={requestBody?.schema}
+              labels={request.map(snippet => snippet.label)}
+              required={[
+                ...headers.filter(each => each.required === true),
+                ...(operation.parameters ?? []).filter(
+                  each => each.in === "query" && each.required === true,
+                ),
+              ].map(each => each.name)}
+              parameters={(operation.parameters ?? [])
+                .filter(parameter => parameter.in === "query")
+                .map(parameter => parameter.name)}
+              schemas={document.components?.schemas ?? {}}
+              onCode={onCode}
+              onResponse={response =>
+                setLive(previous => ({
+                  ...response,
+                  key: (previous?.key ?? 0) + 1,
+                }))
+              }
+            />
+          ),
+        };
 
   return (
     <section
@@ -249,6 +361,10 @@ function OperationSection({
       id={entry.id}
       aria-labelledby={`${entry.id}-title`}
     >
+      {FORMER_IDS[entry.id] !== undefined && (
+        // Where a link to the section's former id still lands.
+        <span id={FORMER_IDS[entry.id]} aria-hidden="true" />
+      )}
       <div className="panel-num">{String(index).padStart(2, "0")}</div>
       <div className="panel-body endpoint">
         <div className="endpoint-docs">
@@ -265,9 +381,45 @@ function OperationSection({
             <Markdown text={operation.description} />
           </div>
           <div className="endpoint-code">
-            {request.length > 0 && <Code title="Request" snippets={request} />}
-            {examples.length > 0 && (
-              <Code title="Response" snippets={examples} />
+            {request.length > 0 && (
+              <p className="code-caption" aria-hidden="true">
+                Request
+              </p>
+            )}
+            {request.length > 0 && (
+              <Code
+                title="Request"
+                snippets={request}
+                {...(tryIt !== undefined ? { tool: tryIt } : {})}
+              />
+            )}
+            {(examples.length > 0 || live !== null) && (
+              <p className="code-caption" aria-hidden="true">
+                Response
+              </p>
+            )}
+            {(examples.length > 0 || live !== null) && (
+              <Code
+                title="Response"
+                snippets={examples}
+                live={
+                  live === null
+                    ? null
+                    : {
+                        key: live.key,
+                        label: `Live · ${live.status ?? "failed"}`,
+                        lang: live.json ? "json" : "plaintext",
+                        code: live.body,
+                        ...(live.expiresAt !== undefined
+                          ? {
+                              note: (
+                                <SessionCountdown expiresAt={live.expiresAt} />
+                              ),
+                            }
+                          : {}),
+                      }
+                }
+              />
             )}
           </div>
 
@@ -279,6 +431,18 @@ function OperationSection({
           ))}
           {method !== "get" && operation["requestBody"] === undefined && (
             <p className="note">No request body.</p>
+          )}
+          {requestBody !== undefined && (
+            <>
+              <h3 className="subhead">
+                Request body{" "}
+                {requestBody.optional && (
+                  <span className="pill pill-quiet">optional</span>
+                )}
+              </h3>
+              <Markdown text={requestBody.description} />
+              <FieldList schema={requestBody.schema} request />
+            </>
           )}
 
           {successes.map(([status, response]) => (
@@ -413,11 +577,15 @@ export function ApiReference() {
             ))}
           </ul>
         </nav>
-        <div className="reference-body">
-          {sections.map((section, i) => (
-            <SectionView key={section.id} section={section} index={i + 1} />
-          ))}
-        </div>
+        {/* One session for the page: a Create a session that succeeds leaves
+            it for the autocomplete routes' forms to start from. */}
+        <SessionProvider>
+          <div className="reference-body">
+            {sections.map((section, i) => (
+              <SectionView key={section.id} section={section} index={i + 1} />
+            ))}
+          </div>
+        </SessionProvider>
       </main>
       <SiteFooter />
     </>

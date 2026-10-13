@@ -33,6 +33,64 @@ breaking change bumps the minor version.
   alone. Enter applies the key. It falls back to a password field where the
   engine cannot mask one.
 
+- The API reference's request block has a third tab, Try it here, set apart by
+  a rule: the request as a short form, started from its curl sample. The mint
+  starts with no scope, which reaches everything the key may search, and says
+  so; a route added comes with every relation it carries.
+  - The URL sits in a read-only box, each part in a colour of its own, with the
+    method and Send on its first line. It follows the typing once it rests,
+    growing or shrinking to the new URL in a stroke.
+  - The headers, the query parameters and the body are tables as wide as the
+    block, each value an underline on a faint fill. The body is flat: a row for
+    each field by its whole path, a list of choices a row of chips in the
+    values' own ink, and what the schema names and the body does not hold yet
+    offered by name in the table's last row. A scope's route offers only the
+    relations it carries, never itself, and says they are what its requests may
+    include or filter by, or, with none on, that it searches with nothing
+    related. With no route listed, the form says that leaves `routes` out,
+    which is every route.
+  - `Origin` is this page's, as the browser sends it, and it and `Content-Type`
+    are shown but fixed. What the operation requires is starred.
+  - A bar under the form says how the last send ended, a refusal's code and
+    message included, and unfolds on the request as it goes out, headers and
+    body. The answer shows in the response block as a Live tab, after a rule.
+  - Every sample beside it (curl, Node, fetch, the SDK) follows the form as it
+    is edited, and Copy on the tab takes it as curl. Each block has a small
+    caption above it, Request and Response.
+  - Under `pnpm site`, Send goes through the dev server as the demo's calls
+    do, so `DEMO_API=sample` or a real API answers it from localhost
+    (`docs/site.md`).
+  - The session is shared. A Create a session that succeeds leaves its token
+    for the autocomplete routes' forms, which start from it with a line under
+    the field: active, with a countdown from `expires_in`, or expired. Send on
+    an expired session mints a new one first, with the same request and its
+    `X-API-Key`, and says so; a value typed in the field is sent as it is. The
+    key stays in memory only. The response block's Live tab shows the same
+    countdown beside Copy, for a mint that gave a session.
+- The API reference shows what `POST /autocomplete/sessions` takes: a Request
+  body section, optional like the body, with its fields marked optional. Where
+  a field is a choice it says the choices, which routes a scope may name and
+  which relations each lists ("Each key is one of …", "Each value is a list of
+  any of …"), and a number its range ("From 1 to 20"). A model of three fields
+  or fewer, such as the grant's `scope`, is open to begin with.
+
+- The API reference names the autocomplete routes Autocomplete businesses,
+  Autocomplete people and Autocomplete addresses, where they were Search …: a
+  search is what a business token runs. Their anchors follow
+  (`#autocomplete-businesses`, …), and the former ones still land on them.
+
+- JSON on the site is drawn in one rich palette, the one the demo's network
+  panel had: keys pink, strings mint, numbers and true or false orange, null
+  grey, the punctuation muted. It now colours the demo's raw response under a
+  finished business search, which was plain text, and every JSON block in the
+  API reference (the examples, the Live tab, Try it here's request body),
+  whose URL takes the network panel's colours too.
+
+- The documentation's screenshots of the demo and of the API reference show
+  what they now are: the title's segmented button, the Autocomplete route
+  names and Try it here. `docs/demo.md` describes the title and the line under
+  a picked business as they are.
+
 ### Fixed
 
 - A name or an address field of the components (`BusinessAutocomplete`,

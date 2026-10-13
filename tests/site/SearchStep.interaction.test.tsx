@@ -347,3 +347,26 @@ describe("the key a pick's search is named by", () => {
     expect(keyOf(fetchImpl, 2)).toBe(keyOf(fetchImpl, 1));
   });
 });
+
+describe("the raw response under a report", () => {
+  it("is the search's JSON, highlighted in the site's rich palette", async () => {
+    const { fetchImpl, answer } = held();
+    render(step(fetchImpl));
+    await act(async () => {
+      fireEvent.click(runButton());
+    });
+    await act(async () => {
+      answer(reply(201, SAMPLE_SEARCH));
+    });
+    await screen.findByTestId("demo-search-result");
+
+    const raw = document.querySelector("details.sr-raw pre")!;
+    expect(raw.classList.contains("json-rich")).toBe(true);
+    // Marked up as JSON: a key is a property, a string a string.
+    expect(raw.querySelector(".sh__token--property")).not.toBeNull();
+    expect(raw.querySelector(".sh__token--string")).not.toBeNull();
+    expect(JSON.parse(raw.textContent ?? "")).toEqual(
+      JSON.parse(JSON.stringify(SAMPLE_SEARCH)),
+    );
+  });
+});

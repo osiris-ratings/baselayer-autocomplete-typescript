@@ -217,6 +217,13 @@
   color: var(--ink-soft);
 }
 
+/* A request's optional field, quieter than the required ones. */
+.pill-quiet {
+  background: transparent;
+  border: 1px solid var(--line-soft);
+  color: var(--muted);
+}
+
 .facts-list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -353,4 +360,619 @@
   .field-chevron {
     transition: none;
   }
+}
+
+/* What each block below holds, said above it as the page's subheads say
+   theirs, only smaller and fainter. The blocks name themselves to a screen
+   reader by their tabs. */
+.code-caption {
+  margin: 0 0 -8px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ---- Try it here --------------------------------------------------------- */
+
+/* The request as a form, in the code block's colours and kept short: the URL
+   in a box of its own with Send, then a table each for the headers, the query
+   and the body, every one as wide as the block, and a status bar that opens on
+   the request as it goes out. Each value is a white field; a list of choices
+   is a row of chips, each choice in a hue of its own. */
+.code-tool {
+  min-width: 0;
+  padding: 14px 16px 12px;
+  font-family: var(--mono);
+  font-size: 12.5px;
+}
+
+.try {
+  --try-good: #86efac;
+  --try-bad: #fca5a5;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+}
+
+/* The method, the URL's first line and Send share the box's top row; a URL
+   that wraps runs on below. */
+.try-url-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 5px 5px 8px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 3px;
+}
+
+.try-method {
+  flex: none;
+  margin-top: 4px;
+  padding: 1px 7px;
+  border-radius: 2px;
+  background: #a5b4fc;
+  color: var(--navy-deep);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 20px;
+}
+
+.try-method-post {
+  background: #86efac;
+}
+
+.try-method-get {
+  background: #7dd3fc;
+}
+
+/* Read-only, and selectable as text is. */
+.try-url {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  background: none;
+  color: #e8eefb;
+  padding-top: 4px;
+  font-size: 13px;
+  line-height: 22px;
+  overflow-wrap: anywhere;
+  user-select: text;
+}
+
+/* The URL's parts in the demo network panel's colours. */
+.url-protocol {
+  color: #93a6cf;
+}
+
+.url-host {
+  color: #8fd3ff;
+}
+
+.url-path {
+  color: #c9b8ff;
+}
+
+.url-sign {
+  color: #93a6cf;
+}
+
+.url-key {
+  color: #ff9fd6;
+}
+
+.url-value {
+  color: #bef9b6;
+}
+
+.try-send {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  height: 30px;
+  border: 0;
+  border-radius: 2px;
+  background: var(--blue);
+  color: #ffffff;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.try-send:hover {
+  background: #4f62f0;
+}
+
+.try-send[disabled] {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.try-table {
+  margin-top: 6px;
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+/* One rule, under the head: the rows run on without. */
+.try-table th,
+.try-table td {
+  padding: 3px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+/* The head is the section's title: what the rows are, then their values. */
+.try-table thead th {
+  padding: 0 6px 4px;
+  vertical-align: bottom;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #6f7fa6;
+  font-size: 10.5px;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.try-table thead th:first-child {
+  color: #c3cde6;
+}
+
+/* Value starts where the values' text does, inside their fields. */
+.try-table thead th:nth-child(2) {
+  padding-left: 14px;
+}
+
+.try-table tbody tr:first-child > * {
+  padding-top: 6px;
+}
+
+.try-col-name {
+  width: 36%;
+}
+
+.try-actions {
+  width: 26px;
+  text-align: right;
+}
+
+/* A name stands on its value's first line, a field's or a row of chips', as
+   does a row's remove button. */
+.try-name {
+  font-weight: 400;
+  line-height: 26px;
+  overflow-wrap: anywhere;
+}
+
+.try-actions .try-remove {
+  height: 26px;
+}
+
+.try-key {
+  color: var(--sh-property);
+}
+
+.try-parent {
+  color: #6f7fa6;
+}
+
+/* A value is an underline on a faint fill, no box: typed in light ink, the
+   line lit in the accent while it has the focus. */
+.try-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 26px;
+  padding: 0 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.26);
+  border-radius: 0;
+  color: #e8eefb;
+  font: inherit;
+  font-size: 12.5px;
+  color-scheme: dark;
+}
+
+.try-input:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-bottom-color: rgba(255, 255, 255, 0.45);
+}
+
+.try-input:focus {
+  background: rgba(255, 255, 255, 0.1);
+  border-bottom-color: #7d8cff;
+  outline: none;
+  box-shadow: 0 1px 0 #7d8cff;
+}
+
+select.try-input {
+  padding-right: 4px;
+  cursor: pointer;
+}
+
+/* A value the form shows but does not take: no line, only faint ink, as a
+   label reads. */
+.try-input[readonly],
+.try-input[readonly]:hover,
+.try-input[readonly]:focus {
+  background: transparent;
+  border-bottom-color: transparent;
+  box-shadow: none;
+  color: #6f7fa6;
+  cursor: default;
+}
+
+.try-required {
+  margin-left: 3px;
+  color: #f9a8d4;
+}
+
+.try-number {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.try-number .try-input {
+  width: 9ch;
+}
+
+.try-hint {
+  color: #6f7fa6;
+  font-size: 11.5px;
+}
+
+.try-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* A route's relations, then, always on a line of its own, what they are for:
+   each route's row reads the same, however wide its chips. */
+.try-chips-row {
+  display: grid;
+  gap: 3px;
+  padding: 2px 0;
+}
+
+.try-hint-line {
+  padding-left: 8px;
+  font-size: 11px;
+}
+
+/* A choice, in the values' own ink: an outline while off, filled while on. */
+.try-chip {
+  padding: 1px 9px;
+  border: 1px solid rgba(232, 238, 251, 0.45);
+  border-radius: 999px;
+  background: transparent;
+  color: #e8eefb;
+  font: inherit;
+  font-size: 12px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.try-chip:hover {
+  border-color: #e8eefb;
+}
+
+.try-chip[aria-pressed="true"] {
+  background: #e8eefb;
+  border-color: #e8eefb;
+  color: var(--navy-deep);
+}
+
+.try-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  background: none;
+  color: #c3cde6;
+  font: inherit;
+  font-size: 12px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+.try-add:hover {
+  border-color: #7d8cff;
+  color: #ffffff;
+}
+
+/* The note and a route's line under its chips start where the values' text
+   does, with the Value head. */
+.try-note td {
+  padding-top: 4px;
+  padding-left: 14px;
+  color: #9fb0d6;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.try-note code {
+  padding: 0;
+  background: none;
+  color: var(--sh-property);
+  font-size: inherit;
+}
+
+.try-addrow td {
+  padding-top: 7px;
+}
+
+.try-remove {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px;
+  border: 0;
+  background: none;
+  color: #9fb0d6;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.try-remove:hover {
+  color: var(--try-bad);
+}
+
+/* The status bar: how the last send ended, what goes out, and a chevron that
+   opens on it. */
+.try-status {
+  margin: 0 -16px -12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+/* After a send the bar has two rows: how it ended, the whole width of it, and
+   under it the request and what opening it shows. Before, only the second. */
+.try-status-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 10px;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 16px;
+  border: 0;
+  background: none;
+  color: #9fb0d6;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.try-status-bar:hover {
+  color: #ffffff;
+}
+
+/* What the bar holds: the request, summed up, with what opening it shows. */
+.try-status-text {
+  display: inline-flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 34px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.try-status-text .icon {
+  flex: none;
+  color: #7d8cff;
+}
+
+.try-status-what {
+  color: #e8eefb;
+}
+
+.try-status-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.try-status-open {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  color: #c3cde6;
+}
+
+.try-chevron {
+  display: inline-flex;
+  transition: transform 240ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.try-chevron[data-open="true"] {
+  transform: rotate(180deg);
+}
+
+/* Unfolds as its one row grows from nothing to what it holds. */
+.try-preview {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 280ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.try-preview[data-open="true"] {
+  grid-template-rows: 1fr;
+}
+
+.try-preview-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .try-preview,
+  .try-chevron {
+    transition: none;
+  }
+}
+
+.try-outcome {
+  display: flex;
+  flex: 1 1 100%;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding-top: 6px;
+}
+
+.try-outcome-status {
+  padding: 0 7px;
+  border-radius: 2px;
+  background: var(--try-good);
+  color: var(--navy-deep);
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.try-outcome[data-ok="false"] .try-outcome-status {
+  background: var(--try-bad);
+}
+
+.try-outcome-detail {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--try-bad);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.try-outcome-ms {
+  margin-left: auto;
+  color: #6f7fa6;
+  white-space: nowrap;
+}
+
+/* The request as it goes out, as HTTP writes it. */
+.try-request {
+  margin: 0;
+  padding: 10px 16px 14px;
+  overflow-x: auto;
+  color: #e8eefb;
+  font-size: 12.5px;
+  line-height: 1.6;
+  white-space: pre;
+}
+
+.http-method {
+  color: #86efac;
+}
+
+.http-path {
+  color: #e8eefb;
+}
+
+.http-version,
+.http-note {
+  color: #6f7fa6;
+}
+
+.http-name {
+  color: var(--sh-property);
+}
+
+.http-body {
+  color: #e8eefb;
+}
+
+/* The session header's row: whether there is a session and how long it has,
+   under the field, with what Send will do about it. */
+.try-session {
+  display: grid;
+  gap: 2px;
+  margin: 5px 0 2px;
+  padding-left: 8px;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.try-session-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 8px;
+  color: #c3cde6;
+}
+
+.try-session-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #6f7fa6;
+}
+
+.try-session[data-state="active"] .try-session-dot {
+  background: var(--try-good);
+  box-shadow: 0 0 0 3px rgba(134, 239, 172, 0.16);
+}
+
+.try-session[data-state="expired"] .try-session-dot {
+  background: #fcd34d;
+  box-shadow: 0 0 0 3px rgba(252, 211, 77, 0.16);
+}
+
+.try-session-clock {
+  color: #9fb0d6;
+  font-variant-numeric: tabular-nums;
+}
+
+.try-session-note {
+  color: #8191b8;
+}
+
+.try-session a,
+.try-session-use {
+  color: #b9c6ff;
+  text-decoration: underline;
+  text-decoration-color: rgba(185, 198, 255, 0.4);
+  text-underline-offset: 2px;
+}
+
+.try-session-use {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.try-session a:hover,
+.try-session-use:hover {
+  color: #ffffff;
+}
+
+.try-outcome-minted {
+  padding: 0 7px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  color: #c3cde6;
+  font-size: 11px;
+  line-height: 18px;
+  white-space: nowrap;
 }

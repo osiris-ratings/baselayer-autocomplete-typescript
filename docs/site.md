@@ -52,7 +52,43 @@ contracts/autocomplete.overlay.yaml  what the specs lack          ─┘
 - A target the overlay names that no longer exists fails the build.
 
 A nested model starts folded under its field, which says how many fields it
-holds; `site/api/fieldTree.ts` works out which rows belong to which.
+holds, unless it is small (three fields or fewer); `site/api/fieldTree.ts`
+works out which rows belong to which.
+
+### Try it here
+
+Each operation's request block has a Try it here tab: the request as a form,
+started from its curl sample (`site/api/TryIt.tsx`). The other samples follow
+the form as it is edited (`site/api/snippets.ts`). Send makes the call from the
+browser, and the answer shows in the response block as a Live tab.
+
+It sends the way the demo does (see [the demo](demo.md)): under `pnpm site` it
+goes to `/_baselayer/…` on the dev server, which forwards it to the API
+`DEMO_API` names with the page's `Origin`, so no CORS list has to admit
+localhost. So, to try it on localhost:
+
+```sh
+DEMO_API=sample pnpm site                     # made-up data, any key
+DEMO_API=https://api.staging.example.test pnpm site   # a real API
+```
+
+Then open `/api/`, pick an operation, open Try it here and press Send. With a
+real API the mint takes a real `X-API-Key`, which the form shows as typed,
+since the field is not masked: use it only on a screen no one else sees. A
+build sends to the URL the form shows, which a browser keeps from a page the
+API does not admit.
+
+The session is shared. A Create a session that succeeds leaves its token, when
+it expires (counted from `expires_in`, as the API says to) and the request that
+made it with the page (`site/api/session.tsx`), and the autocomplete routes'
+forms start from it: `X-Autocomplete-Session` is the token, with a line under
+it that says the session is active and how long it has, or that it has expired.
+When Send finds it expired, the form mints a new one first, with that same
+request and its `X-API-Key`, and says so in the bar; nothing mints in the
+background, since sessions count against the organization's pools. The response
+block's Live tab for a mint that gave a session shows the same countdown beside
+Copy. A value typed in the field is the reader's own and is sent as it is. The
+key is held in memory only: a reload forgets it, and nothing is stored.
 
 ![The API reference](images/site-api-reference.png)
 

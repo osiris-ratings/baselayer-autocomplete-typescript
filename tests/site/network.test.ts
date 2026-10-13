@@ -179,7 +179,7 @@ describe("bodyHtml", () => {
     expect(keywords).toEqual([
       ["true", "color:var(--sh-keyword)"],
       ["false", "color:var(--sh-keyword)"],
-      ["null", "color:var(--net-null)"],
+      ["null", "color:var(--json-null)"],
     ]);
     expect(html).toContain(
       '<span class="sh__token--string" style="color:var(--sh-string)">&quot;null&quot;</span>',
