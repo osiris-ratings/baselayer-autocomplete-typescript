@@ -23,6 +23,7 @@ import {
   type OperationEntry,
   type Section,
 } from "./model";
+import { SessionProvider } from "./session";
 import { TryIt, type LiveResponse } from "./TryIt";
 import { parseCurl } from "./curl";
 import type {
@@ -569,11 +570,15 @@ export function ApiReference() {
             ))}
           </ul>
         </nav>
-        <div className="reference-body">
-          {sections.map((section, i) => (
-            <SectionView key={section.id} section={section} index={i + 1} />
-          ))}
-        </div>
+        {/* One session for the page: a Create a session that succeeds leaves
+            it for the autocomplete routes' forms to start from. */}
+        <SessionProvider>
+          <div className="reference-body">
+            {sections.map((section, i) => (
+              <SectionView key={section.id} section={section} index={i + 1} />
+            ))}
+          </div>
+        </SessionProvider>
       </main>
       <SiteFooter />
     </>

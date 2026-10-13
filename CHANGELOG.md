@@ -60,6 +60,12 @@ breaking change bumps the minor version.
   - Under `pnpm site`, Send goes through the dev server as the demo's calls
     do, so `DEMO_API=sample` or a real API answers it from localhost
     (`docs/site.md`).
+  - The session is shared. A Create a session that succeeds leaves its token
+    for the autocomplete routes' forms, which start from it with a line under
+    the field: active, with a countdown from `expires_in`, or expired. Send on
+    an expired session mints a new one first, with the same request and its
+    `X-API-Key`, and says so; a value typed in the field is sent as it is. The
+    key stays in memory only.
 - The API reference shows what `POST /autocomplete/sessions` takes: a Request
   body section, optional like the body, with its fields marked optional. Where
   a field is a choice it says the choices, which routes a scope may name and

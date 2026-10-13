@@ -78,6 +78,17 @@ since the field is not masked: use it only on a screen no one else sees. A
 build sends to the URL the form shows, which a browser keeps from a page the
 API does not admit.
 
+The session is shared. A Create a session that succeeds leaves its token, when
+it expires (counted from `expires_in`, as the API says to) and the request that
+made it with the page (`site/api/session.tsx`), and the autocomplete routes'
+forms start from it: `X-Autocomplete-Session` is the token, with a line under
+it that says the session is active and how long it has, or that it has expired.
+When Send finds it expired, the form mints a new one first, with that same
+request and its `X-API-Key`, and says so in the bar; nothing mints in the
+background, since sessions count against the organization's pools. A value
+typed in the field is the reader's own and is sent as it is. The key is held in
+memory only: a reload forgets it, and nothing is stored.
+
 ![The API reference](images/site-api-reference.png)
 
 ## Running it

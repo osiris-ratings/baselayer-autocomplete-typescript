@@ -9,7 +9,14 @@
 // the session mint takes an API key, which belongs on a backend, and the
 // autocomplete routes take a session.
 
-import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { LEGAL_RELATIONS, type Route } from "@baselayer-sdk/autocomplete";
 
@@ -18,6 +25,15 @@ import { Icon } from "../shared/icons";
 import { jsonHtml } from "../shared/json";
 import { urlOf, type Pair, type Sample } from "./curl";
 import { resolveIn, type Schemas } from "./schema";
+import { refusalOf, sendTarget } from "./send";
+import {
+  isSessionHeader,
+  mintSession,
+  MintFailure,
+  sessionFrom,
+  SessionLine,
+  useSession,
+} from "./session";
 import { BROWSER_HEADERS, samplesOf } from "./snippets";
 import type { JsonSchema } from "./spec/assemble";
 
@@ -473,17 +489,6 @@ function Required() {
   );
 }
 
-/**
- * Where the page sends a request: in `pnpm site` through the dev server, which
- * forwards it (or answers it, on made-up data), as the demo's calls go; built,
- * to the URL it shows.
- */
-function sendTarget(url: string): string {
-  return import.meta.env.DEV
-    ? url.replace(/^https?:\/\/[^/]+/, "/_baselayer")
-    : url;
-}
-
 /** The request as HTTP writes it: the line, the headers, then the body. */
 function HttpRequest({
   method,
@@ -545,27 +550,8 @@ interface Outcome {
   ok: boolean;
   /** For a refusal, its code and message; for a failure, what failed. */
   detail: string | null;
-}
-
-/** A refusal's reason, from its body: the code and the message, or a 422's. */
-function refusalOf(body: unknown): string | null {
-  if (body === null || typeof body !== "object") {
-    return null;
-  }
-  const record = body as Record<string, unknown>;
-  if (typeof record.message === "string") {
-    return record.code === undefined || record.code === null
-      ? record.message
-      : `${String(record.code)} · ${record.message}`;
-  }
-  const first = Array.isArray(record.detail) ? record.detail[0] : undefined;
-  if (first !== null && typeof first === "object") {
-    const { loc, msg } = first as { loc?: unknown[]; msg?: string };
-    return [Array.isArray(loc) ? loc.join(".") : null, msg]
-      .filter(Boolean)
-      .join(": ");
-  }
-  return null;
+  /** The session had run out, and a new one was minted before this was sent. */
+  minted?: boolean;
 }
 
 /** How long the typing rests before the URL box shows what it made. */
@@ -677,6 +663,11 @@ export function TryIt({
     ),
   );
   const [result, setResult] = useState<Outcome | null>(null);
+  // The session the page shares: a Create a session that succeeded leaves it,
+  // and the routes that take one start from it, unless the reader typed their
+  // own value in the field.
+  const { session, setSession } = useSession();
+  const [own, setOwn] = useState<string | null>(null);
   // Rows are numbered from the sample's own order, with no counter outside
   // the component, so an initializer run twice makes the same rows; the
   // counter for the rows added after is this component's own.
@@ -718,54 +709,114 @@ export function TryIt({
   const held = slots.filter(slot => getAt(body, slot.path) !== undefined);
   const free = slots.filter(slot => getAt(body, slot.path) === undefined);
   const sentBody = body === undefined ? null : JSON.stringify(body, null, 2);
-  const sentHeaders = headers.filter(header => header.name.trim() !== "");
+  // What each header says now: the session's field is the active session's,
+  // or the reader's own value, before the sample's stand-in.
+  const managed = own === null && session !== null;
+  const effective = useMemo(
+    () =>
+      headers.map(header => ({
+        ...header,
+        value: !isSessionHeader(header.name)
+          ? header.value
+          : (own ?? session?.token ?? header.value),
+      })),
+    [headers, own, session],
+  );
+  const sentHeaders = effective.filter(header => header.name.trim() !== "");
+  const shownHeaderValue = (header: Pair) =>
+    effective.find(each => each.name === header.name)?.value ?? header.value;
 
   const labelsKey = labels.join("\n");
   useEffect(() => {
     onCode(
       samplesOf(
-        { method, url: sample.url, headers, query, body },
+        { method, url: sample.url, headers: effective, query, body },
         labelsKey.split("\n"),
       ),
     );
-  }, [onCode, method, sample.url, headers, query, body, labelsKey]);
+  }, [onCode, method, sample.url, effective, query, body, labelsKey]);
 
   const send = async () => {
     setSending(true);
     const started = performance.now();
     const elapsed = () => Math.round(performance.now() - started);
     try {
+      // A session that has run out is minted again first, with the request
+      // that made it, and only on this Send: the reader asked for a request,
+      // not for a mint in the background.
+      let active = session;
+      let minted = false;
+      if (managed && Date.now() >= session.expiresAt) {
+        try {
+          active = await mintSession(session.mint);
+        } catch (error) {
+          const failure =
+            error instanceof MintFailure
+              ? error
+              : new MintFailure(null, String(error));
+          setResult({
+            status: failure.status,
+            ms: elapsed(),
+            ok: false,
+            detail: `The session had expired, and minting a new one failed: ${failure.message}`,
+          });
+          onResponse({
+            status: failure.status,
+            ms: elapsed(),
+            body: `The session had expired. Minting a new one with the X-API-Key from Create a session failed: ${failure.message}\n\nSend Create a session again with a key the API accepts.`,
+            json: false,
+          });
+          return;
+        }
+        setSession(active);
+        minted = true;
+      }
+      const toSend = sentHeaders
+        .filter(header => !BROWSER_HEADERS.has(header.name.toLowerCase()))
+        .map(header =>
+          managed && isSessionHeader(header.name) && active !== null
+            ? { ...header, value: active.token }
+            : header,
+        );
+      const fetchHeaders = Object.fromEntries(
+        toSend.map(header => [header.name, header.value]),
+      );
       const response = await fetch(sendTarget(url), {
         method: method.toUpperCase(),
-        headers: Object.fromEntries(
-          sentHeaders
-            .filter(header => !BROWSER_HEADERS.has(header.name.toLowerCase()))
-            .map(header => [header.name, header.value]),
-        ),
+        headers: fetchHeaders,
         ...(body === undefined ? {} : { body: JSON.stringify(body) }),
         credentials: "omit",
       });
       const text = await response.text();
       let json = false;
       let shown = text;
+      let parsed: unknown = null;
       try {
-        shown = JSON.stringify(JSON.parse(text), null, 2);
+        parsed = JSON.parse(text);
+        shown = JSON.stringify(parsed, null, 2);
         json = true;
       } catch {
         // Not JSON: shown as it came.
       }
       const ms = elapsed();
-      let parsed: unknown = null;
-      try {
-        parsed = JSON.parse(text);
-      } catch {
-        parsed = null;
+      // A mint that succeeded is the session the other forms start from.
+      if (
+        response.ok &&
+        new URL(url).pathname.endsWith("/autocomplete/sessions")
+      ) {
+        const made = sessionFrom(
+          parsed,
+          { url, headers: fetchHeaders, body: body ?? {} },
+          Date.now(),
+        );
+        if (made !== null) setSession(made);
       }
       setResult({
         status: response.status,
         ms,
         ok: response.ok,
         detail: response.ok ? null : refusalOf(parsed),
+        minted,
       });
       onResponse({ status: response.status, ms, body: shown, json });
     } catch (error) {
@@ -830,17 +881,28 @@ export function TryIt({
                     FIXED_HEADERS[header.name.toLowerCase()] !== undefined
                   }
                   title={FIXED_HEADERS[header.name.toLowerCase()]}
-                  value={header.value}
-                  onChange={event =>
+                  value={shownHeaderValue(header)}
+                  onChange={event => {
+                    const value = event.target.value;
+                    if (isSessionHeader(header.name)) {
+                      // The reader's own value, or the active session's again.
+                      setOwn(value === session?.token ? null : value);
+                      return;
+                    }
                     setHeaders(
                       headers.map(h =>
-                        h.name === header.name
-                          ? { ...h, value: event.target.value }
-                          : h,
+                        h.name === header.name ? { ...h, value } : h,
                       ),
-                    )
-                  }
+                    );
+                  }}
                 />
+                {isSessionHeader(header.name) && (
+                  <SessionLine
+                    session={session}
+                    own={own !== null}
+                    onUse={() => setOwn(null)}
+                  />
+                )}
               </td>
               <td className="try-actions" />
             </tr>
@@ -1017,6 +1079,9 @@ export function TryIt({
               </span>
               {result.detail !== null && (
                 <span className="try-outcome-detail">{result.detail}</span>
+              )}
+              {result.minted === true && (
+                <span className="try-outcome-minted">new session minted</span>
               )}
               <span className="try-outcome-ms">{result.ms} ms</span>
             </span>
