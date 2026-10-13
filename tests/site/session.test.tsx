@@ -13,13 +13,15 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { parseCurl } from "../../site/api/curl";
 import {
   clock,
+  SessionCountdown,
   SessionProvider,
   sessionFrom,
   type ActiveSession,
 } from "../../site/api/session";
 import type { JsonSchema } from "../../site/api/spec/assemble";
 import { buildReference } from "../../site/api/spec/plugin";
-import { TryIt } from "../../site/api/TryIt";
+import { TryIt, type LiveResponse } from "../../site/api/TryIt";
+import { Code } from "../../site/shared/Code";
 
 // The page's document, assembled from contracts/ as the build assembles it.
 const { document: reference } = buildReference(process.cwd());
@@ -30,7 +32,11 @@ afterEach(() => {
 });
 
 /** One operation's form, as the reference draws it. */
-function form(path: string, onCode = vi.fn()) {
+function form(
+  path: string,
+  onCode = vi.fn(),
+  onResponse: (response: LiveResponse) => void = () => {},
+) {
   const [method, operation] = Object.entries(reference.paths[path]!)[0]!;
   const source = (operation["x-codeSamples"] ?? []).find(
     sample => sample.lang === "shell",
@@ -54,7 +60,7 @@ function form(path: string, onCode = vi.fn()) {
           .map(parameter => parameter.name)}
         schemas={reference.components?.schemas ?? {}}
         onCode={onCode}
-        onResponse={() => {}}
+        onResponse={onResponse}
       />
     </section>
   );
@@ -288,5 +294,84 @@ describe("a session from a mint's answer", () => {
     expect(clock(125_000)).toBe("2:05");
     expect(clock(59_001)).toBe("1:00");
     expect(clock(-5)).toBe("0:00");
+  });
+});
+
+describe("the countdown beside a minted session's answer", () => {
+  it("counts down to the second, then says expired", () => {
+    const { rerender } = render(
+      <SessionCountdown expiresAt={Date.now() + 118_500} />,
+    );
+    expect(
+      screen.getByText(/session expires in 1:5\d|session expires in 2:00/),
+    ).toBeTruthy();
+
+    rerender(<SessionCountdown expiresAt={Date.now() - 1000} />);
+    expect(screen.getByText("session expired")).toBeTruthy();
+  });
+
+  it("is handed to the response block by a mint that gave a session, from expires_in", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => reply(201, { session_token: "tok", expires_in: 120 })),
+    );
+    const onResponse = vi.fn<(response: LiveResponse) => void>();
+    const user = userEvent.setup();
+    const before = Date.now();
+    render(
+      <SessionProvider>
+        {form("/autocomplete/sessions", vi.fn(), onResponse)}
+      </SessionProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(onResponse).toHaveBeenCalled());
+    const { expiresAt } = onResponse.mock.lastCall![0];
+    expect(expiresAt).toBeGreaterThanOrEqual(before + 120_000);
+    expect(expiresAt).toBeLessThan(Date.now() + 120_000 + 1);
+  });
+
+  it("is not on an answer that is no session, a refusal or a search", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => reply(200, { suggestions: [] })),
+    );
+    const onResponse = vi.fn<(response: LiveResponse) => void>();
+    const user = userEvent.setup();
+    render(
+      <SessionProvider initial={session()}>
+        {form("/autocomplete/people", vi.fn(), onResponse)}
+      </SessionProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(onResponse).toHaveBeenCalled());
+    expect(onResponse.mock.lastCall![0].expiresAt).toBeUndefined();
+  });
+
+  it("shows in the response block beside Copy while the live tab is up, and not on another tab", async () => {
+    const user = userEvent.setup();
+    const { container } = render(
+      <Code
+        title="Response"
+        snippets={[{ label: "201", lang: "json", code: "{}" }]}
+        live={{
+          key: 1,
+          label: "Live · 201",
+          lang: "json",
+          code: "{}",
+          note: <SessionCountdown expiresAt={Date.now() + 90_000} />,
+        }}
+      />,
+    );
+    // A live answer is shown as it arrives.
+    expect(container.querySelector(".code-note")?.textContent).toContain(
+      "session expires in",
+    );
+
+    await user.click(screen.getByRole("tab", { name: "201" }));
+    expect(container.querySelector(".code-note")).toBeNull();
   });
 });

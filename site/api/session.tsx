@@ -220,3 +220,29 @@ export function SessionLine({
     </p>
   );
 }
+
+/**
+ * How long a minted session has, beside the answer that made it: counted down
+ * to the second, then "expired". Drawn, not announced; the time it ends is
+ * there for a screen reader.
+ */
+export function SessionCountdown({ expiresAt }: { expiresAt: number }) {
+  const now = useNow(true);
+  const left = expiresAt - now;
+  const expired = left <= 0;
+  return (
+    <span
+      className="session-countdown"
+      data-state={expired ? "expired" : "active"}
+    >
+      <span className="try-session-dot" aria-hidden="true" />
+      <span aria-hidden="true">
+        {expired ? "session expired" : `session expires in ${clock(left)}`}
+      </span>
+      <span className="visually-hidden">
+        Session {expired ? "expired" : "until"}{" "}
+        {new Date(expiresAt).toLocaleTimeString()}
+      </span>
+    </span>
+  );
+}

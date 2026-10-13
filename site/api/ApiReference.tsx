@@ -23,7 +23,7 @@ import {
   type OperationEntry,
   type Section,
 } from "./model";
-import { SessionProvider } from "./session";
+import { SessionCountdown, SessionProvider } from "./session";
 import { TryIt, type LiveResponse } from "./TryIt";
 import { parseCurl } from "./curl";
 import type {
@@ -410,6 +410,13 @@ function OperationSection({
                         label: `Live · ${live.status ?? "failed"}`,
                         lang: live.json ? "json" : "plaintext",
                         code: live.body,
+                        ...(live.expiresAt !== undefined
+                          ? {
+                              note: (
+                                <SessionCountdown expiresAt={live.expiresAt} />
+                              ),
+                            }
+                          : {}),
                       }
                 }
               />

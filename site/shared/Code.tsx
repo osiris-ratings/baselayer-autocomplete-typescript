@@ -44,7 +44,7 @@ export function Code({
    * A snippet that arrives later, such as a sent request's answer: a tab of
    * its own after a rule, there only once it is, and shown as it arrives.
    */
-  live?: (Snippet & { key: number }) | null;
+  live?: (Snippet & { key: number; note?: ReactNode }) | null;
 }) {
   const [index, setIndex] = useState(0);
   const [copied, setCopied] = useState(false);
@@ -138,6 +138,9 @@ export function Code({
           </div>
         ) : (
           <span className="code-title">{title ?? snippet.label}</span>
+        )}
+        {onLive && live?.note !== undefined && (
+          <span className="code-note">{live.note}</span>
         )}
         <button type="button" className="copy" onClick={() => void copy()}>
           {copied ? "Copied" : "Copy"}

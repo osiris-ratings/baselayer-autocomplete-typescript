@@ -65,7 +65,8 @@ breaking change bumps the minor version.
     the field: active, with a countdown from `expires_in`, or expired. Send on
     an expired session mints a new one first, with the same request and its
     `X-API-Key`, and says so; a value typed in the field is sent as it is. The
-    key stays in memory only.
+    key stays in memory only. The response block's Live tab shows the same
+    countdown beside Copy, for a mint that gave a session.
 - The API reference shows what `POST /autocomplete/sessions` takes: a Request
   body section, optional like the body, with its fields marked optional. Where
   a field is a choice it says the choices, which routes a scope may name and

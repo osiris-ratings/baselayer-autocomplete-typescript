@@ -85,9 +85,10 @@ forms start from it: `X-Autocomplete-Session` is the token, with a line under
 it that says the session is active and how long it has, or that it has expired.
 When Send finds it expired, the form mints a new one first, with that same
 request and its `X-API-Key`, and says so in the bar; nothing mints in the
-background, since sessions count against the organization's pools. A value
-typed in the field is the reader's own and is sent as it is. The key is held in
-memory only: a reload forgets it, and nothing is stored.
+background, since sessions count against the organization's pools. The response
+block's Live tab for a mint that gave a session shows the same countdown beside
+Copy. A value typed in the field is the reader's own and is sent as it is. The
+key is held in memory only: a reload forgets it, and nothing is stored.
 
 ![The API reference](images/site-api-reference.png)
 

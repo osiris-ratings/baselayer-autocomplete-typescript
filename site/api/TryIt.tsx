@@ -456,6 +456,8 @@ export interface LiveResponse {
   /** The body, as JSON laid out where it is JSON, else as it came. */
   body: string;
   json: boolean;
+  /** For a mint that gave a session, when that session ends (epoch ms). */
+  expiresAt?: number;
 }
 
 /**
@@ -799,6 +801,7 @@ export function TryIt({
         // Not JSON: shown as it came.
       }
       const ms = elapsed();
+      let expiresAt: number | undefined;
       // A mint that succeeded is the session the other forms start from.
       if (
         response.ok &&
@@ -809,7 +812,10 @@ export function TryIt({
           { url, headers: fetchHeaders, body: body ?? {} },
           Date.now(),
         );
-        if (made !== null) setSession(made);
+        if (made !== null) {
+          setSession(made);
+          expiresAt = made.expiresAt;
+        }
       }
       setResult({
         status: response.status,
@@ -818,7 +824,13 @@ export function TryIt({
         detail: response.ok ? null : refusalOf(parsed),
         minted,
       });
-      onResponse({ status: response.status, ms, body: shown, json });
+      onResponse({
+        status: response.status,
+        ms,
+        body: shown,
+        json,
+        ...(expiresAt !== undefined ? { expiresAt } : {}),
+      });
     } catch (error) {
       setResult({
         status: null,

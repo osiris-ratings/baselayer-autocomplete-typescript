@@ -532,6 +532,41 @@ h3 code {
   color: #ffffff;
 }
 
+/* A note beside Copy, about what the tab shows: a session's countdown. */
+.code-note {
+  flex: 0 1 auto;
+  margin-left: auto;
+  min-width: 0;
+  padding: 4px;
+  overflow: hidden;
+  color: #9fb0d6;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.session-countdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-variant-numeric: tabular-nums;
+}
+
+.session-countdown .try-session-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #86efac;
+  box-shadow: 0 0 0 3px rgba(134, 239, 172, 0.16);
+}
+
+.session-countdown[data-state="expired"] .try-session-dot {
+  background: #fcd34d;
+  box-shadow: 0 0 0 3px rgba(252, 211, 77, 0.16);
+}
+
 /* A live answer's tab: a dot says it came from a request just sent. */
 .code-tab-live::before {
   display: inline-block;
