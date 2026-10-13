@@ -67,7 +67,7 @@ import {
 
 const client = createAutocompleteClient({
   baseUrl: "https://api.baselayer.com",
-  mint: defaultMint("/api/ac-session"),
+  mint: defaultMint("/api/autocomplete-session"),
 });
 
 // The same as client.suggest({ q: "harbor concrete" }).
@@ -200,7 +200,7 @@ role they hold there.
 
 ```tsx
 <PersonAutocomplete
-  mintUrl="/api/ac-session"
+  mintUrl="/api/autocomplete-session"
   baseUrl="https://api.baselayer.com"
   id="person"
   label="Person's name"

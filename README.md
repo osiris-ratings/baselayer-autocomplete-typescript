@@ -58,7 +58,12 @@ test fails when a file falls behind its component.
 
 ## 1. Add the mint endpoint to your backend
 
-Next.js (App Router), in `app/api/ac-session/route.ts`:
+This is your own endpoint, not a Baselayer route. It takes your user's cookie,
+mints a session with your API key by calling Baselayer's
+`POST /autocomplete/sessions`, and returns the answer. Name it what suits your
+API: the snippets call it `/api/autocomplete-session`.
+
+Next.js (App Router), in `app/api/autocomplete-session/route.ts`:
 
 ```ts
 import { createMintHandler } from "@baselayer-sdk/autocomplete/server";
@@ -74,7 +79,7 @@ Express:
 ```ts
 import { mintForOrigin } from "@baselayer-sdk/autocomplete/server";
 
-app.post("/api/ac-session", requireLogin, async (req, res) => {
+app.post("/api/autocomplete-session", requireLogin, async (req, res) => {
   const origin = req.get("Origin");
   if (!origin || !ALLOWED.has(origin)) {
     return res.status(403).end();
@@ -106,7 +111,7 @@ export function LegalNameField() {
       id="legal-name"
       label="Legal entity name"
       baseUrl="https://api.baselayer.com"
-      mintUrl="/api/ac-session"
+      mintUrl="/api/autocomplete-session"
       value={name}
       onChange={value => {
         setName(value);
@@ -220,7 +225,7 @@ person or address it was reached by:
   id="officer-name"
   label="Officer's name"
   baseUrl="https://api.baselayer.com"
-  mintUrl="/api/ac-session"
+  mintUrl="/api/autocomplete-session"
   value={typed}
   onChange={setTyped}
   onPick={pick => {
@@ -253,6 +258,26 @@ A session searches what its scope allows, which your mint endpoint can narrow
 (see [Narrowing a session](docs/mint-endpoint.md#narrowing-a-session)), and
 the SDK never asks for anything outside it.
 
+## What a row carries
+
+Each route answers its own entity, and what a row lists is typed by what it
+holds:
+
+- A business row lists `people` and `addresses`. A listed person carries the
+  `role` they hold, `officer` or `agent`; a listed address carries how it is
+  listed, `listed_as`: `principal`, `mailing`, `registered_office` or
+  `officer`.
+- A person row lists `businesses` and `addresses`, and an address row lists
+  `businesses` and `people`. A person and an address have no role to each
+  other, so those lines carry none.
+- Only a listed business has a `token`: the one you send with your search. A
+  person row has `states`, the states of the businesses they hold a role on.
+
+The enums are open: a value the SDK does not list comes through as the
+autocomplete service sent it, and your code treats it as "other". A response
+that does not match the contract is refused whole, as a `contract` error.
+[Rows](docs/entities.md#rows) has every field.
+
 ## Documentation
 
 - [Mint endpoint contract](docs/mint-endpoint.md): the three rules, and
@@ -265,6 +290,8 @@ the SDK never asks for anything outside it.
 - [Error states](docs/error-states.md): what the SDK does with every answer
 - [Security](docs/security.md): what the session is and what never leaves
   your backend
+- [API reference](https://sdk.baselayer.com/autocomplete/api/): every route,
+  its request and its answers, with a form to try each one
 - [The site](docs/site.md): the overview, the generated API reference and
   the demo, and how to publish them
 - [Live demo](docs/demo.md): try it with your own API key, and run the search
@@ -274,10 +301,12 @@ the SDK never asks for anything outside it.
 ```sh
 pnpm install
 pnpm test          # vitest: core, server and site in node, react in jsdom
+pnpm test:browser  # the components in a real browser (Playwright)
 pnpm typecheck
 pnpm lint
 pnpm build         # dist/ with ESM, CJS and type declarations
 pnpm site          # the site on http://localhost:3000
+pnpm site:build    # the site as it is published
 pnpm demo          # the same, opened on the demo, forwarding to production
 DEMO_API=sample pnpm demo   # the demo on made-up data, with no network
 ```

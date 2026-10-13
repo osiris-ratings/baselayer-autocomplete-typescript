@@ -6,6 +6,13 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+### Changed
+
+- The README and the docs name the example mint route
+  `/api/autocomplete-session`, say it is the host's own endpoint and not a
+  Baselayer route, and describe what a row carries and links the API
+  reference.
+
 ## [0.7.0] - 2026-10-12
 
 ### Changed

@@ -143,7 +143,7 @@ const MINT_SNIPPETS: Snippet[] = [
   {
     label: "Next.js",
     lang: "typescript",
-    code: `// app/api/ac-session/route.ts
+    code: `// app/api/autocomplete-session/route.ts
 import { createMintHandler } from "@baselayer-sdk/autocomplete/server";
 
 export const POST = createMintHandler({
@@ -156,7 +156,7 @@ export const POST = createMintHandler({
     lang: "typescript",
     code: `import { mintForOrigin } from "@baselayer-sdk/autocomplete/server";
 
-app.post("/api/ac-session", requireLogin, async (req, res) => {
+app.post("/api/autocomplete-session", requireLogin, async (req, res) => {
   const origin = req.get("Origin");
   if (!origin || !ALLOWED.has(origin)) {
     return res.status(403).end();
@@ -171,7 +171,7 @@ app.post("/api/ac-session", requireLogin, async (req, res) => {
   {
     label: "Python",
     lang: "python",
-    code: `@app.post("/api/ac-session")
+    code: `@app.post("/api/autocomplete-session")
 async def ac_session(request: Request) -> Response:
     origin = request.headers.get("origin")
     if origin not in ALLOWED_ORIGINS:
@@ -210,7 +210,7 @@ export function LegalNameField() {
       id="legal-name"
       label="Legal entity name"
       baseUrl="https://api.baselayer.com"
-      mintUrl="/api/ac-session"
+      mintUrl="/api/autocomplete-session"
       value={name}
       onChange={value => {
         setName(value);
@@ -251,7 +251,7 @@ function Field() {
 
 const client = createAutocompleteClient({
   baseUrl: "https://api.baselayer.com",
-  mint: defaultMint("/api/ac-session"),
+  mint: defaultMint("/api/autocomplete-session"),
 });
 
 const controller = new AbortController();

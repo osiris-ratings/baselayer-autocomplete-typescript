@@ -14,7 +14,7 @@ import {
 
 const client = createAutocompleteClient({
   baseUrl: "https://api.baselayer.com",
-  mint: defaultMint("/api/ac-session"),
+  mint: defaultMint("/api/autocomplete-session"),
 });
 
 const controller = new AbortController();

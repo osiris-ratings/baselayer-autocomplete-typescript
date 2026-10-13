@@ -2,7 +2,9 @@
 
 The browser needs a session to query autocomplete, and a session is minted
 with your API key. Your key must never reach a browser, so your backend
-mints on the page's behalf with one small endpoint.
+mints on the page's behalf with one small endpoint. The endpoint is yours, not
+a Baselayer route: it calls Baselayer's `POST /autocomplete/sessions`, and the
+examples below name it `/api/autocomplete-session`, which you can change.
 
 ## The three rules
 
@@ -116,7 +118,7 @@ and `X-Request-ID` back, and marks every answer `Cache-Control: no-store`.
 Next.js App Router:
 
 ```ts
-// app/api/ac-session/route.ts
+// app/api/autocomplete-session/route.ts
 import { createMintHandler } from "@baselayer-sdk/autocomplete/server";
 
 export const POST = createMintHandler({
@@ -137,15 +139,16 @@ signed-in user's plan, say), or none to mint without one.
 Bun (`Bun.serve({ fetch: handler })`), Deno (`Deno.serve(handler)`) and a
 Cloudflare Worker (`export default { fetch: handler }`) take the same
 handler as it is. Hono takes it through
-`app.mount("/api/ac-session", handler)` or as `c => handler(c.req.raw)`, and
-a Remix action is `({ request }) => handler(request)`.
+`app.mount("/api/autocomplete-session", handler)` or as
+`c => handler(c.req.raw)`, and a Remix action is
+`({ request }) => handler(request)`.
 
 Express, with `mintForOrigin`, which returns `{ status, headers, body }`:
 
 ```ts
 import { mintForOrigin } from "@baselayer-sdk/autocomplete/server";
 
-app.post("/api/ac-session", requireLogin, async (req, res) => {
+app.post("/api/autocomplete-session", requireLogin, async (req, res) => {
   const origin = req.get("Origin");
   if (!origin || !ALLOWED.has(origin)) {
     return res.status(403).end();
@@ -179,7 +182,7 @@ Baselayer's status, body and `Retry-After` back.
 In Python:
 
 ```python
-@app.post("/api/ac-session")
+@app.post("/api/autocomplete-session")
 async def ac_session(request: Request) -> Response:
     origin = request.headers.get("origin")
     if origin not in ALLOWED_ORIGINS:
@@ -198,7 +201,7 @@ async def ac_session(request: Request) -> Response:
 
 ```tsx
 <BusinessAutocomplete baseUrl="https://api.baselayer.com"
-                      mintUrl="/api/ac-session" … />
+                      mintUrl="/api/autocomplete-session" … />
 ```
 
 `mintUrl` is fetched with `credentials: "same-origin"`, so your session
@@ -208,7 +211,7 @@ yourself:
 ```ts
 import { defaultMint } from "@baselayer-sdk/autocomplete";
 
-const mint = defaultMint("/api/ac-session", {
+const mint = defaultMint("/api/autocomplete-session", {
   headers: () => ({ "X-CSRF-Token": readCsrfToken() }),
 });
 ```

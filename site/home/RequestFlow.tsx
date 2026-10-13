@@ -22,7 +22,7 @@ const STEPS: Step[] = [
     kind: "message",
     from: "browser",
     to: "backend",
-    label: "POST /api/ac-session",
+    label: "POST /api/autocomplete-session",
     detail: "your cookie rides along (credentials: same-origin)",
   },
   {

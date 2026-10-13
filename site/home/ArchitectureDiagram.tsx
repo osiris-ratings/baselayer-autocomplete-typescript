@@ -881,7 +881,7 @@ export function ArchitectureDiagram({ paused = false }: { paused?: boolean }) {
         x={410}
         y={112}
         h={108}
-        title="POST /api/ac-session"
+        title="POST /api/autocomplete-session"
         lines={["Your route, behind your own login"]}
       />
       <rect
