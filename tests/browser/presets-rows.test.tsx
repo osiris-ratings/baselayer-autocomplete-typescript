@@ -6,7 +6,6 @@ import type {
   AddressSuggestion,
   BusinessSuggestion,
   PersonSuggestion,
-  RelatedItem,
 } from "@baselayer-sdk/autocomplete";
 import {
   AddressAutocompleteView,
@@ -24,42 +23,18 @@ import {
 } from "../../site/demo/style-state";
 
 import "../../src/react/styles.css";
+import {
+  addressOfBusiness,
+  businessOfAddress,
+  businessOfPerson,
+  personOfBusiness,
+  relatedAddress,
+  relatedPerson,
+} from "./support/related";
 
 // Each preset's rows drawn at the widths, and as long, as the groups' own test
 // draws them, and held to the same faults.
 const WIDTHS = [560, 400, 320] as const;
-
-// Made-up people, addresses and businesses, each as long as a real one can be.
-const business = (label: string, role: RelatedItem["role"]): RelatedItem => ({
-  type: "business",
-  token: `tok-${label}`,
-  label,
-  role,
-  matched: false,
-  matched_name: null,
-  highlight: null,
-  address:
-    "4120 Wrenmoor Lane Northwest Building C Suite 1400, Springfield, MO 65806",
-  states: ["CA", "DE", "FL", "IL", "MO", "NY", "TX"],
-  domicile_state: "MO",
-});
-
-const entity = (
-  type: "person" | "address",
-  label: string,
-  role: RelatedItem["role"],
-): RelatedItem => ({
-  type,
-  token: `tok-${label}`,
-  label,
-  role,
-  matched: false,
-  matched_name: null,
-  highlight: null,
-  address: null,
-  states: null,
-  domicile_state: null,
-});
 
 const LONG_ADDRESS =
   "4120 Wrenmoor Lane Northwest Building C Suite 1400, Springfield, MO 65806";
@@ -68,13 +43,20 @@ const LONG_NAME = "Margarethe Alexandrina Featherstonehaugh-Whitfield";
 const LONG_BUSINESS =
   "CINDER RIGGING AND HEAVY EQUIPMENT HAULING COMPANY OF THE GREATER LAKES, INC.";
 
+// Made-up people, addresses and businesses, each as long as a real one can be.
+const long = {
+  address: LONG_ADDRESS,
+  states: ["CA", "DE", "FL", "IL", "MO", "NY", "TX"],
+  domicile_state: "MO",
+};
+
 const PEOPLE: PersonSuggestion[] = [
   {
     type: "person",
     token: "tok-p-1",
     label: LONG_NAME,
-    matched_name: null,
     match: "strong",
+    states: long.states,
     highlight: [
       { text: "Margarethe", matched: true },
       { text: " Alexandrina Featherstonehaugh-Whitfield", matched: false },
@@ -85,15 +67,15 @@ const PEOPLE: PersonSuggestion[] = [
         matched: null,
         truncated: true,
         items: [
-          business(LONG_BUSINESS, "officer"),
-          business("Ortega Masonry LLC", "agent"),
+          businessOfPerson(LONG_BUSINESS, "officer", long),
+          businessOfPerson("Ortega Masonry LLC", "agent", long),
         ],
       },
       addresses: {
         count: 3_210,
         matched: null,
         truncated: true,
-        items: [entity("address", LONG_ADDRESS, "officer")],
+        items: [relatedAddress(LONG_ADDRESS)],
       },
     },
   },
@@ -104,7 +86,6 @@ const ADDRESSES: AddressSuggestion[] = [
     type: "address",
     token: "tok-a-1",
     label: LONG_ADDRESS,
-    matched_name: null,
     match: "strong",
     highlight: [{ text: "4120 Orchard", matched: true }],
     components: {
@@ -120,15 +101,15 @@ const ADDRESSES: AddressSuggestion[] = [
         matched: null,
         truncated: true,
         items: [
-          business(LONG_BUSINESS, "officer"),
-          business("Ridgeline Freight LLC", "mailing"),
+          businessOfAddress(LONG_BUSINESS, "officer", long),
+          businessOfAddress("Ridgeline Freight LLC", "mailing", long),
         ],
       },
       people: {
         count: 2_345,
         matched: null,
         truncated: true,
-        items: [entity("person", LONG_NAME, "agent")],
+        items: [relatedPerson(LONG_NAME)],
       },
     },
   },
@@ -150,15 +131,15 @@ const BUSINESSES: BusinessSuggestion[] = [
         matched: null,
         truncated: true,
         items: [
-          entity("person", LONG_NAME, "officer"),
-          { ...entity("person", "Ada Fox", "agent"), token: null },
+          personOfBusiness(LONG_NAME, "officer"),
+          personOfBusiness("Ada Fox", "agent"),
         ],
       },
       addresses: {
         count: 3,
         matched: null,
         truncated: true,
-        items: [entity("address", LONG_ADDRESS, "principal")],
+        items: [addressOfBusiness(LONG_ADDRESS, "principal")],
       },
     },
     highlight: [{ text: "CINDER", matched: true }],

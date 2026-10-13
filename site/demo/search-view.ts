@@ -9,8 +9,10 @@ import {
   type BusinessPick,
   type BusinessStructure,
   type BusinessSuggestion,
+  type AddressListing,
+  type PersonRole,
   type MatchedOn,
-  type RelatedRole,
+  type Open,
 } from "@baselayer-sdk/autocomplete";
 import type { Pick } from "@baselayer-sdk/autocomplete/react";
 
@@ -332,11 +334,15 @@ export interface Matched {
   through: Through | null;
 }
 
-/** The person or address a business was picked through, and its role there. */
+/**
+ * The person or address a business was picked through, and its role there: the
+ * one the person holds on it, or how it filed the address, as the autocomplete
+ * service sent it.
+ */
 export interface Through {
   route: "people" | "addresses";
   label: string;
-  role: RelatedRole | null;
+  role: Open<PersonRole> | Open<AddressListing> | null;
 }
 
 export const NOTHING_MATCHED: Matched = {
@@ -419,17 +425,19 @@ export function pickFromRow(
   };
 }
 
-const ROLE_UNDER_PERSON: Partial<Record<RelatedRole, string>> = {
-  officer: "an officer",
-  agent: "its registered agent",
-};
+// Keyed by what the service sent, which may be a role this build does not
+// list: a Map has no inherited keys to answer for one.
+const ROLE_UNDER_PERSON = new Map<string, string>([
+  ["officer", "an officer"],
+  ["agent", "its registered agent"],
+]);
 
-const ROLE_AT_ADDRESS: Record<RelatedRole, string> = {
-  principal: "its principal office",
-  mailing: "its mailing address",
-  agent: "its registered agent's office",
-  officer: "an officer's address",
-};
+const ROLE_AT_ADDRESS = new Map<string, string>([
+  ["principal", "its principal office"],
+  ["mailing", "its mailing address"],
+  ["registered_office", "its registered agent's office"],
+  ["officer", "an officer's address"],
+]);
 
 /**
  * A business picked through a person or an address, as step 03 searches for
@@ -443,17 +451,19 @@ export function pickThrough(
   const { through } = pick;
   const label =
     through.route === "people" ? through.person.label : through.address.label;
+  const sent = through.route === "people" ? through.role : through.listedAs;
+  // A role this build has no words for is left out of the sentence.
   const role =
-    through.role === null
+    sent === null
       ? undefined
-      : through.route === "people"
-        ? ROLE_UNDER_PERSON[through.role]
-        : ROLE_AT_ADDRESS[through.role];
+      : (through.route === "people" ? ROLE_UNDER_PERSON : ROLE_AT_ADDRESS).get(
+          sent,
+        );
   const matchedOn: MatchedOn[] =
     through.route === "people"
       ? [
           {
-            kind: through.role === "agent" ? "agent" : "officer",
+            kind: sent === "agent" ? "agent" : "officer",
             names: [label],
             of: null,
           },
@@ -471,7 +481,7 @@ export function pickThrough(
     expiresAt: pick.expiresAt,
     matched: {
       ...matched,
-      through: { route: through.route, label, role: through.role },
+      through: { route: through.route, label, role: sent },
     },
   };
 }
@@ -902,7 +912,7 @@ const ENTITY_TYPES: Partial<Record<BusinessStructure, string>> = {
 
 /** What kind of entity the business is, or null when the API does not say. */
 export function entityType(
-  structure: BusinessStructure | null | undefined,
+  structure: Open<BusinessStructure> | null | undefined,
 ): string | null {
   return structureLabel(structure ?? null, ENTITY_TYPES);
 }

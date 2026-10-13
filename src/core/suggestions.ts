@@ -2,8 +2,9 @@ import type { MatchRegion } from "./look";
 import type {
   BusinessStructure,
   BusinessSuggestion,
+  AddressListing,
   HighlightPart,
-  RelatedRole,
+  Open,
 } from "./wire";
 
 /**
@@ -53,15 +54,17 @@ export interface AddressLine {
   highlight: HighlightPart[] | null;
 }
 
-function ownerOf(role: RelatedRole | null): AddressOwner | null {
-  switch (role) {
+/** Whose an address is, from how the family filed it; null for one this build does not know. */
+function ownerOf(listedAs: Open<AddressListing> | null): AddressOwner | null {
+  switch (listedAs) {
     case "officer":
-    case "agent":
-      return role;
+      return "officer";
+    case "registered_office":
+      return "agent";
     case "principal":
     case "mailing":
       return "principal";
-    case null:
+    default:
       return null;
   }
 }
@@ -79,7 +82,7 @@ export function addressLineOf(
     : {
         label: lead.label,
         matched: lead.matched,
-        role: ownerOf(lead.role),
+        role: ownerOf(lead.listed_as),
         highlight: lead.highlight,
       };
 }
@@ -250,7 +253,7 @@ export function matchedOn(
       found.push({
         kind: "address",
         label: item.label,
-        role: ownerOf(item.role),
+        role: ownerOf(item.listed_as),
       });
     }
   }
@@ -291,8 +294,8 @@ const STRUCTURE_LABELS: Partial<Record<BusinessStructure, string>> = {
 
 /** `labels[key]` when it is a string of the object's own, else undefined. */
 function ownLabel(
-  labels: Partial<Record<BusinessStructure, string>> | null,
-  key: BusinessStructure,
+  labels: Partial<Record<string, string>> | null,
+  key: string,
 ): string | undefined {
   // A host may call this with untyped data, so the key may name a member of
   // every object.
@@ -309,7 +312,7 @@ function ownLabel(
  * hides that value's flag.
  */
 export function structureLabel(
-  structure: BusinessStructure | null,
+  structure: Open<BusinessStructure> | null,
   labels: Partial<Record<BusinessStructure, string>> | null = {},
 ): string | null {
   if (structure === null) {

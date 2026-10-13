@@ -10,7 +10,6 @@ import {
   type EntityType,
   type LookInput,
   type PersonSuggestion,
-  type RelatedItem,
 } from "@baselayer-sdk/autocomplete";
 import {
   AddressAutocompleteView,
@@ -21,6 +20,15 @@ import {
 import { PRESETS } from "../../site/demo/style-state";
 import { disabledInks } from "../../src/react/disabled";
 import "../../src/react/styles.css";
+import {
+  addressOfBusiness,
+  businessOfAddress,
+  businessOfPerson,
+  personOfBusiness,
+  relatedAddress,
+  relatedPerson,
+  relatedSet,
+} from "./support/related";
 
 declare module "vitest/browser" {
   interface BrowserCommands {
@@ -29,45 +37,35 @@ declare module "vitest/browser" {
   }
 }
 
-// Made-up people and businesses: one business with a token, which is enabled,
-// and one without, which is disabled, each drawing the same fields.
-const business = (label: string, token: string | null): RelatedItem => ({
-  type: "business",
-  token,
-  label,
-  role: "officer",
-  matched: false,
-  matched_name: null,
-  highlight: null,
+// Made-up people and businesses: a business line draws the same fields
+// whether or not its entity is a pick, so one row is drawn twice, once with its
+// business lines picks and once with no line a pick.
+const harbor = {
   address: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
   states: ["OH", "PA"],
-  domicile_state: "PA",
-});
+};
 
 const DANA: PersonSuggestion = {
   type: "person",
   token: "tok-dana",
   label: "Dana Whitfield",
-  matched_name: null,
   match: "strong",
+  states: ["OH", "PA"],
   highlight: [],
   related: {
-    businesses: {
-      count: 2,
-      matched: null,
-      truncated: false,
-      items: [
-        business("HARBOR CONCRETE PUMPING, LLC", "tok-harbor"),
-        business("NORTHSHORE CRANE HIRE, LLC", null),
-      ],
-    },
+    businesses: relatedSet([
+      businessOfPerson("HARBOR CONCRETE PUMPING, LLC", "officer", harbor),
+    ]),
     addresses: { count: null, matched: null, truncated: false, items: [] },
   },
 };
 
-function draw(look?: LookInput) {
+/** The row's menu, with the lines in `enabledLines` picks, or the default's. */
+function drawRow(look?: LookInput, enabledLines?: EntityType[]) {
   const host = document.createElement("div");
   host.style.width = "760px";
+  // The menu is drawn below its input over what follows: room for it.
+  host.style.minHeight = "240px";
   host.style.fontFamily = "sans-serif";
   document.body.append(host);
   const root = createRoot(host);
@@ -89,19 +87,32 @@ function draw(look?: LookInput) {
         error={null}
         open
         {...(look !== undefined ? { look } : {})}
+        {...(enabledLines !== undefined ? { enabledLines } : {})}
       />,
     ),
   );
-  const [enabled, disabled] = host.querySelectorAll<HTMLElement>(
-    '[data-testid="business-line"]',
-  );
   return {
     head: host.querySelector<HTMLElement>('[data-testid="group-head"]')!,
-    enabled: enabled!,
-    disabled: disabled!,
+    line: host.querySelector<HTMLElement>('[data-testid="business-line"]')!,
     done() {
       root.unmount();
       host.remove();
+    },
+  };
+}
+
+function draw(look?: LookInput) {
+  // By default businesses are picks and a person is not; with no line a pick,
+  // the same line is disabled.
+  const pick = drawRow(look);
+  const off = drawRow(look, []);
+  return {
+    head: pick.head,
+    enabled: pick.line,
+    disabled: off.line,
+    done() {
+      off.done();
+      pick.done();
     },
   };
 }
@@ -278,7 +289,6 @@ const PIER: AddressSuggestion = {
   type: "address",
   token: "tok-pier",
   label: "77 Quillfeather Ln, Dover, DE 19904",
-  matched_name: null,
   match: "strong",
   // Marked as "77 quill" is typed: much of an address's label is the mark.
   highlight: [
@@ -293,7 +303,9 @@ const PIER: AddressSuggestion = {
     postal_code: "19904",
   },
   related: {
-    businesses: DANA.related.businesses,
+    businesses: relatedSet([
+      businessOfAddress("HARBOR CONCRETE PUMPING, LLC", "principal", harbor),
+    ]),
     people: { count: null, matched: null, truncated: false, items: [] },
   },
 };
@@ -309,26 +321,13 @@ const HARBOR: BusinessSuggestion = {
   structure: "LLC",
   highlight: [],
   related: {
-    people: {
-      count: 1,
-      matched: null,
-      truncated: false,
-      items: [{ ...business("Dana Whitfield", "tok-dana"), type: "person" }],
-    },
-    addresses: {
-      count: 1,
-      matched: null,
-      truncated: false,
-      items: [
-        {
-          ...business("1200 Tallowmere Rd, Pittsburgh, PA 15212", null),
-          type: "address",
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
-      ],
-    },
+    people: relatedSet([personOfBusiness("Dana Whitfield", "officer")]),
+    addresses: relatedSet([
+      addressOfBusiness(
+        "1200 Tallowmere Rd, Pittsburgh, PA 15212",
+        "principal",
+      ),
+    ]),
   },
 };
 
@@ -474,59 +473,33 @@ function unfiltered(element: Element): boolean {
 }
 
 // A row of each search listing every kind of line it can, each a possible pick.
-const lineItem = (
-  type: EntityType,
-  label: string,
-  role: RelatedItem["role"],
-): RelatedItem => ({
-  type,
-  token: `tok-${label}`,
-  label,
-  role,
-  matched: false,
-  matched_name: null,
-  highlight: null,
-  address:
-    type === "business" ? "1200 Tallowmere Rd, Pittsburgh, PA 15212" : null,
-  states: type === "business" ? ["OH", "PA"] : null,
-  domicile_state: type === "business" ? "PA" : null,
-});
-
-const listOf = (items: RelatedItem[]) => ({
-  count: items.length,
-  matched: null,
-  truncated: false,
-  items,
-});
-
 const LISTED = {
   person: {
     ...DANA,
     related: {
-      businesses: listOf([
-        lineItem("business", "HARBOR CONCRETE PUMPING, LLC", "officer"),
+      businesses: relatedSet([
+        businessOfPerson("HARBOR CONCRETE PUMPING, LLC", "officer", harbor),
       ]),
-      addresses: listOf([
-        lineItem("address", "77 Quillfeather Ln, Dover, DE 19904", "officer"),
+      addresses: relatedSet([
+        relatedAddress("77 Quillfeather Ln, Dover, DE 19904"),
       ]),
     },
   },
   address: {
     ...PIER,
     related: {
-      businesses: listOf([
-        lineItem("business", "HARBOR CONCRETE PUMPING, LLC", "principal"),
+      businesses: relatedSet([
+        businessOfAddress("HARBOR CONCRETE PUMPING, LLC", "principal", harbor),
       ]),
-      people: listOf([lineItem("person", "Dana Whitfield", "officer")]),
+      people: relatedSet([relatedPerson("Dana Whitfield")]),
     },
   },
   business: {
     ...HARBOR,
     related: {
-      people: listOf([lineItem("person", "Dana Whitfield", "officer")]),
-      addresses: listOf([
-        lineItem(
-          "address",
+      people: relatedSet([personOfBusiness("Dana Whitfield", "officer")]),
+      addresses: relatedSet([
+        addressOfBusiness(
           "1200 Tallowmere Rd, Pittsburgh, PA 15212",
           "mailing",
         ),
@@ -590,13 +563,15 @@ function listed(
   };
 }
 
+// Whether the line draws more than its name: a person holds no role at an
+// address, nor an address on a person, so those lines draw their names alone.
 const LINE_CASES = [
-  ["person", "business"],
-  ["person", "address"],
-  ["address", "business"],
-  ["address", "person"],
-  ["business", "person"],
-  ["business", "address"],
+  ["person", "business", true],
+  ["person", "address", false],
+  ["address", "business", true],
+  ["address", "person", false],
+  ["business", "person", true],
+  ["business", "address", true],
 ] as const;
 
 const EVERY_LINE: EntityType[] = ["business", "person", "address"];
@@ -632,8 +607,8 @@ describe("a disabled line's name, on every search", () => {
   for (const preset of PRESETS.filter(
     each => each.name === "Light" || each.name === "Midnight",
   )) {
-    for (const [search, entity] of LINE_CASES) {
-      it(`is as faint as a disabled head's on ${search === "address" ? "an" : "a"} ${search}'s ${entity} line, on ${preset.name}, its secondary text still there`, async () => {
+    for (const [search, entity, beside] of LINE_CASES) {
+      it(`is as faint as a disabled head's on ${search === "address" ? "an" : "a"} ${search}'s ${entity} line, on ${preset.name}${beside ? ", its secondary text still there" : ""}`, async () => {
         const pick = listed(search, EVERY_LINE, preset.look);
         const pickLine = pick.line(entity);
         expect(pickLine).toHaveAttribute("data-enabled", "true");
@@ -667,7 +642,7 @@ describe("a disabled line's name, on every search", () => {
           expect(drawn, "name").toBeGreaterThanOrEqual(2);
           // A short name draws its pick lower, more so on Linux: a quarter.
           expect(drawn, "name").toBeLessThanOrEqual(0.25 * pickDrawn);
-          expect(secondary.length).toBeGreaterThan(0);
+          expect(secondary.length > 0, "secondary text").toBe(beside);
           for (const selector of secondary) {
             expect(
               await drawnText(part(line, selector)),
@@ -720,6 +695,38 @@ describe("a disabled line's name, on every search", () => {
       style.remove();
     }
   });
+});
+
+describe("a line's entity named as a pick", () => {
+  // A person or an address listed under a row has no token of its own: it is a
+  // pick when its entity is named, and a disabled option when it is not.
+  for (const [search, entity] of LINE_CASES) {
+    it(`enables ${search === "address" ? "an" : "a"} ${search}'s ${entity} line when ${entity} is named, and only then`, () => {
+      const named = listed(search, [entity], {});
+      try {
+        const line = named.line(entity);
+        expect(line).toHaveAttribute("data-enabled", "true");
+        expect(line).not.toHaveAttribute("aria-disabled", "true");
+        // Naming the entity enables its lines and no other kind's.
+        for (const other of EVERY_LINE.filter(each => each !== entity)) {
+          const unnamed = named.line(other);
+          if (unnamed === null) continue;
+          expect(unnamed, `${other} line`).toHaveAttribute(
+            "aria-disabled",
+            "true",
+          );
+        }
+      } finally {
+        named.done();
+      }
+      const off = listed(search, [], {});
+      try {
+        expect(off.line(entity)).toHaveAttribute("aria-disabled", "true");
+      } finally {
+        off.done();
+      }
+    });
+  }
 });
 
 describe("a disabled head's name's weight", () => {

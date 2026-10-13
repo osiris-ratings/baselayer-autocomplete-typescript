@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -32,20 +32,22 @@ function reply(body: unknown): ResponseLike {
   };
 }
 
-const item = (
-  type: "person" | "address",
-  label: string,
-  token: string | null,
-  role: string,
-) => ({
-  type,
-  token,
+// A person under a business, with the role they hold on it; an address under
+// it, with how it filed it. Neither carries a token of its own.
+const person = (label: string, role: string) => ({
+  type: "person",
   label,
-  role,
+  role: role,
   matched: false,
-  address: null,
-  states: null,
-  domicile_state: null,
+  highlight: null,
+});
+
+const address = (label: string, listedAs: string) => ({
+  type: "address",
+  label,
+  listed_as: listedAs,
+  matched: false,
+  highlight: null,
 });
 
 const BODY = {
@@ -70,8 +72,8 @@ const BODY = {
           matched: null,
           truncated: true,
           items: [
-            item("person", "Dana Whitfield", "tok-dana", "officer"),
-            item("person", "Meridian Registered Agents, LLC", null, "agent"),
+            person("Dana Whitfield", "officer"),
+            person("Meridian Registered Agents, LLC", "agent"),
           ],
         },
         addresses: {
@@ -79,12 +81,7 @@ const BODY = {
           matched: null,
           truncated: false,
           items: [
-            item(
-              "address",
-              "1200 Tallowmere Rd, Pittsburgh, PA 15212",
-              "tok-tallowmere",
-              "principal",
-            ),
+            address("1200 Tallowmere Rd, Pittsburgh, PA 15212", "principal"),
           ],
         },
       },
@@ -113,7 +110,10 @@ function setup(body: unknown = BODY, scope?: SessionScope) {
 }
 
 type HostProps = Partial<
-  Pick<BusinessAutocompleteProps, "list" | "layout" | "icons" | "iconSegments">
+  Pick<
+    BusinessAutocompleteProps,
+    "list" | "layout" | "icons" | "iconSegments" | "messages"
+  >
 > & {
   enabledLines?: EntityType[];
   onPick?: () => void;
@@ -187,6 +187,126 @@ describe("a business row that lists its officers and addresses", () => {
     expect(within(harbor).getByText("+2 more not shown")).toBeInTheDocument();
   });
 
+  it("draws a role this build does not list as the service sent it, and none where the filing names none", async () => {
+    const grown = {
+      ...BODY,
+      suggestions: [
+        {
+          ...BODY.suggestions[0]!,
+          related: {
+            people: {
+              count: 2,
+              matched: null,
+              truncated: false,
+              items: [
+                person("Dana Whitfield", "director"),
+                // The role key is absent where the filing names none.
+                {
+                  type: "person",
+                  label: "Ines Marlowe",
+                  matched: false,
+                  highlight: null,
+                },
+              ],
+            },
+            addresses: {
+              count: 2,
+              matched: null,
+              truncated: false,
+              items: [
+                address(
+                  "1200 Tallowmere Rd, Pittsburgh, PA 15212",
+                  "head_office",
+                ),
+                {
+                  type: "address",
+                  label: "77 Quillfeather Ln, Dover, DE 19904",
+                  matched: false,
+                  highlight: null,
+                },
+              ],
+            },
+          },
+        },
+      ],
+    };
+    await typeHarbor({ list: ["people", "addresses"] }, grown);
+
+    const harbor = screen.getByRole("group");
+    expect(
+      within(harbor)
+        .getAllByTestId("person-line")
+        .map(line => line.textContent),
+    ).toEqual(["Dana Whitfielddirector", "Ines Marlowe"]);
+    expect(
+      within(harbor)
+        .getAllByTestId("address-line")
+        .map(line => line.textContent),
+    ).toEqual([
+      "1200 Tallowmere Rd, Pittsburgh, PA 15212head_office",
+      "77 Quillfeather Ln, Dover, DE 19904",
+    ]);
+  });
+
+  it("says a role in the host's words, a registered agent's office by `registered_office`", async () => {
+    const offices = {
+      ...BODY,
+      suggestions: [
+        {
+          ...BODY.suggestions[0]!,
+          related: {
+            ...BODY.suggestions[0]!.related,
+            addresses: {
+              count: 2,
+              matched: null,
+              truncated: false,
+              items: [
+                address("1200 Tallowmere Rd, Pittsburgh, PA 15212", "mailing"),
+                address(
+                  "77 Quillfeather Ln, Dover, DE 19904",
+                  "registered_office",
+                ),
+              ],
+            },
+          },
+        },
+      ],
+    };
+    await typeHarbor(
+      {
+        list: ["people", "addresses"],
+        messages: {
+          personRoles: { officer: "director", agent: "process agent" },
+          addressRoles: {
+            principal: "head office",
+            mailing: "post",
+            registered_office: "agent's office",
+            officer: "home",
+          },
+        },
+      },
+      offices,
+    );
+
+    const harbor = screen.getByRole("group");
+    expect(
+      within(harbor)
+        .getAllByTestId("person-line")
+        .map(line => line.textContent),
+    ).toEqual([
+      "Dana Whitfielddirector",
+      "Meridian Registered Agents, LLCprocess agent",
+    ]);
+    expect(
+      within(harbor)
+        .getAllByTestId("address-line")
+        .map(line => line.textContent),
+    ).toEqual([
+      "1200 Tallowmere Rd, Pittsburgh, PA 15212post",
+      "77 Quillfeather Ln, Dover, DE 19904agent's office",
+    ]);
+  });
+
   it("keeps the business itself the one enabled option, its head drawn as a row always is, its lines disabled options", async () => {
     const onPick = vi.fn();
     const onPickEntity = vi.fn<(pick: EntityPick) => void>();
@@ -220,6 +340,52 @@ describe("a business row that lists its officers and addresses", () => {
     expect(input().value).toBe("harbor");
   });
 
+  it("makes a line a pick where its entity is named, though the service seals it no token", async () => {
+    const onPickEntity = vi.fn<(pick: EntityPick) => void>();
+    const { user } = await typeHarbor({
+      list: ["people", "addresses"],
+      enabledLines: ["business", "person"],
+      onPickEntity,
+    });
+
+    const harbor = screen.getByRole("group");
+    // Every person line is a pick, the agent's too; the addresses are not named.
+    for (const line of within(harbor).getAllByTestId("person-line")) {
+      expect(line).not.toHaveAttribute("aria-disabled", "true");
+    }
+    for (const line of within(harbor).getAllByTestId("address-line")) {
+      expect(line).toHaveAttribute("aria-disabled", "true");
+    }
+
+    await user.click(
+      within(harbor).getByRole("option", {
+        name: /^Meridian Registered Agents, LLC/,
+      }),
+    );
+    expect(onPickEntity).toHaveBeenCalledWith({
+      type: "person",
+      token: null,
+      label: "Meridian Registered Agents, LLC",
+    });
+  });
+
+  it("picks an address under a business as a typed pick with no token", async () => {
+    const onPickEntity = vi.fn<(pick: EntityPick) => void>();
+    const { user } = await typeHarbor({
+      list: ["addresses"],
+      enabledLines: ["business", "address"],
+      onPickEntity,
+    });
+
+    await user.click(screen.getByTestId("address-line"));
+
+    expect(onPickEntity).toHaveBeenCalledWith({
+      type: "address",
+      token: null,
+      label: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
+    });
+  });
+
   it("draws its lines in the list's order, after the business, and the keys follow", async () => {
     const { user } = await typeHarbor({
       list: ["addresses", "people"],
@@ -234,17 +400,19 @@ describe("a business row that lists its officers and addresses", () => {
     ).toEqual(["address", "person", "person"]);
     const input = screen.getByRole("combobox");
     const visited: (string | null)[] = [];
-    for (let step = 0; step < 3; step++) {
+    for (let step = 0; step < 4; step++) {
       await user.keyboard("{ArrowDown}");
       const active = document.getElementById(
         input.getAttribute("aria-activedescendant")!,
       )!;
       visited.push(active.getAttribute("data-testid"));
     }
-    // The business, its address, then the officer with a token.
+    // The business, its address, then each person: a line is a stop where its
+    // entity is enabled, whether or not it has a token.
     expect(visited).toEqual([
       "business-suggestion",
       "address-line",
+      "person-line",
       "person-line",
     ]);
   });
@@ -369,9 +537,10 @@ describe("a business row that lists its officers and addresses", () => {
 
     await user.click(screen.getByRole("option", { name: /^Dana Whitfield/ }));
 
+    // The service seals no token for a person listed under a business.
     expect(onPickEntity).toHaveBeenCalledWith({
       type: "person",
-      token: "tok-dana",
+      token: null,
       label: "Dana Whitfield",
     });
     expect(onPick).not.toHaveBeenCalled();
@@ -486,14 +655,7 @@ describe("the icons on a business row", () => {
               count: 1,
               matched: null,
               truncated: false,
-              items: [
-                item(
-                  "person",
-                  "Meridian Registered Agents, LLC",
-                  "tok-meridian",
-                  "agent",
-                ),
-              ],
+              items: [person("Meridian Registered Agents, LLC", "agent")],
             },
           },
         },
@@ -526,7 +688,7 @@ describe("the icons on a business row", () => {
               count: 1,
               matched: null,
               truncated: false,
-              items: [{ ...lead!, role: "mailing" }],
+              items: [{ ...lead!, listed_as: "mailing" }],
             },
           },
         },
@@ -539,6 +701,44 @@ describe("the icons on a business row", () => {
     expect(address.querySelector(".bl-ac-icon")).toHaveAttribute(
       "data-role",
       "mailing",
+    );
+  });
+
+  it("draws a registered agent's office as a briefcase, and a way this build does not list as a pin", async () => {
+    const [lead] = BODY.suggestions[0]!.related.addresses.items;
+    const listedAs = (way: string) => ({
+      ...BODY,
+      suggestions: [
+        {
+          ...BODY.suggestions[0]!,
+          related: {
+            ...BODY.suggestions[0]!.related,
+            addresses: {
+              count: 1,
+              matched: null,
+              truncated: false,
+              items: [{ ...lead!, listed_as: way }],
+            },
+          },
+        },
+      ],
+    });
+
+    await typeHarbor(
+      { iconSegments: ["address"] },
+      listedAs("registered_office"),
+    );
+    const office = screen.getByTestId("business-suggestion-address");
+    expect(glyphsOf(office)).toEqual(["briefcase"]);
+    expect(office.querySelector(".bl-ac-icon")).toHaveAttribute(
+      "data-role",
+      "registered_office",
+    );
+    cleanup();
+
+    await typeHarbor({ iconSegments: ["address"] }, listedAs("head_office"));
+    expect(glyphsOf(screen.getByTestId("business-suggestion-address"))).toEqual(
+      ["pin"],
     );
   });
 

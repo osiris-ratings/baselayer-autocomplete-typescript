@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   AutocompleteError,
+  ContractViolation,
   createAutocompleteClient,
   parseMintResponse,
   type FetchLike,
@@ -9,10 +10,12 @@ import {
   type ResponseLike,
 } from "@baselayer-sdk/autocomplete";
 
-// A deployment from before the people and addresses routes: its mint answers
-// no scope, and its businesses route still lists liens, carries no address,
-// states or domicile on a related item, and may give an address no role.
-// Made-up businesses, people and addresses.
+// A deployment from before the contract that names how a business lists an
+// address `listed_as`, and before the people and addresses routes: its mint
+// answers no scope, and its businesses route still lists liens, names how a
+// business filed an address `role`, gives a related item a token or none, and
+// carries no address, states or domicile on one. Made-up businesses, people
+// and addresses.
 const OLDER_MINT = {
   session_token: "grant-older",
   expires_in: 180,
@@ -62,6 +65,7 @@ const OLDER_ANSWER = {
               label: "Dana Whitfield",
               role: "officer",
               matched: false,
+              highlight: null,
             },
             {
               type: "person",
@@ -69,6 +73,7 @@ const OLDER_ANSWER = {
               label: "Ines Marlowe",
               role: "agent",
               matched: false,
+              highlight: null,
             },
           ],
         },
@@ -83,6 +88,7 @@ const OLDER_ANSWER = {
               label: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
               role: "principal",
               matched: false,
+              highlight: null,
             },
             {
               type: "address",
@@ -90,6 +96,7 @@ const OLDER_ANSWER = {
               label: "77 Quillfeather Ln, Dover, DE 19904",
               role: "mailing",
               matched: false,
+              highlight: null,
             },
             {
               type: "address",
@@ -97,6 +104,7 @@ const OLDER_ANSWER = {
               label: "48 Wrenmoor St, Pittsburgh, PA 15201",
               role: null,
               matched: false,
+              highlight: null,
             },
           ],
         },
@@ -117,6 +125,10 @@ const OLDER_ANSWER = {
     },
   ],
 };
+
+/** An answer from before even `truncated`, which the contract now requires. */
+const OLDEST_ANSWER: Partial<typeof OLDER_ANSWER> = { ...OLDER_ANSWER };
+delete OLDEST_ANSWER.truncated;
 
 /** The parameters the older businesses route accepts; any other is a 422. */
 const OLDER_PARAMS = [
@@ -143,11 +155,11 @@ function reply(status: number, body: unknown): ResponseLike {
   };
 }
 
-function olderDeployment() {
+function olderDeployment(answer: unknown = OLDER_ANSWER) {
   const mint = vi.fn<MintFunction>(async () =>
     parseMintResponse(201, { get: () => null }, OLDER_MINT),
   );
-  const fetch = vi.fn<FetchLike>(async () => reply(200, OLDER_ANSWER));
+  const fetch = vi.fn<FetchLike>(async () => reply(200, answer));
   const client = createAutocompleteClient({
     baseUrl: "https://api.test",
     mint,
@@ -156,7 +168,7 @@ function olderDeployment() {
   return { client, mint, fetch };
 }
 
-describe("a deployment from before people and addresses", () => {
+describe("a deployment from before this contract", () => {
   it("mints a grant with no scope of its own", () => {
     const outcome = parseMintResponse(201, { get: () => null }, OLDER_MINT);
 
@@ -164,46 +176,63 @@ describe("a deployment from before people and addresses", () => {
     expect(outcome.kind === "granted" && "scope" in outcome.grant).toBe(false);
   });
 
-  it("answers a business search: the liens dropped, the new fields null, its roles kept", async () => {
+  it("is sent only what its businesses route accepts", async () => {
     const { client, fetch } = olderDeployment();
 
-    const { response } = await client.search("businesses", {
-      q: "harbor",
-      include: ["people", "addresses"],
-    });
+    await client
+      .search("businesses", { q: "harbor", include: ["people", "addresses"] })
+      .catch(() => null);
 
     const sent = new URL(fetch.mock.calls[0]![0]).searchParams;
     expect([...sent.keys()].filter(key => !OLDER_PARAMS.includes(key))).toEqual(
       [],
     );
-    expect(Object.keys(response.sources).sort()).toEqual([
-      "addresses",
-      "people",
-    ]);
-    const [harbor] = response.suggestions;
-    expect(Object.keys(harbor!.related).sort()).toEqual([
-      "addresses",
-      "people",
-    ]);
-    expect(harbor!.related.people.items.map(item => item.role)).toEqual([
-      "officer",
-      "agent",
-    ]);
-    expect(harbor!.related.addresses.items.map(item => item.role)).toEqual([
-      "principal",
-      "mailing",
-      null,
-    ]);
-    for (const item of [
-      ...harbor!.related.people.items,
-      ...harbor!.related.addresses.items,
-    ]) {
-      expect(item).toMatchObject({
-        address: null,
-        states: null,
-        domicile_state: null,
-      });
-    }
+  });
+
+  it("refuses a business search's answer whole, naming the address's `role` it cannot read", async () => {
+    const { client, fetch } = olderDeployment();
+
+    const error = await client
+      .search("businesses", { q: "harbor", include: ["people", "addresses"] })
+      .then(
+        () => null,
+        (failure: unknown) => failure,
+      );
+
+    // Read as the contract it is on, an address's `role` would be no listing at
+    // all: every address drawn without how it is listed. So nothing is read,
+    // and the host is told what to look at.
+    expect(error).toBeInstanceOf(AutocompleteError);
+    expect(error).toMatchObject({
+      kind: "contract",
+      status: 200,
+      message: expect.stringContaining(
+        "response.suggestions[0].related.addresses.items[0].role",
+      ) as string,
+    });
+    const { cause } = error as AutocompleteError;
+    expect(cause).toBeInstanceOf(ContractViolation);
+    expect(cause).toMatchObject({
+      path: "response.suggestions[0].related.addresses.items[0].role",
+      message: expect.stringMatching(
+        /`listed_as`.*still serves the one before it/,
+      ) as string,
+    });
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("is refused for an answer from before `truncated` too, naming it first", async () => {
+    const { client } = olderDeployment(OLDEST_ANSWER);
+
+    const error = await client.search("businesses", { q: "harbor" }).then(
+      () => null,
+      (failure: unknown) => failure,
+    );
+
+    expect(error).toMatchObject({ kind: "contract" });
+    expect((error as AutocompleteError).cause).toMatchObject({
+      path: "response.truncated",
+    });
   });
 
   it("refuses a person or an address search before sending it, its scope being businesses alone", async () => {

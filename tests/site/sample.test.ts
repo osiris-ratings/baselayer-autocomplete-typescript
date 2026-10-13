@@ -1,4 +1,6 @@
 import {
+  ADDRESS_LISTINGS,
+  PERSON_ROLES,
   includeForLayout,
   leadAddressOf,
   matchedOn,
@@ -167,16 +169,23 @@ describe("the sample people and addresses", () => {
     }
   });
 
-  it("give each person their addresses, each with a token to pick, counted in full", () => {
+  it("give each person their addresses, counted in full, each with neither a token nor a role", () => {
     for (const row of SAMPLE_PEOPLE) {
       const { items, count } = row.related.addresses;
       expect(items.length, row.label).toBeGreaterThan(0);
       expect(count, row.label).toBeGreaterThanOrEqual(items.length);
-      expect(items.every(item => item.token !== null)).toBe(true);
+      for (const item of items) {
+        expect(Object.keys(item).sort(), item.label).toEqual([
+          "highlight",
+          "label",
+          "matched",
+          "type",
+        ]);
+      }
     }
   });
 
-  it("list at each address the people who list it, and only them", () => {
+  it("list at each address the people who list it, and only them, each with neither a token nor a role", () => {
     const at = (address: string) =>
       SAMPLE_PEOPLE.filter(person =>
         person.related.addresses.items.some(item => item.label === address),
@@ -188,9 +197,14 @@ describe("the sample people and addresses", () => {
         row.related.people.items.map(item => item.label).sort(),
         row.label,
       ).toEqual(at(row.label));
-      expect(row.related.people.items.every(item => item.token !== null)).toBe(
-        true,
-      );
+      for (const item of row.related.people.items) {
+        expect(Object.keys(item).sort(), item.label).toEqual([
+          "highlight",
+          "label",
+          "matched",
+          "type",
+        ]);
+      }
     }
   });
 
@@ -201,30 +215,88 @@ describe("the sample people and addresses", () => {
         expect(item.address).toBe(leadAddressOf(own));
         expect(item.states).toEqual(own.states);
         expect(item.domicile_state).toBe(own.domicile_state);
+        // The token its own row seals, which a pick spends (a pin may follow).
+        expect(item.token.startsWith(own.token), item.label).toBe(true);
+      }
+    }
+  });
+
+  it("have no other name that matched on a person or an address, and give a person the states of their businesses", () => {
+    for (const row of [...SAMPLE_PEOPLE, ...SAMPLE_ADDRESSES]) {
+      expect("matched_name" in row, row.label).toBe(false);
+    }
+    for (const row of SAMPLE_PEOPLE) {
+      const states = row.related.businesses.items.flatMap(
+        item => SAMPLE_SUGGESTIONS.find(b => b.label === item.label)!.states,
+      );
+      expect(row.states, row.label).toEqual([...new Set(states)].sort());
+    }
+    const dana = SAMPLE_PEOPLE.find(row => row.label === "Dana Whitfield")!;
+    expect(dana.states).toEqual([
+      "AZ",
+      "CA",
+      "MD",
+      "NJ",
+      "NV",
+      "NY",
+      "OH",
+      "OR",
+      "PA",
+      "WV",
+    ]);
+  });
+
+  it("name, on each business under a person, the role they hold, and under an address, how it is listed there, never the former role key", () => {
+    for (const row of SAMPLE_PEOPLE) {
+      for (const item of row.related.businesses.items) {
+        expect(PERSON_ROLES, item.label).toContain(item.role);
+        expect("listed_as" in item, item.label).toBe(false);
+      }
+    }
+    for (const row of SAMPLE_ADDRESSES) {
+      for (const item of row.related.businesses.items) {
+        expect(ADDRESS_LISTINGS, item.label).toContain(item.listed_as);
+        expect("role" in item, item.label).toBe(false);
       }
     }
   });
 });
 
 describe("the sample businesses' officers and addresses", () => {
-  it("each carry a token to pick, the one its own row has where it is a row too", () => {
-    const tokenOf = new Map(
-      [...SAMPLE_PEOPLE, ...SAMPLE_ADDRESSES].map(row => [
-        `${row.type}:${row.label}`,
-        row.token,
-      ]),
-    );
+  it("each name the role they hold, or how it is listed, with no token and no former role key", () => {
     for (const business of SAMPLE_SUGGESTIONS) {
-      for (const item of [
-        ...business.related.people.items,
-        ...business.related.addresses.items,
-      ]) {
-        expect(item.token, item.label).not.toBeNull();
-        const own = tokenOf.get(`${item.type}:${item.label}`);
-        if (own !== undefined) {
-          expect(item.token, item.label).toBe(own);
-        }
+      for (const item of business.related.people.items) {
+        expect(PERSON_ROLES, item.label).toContain(item.role);
+        expect(Object.keys(item).sort(), item.label).toEqual([
+          "highlight",
+          "label",
+          "matched",
+          "role",
+          "type",
+        ]);
+      }
+      for (const item of business.related.addresses.items) {
+        expect(ADDRESS_LISTINGS, item.label).toContain(item.listed_as);
+        expect(Object.keys(item).sort(), item.label).toEqual([
+          "highlight",
+          "label",
+          "listed_as",
+          "matched",
+          "type",
+        ]);
       }
     }
+  });
+
+  it("spell a registered agent's office as the contract does", () => {
+    const dover = SAMPLE_ADDRESSES.find(
+      row => row.components.city === "Dover",
+    )!;
+
+    expect(dover.related.businesses.items.map(item => item.listed_as)).toEqual([
+      "registered_office",
+      "registered_office",
+      "registered_office",
+    ]);
   });
 });

@@ -5,7 +5,6 @@ import { describe, expect, it } from "vitest";
 import type {
   AddressSuggestion,
   PersonSuggestion,
-  RelatedItem,
 } from "@baselayer-sdk/autocomplete";
 import {
   AddressAutocompleteView,
@@ -13,49 +12,41 @@ import {
 } from "@baselayer-sdk/autocomplete/react";
 
 import "../../src/react/styles.css";
+import {
+  businessOfAddress,
+  businessOfPerson,
+  relatedSet,
+} from "./support/related";
 
 // Made-up businesses: one, five and two states, under two roles.
-const business = (
-  label: string,
-  states: string[],
-  role: RelatedItem["role"],
-): RelatedItem => ({
-  type: "business",
-  token: `tok-${label}`,
-  label,
-  role,
-  matched: false,
-  matched_name: null,
-  highlight: null,
+const LINES = [
+  ["HARBOR CONCRETE SUPPLY, INC.", ["CA"]],
+  [
+    "BAYSIDE HARBOR CONCRETE, INC.",
+    ["DE", "CA", "FL", "NV", "OR", "WA", "AZ", "TX", "NY", "NJ"],
+  ],
+  ["NORTHSHORE PUMPING, LLC", ["FL", "PA"]],
+] as const;
+
+const details = (states: readonly string[]) => ({
   address: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
-  states,
+  states: [...states],
   domicile_state: states[0]!,
 });
-
-const BUSINESSES = {
-  count: 3,
-  matched: null,
-  truncated: false,
-  items: [
-    business("HARBOR CONCRETE SUPPLY, INC.", ["CA"], "officer"),
-    business(
-      "BAYSIDE HARBOR CONCRETE, INC.",
-      ["DE", "CA", "FL", "NV", "OR", "WA", "AZ", "TX", "NY", "NJ"],
-      "agent",
-    ),
-    business("NORTHSHORE PUMPING, LLC", ["FL", "PA"], "officer"),
-  ],
-};
 
 const DANA: PersonSuggestion = {
   type: "person",
   token: "tok-dana",
   label: "Dana Whitfield",
-  matched_name: null,
   match: "strong",
+  states: ["AZ", "CA", "DE", "FL", "NJ", "NV", "NY", "OR", "PA", "TX", "WA"],
   highlight: [],
   related: {
-    businesses: BUSINESSES,
+    businesses: relatedSet([
+      businessOfPerson(LINES[0][0], "officer", details(LINES[0][1])),
+      businessOfPerson(LINES[1][0], "agent", details(LINES[1][1])),
+      businessOfPerson(LINES[2][0], "officer", details(LINES[2][1])),
+    ]),
     addresses: { count: null, matched: null, truncated: false, items: [] },
   },
 };
@@ -64,7 +55,6 @@ const QUILL: AddressSuggestion = {
   type: "address",
   token: "tok-quill",
   label: "77 QUILLBACK LN, FARRELTON, OR 97433",
-  matched_name: null,
   match: "strong",
   highlight: [],
   components: {
@@ -75,7 +65,11 @@ const QUILL: AddressSuggestion = {
     postal_code: "97433",
   },
   related: {
-    businesses: BUSINESSES,
+    businesses: relatedSet([
+      businessOfAddress(LINES[0][0], "officer", details(LINES[0][1])),
+      businessOfAddress(LINES[1][0], "registered_office", details(LINES[1][1])),
+      businessOfAddress(LINES[2][0], "officer", details(LINES[2][1])),
+    ]),
     people: { count: null, matched: null, truncated: false, items: [] },
   },
 };

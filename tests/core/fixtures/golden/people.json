@@ -1,0 +1,81 @@
+{
+  "found": 1,
+  "found_capped": false,
+  "query": "marisol quennell",
+  "sources": {
+    "addresses": {
+      "status": "ok"
+    },
+    "businesses": {
+      "status": "ok"
+    }
+  },
+  "suggestions": [
+    {
+      "highlight": [
+        {
+          "matched": true,
+          "text": "Marisol Quennell"
+        }
+      ],
+      "label": "Marisol Quennell",
+      "match": "exact",
+      "related": {
+        "addresses": {
+          "count": 2,
+          "items": [
+            {
+              "highlight": null,
+              "label": "12 Pier Road, Port Calder, WA 98300",
+              "matched": false,
+              "type": "address"
+            },
+            {
+              "highlight": null,
+              "label": "400 Lantern Ave, Wilmington, DE 19801",
+              "matched": false,
+              "type": "address"
+            }
+          ],
+          "matched": null,
+          "truncated": false
+        },
+        "businesses": {
+          "count": 2,
+          "items": [
+            {
+              "address": "400 Lantern Ave, Wilmington, DE 19801",
+              "domicile_state": "DE",
+              "highlight": null,
+              "label": "HALCYON FERRY WORKS LLC",
+              "matched": false,
+              "matched_name": null,
+              "role": "officer",
+              "states": ["DE", "WA"],
+              "token": "<sealed token>",
+              "type": "business"
+            },
+            {
+              "address": "12 Pier Road, Port Calder, WA 98300",
+              "domicile_state": "WA",
+              "highlight": null,
+              "label": "HALCYON TIDE PARTNERS LP",
+              "matched": false,
+              "matched_name": null,
+              "role": "officer",
+              "states": ["WA"],
+              "token": "<sealed token>",
+              "type": "business"
+            }
+          ],
+          "matched": null,
+          "truncated": false
+        }
+      },
+      "states": ["DE", "WA"],
+      "token": "<sealed token>",
+      "type": "person"
+    }
+  ],
+  "truncated": false
+}

@@ -122,6 +122,20 @@ describe("filterParams", () => {
     ]);
   });
 
+  it("sends a business's person filter by name and by the role held, as `person.role`", () => {
+    expect(
+      filterParams("businesses", {
+        person: { role: "agent", name: "dana" },
+      }),
+    ).toEqual([
+      ["person.name", "dana"],
+      ["person.role", "agent"],
+    ]);
+    expect(filterParams("businesses", { person: { role: "officer" } })).toEqual(
+      [["person.role", "officer"]],
+    );
+  });
+
   it("sends no filter for an empty or blank name", () => {
     expect(
       filterParams("people", {
@@ -164,6 +178,9 @@ describe("filterParams", () => {
       } as unknown as RouteQuery<"people">["filters"]),
     ).toBe(false);
     expect(hasFilters("businesses", { person: { name: "dana" } })).toBe(true);
+    expect(hasFilters("businesses", { person: { role: "officer" } })).toBe(
+      true,
+    );
     expect(hasFilters("people", { address: { text: "77 quillback" } })).toBe(
       true,
     );

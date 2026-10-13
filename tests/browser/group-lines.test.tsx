@@ -7,8 +7,9 @@ import {
   type BusinessSuggestion,
   type MatchEmphasis,
   type PeopleFilters,
+  type BusinessOfPerson,
+  type PersonRole,
   type PersonSuggestion,
-  type RelatedItem,
 } from "@baselayer-sdk/autocomplete";
 import {
   BusinessAutocompleteView,
@@ -16,31 +17,26 @@ import {
 } from "@baselayer-sdk/autocomplete/react";
 
 import "../../src/react/styles.css";
+import { businessOfPerson } from "./support/related";
 
 // Made-up people and businesses: one, five and two states, and two roles.
 const business = (
   label: string,
   states: string[],
-  role: RelatedItem["role"],
-): RelatedItem => ({
-  type: "business",
-  token: `tok-${label}`,
-  label,
-  role,
-  matched: false,
-  matched_name: null,
-  highlight: null,
-  address: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
-  states,
-  domicile_state: states[0]!,
-});
+  role: PersonRole,
+): BusinessOfPerson =>
+  businessOfPerson(label, role, {
+    address: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
+    states,
+    domicile_state: states[0]!,
+  });
 
 const DANA: PersonSuggestion = {
   type: "person",
   token: "tok-dana",
   label: "Dana Whitfield",
-  matched_name: null,
   match: "strong",
+  states: ["AZ", "CA", "NJ", "NV", "OH", "OR", "PA", "WA"],
   highlight: [],
   related: {
     businesses: {

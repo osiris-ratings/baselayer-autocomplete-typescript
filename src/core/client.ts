@@ -290,23 +290,24 @@ async function readFailure(response: ResponseLike): Promise<Failure> {
     };
   }
   const envelope = parseErrorEnvelope(body);
-  if (envelope !== null) {
-    const reason = envelope.metadata?.reason;
+  if (envelope === null) {
     return {
-      message: envelope.message.length > 0 ? envelope.message : fallback,
-      userMessage: envelope.message.length > 0 ? envelope.message : null,
-      reason: typeof reason === "string" ? reason : null,
-      code: envelope.code,
-      metadata: envelope.metadata,
+      message: fallback,
+      userMessage: null,
+      reason: null,
+      code: null,
+      metadata: null,
     };
   }
-  const detail = firstValidationMessage(body);
+  const reason = envelope.metadata?.reason;
+  // A 422 says what failed in `metadata.errors`; its own message is generic.
+  const said = firstValidationMessage(envelope) ?? envelope.message;
   return {
-    message: detail ?? fallback,
-    userMessage: detail,
-    reason: null,
-    code: null,
-    metadata: null,
+    message: said.length > 0 ? said : fallback,
+    userMessage: said.length > 0 ? said : null,
+    reason: typeof reason === "string" ? reason : null,
+    code: envelope.code,
+    metadata: envelope.metadata,
   };
 }
 

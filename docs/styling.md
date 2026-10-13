@@ -235,7 +235,7 @@ line has (`BUSINESS_ROW`):
 | -------------------------------------- | ------------- | ------------------------------------------------------------------ |
 | `personBadge`, `personTrailingBadge`   | empty         | `personRole`: officer or agent (`messages.personRoles`)            |
 | `personTrailing`                       | `personRole`  | `personRole`                                                       |
-| `addressBadge`, `addressTrailingBadge` | empty         | `addressRole`: how the business holds it (`messages.addressRoles`) |
+| `addressBadge`, `addressTrailingBadge` | empty         | `addressRole`: how the business filed it (`messages.addressRoles`) |
 | `addressTrailing`                      | `addressRole` | `addressRole`                                                      |
 
 A line's fields go only on that line, and the head's only in the head;
@@ -268,7 +268,7 @@ default:
 ```text
 Jane Q Doe   12 Fernhallow Ln, Dover, DE 19901 +2 ........ 3 businesses · 3 addresses
   ACME HOLDINGS LLC   1200 Tallowmere Rd, Wilm… ............ [DE][FL] +1   officer
-  12 Fernhallow Ln, Dover, DE 19901 .................................... officer
+  12 Fernhallow Ln, Dover, DE 19901
 ```
 
 The last line is there when `list` names addresses. Each line's places are
@@ -277,15 +277,15 @@ The last line is there when `list` names addresses. Each line's places are
 `layout` fills them as it does a business row's, each place taking only its
 own line's fields:
 
-| Field          | Line                 | Draws                                                                                    |
-| -------------- | -------------------- | ---------------------------------------------------------------------------------------- |
-| `firstAddress` | a person's head      | their first address, then `+N` for the rest (`bl-ac-address`)                            |
-| `counts`       | the head             | each relation's full count, `·` between (`bl-ac-group-count`: `messages.relationCounts`) |
-| `address`      | a business           | the business's lead address (`bl-ac-address`)                                            |
-| `states`       | a business           | its states as squares, the domicile first (`bl-ac-states`)                               |
-| `role`         | a business           | the person's role on it, or how it holds the address (`bl-ac-role`)                      |
-| `addressRole`  | an address, a person | the person's role at it (`bl-ac-role`)                                                   |
-| `personRole`   | a person, an address | the person's role at the address (`bl-ac-role`)                                          |
+| Field          | Line            | Draws                                                                                    |
+| -------------- | --------------- | ---------------------------------------------------------------------------------------- |
+| `firstAddress` | a person's head | their first address, then `+N` for the rest (`bl-ac-address`)                            |
+| `counts`       | the head        | each relation's full count, `·` between (`bl-ac-group-count`: `messages.relationCounts`) |
+| `address`      | a business      | the business's lead address (`bl-ac-address`)                                            |
+| `states`       | a business      | its states as squares, the domicile first (`bl-ac-states`)                               |
+| `role`         | a business      | the person's role on it, or how it filed the address (`bl-ac-role`)                      |
+| `addressRole`  | an address      | how the business filed it (`bl-ac-role`); an address under a person has none             |
+| `personRole`   | a person        | the role they hold on the business (`bl-ac-role`); a person under an address has none    |
 
 Every listed line is an option. One the host enabled (`enabledLines`) has
 `data-enabled`, and `data-highlighted` while the keys or the pointer are on

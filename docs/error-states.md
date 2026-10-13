@@ -172,5 +172,5 @@ All of them are overridable through `messages`:
 | `address`, `addresses` | address, addresses: the address search's footer                                                      |
 | `relationCounts`       | per relation, a count in a person's or an address's head: `3 businesses`, `1 address`, `2 people`    |
 | `moreNotShown(n)`      | `+n more not shown`, under a list in a person's or an address's row                                  |
-| `personRoles`          | a person's role, on a business or at an address: `officer`, `agent`                                  |
-| `addressRoles`         | how a business holds an address: `principal office`, `mailing address`, `agent`, `officer's address` |
+| `personRoles`          | the role a person holds on a business: `officer`, `agent`                                            |
+| `addressRoles`         | how a business filed an address: `principal office`, `mailing address`, `agent`, `officer's address` |

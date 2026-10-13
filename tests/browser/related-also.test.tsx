@@ -5,34 +5,32 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_LOOK,
   type EntityType,
+  type BusinessOfPerson,
   type PersonSuggestion,
-  type RelatedItem,
 } from "@baselayer-sdk/autocomplete";
 import { PersonAutocompleteView } from "@baselayer-sdk/autocomplete/react";
 
 import "../../src/react/styles.css";
+import { businessOfPerson, relatedAddress } from "./support/related";
 
 // Made-up people and businesses: the first matched on the other name it goes
 // by, the second on its label.
-const business = (label: string, matched_name: string | null): RelatedItem => ({
-  type: "business",
-  token: `tok-${label}`,
-  label,
-  role: "officer",
-  matched: true,
-  matched_name,
-  highlight: null,
-  address: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
-  states: ["PA"],
-  domicile_state: "PA",
-});
+const business = (
+  label: string,
+  matched_name: string | null,
+): BusinessOfPerson =>
+  businessOfPerson(label, "officer", {
+    matched: true,
+    matched_name,
+    address: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
+  });
 
 const DANA: PersonSuggestion = {
   type: "person",
   token: "tok-dana",
   label: "Dana Whitfield",
-  matched_name: null,
   match: "strong",
+  states: ["PA"],
   highlight: [],
   related: {
     businesses: {
@@ -213,21 +211,13 @@ describe("a person's first address with parts", () => {
       matched: 1,
       truncated: false,
       items: [
-        {
-          type: "address",
-          token: "tok-fern",
-          label: "12 Fernhallow Ln, Dover, DE 19901",
-          role: "officer",
+        relatedAddress("12 Fernhallow Ln, Dover, DE 19901", {
           matched: true,
-          matched_name: null,
           highlight: [
             { text: "12 Fernhallow", matched: true },
             { text: " Ln, Dover, DE 19901", matched: false },
           ],
-          address: null,
-          states: null,
-          domicile_state: null,
-        },
+        }),
       ],
     };
     const host = document.createElement("div");

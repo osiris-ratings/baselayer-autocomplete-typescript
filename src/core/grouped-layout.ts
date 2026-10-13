@@ -444,17 +444,19 @@ export interface GroupedLines {
 /**
  * A person's or an address's row as lines: the head, then a list per relation
  * in `listed`, each item a line. A line is enabled when its type is in
- * `enabledLines` and the autocomplete service gave it a token; a business hands a
- * business option, a person or an address a typed pick.
+ * `enabledLines`; a business hands a business option, a person or an address a
+ * typed pick. A person or an address listed under a row has no token of its
+ * own, so its pick hands none.
  */
 export function groupedLines(
   row: PersonSuggestion | AddressSuggestion | BusinessSuggestion,
   listed: readonly Relation[],
   enabledLines: readonly EntityType[] = DEFAULT_ENABLED_LINES,
 ): GroupedLines {
-  const related: Partial<Record<Relation, RelatedSet>> = row.related;
+  const related: Partial<Record<Relation, RelatedSet<RelatedItem>>> =
+    row.related;
   const optionOf = (item: RelatedItem): GroupedOption | null => {
-    if (item.token === null || !enabledLines.includes(item.type)) {
+    if (!enabledLines.includes(item.type)) {
       return null;
     }
     if (item.type === "business") {
@@ -466,7 +468,7 @@ export function groupedLines(
     return {
       kind: "entity",
       row,
-      pick: { type: item.type, token: item.token, label: item.label },
+      pick: { type: item.type, token: null, label: item.label },
     };
   };
   return {

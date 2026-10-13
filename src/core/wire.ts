@@ -1,30 +1,33 @@
 /**
  * The wire shapes of `GET /autocomplete/{route}` and the error envelope, as
- * the autocomplete service serves them: snake_case, nulls spelled out. Every
- * route answers the same envelope and the same row, and each entity type adds
- * its own fields to the row (see `entities.ts`).
+ * the autocomplete service serves them: snake_case, nulls spelled out. Each
+ * route answers its own entity, a business row, a person row or an address
+ * row, and what a row relates to is typed by what the relation holds (see
+ * `entities.ts` for the routes).
  *
  * Hand-written types and a small structural validator rather than a schema
  * library. Three shapes do not justify a validator dependency in a snippet
  * customers embed on their own pages, and every host would have to agree on
  * its version.
  *
- * Every closed value (`match`, `type`, `sources.*.status`, `role`,
- * `structure`) is a typed union pinned to the contract's enum, and a value
- * this build does not know is refused as a contract error: the SDK learns a
- * value before the autocomplete service sends it. One liberty is kept: the
- * keys the contract leaves out of `required` (`matched_name`,
- * `RelatedItem.token`, `role`, `RelatedSet.count`, `RelatedSet.matched`,
- * `structure`, an address's components, a related item's `address`, `states`
- * and `domicile_state`) may be absent as well as null; either reads as null.
- * So may a related item's `matched_name` and `highlight`, which a newer
- * autocomplete service sends ahead of this repository's copy of its contract,
- * and an older one leaves out.
+ * The contract's enums are open: `match`, `structure`, `role`, `listed_as`,
+ * `sources.*.status` and a refusal's `reason` may gain values the service
+ * sends before this build lists them. Each is typed `Open<Known>`, a value
+ * this build lists or any other string, and one it does not list is kept as
+ * the service sent it, never refused. What stays closed is each `type`: a row
+ * and a related item name the one entity they are, and a relation holds one
+ * entity.
+ *
+ * A key the contract marks `required` must be there, null where it may be
+ * null. The keys it leaves out of `required` are `role` and `listed_as`, sent
+ * only where the relationship has one, and a 422's `ctx`; an absent one reads
+ * as null. A response from before this contract, which named how a business
+ * lists an address `role` too, is refused with a message that says so, not
+ * half read.
  */
 
 import {
   ENTITY_OF,
-  ENTITY_TYPES,
   ROUTES,
   type EntityType,
   type IncludeOf,
@@ -34,6 +37,14 @@ import {
 
 /** The relations `GET /autocomplete/businesses` can expand. */
 export type Include = IncludeOf<"businesses">;
+
+/**
+ * A value of an enum the contract leaves open: one of `Known`, or any other
+ * string the autocomplete service sends ahead of this build. Compare it to
+ * the values you handle and treat the rest as "other", showing it as it is.
+ */
+export type Open<Known extends string> =
+  Known | (string & Record<never, never>);
 
 /** How a name fits the typed one, in the contract's order. */
 export const MATCH_GRADES = ["exact", "strong", "partial"] as const;
@@ -50,21 +61,31 @@ export const SOURCE_STATUSES = ["ok", "not_requested", "unavailable"] as const;
 
 export type SourceStatus = (typeof SOURCE_STATUSES)[number];
 
-/** The roles a related item stands in, in the contract's order. */
-export const RELATED_ROLES = [
-  "officer",
-  "agent",
+/** The roles a person holds on a business, in the contract's order. */
+export const PERSON_ROLES = ["officer", "agent"] as const;
+
+/**
+ * The role a person holds on a business: `officer`, or `agent`, the registered
+ * agent. Sent on a person listed under a business and on a business listed
+ * under a person.
+ */
+export type PersonRole = (typeof PERSON_ROLES)[number];
+
+/** How an address is listed on a business, in the contract's order. */
+export const ADDRESS_LISTINGS = [
   "principal",
   "mailing",
+  "registered_office",
+  "officer",
 ] as const;
 
 /**
- * The role a related item stands in. A business's people and a person's
- * businesses: `officer` or `agent`. An address: the role it was filed under
- * (`principal`, `mailing`, `agent`, `officer`), or the role of the person
- * standing at it.
+ * How an address is listed on a business: as its `principal` or `mailing` address,
+ * as the office of its registered agent (`registered_office`), or as an officer's
+ * (`officer`). Sent on an address listed under a business and on a business
+ * listed under an address.
  */
-export type RelatedRole = (typeof RELATED_ROLES)[number];
+export type AddressListing = (typeof ADDRESS_LISTINGS)[number];
 
 /** Why a deployment cannot answer a route it has yet, in the contract's order. */
 export const ROUTE_UNSERVED_REASONS = [
@@ -78,53 +99,6 @@ export const ROUTE_UNSERVED_REASONS = [
  */
 export type RouteUnservedReason = (typeof ROUTE_UNSERVED_REASONS)[number];
 
-export interface RelatedItem {
-  /** Always the entity its relation holds: a `business` under `businesses`. */
-  type: EntityType;
-  /**
-   * An opaque handle. A business's is a `business_token` `POST /searches`
-   * redeems; a person's or an address's is redeemed nowhere yet.
-   */
-  token: string | null;
-  label: string;
-  /** Null when the filing names none. */
-  role: RelatedRole | null;
-  /** This item is why the row is here. */
-  matched: boolean;
-  /**
-   * The other name a matched business goes by (a DBA, or a former name) when
-   * it fit the business name filter better than `label`, as a business row's
-   * `matched_name` says it. Null when the label fit as well, when no business
-   * name filters, and on a person or an address.
-   */
-  matched_name: string | null;
-  /**
-   * The name a filter matched the item on, split into parts as a row's own
-   * `highlight` is: `matched_name` when it is set, else `label`. Null when no
-   * filter matched the item by its name, or the filter marked no word in it.
-   */
-  highlight: HighlightPart[] | null;
-  /**
-   * A business's lead address, the one its own row leads with: on an address
-   * row too, where it need not be the row's. Null when it has none, and on a
-   * person or an address.
-   */
-  address: string | null;
-  /** A business's states, sorted by code; null on a person or an address. */
-  states: string[] | null;
-  /** A business's domicile state; null on a person or an address. */
-  domicile_state: string | null;
-}
-
-export interface RelatedSet {
-  /** Total before the head cap; null when the relation was not requested. */
-  count: number | null;
-  /** How many satisfied a relation filter; null when none applied. */
-  matched: number | null;
-  truncated: boolean;
-  items: RelatedItem[];
-}
-
 /**
  * One part of a name as the autocomplete service split it: a word a typed token
  * starts, or the text between such words. The parts concatenate to the name
@@ -135,8 +109,124 @@ export interface HighlightPart {
   matched: boolean;
 }
 
+/**
+ * A business listed under a person or an address. Its `token` is a
+ * `business_token` that `POST /searches` redeems. Under a person it is a
+ * `BusinessOfPerson`, with the role they hold on it; under an address a
+ * `BusinessOfAddress`, with how it lists it.
+ */
+export interface RelatedBusiness {
+  type: "business";
+  token: string;
+  label: string;
+  /** This item is why the row is here. */
+  matched: boolean;
+  /**
+   * The other name a matched business goes by (a DBA, or a former name) when
+   * it fit the business name filter better than `label`, as a business row's
+   * `matched_name` says it. Null when the label fit as well, or no business
+   * name filters.
+   */
+  matched_name: string | null;
+  /**
+   * The name a filter matched the item on, split into parts as a row's own
+   * `highlight` is: `matched_name` when it is set, else `label`. Null when no
+   * filter matched the item by its name, or the filter marked no word in it.
+   */
+  highlight: HighlightPart[] | null;
+  /**
+   * The business's lead address, the one its own row leads with: on an address
+   * row too, where it need not be the row's. Null when it has none.
+   */
+  address: string | null;
+  /** The business's states, sorted by code. */
+  states: string[];
+  domicile_state: string;
+}
+
+/** A person listed under an address, where they hold no role of their own. */
+export interface RelatedPerson {
+  type: "person";
+  label: string;
+  /** This item is why the row is here. */
+  matched: boolean;
+  /**
+   * How the name this person matched on reads against the typed text of the
+   * person name filter. Null when no filter matched the item by its name.
+   */
+  highlight: HighlightPart[] | null;
+}
+
+/** An address listed under a person, where they are at it with no role. */
+export interface RelatedAddress {
+  type: "address";
+  label: string;
+  /** This item is why the row is here. */
+  matched: boolean;
+  /**
+   * How this address reads against the typed text of the address filter. Null
+   * when no filter matched it.
+   */
+  highlight: HighlightPart[] | null;
+}
+
+/** A person listed under a business, with the role they hold on it. */
+export interface PersonOfBusiness extends RelatedPerson {
+  /** Null when the filing names none. */
+  role: Open<PersonRole> | null;
+}
+
+/** An address listed under a business, with how the business lists it. */
+export interface AddressOfBusiness extends RelatedAddress {
+  /** Null when the filing says none. */
+  listed_as: Open<AddressListing> | null;
+}
+
+/** A business listed under a person, with the role the person holds on it. */
+export interface BusinessOfPerson extends RelatedBusiness {
+  /** Null when the filing names none. */
+  role: Open<PersonRole> | null;
+}
+
+/** A business listed under an address, with how it lists the address. */
+export interface BusinessOfAddress extends RelatedBusiness {
+  /** Null when the filing says none. */
+  listed_as: Open<AddressListing> | null;
+}
+
+/** A related item of any kind, told apart by its `type`. */
+export type RelatedItem = RelatedBusiness | RelatedPerson | RelatedAddress;
+
+/** The items of one relation of a row, and how many the row has. */
+export interface RelatedSet<Item extends RelatedItem> {
+  /** Total before the head cap; null when the relation was not requested. */
+  count: number | null;
+  /** How many satisfied a relation filter; null when none applied. */
+  matched: number | null;
+  truncated: boolean;
+  items: Item[];
+}
+
+/** What a business is related to. */
+export interface BusinessRelated {
+  people: RelatedSet<PersonOfBusiness>;
+  addresses: RelatedSet<AddressOfBusiness>;
+}
+
+/** What a person is related to. */
+export interface PersonRelated {
+  businesses: RelatedSet<BusinessOfPerson>;
+  addresses: RelatedSet<RelatedAddress>;
+}
+
+/** What an address is related to. */
+export interface AddressRelated {
+  businesses: RelatedSet<BusinessOfAddress>;
+  people: RelatedSet<RelatedPerson>;
+}
+
 /** What every row carries, whatever the route. */
-export interface SuggestionBase<T extends EntityType, R extends Route> {
+export interface SuggestionBase<T extends EntityType> {
   type: T;
   /**
    * An opaque handle for the entity, sealed by the autocomplete service. A
@@ -144,11 +234,8 @@ export interface SuggestionBase<T extends EntityType, R extends Route> {
    */
   token: string;
   label: string;
-  /** The indexed name that matched, when it is not `label`. */
-  matched_name: string | null;
   /** Order the rows by position, never by this. */
-  match: MatchGrade;
-  related: Record<IncludeOf<R>, RelatedSet>;
+  match: Open<MatchGrade>;
   /**
    * The name that matched, split into parts, the words a typed token starts
    * marked. Empty when the query reached the row some other way.
@@ -185,10 +272,10 @@ export const BUSINESS_STRUCTURES = [
 /** A business's legal structure. */
 export type BusinessStructure = (typeof BUSINESS_STRUCTURES)[number];
 
-export interface BusinessSuggestion extends SuggestionBase<
-  "business",
-  "businesses"
-> {
+/** A business, with the people and addresses it is related to. */
+export interface BusinessSuggestion extends SuggestionBase<"business"> {
+  /** The indexed name that matched, when it is not `label`. */
+  matched_name: string | null;
   domicile_state: string;
   states: string[];
   /**
@@ -196,11 +283,19 @@ export interface BusinessSuggestion extends SuggestionBase<
    * autocomplete service spells it (`structureLabel` draws it); null when it is
    * not known.
    */
-  structure: BusinessStructure | null;
+  structure: Open<BusinessStructure> | null;
+  related: BusinessRelated;
 }
 
-/** A person, with the businesses they hold a role on. A person has no jurisdiction of its own. */
-export type PersonSuggestion = SuggestionBase<"person", "people">;
+/**
+ * A person, with the businesses they hold a role on and the addresses they
+ * filed from. A person has no jurisdiction of its own: its `states` are the
+ * states of those businesses.
+ */
+export interface PersonSuggestion extends SuggestionBase<"person"> {
+  states: string[];
+  related: PersonRelated;
+}
 
 /** The parts of an address's label; each is null where the filing did not carry it. */
 export interface AddressComponents {
@@ -213,12 +308,10 @@ export interface AddressComponents {
   postal_code: string | null;
 }
 
-/** An address, with the businesses filed at it. */
-export interface AddressSuggestion extends SuggestionBase<
-  "address",
-  "addresses"
-> {
+/** An address, with the businesses filed at it and the people who filed from it. */
+export interface AddressSuggestion extends SuggestionBase<"address"> {
   components: AddressComponents;
+  related: AddressRelated;
 }
 
 export interface SuggestionByRelation {
@@ -231,7 +324,7 @@ export interface SuggestionByRelation {
 export type Suggestion = SuggestionByRelation[Route];
 
 export interface Source {
-  status: SourceStatus;
+  status: Open<SourceStatus>;
 }
 
 export interface SuggestResponse<R extends Route = "businesses"> {
@@ -241,8 +334,7 @@ export interface SuggestResponse<R extends Route = "businesses"> {
   found_capped: boolean;
   /**
    * The autocomplete service did not finish looking, so a matching entity may
-   * be missing. Absent or null reads as `false`: an autocomplete service that
-   * predates the field is complete by definition.
+   * be missing.
    */
   truncated: boolean;
   /** One per relation the route can expand; read it before an empty `related`. */
@@ -259,7 +351,21 @@ export type BusinessesResponse = SuggestResponse<"businesses">;
 export interface ErrorEnvelope {
   code: number;
   message: string;
+  uri: string | null;
   metadata: Record<string, unknown> | null;
+}
+
+/**
+ * One parameter a 422 names. The `type` is open: treat one this build does
+ * not know as a request the service refused for that parameter.
+ */
+export interface ValidationItem {
+  type: string;
+  /** Where the failure is: `["query", "limit"]`. */
+  loc: string[];
+  msg: string;
+  /** What the check held, where it holds anything. */
+  ctx: unknown;
 }
 
 /** Thrown by the parsers below; the client turns it into `kind: "contract"`. */
@@ -326,71 +432,63 @@ function array<T>(
   return value.map((entry, index) => item(entry, `${path}[${index}]`));
 }
 
-/** One of `values`, or a contract error naming them. */
-function oneOf<T extends string>(values: readonly T[]) {
-  return (value: Json, path: string): T => {
-    if (typeof value !== "string" || !values.includes(value as T)) {
-      throw new ContractViolation(path, `one of ${values.join(", ")}`);
-    }
-    return value as T;
-  };
+/** A string of an open enum: any string, typed as `Known` or another. */
+function open<Known extends string>(value: Json, path: string): Open<Known> {
+  return string(value, path);
 }
 
-const matchGrade = oneOf(MATCH_GRADES);
-const sourceStatus = oneOf(SOURCE_STATUSES);
-const relatedRole = oneOf(RELATED_ROLES);
-const businessStructure = oneOf(BUSINESS_STRUCTURES);
-const entityType = oneOf(ENTITY_TYPES);
-
-/** Absent or null reads as null; anything else must parse. */
-function nullable<T>(
-  value: Json,
+/** The key of a `required` field that may be null: it must be there. */
+function nullableKey<T>(
+  o: Record<string, unknown>,
+  key: string,
   path: string,
   parse: (v: Json, p: string) => T,
 ): T | null {
-  return value === undefined || value === null ? null : parse(value, path);
-}
-
-function relatedItem(
-  value: Json,
-  path: string,
-  holds: EntityType,
-): RelatedItem {
-  const o = object(value, path);
-  const type = entityType(o.type, `${path}.type`);
-  if (type !== holds) {
-    throw new ContractViolation(`${path}.type`, `"${holds}"`);
+  const value = o[key];
+  if (value === undefined) {
+    throw new ContractViolation(`${path}.${key}`, "a value, or null");
   }
-  return {
-    type,
-    token: nullable(o.token, `${path}.token`, string),
-    label: string(o.label, `${path}.label`),
-    role: nullable(o.role, `${path}.role`, relatedRole),
-    matched: boolean(o.matched, `${path}.matched`),
-    matched_name: nullable(o.matched_name, `${path}.matched_name`, string),
-    highlight: nullable(o.highlight, `${path}.highlight`, (v, p) =>
-      array(v, p, highlightPart),
-    ),
-    address: nullable(o.address, `${path}.address`, string),
-    states: nullable(o.states, `${path}.states`, (v, p) => array(v, p, string)),
-    domicile_state: nullable(
-      o.domicile_state,
-      `${path}.domicile_state`,
-      string,
-    ),
-  };
+  return value === null ? null : parse(value, `${path}.${key}`);
 }
 
-function relatedSet(value: Json, path: string, relation: Relation): RelatedSet {
-  const o = object(value, path);
-  return {
-    count: nullable(o.count, `${path}.count`, count),
-    matched: nullable(o.matched, `${path}.matched`, count),
-    truncated: boolean(o.truncated, `${path}.truncated`),
-    items: array(o.items, `${path}.items`, (v, p) =>
-      relatedItem(v, p, ENTITY_OF[relation]),
-    ),
-  };
+/** A key the contract leaves out of `required`: absent or null reads as null. */
+function optionalKey<T>(
+  o: Record<string, unknown>,
+  key: string,
+  path: string,
+  parse: (v: Json, p: string) => T,
+): T | null {
+  const value = o[key];
+  return value === undefined || value === null
+    ? null
+    : parse(value, `${path}.${key}`);
+}
+
+/** The `type` of a row or an item: the one entity it is. */
+function typeOf<T extends EntityType>(
+  o: Record<string, unknown>,
+  path: string,
+  type: T,
+): T {
+  if (o.type !== type) {
+    throw new ContractViolation(`${path}.type`, `"${type}"`);
+  }
+  return type;
+}
+
+/**
+ * Before this contract, how a business listed an address, and the role a person
+ * held at it, were named `role` as a person's role on a business is. Read as
+ * the new contract an address item with a `role` would show none, so a
+ * relationship that has no `role` refuses one instead.
+ */
+function refuseFormerRole(o: Record<string, unknown>, path: string): void {
+  if (o.role !== undefined) {
+    throw new ContractViolation(
+      `${path}.role`,
+      "no `role`: this build reads the contract that names how a business lists an address `listed_as`, and the autocomplete service answering still serves the one before it",
+    );
+  }
 }
 
 function highlightPart(value: Json, path: string): HighlightPart {
@@ -400,6 +498,196 @@ function highlightPart(value: Json, path: string): HighlightPart {
     matched: boolean(o.matched, `${path}.matched`),
   };
 }
+
+const highlightParts = (v: Json, p: string) => array(v, p, highlightPart);
+
+function relatedBusiness(value: Json, path: string): RelatedBusiness {
+  const o = object(value, path);
+  return {
+    type: typeOf(o, path, "business"),
+    token: nonEmptyString(o.token, `${path}.token`),
+    label: string(o.label, `${path}.label`),
+    matched: boolean(o.matched, `${path}.matched`),
+    matched_name: nullableKey(o, "matched_name", path, string),
+    highlight: nullableKey(o, "highlight", path, highlightParts),
+    address: nullableKey(o, "address", path, string),
+    states: array(o.states, `${path}.states`, string),
+    domicile_state: string(o.domicile_state, `${path}.domicile_state`),
+  };
+}
+
+function relatedPerson(value: Json, path: string): RelatedPerson {
+  const o = object(value, path);
+  return {
+    type: typeOf(o, path, "person"),
+    label: string(o.label, `${path}.label`),
+    matched: boolean(o.matched, `${path}.matched`),
+    highlight: nullableKey(o, "highlight", path, highlightParts),
+  };
+}
+
+function relatedAddress(value: Json, path: string): RelatedAddress {
+  const o = object(value, path);
+  return {
+    type: typeOf(o, path, "address"),
+    label: string(o.label, `${path}.label`),
+    matched: boolean(o.matched, `${path}.matched`),
+    highlight: nullableKey(o, "highlight", path, highlightParts),
+  };
+}
+
+/** An item read as `parse` reads it, with the role a person holds on a business. */
+function roleOn<T extends RelatedItem>(
+  parse: (v: Json, p: string) => T,
+): (v: Json, p: string) => T & { role: Open<PersonRole> | null } {
+  return (value, path) => ({
+    ...parse(value, path),
+    role: optionalKey(object(value, path), "role", path, open<PersonRole>),
+  });
+}
+
+/** An item read as `parse` reads it, with how an address is listed on a business. */
+function listedAs<T extends RelatedItem>(
+  parse: (v: Json, p: string) => T,
+): (v: Json, p: string) => T & { listed_as: Open<AddressListing> | null } {
+  return (value, path) => {
+    const o = object(value, path);
+    refuseFormerRole(o, path);
+    return {
+      ...parse(value, path),
+      listed_as: optionalKey(o, "listed_as", path, open<AddressListing>),
+    };
+  };
+}
+
+/** An item read as `parse` reads it, where the relationship has no role. */
+function withoutRole<T extends RelatedItem>(
+  parse: (v: Json, p: string) => T,
+): (v: Json, p: string) => T {
+  return (value, path) => {
+    refuseFormerRole(object(value, path), path);
+    return parse(value, path);
+  };
+}
+
+function relatedSet<Item extends RelatedItem>(
+  value: Json,
+  path: string,
+  parse: (v: Json, p: string) => Item,
+): RelatedSet<Item> {
+  const o = object(value, path);
+  return {
+    count: nullableKey(o, "count", path, count),
+    matched: nullableKey(o, "matched", path, count),
+    truncated: boolean(o.truncated, `${path}.truncated`),
+    items: array(o.items, `${path}.items`, parse),
+  };
+}
+
+function businessRelated(value: Json, path: string): BusinessRelated {
+  const o = object(value, path);
+  return {
+    people: relatedSet(o.people, `${path}.people`, roleOn(relatedPerson)),
+    addresses: relatedSet(
+      o.addresses,
+      `${path}.addresses`,
+      listedAs(relatedAddress),
+    ),
+  };
+}
+
+function personRelated(value: Json, path: string): PersonRelated {
+  const o = object(value, path);
+  return {
+    businesses: relatedSet(
+      o.businesses,
+      `${path}.businesses`,
+      roleOn(relatedBusiness),
+    ),
+    addresses: relatedSet(
+      o.addresses,
+      `${path}.addresses`,
+      withoutRole(relatedAddress),
+    ),
+  };
+}
+
+function addressRelated(value: Json, path: string): AddressRelated {
+  const o = object(value, path);
+  return {
+    businesses: relatedSet(
+      o.businesses,
+      `${path}.businesses`,
+      listedAs(relatedBusiness),
+    ),
+    people: relatedSet(o.people, `${path}.people`, withoutRole(relatedPerson)),
+  };
+}
+
+function addressComponents(value: Json, path: string): AddressComponents {
+  const o = object(value, path);
+  return {
+    line1: nullableKey(o, "line1", path, string),
+    line2: nullableKey(o, "line2", path, string),
+    city: nullableKey(o, "city", path, string),
+    state: nullableKey(o, "state", path, string),
+    postal_code: nullableKey(o, "postal_code", path, string),
+  };
+}
+
+/** What every row carries, read from `o`. */
+function rowBase<T extends EntityType>(
+  o: Record<string, unknown>,
+  path: string,
+  type: T,
+): SuggestionBase<T> {
+  return {
+    type: typeOf(o, path, type),
+    token: nonEmptyString(o.token, `${path}.token`),
+    label: string(o.label, `${path}.label`),
+    match: open<MatchGrade>(o.match, `${path}.match`),
+    highlight: highlightParts(o.highlight, `${path}.highlight`),
+  };
+}
+
+function businessSuggestion(value: Json, path: string): BusinessSuggestion {
+  const o = object(value, path);
+  return {
+    ...rowBase(o, path, ENTITY_OF.businesses),
+    matched_name: nullableKey(o, "matched_name", path, string),
+    domicile_state: string(o.domicile_state, `${path}.domicile_state`),
+    states: array(o.states, `${path}.states`, string),
+    structure: nullableKey(o, "structure", path, open<BusinessStructure>),
+    related: businessRelated(o.related, `${path}.related`),
+  };
+}
+
+function personSuggestion(value: Json, path: string): PersonSuggestion {
+  const o = object(value, path);
+  return {
+    ...rowBase(o, path, ENTITY_OF.people),
+    states: array(o.states, `${path}.states`, string),
+    related: personRelated(o.related, `${path}.related`),
+  };
+}
+
+function addressSuggestion(value: Json, path: string): AddressSuggestion {
+  const o = object(value, path);
+  return {
+    ...rowBase(o, path, ENTITY_OF.addresses),
+    components: addressComponents(o.components, `${path}.components`),
+    related: addressRelated(o.related, `${path}.related`),
+  };
+}
+
+/** How each route's row is read. */
+const SUGGESTION_PARSERS = {
+  businesses: businessSuggestion,
+  people: personSuggestion,
+  addresses: addressSuggestion,
+} as const satisfies {
+  [R in Route]: (value: Json, path: string) => SuggestionByRelation[R];
+};
 
 function relations<K extends Relation, T>(
   keys: readonly K[],
@@ -415,93 +703,38 @@ function relations<K extends Relation, T>(
   return out;
 }
 
-function addressComponents(value: Json, path: string): AddressComponents {
-  const o = object(value, path);
-  return {
-    line1: nullable(o.line1, `${path}.line1`, string),
-    line2: nullable(o.line2, `${path}.line2`, string),
-    city: nullable(o.city, `${path}.city`, string),
-    state: nullable(o.state, `${path}.state`, string),
-    postal_code: nullable(o.postal_code, `${path}.postal_code`, string),
-  };
-}
-
-/** The fields each entity type adds to the row. */
-const OWN_FIELDS: {
-  [R in Route]: (
-    o: Record<string, unknown>,
-    path: string,
-  ) => Omit<SuggestionByRelation[R], keyof SuggestionBase<EntityType, R>>;
-} = {
-  businesses: (o, path) => ({
-    domicile_state: string(o.domicile_state, `${path}.domicile_state`),
-    states: array(o.states, `${path}.states`, string),
-    structure: nullable(o.structure, `${path}.structure`, businessStructure),
-  }),
-  people: () => ({}),
-  addresses: (o, path) => ({
-    components: addressComponents(o.components, `${path}.components`),
-  }),
-};
-
-function suggestion<R extends Route>(
-  relation: R,
-  value: Json,
-  path: string,
-): SuggestionByRelation[R] {
-  const o = object(value, path);
-  const type = ENTITY_OF[relation];
-  if (o.type !== type) {
-    throw new ContractViolation(`${path}.type`, `"${type}"`);
-  }
-  return {
-    type,
-    token: nonEmptyString(o.token, `${path}.token`),
-    label: string(o.label, `${path}.label`),
-    matched_name: nullable(o.matched_name, `${path}.matched_name`, string),
-    match: matchGrade(o.match, `${path}.match`),
-    ...OWN_FIELDS[relation](o, path),
-    related: relations(
-      ROUTES[relation].includes,
-      o.related,
-      `${path}.related`,
-      relatedSet,
-    ),
-    highlight: array(o.highlight, `${path}.highlight`, highlightPart),
-  } as SuggestionByRelation[R];
-}
-
 function source(value: Json, path: string): Source {
   const o = object(value, path);
-  return { status: sourceStatus(o.status, `${path}.status`) };
+  return { status: open<SourceStatus>(o.status, `${path}.status`) };
 }
 
 /**
  * The body of a 200 from `GET /autocomplete/{relation}`, validated. Unknown
  * keys are dropped, so the value a caller sees is exactly this type; an
- * unknown enum value is a contract error.
+ * unknown value of an open enum is kept as it came.
  */
 export function parseSuggestResponse<R extends Route>(
   relation: R,
   body: Json,
 ): SuggestResponse<R> {
   const o = object(body, "response");
-  const truncated = nullable(o.truncated, "response.truncated", boolean);
+  const parse = SUGGESTION_PARSERS[relation] as (
+    value: Json,
+    path: string,
+  ) => SuggestionByRelation[R];
   return {
     query: string(o.query, "response.query"),
     found: count(o.found, "response.found"),
     found_capped: boolean(o.found_capped, "response.found_capped"),
-    truncated: truncated ?? false,
+    truncated: boolean(o.truncated, "response.truncated"),
     sources: relations(
       ROUTES[relation].includes,
       o.sources,
       "response.sources",
       source,
     ),
-    suggestions: array(o.suggestions, "response.suggestions", (v, p) =>
-      suggestion(relation, v, p),
-    ),
-  } as SuggestResponse<R>;
+    suggestions: array(o.suggestions, "response.suggestions", parse),
+  };
 }
 
 /** The body of a 200 from `GET /autocomplete/businesses`, validated. */
@@ -514,7 +747,7 @@ export function parseErrorEnvelope(body: Json): ErrorEnvelope | null {
   if (!isObject(body)) {
     return null;
   }
-  const { code, message, metadata } = body;
+  const { code, message, uri, metadata } = body;
   if (
     typeof code !== "number" ||
     !Number.isInteger(code) ||
@@ -525,14 +758,47 @@ export function parseErrorEnvelope(body: Json): ErrorEnvelope | null {
   if (metadata !== undefined && metadata !== null && !isObject(metadata)) {
     return null;
   }
-  return { code, message, metadata: metadata ?? null };
+  return {
+    code,
+    message,
+    uri: typeof uri === "string" ? uri : null,
+    metadata: metadata ?? null,
+  };
 }
 
-/** The first `detail[].msg` of a pydantic-style 422, or null. */
-export function firstValidationMessage(body: Json): string | null {
-  if (!isObject(body) || !Array.isArray(body.detail)) {
+function validationItem(value: Json): ValidationItem | null {
+  if (
+    !isObject(value) ||
+    typeof value.type !== "string" ||
+    typeof value.msg !== "string" ||
+    !Array.isArray(value.loc)
+  ) {
     return null;
   }
-  const [first] = body.detail as unknown[];
-  return isObject(first) && typeof first.msg === "string" ? first.msg : null;
+  return {
+    type: value.type,
+    loc: value.loc.map(String),
+    msg: value.msg,
+    ctx: value.ctx ?? null,
+  };
+}
+
+/**
+ * The parameters a 422 names, from its envelope's `metadata.errors`; empty
+ * for any other refusal.
+ */
+export function validationErrors(envelope: ErrorEnvelope): ValidationItem[] {
+  const errors = envelope.metadata?.errors;
+  if (
+    envelope.metadata?.reason !== "request_invalid" ||
+    !Array.isArray(errors)
+  ) {
+    return [];
+  }
+  return errors.flatMap(entry => validationItem(entry) ?? []);
+}
+
+/** What the first parameter a 422 names says, or null. */
+export function firstValidationMessage(envelope: ErrorEnvelope): string | null {
+  return validationErrors(envelope)[0]?.msg ?? null;
 }

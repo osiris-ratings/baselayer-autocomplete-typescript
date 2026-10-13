@@ -1,8 +1,5 @@
 import { ROUTES, type IncludeOf, type Relation, type Route } from "./entities";
-import type { RelatedRole } from "./wire";
-
-/** A person's role on a business. */
-export type PersonRole = Extract<RelatedRole, "officer" | "agent">;
+import type { PersonRole } from "./wire";
 
 /**
  * Narrowing filters on `GET /autocomplete/businesses`: exactly the set the
@@ -13,6 +10,7 @@ export interface Filters {
   state?: string[];
   /** The root registration's state. */
   domicileState?: string;
+  /** A person on the business: by name, and by the role they hold on it. */
   person?: { name?: string; role?: PersonRole };
   address?: {
     text?: string;
@@ -173,7 +171,11 @@ export const FILTER_PARAMS = {
     { param: "state", path: ["state"], relation: null },
     { param: "domicile_state", path: ["domicileState"], relation: null },
     { param: "person.name", path: ["person", "name"], relation: "people" },
-    { param: "person.role", path: ["person", "role"], relation: "people" },
+    {
+      param: "person.role",
+      path: ["person", "role"],
+      relation: "people",
+    },
     { param: "address.text", path: ["address", "text"], relation: "addresses" },
     { param: "address.city", path: ["address", "city"], relation: "addresses" },
     {

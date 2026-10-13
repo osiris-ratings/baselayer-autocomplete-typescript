@@ -9,8 +9,12 @@ import {
   ROUTE_NAMES,
   queryTokens,
   type AddressSuggestion,
+  type BusinessOfPerson,
   type BusinessSuggestion,
+  type Open,
+  type AddressListing,
   type PersonSuggestion,
+  type RelatedAddress,
   type RelatedItem,
   type RelatedSet,
   type Relation,
@@ -47,7 +51,7 @@ export interface SampleOptions {
 
 const SESSION_SECONDS = 300;
 
-const NOT_REQUESTED: RelatedSet = {
+const NOT_REQUESTED: RelatedSet<never> = {
   count: null,
   matched: null,
   truncated: false,
@@ -159,31 +163,31 @@ function pinOf(token: string): { officer?: string; address?: string } {
  * A business's own principal and mailing addresses, never its registered
  * agent's: as its own row lists them, and as the address rows do.
  */
-function ownOffices(item: RelatedItem): string[] {
-  const business = businessOf(item.token ?? "");
+function ownOffices(item: BusinessOfPerson): string[] {
+  const business = businessOf(item.token);
   if (business === undefined) return [];
   return [
     ...business.related.addresses.items
-      .filter(address => ownOffice(address.role))
+      .filter(address => ownOffice(address.listed_as))
       .map(address => address.label),
     ...SAMPLE_ADDRESSES.filter(address =>
       address.related.businesses.items.some(
-        at => businessOf(at.token ?? "") === business && ownOffice(at.role),
+        at => businessOf(at.token) === business && ownOffice(at.listed_as),
       ),
     ).map(address => address.label),
   ];
 }
 
 /** Whether a business holds an address as its own office, not an agent's or an officer's. */
-function ownOffice(role: RelatedItem["role"]): boolean {
-  return role === "principal" || role === "mailing";
+function ownOffice(listedAs: Open<AddressListing> | null): boolean {
+  return listedAs === "principal" || listedAs === "mailing";
 }
 
 /** A set's items, those `matches` holds marked, and how many matched. */
-function marked(
-  set: RelatedSet,
-  matches: (item: RelatedItem) => boolean,
-): RelatedSet {
+function marked<Item extends RelatedItem>(
+  set: RelatedSet<Item>,
+  matches: (item: Item) => boolean,
+): RelatedSet<Item> {
   const items = set.items.map(item => ({ ...item, matched: matches(item) }));
   return { ...set, items, matched: items.filter(item => item.matched).length };
 }
@@ -231,16 +235,12 @@ function rowsFor(
       // all. A registered agent never matches an address, filed from as one
       // or reached through a business it is agent of.
       const ofBusiness = states.length > 0 || firm.length > 0;
-      const inStates = (item: RelatedItem) =>
+      const inStates = (item: BusinessOfPerson) =>
         states.length === 0 ||
-        (businessOf(item.token ?? "")?.states ?? []).some(s =>
-          states.includes(s),
-        );
-      const named = (item: RelatedItem) =>
+        (businessOf(item.token)?.states ?? []).some(s => states.includes(s));
+      const named = (item: BusinessOfPerson) =>
         firm.length === 0 || fits(item.label, firm);
-      const filedFrom = (item: RelatedItem) =>
-        place.length > 0 && item.role !== "agent" && fits(item.label, place);
-      const officedAt = (item: RelatedItem) =>
+      const officedAt = (item: BusinessOfPerson) =>
         place.length > 0 &&
         item.role !== "agent" &&
         ownOffices(item).some(label => fits(label, place));
@@ -248,8 +248,16 @@ function rowsFor(
         row => {
           if (!ofBusiness && place.length === 0) return [row];
           const { businesses, addresses } = row.related;
+          // An address listed under a person names no role, so the sample
+          // knows a registered agent by the role they hold on every business
+          // listed.
+          const agent =
+            businesses.items.length > 0 &&
+            businesses.items.every(item => item.role === "agent");
+          const filedFrom = (item: RelatedAddress) =>
+            place.length > 0 && !agent && fits(item.label, place);
           const filed = addresses.items.some(filedFrom);
-          const meets = (item: RelatedItem) =>
+          const meets = (item: BusinessOfPerson) =>
             inStates(item) &&
             named(item) &&
             (place.length === 0 || filed || officedAt(item));
@@ -289,7 +297,7 @@ function rowsFor(
         if (firm.length > 0) {
           businesses = marked(
             businesses,
-            item => ownOffice(item.role) && fits(item.label, firm),
+            item => ownOffice(item.listed_as) && fits(item.label, firm),
           );
           if (businesses.matched === 0) return [];
         }
@@ -325,19 +333,19 @@ function suggest(
   }
   const q = (params.get("q") ?? "").trim();
   if (q.length < 2) {
-    return {
-      status: 422,
-      body: {
-        detail: [
-          {
-            type: "too_short",
-            loc: ["query", "q"],
-            msg: "q is too short",
-            ctx: {},
-          },
-        ],
-      },
-    };
+    // The autocomplete service answers a refusal in the catalog's envelope, a
+    // 422 naming each parameter it refused.
+    return refusal(422, 422, "The request is invalid.", {
+      reason: "request_invalid",
+      errors: [
+        {
+          type: "too_short",
+          loc: ["query", "q"],
+          msg: "q is too short",
+          ctx: {},
+        },
+      ],
+    });
   }
   const legal: readonly Relation[] = LEGAL_RELATIONS[route];
   const asked = params.get("include");
@@ -350,18 +358,26 @@ function suggest(
   const tokens = queryTokens(q);
   const rows = rowsFor(route, tokens, params);
   const limit = Number(params.get("limit") ?? 10);
-  const suggestions = rows.slice(0, limit).map(row => ({
-    ...row,
-    highlight: highlightFor(row.matched_name ?? row.label, tokens),
-    related: Object.fromEntries(
-      legal.map(relation => [
-        relation,
-        include.includes(relation)
-          ? (row.related as Record<Relation, RelatedSet>)[relation]
-          : NOT_REQUESTED,
-      ]),
-    ),
-  }));
+  const suggestions = rows.slice(0, limit).map(row => {
+    const related: Partial<Record<Relation, RelatedSet<RelatedItem>>> =
+      row.related;
+    return {
+      ...row,
+      // Only a business has another name that matched.
+      highlight: highlightFor(
+        ("matched_name" in row ? row.matched_name : null) ?? row.label,
+        tokens,
+      ),
+      related: Object.fromEntries(
+        legal.map(relation => [
+          relation,
+          include.includes(relation)
+            ? (related[relation] ?? NOT_REQUESTED)
+            : NOT_REQUESTED,
+        ]),
+      ),
+    };
+  });
   return {
     status: 200,
     body: {
@@ -422,7 +438,7 @@ function searchOf(row: BusinessSuggestion, token: string): Search {
       .map(item => item.label),
     ...SAMPLE_PEOPLE.filter(person =>
       person.related.businesses.items.some(
-        item => businessOf(item.token ?? "") === row && item.role === "officer",
+        item => businessOf(item.token) === row && item.role === "officer",
       ),
     ).map(person => person.label),
   ].map(name => name.toUpperCase());
@@ -431,7 +447,7 @@ function searchOf(row: BusinessSuggestion, token: string): Search {
     ...row.related.addresses.items.map(item => item.label),
     ...SAMPLE_ADDRESSES.filter(address =>
       address.related.businesses.items.some(
-        item => businessOf(item.token ?? "") === row,
+        item => businessOf(item.token) === row,
       ),
     ).map(address => address.label),
   ];

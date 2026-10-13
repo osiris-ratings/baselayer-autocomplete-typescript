@@ -568,7 +568,7 @@ export const FIELD_WIRE: Record<RowField, readonly string[]> = {
   address: [
     "related.addresses.items[0].label",
     "related.addresses.items[0].matched",
-    "related.addresses.items[0].role",
+    "related.addresses.items[0].listed_as",
   ],
   people: [
     "related.people.items[].label",
@@ -617,7 +617,7 @@ export const BUSINESS_EDITOR: RowEditor<BusinessRowPlace, BusinessRowField> = {
   fieldWire: {
     ...FIELD_WIRE,
     personRole: ["related.people.items[].role"],
-    addressRole: ["related.addresses.items[].role"],
+    addressRole: ["related.addresses.items[].listed_as"],
   },
   lineNames: {
     title: { long: "Business name", short: "Name" },
@@ -638,8 +638,14 @@ const BUSINESS_LINE_WIRE = {
     "related.businesses.items[].domicile_state",
     "related.businesses.items[].states",
   ],
-  role: ["related.businesses.items[].role"],
 } as const;
+
+/**
+ * What a role field reads on an address listed under a person, or a person
+ * listed under an address: nothing, the autocomplete service sends no role for
+ * either.
+ */
+const NO_ROLE_WIRE = ["nothing: no role is sent here"] as const;
 
 /** A person's row. */
 export const PERSON_EDITOR: RowEditor<PersonRowPlace, PersonRowField> = {
@@ -670,7 +676,8 @@ export const PERSON_EDITOR: RowEditor<PersonRowPlace, PersonRowField> = {
     ],
     counts: ["related.businesses.count", "related.addresses.count"],
     ...BUSINESS_LINE_WIRE,
-    addressRole: ["related.addresses.items[].role"],
+    role: ["related.businesses.items[].role"],
+    addressRole: NO_ROLE_WIRE,
   },
   lineNames: {
     head: { long: "Person's name", short: "Name" },
@@ -708,7 +715,8 @@ export const ADDRESS_EDITOR: RowEditor<AddressRowPlace, AddressRowField> = {
   fieldWire: {
     counts: ["related.businesses.count", "related.people.count"],
     ...BUSINESS_LINE_WIRE,
-    personRole: ["related.people.items[].role"],
+    role: ["related.businesses.items[].listed_as"],
+    personRole: NO_ROLE_WIRE,
   },
   lineNames: {
     head: { long: "Address", short: "Address" },

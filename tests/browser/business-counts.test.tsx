@@ -9,7 +9,6 @@ import {
   resolveLook,
   type BusinessSuggestion,
   type LookInput,
-  type RelatedItem,
   type RowLayoutInput,
 } from "@baselayer-sdk/autocomplete";
 import { BusinessAutocompleteView } from "@baselayer-sdk/autocomplete/react";
@@ -17,22 +16,10 @@ import { BusinessAutocompleteView } from "@baselayer-sdk/autocomplete/react";
 import { PRESETS } from "../../site/demo/style-state";
 import { disabledInks } from "../../src/react/disabled";
 import "../../src/react/styles.css";
+import { addressOfBusiness, personOfBusiness } from "./support/related";
 
 // A made-up business with a long name, an address, officers and counts, so a
 // narrow row has to give way.
-const person = (label: string): RelatedItem => ({
-  type: "person",
-  token: `tok-${label}`,
-  label,
-  role: "officer",
-  matched: false,
-  matched_name: null,
-  highlight: null,
-  address: null,
-  states: null,
-  domicile_state: null,
-});
-
 const HARBOR: BusinessSuggestion = {
   type: "business",
   token: "tok-harbor",
@@ -48,20 +35,20 @@ const HARBOR: BusinessSuggestion = {
       count: 12,
       matched: null,
       truncated: false,
-      items: [person("Dana Whitfield"), person("Ines Marlowe")],
+      items: [
+        personOfBusiness("Dana Whitfield", "officer"),
+        personOfBusiness("Ines Marlowe", "officer"),
+      ],
     },
     addresses: {
       count: 34,
       matched: null,
       truncated: false,
       items: [
-        {
-          ...person("x"),
-          type: "address",
-          token: "tok-tallowmere",
-          label: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
-          role: "principal",
-        },
+        addressOfBusiness(
+          "1200 Tallowmere Rd, Pittsburgh, PA 15212",
+          "principal",
+        ),
       ],
     },
   },

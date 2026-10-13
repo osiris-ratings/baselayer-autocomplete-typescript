@@ -5,54 +5,36 @@ import {
   matchedOn,
   orderedStates,
   peopleLineOf,
+  type AddressOfBusiness,
   type BusinessSuggestion,
+  type AddressListing,
+  type PersonRole,
+  type Open,
+  type PersonOfBusiness,
   type RelatedItem,
-  type RelatedRole,
   type RelatedSet,
 } from "@baselayer-sdk/autocomplete";
 
 function person(
   label: string,
-  role: "officer" | "agent",
+  role: Open<PersonRole> | null,
   matched = false,
-): RelatedItem {
-  return {
-    type: "person",
-    token: null,
-    label,
-    role,
-    matched,
-    matched_name: null,
-    highlight: null,
-    address: null,
-    states: null,
-    domicile_state: null,
-  };
+): PersonOfBusiness {
+  return { type: "person", label, role, matched, highlight: null };
 }
 
 function address(
   label: string,
-  role: RelatedRole | null,
+  listed_as: Open<AddressListing> | null,
   matched = false,
-): RelatedItem {
-  return {
-    type: "address",
-    token: null,
-    label,
-    role,
-    matched,
-    matched_name: null,
-    highlight: null,
-    address: null,
-    states: null,
-    domicile_state: null,
-  };
+): AddressOfBusiness {
+  return { type: "address", label, listed_as, matched, highlight: null };
 }
 
-function set(
-  items: RelatedItem[],
-  more: Partial<Pick<RelatedSet, "count" | "matched">> = {},
-): RelatedSet {
+function set<Item extends RelatedItem>(
+  items: Item[],
+  more: Partial<Pick<RelatedSet<Item>, "count" | "matched">> = {},
+): RelatedSet<Item> {
   return {
     count: items.length,
     matched: null,
@@ -170,6 +152,16 @@ describe("matchedOn", () => {
     ]);
   });
 
+  it("names no one a filter matched on a role this build does not know", () => {
+    const row = withRelated({
+      people: set([person("Mara Okafor", "director", true)], {
+        count: 8,
+        matched: 1,
+      }),
+    });
+    expect(matchedOn(row, {})).toEqual([]);
+  });
+
   it("lists officers before agents and leaves the total unsaid when both matched", () => {
     const row = withRelated({
       people: set(
@@ -223,12 +215,15 @@ describe("matchedOn", () => {
 
   it.each([
     ["officer", "officer"],
-    ["agent", "agent"],
+    // The agent's office is the registered agent's, which the line calls `agent`.
+    ["registered_office", "agent"],
     ["principal", "principal"],
     // The family's own mailing address is its own filing too.
     ["mailing", "principal"],
+    // A way of filing this build does not know says whose it is of nobody.
+    ["head_office", null],
     [null, null],
-  ] as const)("reads an address role of %s as %s", (wire, owner) => {
+  ] as const)("reads an address filed as %s as %s", (wire, owner) => {
     const row = withRelated({
       addresses: set([address("12 Kestrelwick Rd", wire, true)], {
         matched: 1,

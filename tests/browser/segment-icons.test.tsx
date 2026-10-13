@@ -10,7 +10,6 @@ import type {
   PersonIconSegment,
   PersonRowLayoutInput,
   PersonSuggestion,
-  RelatedItem,
 } from "@baselayer-sdk/autocomplete";
 import {
   BusinessAutocompleteView,
@@ -18,31 +17,20 @@ import {
 } from "@baselayer-sdk/autocomplete/react";
 
 import "../../src/react/styles.css";
+import {
+  addressOfBusiness,
+  businessOfPerson,
+  personOfBusiness,
+  relatedAddress,
+  relatedSet as set,
+} from "./support/related";
 
 // Made-up businesses, people and addresses.
-const related = (
-  type: RelatedItem["type"],
-  label: string,
-  role: RelatedItem["role"],
-): RelatedItem => ({
-  type,
-  token: `tok-${label}`,
-  label,
-  role,
-  matched: false,
-  matched_name: null,
-  highlight: null,
-  address: type === "business" ? "1200 Tallowmere Rd, Pittsburgh, PA" : null,
-  states: type === "business" ? ["PA"] : null,
-  domicile_state: type === "business" ? "PA" : null,
-});
-
-const set = (items: RelatedItem[]) => ({
-  count: items.length,
-  matched: null,
-  truncated: false,
-  items,
-});
+const lead = {
+  address: "1200 Tallowmere Rd, Pittsburgh, PA",
+  states: ["PA"],
+  domicile_state: "PA",
+};
 
 const HARBOR: BusinessSuggestion = {
   type: "business",
@@ -56,11 +44,11 @@ const HARBOR: BusinessSuggestion = {
   highlight: [{ text: "HARBOR CONCRETE PUMPING CO., INC.", matched: false }],
   related: {
     people: set([
-      related("person", "Dana Whitfield", "officer"),
-      related("person", "Meridian Registered Agents, LLC", "agent"),
+      personOfBusiness("Dana Whitfield", "officer"),
+      personOfBusiness("Meridian Registered Agents, LLC", "agent"),
     ]),
     addresses: set([
-      related("address", "PO Box 4410, Pittsburgh, PA 15212", "mailing"),
+      addressOfBusiness("PO Box 4410, Pittsburgh, PA 15212", "mailing"),
     ]),
   },
 };
@@ -69,16 +57,14 @@ const DANA: PersonSuggestion = {
   type: "person",
   token: "tok-dana",
   label: "Dana Whitfield",
-  matched_name: null,
   match: "strong",
+  states: ["PA"],
   highlight: [],
   related: {
     businesses: set([
-      related("business", "HARBOR CONCRETE PUMPING CO., INC.", "officer"),
+      businessOfPerson("HARBOR CONCRETE PUMPING CO., INC.", "officer", lead),
     ]),
-    addresses: set([
-      related("address", "48 Wrenmoor St, Pittsburgh, PA 15206", "officer"),
-    ]),
+    addresses: set([relatedAddress("48 Wrenmoor St, Pittsburgh, PA 15206")]),
   },
 };
 

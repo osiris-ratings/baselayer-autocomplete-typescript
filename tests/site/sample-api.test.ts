@@ -6,8 +6,10 @@ import { build } from "vite";
 import { describe, expect, it } from "vitest";
 
 import {
+  parseErrorEnvelope,
   parseMintResponse,
   parseSuggestResponse,
+  validationErrors,
 } from "@baselayer-sdk/autocomplete";
 
 import { readClaims } from "../../site/demo/credentials";
@@ -83,6 +85,186 @@ describe("the made-up API's mint", () => {
 
   it("refuses a mint without a key", () => {
     expect(mint(ALL, "").status).toBe(401);
+  });
+});
+
+/** The keys of an object, sorted, as the wire spells them. */
+const keys = (value: unknown): string[] =>
+  Object.keys(value as Record<string, unknown>).sort();
+
+const RELATED_SET = ["count", "items", "matched", "truncated"];
+const LISTED = ["highlight", "label", "matched", "type"];
+const RELATED_BUSINESS = [
+  "address",
+  "domicile_state",
+  "highlight",
+  "label",
+  "matched",
+  "matched_name",
+  "states",
+  "token",
+  "type",
+];
+
+describe("the made-up API's answers, in the contract's shape", () => {
+  type Body = {
+    suggestions: {
+      related: Record<string, { items: unknown[] }>;
+      components: unknown;
+    }[];
+  };
+  const body = (path: string): Body => get(path).body as Body;
+
+  it("answers a business row with every key, the nullable ones null, and a person or an address listed under it with its role", () => {
+    const reply = get(
+      "/autocomplete/businesses?q=harbor%20concrete%20pum&limit=1",
+    );
+    const answer = reply.body as Body & Record<string, unknown>;
+    const [row] = answer.suggestions;
+
+    expect(keys(answer)).toEqual([
+      "found",
+      "found_capped",
+      "query",
+      "sources",
+      "suggestions",
+      "truncated",
+    ]);
+    expect(answer["truncated"]).toBe(false);
+    expect(keys(row)).toEqual([
+      "domicile_state",
+      "highlight",
+      "label",
+      "match",
+      "matched_name",
+      "related",
+      "states",
+      "structure",
+      "token",
+      "type",
+    ]);
+    expect(row).toMatchObject({ type: "business", matched_name: null });
+    expect(keys(row!.related)).toEqual(["addresses", "people"]);
+    for (const relation of Object.values(row!.related)) {
+      expect(keys(relation)).toEqual(RELATED_SET);
+    }
+    expect(keys(row!.related["people"]!.items[0])).toEqual([
+      "highlight",
+      "label",
+      "matched",
+      "role",
+      "type",
+    ]);
+    expect(keys(row!.related["addresses"]!.items[0])).toEqual([
+      "highlight",
+      "label",
+      "listed_as",
+      "matched",
+      "type",
+    ]);
+    // The SDK reads it whole.
+    expect(
+      parseSuggestResponse("businesses", reply.body).suggestions,
+    ).toHaveLength(1);
+  });
+
+  it("answers a person row with the states of their businesses, no other name that matched, and no token on what is listed under it", () => {
+    const answer = body(
+      "/autocomplete/people?q=dana%20whit&include=businesses,addresses",
+    );
+    const [row] = answer.suggestions;
+
+    expect(keys(row)).toEqual([
+      "highlight",
+      "label",
+      "match",
+      "related",
+      "states",
+      "token",
+      "type",
+    ]);
+    expect(row).toMatchObject({
+      type: "person",
+      states: ["AZ", "CA", "MD", "NJ", "NV", "NY", "OH", "OR", "PA", "WV"],
+    });
+    expect(keys(row!.related)).toEqual(["addresses", "businesses"]);
+    expect(keys(row!.related["businesses"]!.items[0])).toEqual(
+      ["role", ...RELATED_BUSINESS].sort(),
+    );
+    expect(keys(row!.related["addresses"]!.items[0])).toEqual(LISTED);
+  });
+
+  it("answers an address row with every part, null where it has none, and no token on the people listed under it", () => {
+    const answer = body(
+      "/autocomplete/addresses?q=1200%20tall&include=businesses,people",
+    );
+    const [row] = answer.suggestions;
+
+    expect(keys(row)).toEqual([
+      "components",
+      "highlight",
+      "label",
+      "match",
+      "related",
+      "token",
+      "type",
+    ]);
+    expect(row!.components).toEqual({
+      line1: "1200 Tallowmere Rd",
+      line2: null,
+      city: "Pittsburgh",
+      state: "PA",
+      postal_code: "15212",
+    });
+    expect(keys(row!.related["businesses"]!.items[0])).toEqual(
+      ["listed_as", ...RELATED_BUSINESS].sort(),
+    );
+    expect(keys(row!.related["people"]!.items[0])).toEqual(LISTED);
+  });
+
+  it("answers a relation nobody asked for as not requested, empty", () => {
+    const [row] = body(
+      "/autocomplete/people?q=dana&include=businesses",
+    ).suggestions;
+
+    expect(row!.related["addresses"]).toEqual({
+      count: null,
+      matched: null,
+      truncated: false,
+      items: [],
+    });
+  });
+
+  it("refuses a query too short in the catalog's envelope, naming the parameter", () => {
+    const reply = get("/autocomplete/people?q=d");
+
+    expect(reply.status).toBe(422);
+    expect(reply.body).toEqual({
+      code: 422,
+      message: "The request is invalid.",
+      uri: null,
+      metadata: {
+        reason: "request_invalid",
+        errors: [
+          {
+            type: "too_short",
+            loc: ["query", "q"],
+            msg: "q is too short",
+            ctx: {},
+          },
+        ],
+      },
+    });
+    // The SDK reads the parameter it names.
+    const envelope = parseErrorEnvelope(reply.body);
+    expect(envelope && validationErrors(envelope)).toEqual([
+      {
+        type: "too_short",
+        loc: ["query", "q"],
+        msg: "q is too short",
+        ctx: {},
+      },
+    ]);
   });
 });
 
@@ -385,7 +567,7 @@ describe("the made-up API's business search", () => {
     const supply = dana.related.businesses.items.find(
       item => item.label === "HARBOR CONCRETE SUPPLY, INC.",
     )!;
-    const found = parseSearch(search(supply.token!).body);
+    const found = parseSearch(search(supply.token).body);
 
     expect(found?.name).toBe("HARBOR CONCRETE SUPPLY, INC.");
     expect(found?.officer_names).toEqual(["DANA WHITFIELD"]);
@@ -400,7 +582,7 @@ describe("the made-up API's business search", () => {
     )!;
     const [northshore] = meridian.related.businesses.items;
 
-    expect(parseSearch(search(northshore!.token!).body)?.officer_names).toBe(
+    expect(parseSearch(search(northshore!.token).body)?.officer_names).toBe(
       undefined,
     );
   });
@@ -410,7 +592,7 @@ describe("the made-up API's business search", () => {
       row => row.components.city === "Dover",
     )!;
     const [northshore] = office.related.businesses.items;
-    const found = parseSearch(search(northshore!.token!).body);
+    const found = parseSearch(search(northshore!.token).body);
 
     expect(found?.name).toBe("NORTHSHORE PUMPING, LLC");
     expect(found?.address).toBe("77 QUILLFEATHER LN STE 300, DOVER, DE 19904");

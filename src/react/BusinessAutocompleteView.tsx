@@ -16,7 +16,6 @@ import {
   type BusinessRowLayoutInput,
   type EntityPick,
   type EntityType,
-  type RelatedRole,
   type GroupedOption,
   type Include,
   type Look,
@@ -47,6 +46,7 @@ import { resolveMessages, type AutocompleteMessages } from "./messages";
 import type { GroupedSelection } from "./selection";
 import { useSuggestionCombobox } from "./useBusinessCombobox";
 import { NO_FILL_ATTRIBUTES } from "./inputAttributes";
+import { roleLabel, roleOf } from "./roles";
 import {
   StateSquares,
   classes,
@@ -205,7 +205,7 @@ interface DefaultRowProps {
 type IconOf = (
   segment: BusinessIconSegment,
   entity: EntityType,
-  role: RelatedRole | null,
+  role: string | null,
 ) => ReactNode;
 
 /**
@@ -311,7 +311,7 @@ function DefaultRow({
             {iconOf(
               "address",
               "address",
-              item.related.addresses.items[0]?.role ?? null,
+              item.related.addresses.items[0]?.listed_as ?? null,
             )}
             {relatedMark(
               address.label,
@@ -612,11 +612,12 @@ export function BusinessAutocompleteView({
   /** A field of a line under a business, as drawn in `place`. */
   const lineField = (place: string, related: RelatedItem): ReactNode => {
     const name = rowLayout[place] ?? null;
-    if (name === null || related.role === null) return null;
-    const role =
-      name === "addressRole"
-        ? text.addressRoles[related.role]
-        : text.personRoles[related.role];
+    const held = roleOf(related);
+    if (name === null || held === null) return null;
+    const role = roleLabel(
+      name === "addressRole" ? text.addressRoles : text.personRoles,
+      held,
+    );
     return (
       <span
         className={cx("role", "bl-ac-role")}
@@ -661,7 +662,7 @@ export function BusinessAutocompleteView({
           {iconOf(
             line === "person" ? "personName" : "addressName",
             related.type,
-            related.role,
+            roleOf(related),
           )}
           <span className={cx("lineName", "bl-ac-line-name")}>
             {related.label}
@@ -686,13 +687,17 @@ export function BusinessAutocompleteView({
     menu,
     rowLines.flatMap(lines =>
       lines.lists.flatMap(list =>
-        list.lines.map(({ item: related }) =>
-          related.role === null
+        list.lines.map(({ item: related }) => {
+          const held = roleOf(related);
+          return held === null
             ? null
-            : list.relation === "addresses"
-              ? text.addressRoles[related.role]
-              : text.personRoles[related.role],
-        ),
+            : roleLabel(
+                list.relation === "addresses"
+                  ? text.addressRoles
+                  : text.personRoles,
+                held,
+              );
+        }),
       ),
     ),
     menuVisible,

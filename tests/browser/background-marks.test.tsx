@@ -5,8 +5,8 @@ import { describe, expect, it } from "vitest";
 import {
   DEFAULT_LOOK,
   type BusinessSuggestion,
+  type BusinessOfPerson,
   type PersonSuggestion,
-  type RelatedItem,
 } from "@baselayer-sdk/autocomplete";
 import {
   BusinessAutocompleteView,
@@ -14,6 +14,11 @@ import {
 } from "@baselayer-sdk/autocomplete/react";
 
 import "../../src/react/styles.css";
+import {
+  addressOfBusiness,
+  businessOfPerson,
+  personOfBusiness,
+} from "./support/related";
 
 // The background emphasis lays its fill a little past the marked letters, so
 // they don't touch its rounded ends. A mark at the start or the end of a
@@ -40,23 +45,6 @@ const common = {
   look,
 };
 
-const item = (
-  type: RelatedItem["type"],
-  label: string,
-  role: RelatedItem["role"],
-): RelatedItem => ({
-  type,
-  token: `tok-${label}`,
-  label,
-  role,
-  matched: true,
-  matched_name: null,
-  highlight: null,
-  address: null,
-  states: null,
-  domicile_state: null,
-});
-
 // Matched on its name's first word, and through an officer and an address,
 // which a business row marks whole.
 const ROW: BusinessSuggestion = {
@@ -77,14 +65,20 @@ const ROW: BusinessSuggestion = {
       count: 1,
       matched: 1,
       truncated: false,
-      items: [item("person", "Priya Raman", "officer")],
+      items: [personOfBusiness("Priya Raman", "officer", { matched: true })],
     },
     addresses: {
       count: 1,
       matched: 1,
       truncated: false,
       items: [
-        item("address", "2210 Pellington Hwy, Baltimore, MD 21230", "officer"),
+        addressOfBusiness(
+          "2210 Pellington Hwy, Baltimore, MD 21230",
+          "officer",
+          {
+            matched: true,
+          },
+        ),
       ],
     },
   },
@@ -94,8 +88,8 @@ const DANA: PersonSuggestion = {
   type: "person",
   token: "tok-dana",
   label: "Dana Whitfield",
-  matched_name: null,
   match: "strong",
+  states: ["OH", "PA"],
   highlight: [
     { text: "Dana", matched: true },
     { text: " Whitfield", matched: false },
@@ -107,7 +101,9 @@ const DANA: PersonSuggestion = {
       truncated: false,
       items: [
         {
-          ...item("business", "HARBOR LANE HOLDINGS LLC", "officer"),
+          ...businessOfPerson("HARBOR LANE HOLDINGS LLC", "officer", {
+            matched: true,
+          }),
           highlight: [
             { text: "HARBOR", matched: true },
             { text: " LANE HOLDINGS LLC", matched: false },
@@ -116,7 +112,9 @@ const DANA: PersonSuggestion = {
           domicile_state: "PA",
         },
         {
-          ...item("business", "NORTHSHORE PUMPING, LLC", "officer"),
+          ...businessOfPerson("NORTHSHORE PUMPING, LLC", "officer", {
+            matched: true,
+          }),
           matched_name: "HARBOR PUMPS",
           highlight: [
             { text: "HARBOR", matched: true },
@@ -275,7 +273,7 @@ describe("making room for the fill", () => {
   function letters(
     field: string,
     matchEmphasis: "background" | "underline",
-    business: Partial<RelatedItem>,
+    business: Partial<BusinessOfPerson>,
     { width = 560, layout = {} }: { width?: number; layout?: object } = {},
   ) {
     const host = document.createElement("div");

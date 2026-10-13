@@ -152,8 +152,8 @@ const PERSON: PersonSuggestion = {
   type: "person",
   token: "tok-p-1",
   label: "Margarethe Whitfield",
-  matched_name: null,
   match: "strong",
+  states: [],
   highlight: [
     { text: "Margarethe", matched: true },
     { text: " Whitfield", matched: false },

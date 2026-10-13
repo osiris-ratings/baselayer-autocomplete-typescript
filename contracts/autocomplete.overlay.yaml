@@ -30,6 +30,8 @@ actions:
           | [`GET /autocomplete/addresses`](#autocomplete-addresses) | The browser | `X-Autocomplete-Session` |
 
           Every route answers JSON. The mint takes an optional body, a `scope` that narrows what the session may search; the search takes none. Your API key is an application's key from Baselayer, with the `autocomplete.read` permission.
+
+          Each route answers its own entity, so a row and everything it lists carries a fixed `type`: `business`, `person` or `address`. The enums that describe a row (`match`, `structure`, `role`, `listed_as` and a source's `status`) are open: a value you do not know is not an error. Treat it as "other", and show it as it came.
       tags:
         - name: Sessions
         - name: Businesses
@@ -38,7 +40,7 @@ actions:
         - name: Errors
           x-traitTag: true
           description: |
-            Every refusal carries a `code`, a `message` a person can read, and `metadata` a program can act on. On the autocomplete service, `metadata.reason` names the refusal and `metadata.action` says whether to `mint` or `retry`. A 422 carries `{ "detail": [{ "type", "loc", "msg", "ctx" }] }` instead.
+            Every refusal carries a `code`, a `message` a person can read, and `metadata` a program can act on. On the autocomplete service, `metadata.reason` names the refusal and `metadata.action` says whether to `mint` or `retry`. A 422 from the autocomplete routes names each parameter that failed in `metadata.errors`, one `{ "type", "loc", "msg", "ctx" }` for each, under `metadata.reason` `request_invalid`. `POST /autocomplete/sessions` answers a 422 as `{ "detail": [{ "type", "loc", "msg", "ctx" }] }` instead.
 
             | Status | Code | Reason | What to do |
             | --- | --- | --- | --- |
@@ -50,7 +52,7 @@ actions:
             | 429 | 480 | `session_budget_spent` | Mint, then replay. |
             | 429 | 482 | `session_pivots_exceeded` | Mint, then replay. |
             | 429 | 429 | `rate_limited` | Wait `Retry-After` seconds, then replay. |
-            | 422 | | | Fix the request; retrying will not help. |
+            | 422 | 422 | `request_invalid` | Fix the request; retrying will not help. `metadata.errors` names each parameter that failed. |
             | 503 | 503 | | Wait `Retry-After` (30 s while no index is served, 1 s when the workers are busy), then try again. |
             | 504 | | | The request took longer than 10 seconds; let the next keystroke try again. |
 
@@ -281,8 +283,8 @@ actions:
                             truncated: true
                             items:
                               - type: person
-                                token: AwGCjUrMDqXaypeR5o…
                                 label: DANA WHITFIELD
+                                highlight: null
                                 role: officer
                                 matched: false
                           addresses:
@@ -291,9 +293,9 @@ actions:
                             truncated: true
                             items:
                               - type: address
-                                token: A2leF7_gomJWvMMtp4…
                                 label: 1200 Tallowmere Rd, Pittsburgh, PA 15212
-                                role: principal
+                                highlight: null
+                                listed_as: principal
                                 matched: false
                         highlight:
                           - { text: HARBOR CONCRETE, matched: true }
@@ -323,11 +325,16 @@ actions:
                 filters:
                   summary: A filter before `filter_min_stem`
                   value:
-                    detail:
-                      - type: string_too_short
-                        loc: [query, q]
-                        msg: Filters need a query of at least 5 characters
-                        ctx: { min_length: 5, with: filters }
+                    code: 422
+                    message: The request is invalid.
+                    uri: null
+                    metadata:
+                      reason: request_invalid
+                      errors:
+                        - type: string_too_short
+                          loc: [query, q]
+                          msg: Filters need a query of at least 5 characters
+                          ctx: { min_length: 5, with: filters }
         "429":
           description: >-
             Code 480, the session's request budget is spent; code 482, it
@@ -387,7 +394,7 @@ actions:
       description: |
         The people a typed name fits, best first, each with the businesses they hold a role on. A business under a person is what a pick spends: its `token` is a `business_token` that `POST /searches` redeems, sealed with the person it was reached through. The person's own `token` is redeemed nowhere.
 
-        `related.businesses.count` is every business the person holds a role on; `items` is the first five, and an item's `role` is `officer` or `agent`. `business.state` keeps the people with a business in any of those states, and marks those businesses `matched`. Each parameter may appear once, and the session's scope must list the route, and the `businesses` or `addresses` relation for whatever touches it.
+        `related.businesses.count` is every business the person holds a role on; `items` is the first five, and an item's `role` is the role they hold there, `officer` or `agent`. `states` lists the states of those businesses. `business.state` keeps the people with a business in any of those states, and marks those businesses `matched`. Each parameter may appear once, and the session's scope must list the route, and the `businesses` or `addresses` relation for whatever touches it.
 
         The route answers CORS as the businesses route does, and counts against the session's `request_budget` on its own.
       parameters:
@@ -416,8 +423,8 @@ actions:
                       - type: person
                         token: AwGCjUrMDqXaypeR5o…
                         label: Dana Whitfield
-                        matched_name: null
                         match: strong
+                        states: [MD, NY, OH, PA, WV]
                         related:
                           businesses:
                             count: 7
@@ -427,6 +434,11 @@ actions:
                               - type: business
                                 token: A4uYMdTtN1PuVsmNF8…
                                 label: HARBOR CONCRETE PUMPING CO., INC.
+                                matched_name: null
+                                highlight: null
+                                address: 1200 Tallowmere Rd, Pittsburgh, PA 15212
+                                states: [MD, NY, OH, PA, WV]
+                                domicile_state: PA
                                 role: officer
                                 matched: false
                           addresses:
@@ -464,7 +476,7 @@ actions:
       description: |
         The addresses typed text fits, those with the most businesses first, each with the businesses filed there. A business under an address is what a pick spends: its `token` is a `business_token` that `POST /searches` redeems, pinned to that address. The address's own `token` is redeemed nowhere.
 
-        `related.businesses.count` is every business filed at the address, the exact address, suite included; `items` is the first five, those filed there as their principal or mailing address first, each with its `role` there. `state` keeps the addresses in any of those states. Each parameter may appear once, and the session's scope must list the route, and the `businesses` or `people` relation for whatever `include` asks for.
+        `related.businesses.count` is every business filed at the address, the exact address, suite included; `items` is the first five, those filed there as their principal or mailing address first, each with its `listed_as` there: `principal`, `mailing`, `registered_office` (the office of its registered agent) or `officer`. `state` keeps the addresses in any of those states. Each parameter may appear once, and the session's scope must list the route, and the `businesses` or `people` relation for whatever `include` asks for.
 
         The route answers CORS as the businesses route does, and counts against the session's `request_budget` on its own.
       parameters:
@@ -493,7 +505,6 @@ actions:
                       - type: address
                         token: A2leF7_gomJWvMMtp4…
                         label: 1200 Tallowmere Rd, Pittsburgh, PA 15212
-                        matched_name: null
                         match: strong
                         components:
                           line1: 1200 Tallowmere Rd
@@ -510,11 +521,13 @@ actions:
                               - type: business
                                 token: A4uYMdTtN1PuVsmNF8…
                                 label: HARBOR CONCRETE PUMPING CO., INC.
-                                role: principal
-                                matched: false
+                                matched_name: null
+                                highlight: null
                                 address: 1200 Tallowmere Rd, Pittsburgh, PA 15212
                                 states: [MD, NY, OH, PA, WV]
                                 domicile_state: PA
+                                listed_as: principal
+                                matched: false
                           people:
                             count: null
                             matched: null

@@ -5,31 +5,25 @@ import { describe, expect, it } from "vitest";
 
 import type {
   AddressSuggestion,
-  RelatedItem,
+  AddressListing,
 } from "@baselayer-sdk/autocomplete";
 import { AddressAutocompleteView } from "@baselayer-sdk/autocomplete/react";
 
 import "../../src/react/styles.css";
+import { businessOfAddress, relatedSet } from "./support/related";
 
 // A made-up address its businesses hold as an agent's office and a principal one.
-const business = (label: string, role: RelatedItem["role"]): RelatedItem => ({
-  type: "business",
-  token: `tok-${label}`,
-  label,
-  role,
-  matched: false,
-  matched_name: null,
-  highlight: null,
-  address: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
-  states: ["OR", "WA"],
-  domicile_state: "OR",
-});
+const business = (label: string, listedAs: AddressListing) =>
+  businessOfAddress(label, listedAs, {
+    address: "1200 Tallowmere Rd, Pittsburgh, PA 15212",
+    states: ["OR", "WA"],
+    domicile_state: "OR",
+  });
 
 const ANSWER: AddressSuggestion = {
   type: "address",
   token: "tok-quill",
   label: "77 QUILLBACK LN, FARRELTON, OR 97433",
-  matched_name: null,
   match: "strong",
   highlight: [],
   components: {
@@ -40,16 +34,11 @@ const ANSWER: AddressSuggestion = {
     postal_code: "97433",
   },
   related: {
-    businesses: {
-      count: 3,
-      matched: null,
-      truncated: false,
-      items: [
-        business("QUILLBACK HOLDINGS 1, LLC", "agent"),
-        business("QUILLBACK HOLDINGS 2, LLC", "principal"),
-        business("QUILLBACK HOLDINGS 3, LLC", "agent"),
-      ],
-    },
+    businesses: relatedSet([
+      business("QUILLBACK HOLDINGS 1, LLC", "registered_office"),
+      business("QUILLBACK HOLDINGS 2, LLC", "principal"),
+      business("QUILLBACK HOLDINGS 3, LLC", "registered_office"),
+    ]),
     people: { count: null, matched: null, truncated: false, items: [] },
   },
 };

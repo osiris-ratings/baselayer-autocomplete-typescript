@@ -1,6 +1,3 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-
 import { describe, expect, it } from "vitest";
 
 import {
@@ -8,10 +5,18 @@ import {
   ContractViolation,
   parseBusinessesResponse,
   parseErrorEnvelope,
+  parseSuggestResponse,
+  validationErrors,
+  type AddressSuggestion,
   type BusinessSuggestion,
+  type ErrorEnvelope,
+  type PersonSuggestion,
 } from "@baselayer-sdk/autocomplete";
 
 import { firstValidationMessage } from "../../src/core/wire";
+
+import { faultsAgainst, schemaNamed } from "./fixtures/contract";
+import { golden, type GoldenName } from "./fixtures/golden";
 
 // The wire shape of `GET /autocomplete/businesses` as the autocomplete service
 // serves it today: every key present, nulls spelled out.
@@ -32,15 +37,10 @@ const suggestion = {
       items: [
         {
           type: "person",
-          token: null,
           label: "Wesley Crane",
           role: "officer",
           matched: true,
-          matched_name: null,
           highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
         },
       ],
     },
@@ -51,15 +51,10 @@ const suggestion = {
       items: [
         {
           type: "address",
-          token: "tok-7f1a2c3d",
           label: "1200 TIDECASTER RD FL 3, OAKLAND, CA 94606",
-          role: "principal",
+          listed_as: "principal",
           matched: false,
-          matched_name: null,
           highlight: null,
-          address: null,
-          states: null,
-          domicile_state: null,
         },
       ],
     },
@@ -71,11 +66,50 @@ const response = {
   query: "cind",
   found: 0,
   found_capped: true,
+  truncated: false,
   sources: {
     people: { status: "ok" },
     addresses: { status: "ok" },
   },
   suggestions: [],
+};
+
+/** A business listed under a person or an address, which `POST /searches` redeems. */
+const relatedBusiness = {
+  type: "business",
+  token: "tok-cinder-rigging",
+  label: "CINDER RIGGING, INC.",
+  matched: false,
+  matched_name: null,
+  highlight: null,
+  address: "1200 Tidecaster Rd, Oakland, CA 94606",
+  states: ["CA", "DE"],
+  domicile_state: "DE",
+};
+
+const businessOfPerson = { ...relatedBusiness, role: "officer" };
+
+const businessOfAddress = {
+  ...relatedBusiness,
+  listed_as: "registered_office",
+};
+
+const person = {
+  type: "person",
+  token: "tok-wesley-crane",
+  label: "Wesley Crane",
+  match: "exact",
+  states: ["CA", "DE"],
+  highlight: [{ text: "Wesley Crane", matched: true }],
+  related: {
+    businesses: {
+      count: 1,
+      matched: null,
+      truncated: false,
+      items: [businessOfPerson],
+    },
+    addresses: { count: 0, matched: null, truncated: false, items: [] },
+  },
 };
 
 /**
@@ -93,22 +127,76 @@ function parseSuggestion(value: unknown): BusinessSuggestion {
   return parsed;
 }
 
+function parsePerson(value: unknown): PersonSuggestion {
+  const [parsed] = parseSuggestResponse("people", {
+    ...response,
+    sources: { businesses: { status: "ok" }, addresses: { status: "ok" } },
+    suggestions: [value],
+  }).suggestions;
+  if (parsed === undefined) {
+    throw new Error("the response parsed without its suggestion");
+  }
+  return parsed;
+}
+
+function parseAddress(value: unknown): AddressSuggestion {
+  const [parsed] = parseSuggestResponse("addresses", {
+    ...response,
+    sources: { businesses: { status: "ok" }, people: { status: "ok" } },
+    suggestions: [value],
+  }).suggestions;
+  if (parsed === undefined) {
+    throw new Error("the response parsed without its suggestion");
+  }
+  return parsed;
+}
+
+/** `body` with the key at `path` taken out. */
+function without(body: unknown, path: (string | number)[]): unknown {
+  const copy = structuredClone(body);
+  let at = copy as Record<string | number, unknown>;
+  for (const step of path.slice(0, -1)) {
+    at = at[step] as Record<string | number, unknown>;
+  }
+  delete at[path[path.length - 1]!];
+  return copy;
+}
+
+function pathOf(steps: (string | number)[]): string {
+  return steps.reduce<string>(
+    (path, step) =>
+      typeof step === "number" ? `${path}[${step}]` : `${path}.${step}`,
+    "response",
+  );
+}
+
 describe("a business suggestion", () => {
   it("parses today's wire shape", () => {
     expect(parseSuggestion(suggestion)).toEqual(suggestion);
     expect(
-      parseBusinessesResponse({
-        ...response,
-        truncated: false,
-        suggestions: [suggestion],
-      }),
-    ).toEqual({ ...response, truncated: false, suggestions: [suggestion] });
+      parseBusinessesResponse({ ...response, suggestions: [suggestion] }),
+    ).toEqual({ ...response, suggestions: [suggestion] });
   });
 
-  it("refuses a related type, a grade or a status it has never seen", () => {
-    // Every closed value is a typed union: the SDK learns a value before the
-    // autocomplete service sends it, so one it does not know is a contract
-    // error, never a value the types say cannot exist.
+  it("is the shape the vendored contract describes", () => {
+    // The fixtures above are hand-written: held to the contract itself, so
+    // the tests that read them are not reading a shape the service never sends.
+    expect(
+      faultsAgainst(schemaNamed("BusinessSuggestion"), suggestion),
+    ).toEqual([]);
+    expect(faultsAgainst(schemaNamed("PersonSuggestion"), person)).toEqual([]);
+    expect(
+      faultsAgainst(schemaNamed("BusinessesResponse"), {
+        ...response,
+        suggestions: [suggestion],
+      }),
+    ).toEqual([]);
+  });
+
+  it("refuses a related item of a type it has never seen", () => {
+    // `type` is the one value that stays closed: a relation holds the one
+    // entity it is for, and a client tells the entities apart by it. An
+    // unknown `match` or `status` is another matter (see `wire-enums`).
     const grown = {
       ...suggestion,
       related: {
@@ -120,136 +208,151 @@ describe("a business suggestion", () => {
           items: [
             {
               type: "parcel",
-              token: "tok-8f1a2c3d",
               label: "PARCEL 12-004-118",
-              role: null,
               matched: false,
+              highlight: null,
             },
           ],
         },
       },
     };
 
-    expect(() => parseSuggestion(grown)).toThrow(ContractViolation);
-    expect(() => parseSuggestion({ ...suggestion, match: "fuzzy" })).toThrow(
-      ContractViolation,
+    expect(() => parseSuggestion(grown)).toThrow(
+      'response.suggestions[0].related.addresses.items[0].type: expected "address"',
     );
-    expect(() =>
-      parseBusinessesResponse({
-        ...response,
-        sources: { ...response.sources, addresses: { status: "degraded" } },
-      }),
-    ).toThrow(ContractViolation);
   });
 
-  it("reads an absent optional key as null, as the published contract allows", () => {
-    // `openapi.json` leaves `matched_name`, `RelatedItem.token`, `role`,
-    // `RelatedSet.count` and `matched` out of `required`. The autocomplete
-    // service spells them as null today; a build that omits them instead is
-    // still on contract.
-    const withoutMatchedName: Partial<typeof suggestion> = { ...suggestion };
-    delete withoutMatchedName.matched_name;
-    const sparse = {
-      ...withoutMatchedName,
+  it("reads an absent role as null, as the published contract allows", () => {
+    // `role` and `listed_as` are the keys the contract leaves out of
+    // `required`: the service sends them only where the filing names a role.
+    expect(schemaNamed("RelatedPerson").required).not.toContain("role");
+    expect(schemaNamed("RelatedAddress").required).not.toContain("listed_as");
+    expect(schemaNamed("RelatedBusiness").required).not.toContain("role");
+    expect(schemaNamed("RelatedBusiness").required).not.toContain("listed_as");
+    const person = { ...suggestion.related.people.items[0] };
+    delete (person as { role?: unknown }).role;
+    const address = { ...suggestion.related.addresses.items[0] };
+    delete (address as { listed_as?: unknown }).listed_as;
+
+    const parsed = parseSuggestion({
+      ...suggestion,
       related: {
-        people: {
-          truncated: false,
-          items: [{ type: "person", label: "Wesley Crane", matched: true }],
-        },
-        addresses: { truncated: false, items: [] },
+        people: { ...suggestion.related.people, items: [person] },
+        addresses: { ...suggestion.related.addresses, items: [address] },
       },
-    };
+    });
 
-    const parsed = parseSuggestion(sparse);
+    expect(parsed.related.people.items[0]?.role).toBeNull();
+    expect(parsed.related.addresses.items[0]?.listed_as).toBeNull();
+  });
 
-    expect(parsed.matched_name).toBeNull();
-    expect(parsed.related.people.count).toBeNull();
-    expect(parsed.related.people.matched).toBeNull();
-    expect(parsed.related.people.items[0]?.token).toBeNull();
+  it("reads a role the service sent as null the same", () => {
+    const parsed = parseSuggestion({
+      ...suggestion,
+      related: {
+        ...suggestion.related,
+        people: {
+          ...suggestion.related.people,
+          items: [{ ...suggestion.related.people.items[0], role: null }],
+        },
+      },
+    });
+
     expect(parsed.related.people.items[0]?.role).toBeNull();
   });
 
-  it("takes a related item's handle as the opaque string it is", () => {
+  it("takes a related business's handle as the opaque string it is", () => {
     // It used to be a uuid and the schema said so; a sealed handle is 94
     // base64url characters and nothing about it should have to parse.
     const handle =
       "AwICAgICAgICAgICAgTWyUlKV8H908y8yFynwrKjtdHv67GNcd2H4Pt4-3R_dX8eN20E6j1HG_3f6xiVVArRqtWIzh89LQ";
     const tokened = {
-      ...suggestion,
+      ...person,
       related: {
-        ...suggestion.related,
-        addresses: {
-          count: 1,
-          matched: null,
-          truncated: false,
-          items: [
-            {
-              type: "address",
-              token: handle,
-              label: "412 Wrenmoor Ln, Springfield, MO 65806",
-              role: "principal",
-              matched: false,
-            },
-          ],
+        ...person.related,
+        businesses: {
+          ...person.related.businesses,
+          items: [{ ...businessOfPerson, token: handle }],
         },
       },
     };
 
-    const parsed = parseSuggestion(tokened);
+    const parsed = parsePerson(tokened);
 
-    expect(parsed.related.addresses.items[0]?.token).toBe(handle);
+    expect(parsed.related.businesses.items[0]?.token).toBe(handle);
   });
 
-  it("drops a raw id a rolled-back autocomplete service still sends, and reads no handle", () => {
+  it("drops a raw id a rolled-back autocomplete service still sends", () => {
     // The version-skew tripwire, which needs an `id` fed IN to mean anything:
     // asserting `not.toHaveProperty("id")` on a fixture that never had one
     // passes under any parser that drops unknown keys.
-    // 0.5.0 of the autocomplete service served `id` and no `token`; this is
-    // that wire shape.
-    const rolledBack = {
-      ...suggestion,
+    const stray = {
+      ...person,
       related: {
-        ...suggestion.related,
-        addresses: {
-          count: 1,
-          matched: null,
-          truncated: false,
+        ...person.related,
+        businesses: {
+          ...person.related.businesses,
           items: [
-            {
-              type: "address",
-              id: "7f1a2c3d-4e5f-4a0c-9c0e-0d3b2b6e2b7e",
-              label: "412 Wrenmoor Ln, Springfield, MO 65806",
-              role: "principal",
-              matched: false,
-            },
+            { ...businessOfPerson, id: "7f1a2c3d-4e5f-4a0c-9c0e-0d3b2b6e2b7e" },
           ],
         },
       },
     };
 
-    const parsed = parseSuggestion(rolledBack);
+    const item = parsePerson(stray).related.businesses.items[0];
 
-    const item = parsed.related.addresses.items[0];
     expect(item).not.toHaveProperty("id");
-    expect(item?.token).toBeNull();
-    expect(item?.label).toBe("412 Wrenmoor Ln, Springfield, MO 65806");
+    expect(item?.token).toBe("tok-cinder-rigging");
+  });
+
+  it("refuses a related business that carries an id and no handle", () => {
+    // 0.5.0 of the autocomplete service served `id` and no `token`. A business
+    // listed under a person is what a pick spends, so one with no handle is a
+    // contract error, not a line that quietly cannot be picked.
+    const unsealed = without(businessOfPerson, ["token"]) as object;
+    const rolledBack = {
+      ...person,
+      related: {
+        ...person.related,
+        businesses: {
+          ...person.related.businesses,
+          items: [{ ...unsealed, id: "7f1a2c3d-4e5f-4a0c-9c0e-0d3b2b6e2b7e" }],
+        },
+      },
+    };
+
+    expect(() => parsePerson(rolledBack)).toThrow(
+      "response.suggestions[0].related.businesses.items[0].token",
+    );
+    expect(() =>
+      parsePerson({
+        ...person,
+        related: {
+          ...person.related,
+          businesses: {
+            ...person.related.businesses,
+            items: [{ ...businessOfPerson, token: "" }],
+          },
+        },
+      }),
+    ).toThrow("response.suggestions[0].related.businesses.items[0].token");
   });
 
   describe("structure", () => {
-    const autocomplete = JSON.parse(
-      readFileSync(
-        join(__dirname, "../../contracts/autocomplete-openapi.json"),
-        "utf8",
-      ),
-    ) as {
-      components: {
-        schemas: Record<string, { enum?: string[]; required?: string[] }>;
-      };
+    const autocomplete = {
+      schemas: {
+        BusinessStructure: schemaNamed("BusinessStructure") as {
+          enum?: string[];
+        },
+        BusinessSuggestion: schemaNamed("BusinessSuggestion") as {
+          required?: string[];
+        },
+      },
     };
 
     it("knows every structure the autocomplete service's contract lists, in its order", () => {
       expect(BUSINESS_STRUCTURES).toEqual(
-        autocomplete.components.schemas.BusinessStructure?.enum,
+        autocomplete.schemas.BusinessStructure.enum,
       );
     });
 
@@ -262,27 +365,30 @@ describe("a business suggestion", () => {
       }
     });
 
-    it("reads an absent or null structure as null, as an autocomplete service that predates it sends it", () => {
-      // The contract leaves it out of `required`, and an autocomplete service
-      // that predates the field sends no such key at all.
-      expect(
-        autocomplete.components.schemas.BusinessSuggestion?.required,
-      ).not.toContain("structure");
+    it("reads a null structure as null, and refuses an absent one", () => {
+      // The contract lists it as `required`, and nullable: null is the answer
+      // for a business whose structure is not known, a missing key is not.
+      expect(autocomplete.schemas.BusinessSuggestion.required).toContain(
+        "structure",
+      );
       const older: Partial<typeof suggestion> = { ...suggestion };
       delete older.structure;
 
-      expect(parseSuggestion(older).structure).toBeNull();
       expect(
         parseSuggestion({ ...suggestion, structure: null }).structure,
       ).toBe(null);
+      expect(() => parseSuggestion(older)).toThrow(
+        "response.suggestions[0].structure: expected a value, or null",
+      );
     });
 
-    it("refuses a structure this build does not know, or one that is not a string", () => {
-      for (const structure of ["FOUNDATION", 3]) {
-        expect(() => parseSuggestion({ ...suggestion, structure })).toThrow(
-          "response.suggestions[0].structure: expected one of SOLE_PROPRIETORSHIP",
-        );
-      }
+    it("keeps a structure this build does not know as sent, and refuses one that is not a string", () => {
+      expect(
+        parseSuggestion({ ...suggestion, structure: "FOUNDATION" }).structure,
+      ).toBe("FOUNDATION");
+      expect(() => parseSuggestion({ ...suggestion, structure: 3 })).toThrow(
+        "response.suggestions[0].structure: expected a string",
+      );
     });
   });
 
@@ -296,14 +402,17 @@ describe("a business suggestion", () => {
       ).toBe(false);
     });
 
-    it("survives an autocomplete service that predates the field, omitted or null", () => {
-      // The console can deploy ahead of the autocomplete service. An omitted
-      // key and an explicit null both have to parse, and both read as complete,
-      // rather than taking the whole typeahead down over one caveat.
-      expect(parseBusinessesResponse(response).truncated).toBe(false);
-      expect(
-        parseBusinessesResponse({ ...response, truncated: null }).truncated,
-      ).toBe(false);
+    it("is required: an answer without it, omitted or null, is a contract error", () => {
+      // It was optional while the autocomplete service predated the field. A
+      // service that answers without it is not the one this build reads, and
+      // reading it as complete would put "0 matches" where a search did not
+      // finish.
+      expect(() =>
+        parseBusinessesResponse(without(response, ["truncated"])),
+      ).toThrow("response.truncated: expected a boolean");
+      expect(() =>
+        parseBusinessesResponse({ ...response, truncated: null }),
+      ).toThrow(ContractViolation);
     });
 
     it("still refuses a value that is not a boolean", () => {
@@ -321,17 +430,8 @@ describe("a business suggestion", () => {
       ContractViolation,
     );
     expect(() =>
-      parseBusinessesResponse({
-        query: "cind",
-        found: -1,
-        found_capped: false,
-        sources: {
-          people: { status: "ok" },
-          addresses: { status: "ok" },
-        },
-        suggestions: [],
-      }),
-    ).toThrow(ContractViolation);
+      parseBusinessesResponse({ ...response, found: -1, found_capped: false }),
+    ).toThrow("response.found: expected a non-negative integer");
   });
 
   it("names the path it refused", () => {
@@ -381,11 +481,26 @@ describe("a business suggestion", () => {
     const parsed = parseBusinessesResponse({
       ...response,
       elapsed_ms: 4,
-      suggestions: [{ ...suggestion, score: 0.93 }],
+      suggestions: [
+        {
+          ...suggestion,
+          score: 0.93,
+          related: {
+            ...suggestion.related,
+            people: {
+              ...suggestion.related.people,
+              items: [{ ...suggestion.related.people.items[0], tenure: 4 }],
+            },
+          },
+        },
+      ],
     });
 
     expect(parsed).not.toHaveProperty("elapsed_ms");
     expect(parsed.suggestions[0]).not.toHaveProperty("score");
+    expect(parsed.suggestions[0]?.related.people.items[0]).not.toHaveProperty(
+      "tenure",
+    );
   });
 
   it("drops a relation the route does not expand, from sources and related", () => {
@@ -416,6 +531,310 @@ describe("a business suggestion", () => {
   });
 });
 
+describe("a person suggestion and an address suggestion", () => {
+  const address = {
+    type: "address",
+    token: "tok-tidecaster",
+    label: "1200 Tidecaster Rd, Oakland, CA 94606",
+    match: "strong",
+    highlight: [{ text: "1200", matched: true }],
+    components: {
+      line1: "1200 Tidecaster Rd",
+      line2: null,
+      city: "Oakland",
+      state: "CA",
+      postal_code: "94606",
+    },
+    related: {
+      businesses: {
+        count: 1,
+        matched: null,
+        truncated: false,
+        items: [businessOfAddress],
+      },
+      people: {
+        count: 1,
+        matched: null,
+        truncated: false,
+        items: [
+          {
+            type: "person",
+            label: "Wesley Crane",
+            matched: false,
+            highlight: null,
+          },
+        ],
+      },
+    },
+  };
+
+  it("parse today's wire shape, and the contract describes it", () => {
+    expect(parsePerson(person)).toEqual(person);
+    expect(parseAddress(address)).toEqual(address);
+    expect(faultsAgainst(schemaNamed("AddressSuggestion"), address)).toEqual(
+      [],
+    );
+  });
+
+  it("read a person's states, which it has from its businesses", () => {
+    expect(parsePerson(person).states).toEqual(["CA", "DE"]);
+    expect(() => parsePerson({ ...person, states: undefined })).toThrow(
+      "response.suggestions[0].states: expected an array",
+    );
+  });
+
+  it("read no role on an address listed under a person", () => {
+    const parsed = parsePerson({
+      ...person,
+      related: {
+        ...person.related,
+        addresses: {
+          count: 1,
+          matched: null,
+          truncated: false,
+          items: [
+            {
+              type: "address",
+              label: "1200 Tidecaster Rd, Oakland, CA 94606",
+              matched: false,
+              highlight: null,
+              // Not the contract's for an address under a person: dropped, not
+              // read as a role.
+              listed_as: "principal",
+            },
+          ],
+        },
+      },
+    });
+
+    expect(parsed.related.addresses.items[0]).not.toHaveProperty("listed_as");
+    expect(Object.keys(parsed.related.addresses.items[0]!).sort()).toEqual([
+      "highlight",
+      "label",
+      "matched",
+      "type",
+    ]);
+  });
+
+  it("drop a token, a name and states a person listed under an address has no place for", () => {
+    const parsed = parseAddress({
+      ...address,
+      related: {
+        ...address.related,
+        people: {
+          ...address.related.people,
+          items: [
+            {
+              ...address.related.people.items[0],
+              token: "tok-wesley-crane",
+              matched_name: null,
+              states: ["DE"],
+            },
+          ],
+        },
+      },
+    });
+
+    const wesley = parsed.related.people.items[0]!;
+    expect(wesley).not.toHaveProperty("token");
+    expect(wesley).not.toHaveProperty("matched_name");
+    expect(wesley).not.toHaveProperty("states");
+  });
+
+  it("read no `matched_name` on either: it is a business's alone", () => {
+    expect(
+      parsePerson({ ...person, matched_name: "W. CRANE" }),
+    ).not.toHaveProperty("matched_name");
+    expect(parseAddress({ ...address, matched_name: "x" })).not.toHaveProperty(
+      "matched_name",
+    );
+  });
+});
+
+describe("a key the contract requires", () => {
+  // Each is taken out of a golden answer in turn. The contract leaves a key
+  // null where there is nothing to say, never absent: a missing one is a
+  // service that is not speaking this contract, so it is refused, naming it.
+  type Steps = (string | number)[];
+  const lacking = (
+    name: GoldenName,
+    under: Steps,
+    keys: string[],
+  ): [GoldenName, Steps][] => keys.map(key => [name, [...under, key]]);
+
+  const row = ["suggestions", 0];
+  const businessItems = [...row, "related", "businesses", "items", 0];
+  const CASES: [GoldenName, Steps][] = [
+    ...lacking(
+      "businesses",
+      [],
+      ["query", "found", "found_capped", "truncated", "sources", "suggestions"],
+    ),
+    ...lacking("businesses", ["sources"], ["people", "addresses"]),
+    ["businesses", ["sources", "people", "status"]],
+    ...lacking("businesses", row, [
+      "type",
+      "token",
+      "label",
+      "matched_name",
+      "match",
+      "domicile_state",
+      "structure",
+      "states",
+      "related",
+      "highlight",
+    ]),
+    ...lacking("businesses", [...row, "related"], ["people", "addresses"]),
+    ...lacking(
+      "businesses",
+      [...row, "related", "people"],
+      ["count", "matched", "truncated", "items"],
+    ),
+    ...lacking(
+      "businesses",
+      [...row, "related", "people", "items", 0],
+      ["type", "label", "matched", "highlight"],
+    ),
+    ...lacking(
+      "businesses",
+      [...row, "related", "addresses", "items", 0],
+      ["type", "label", "matched", "highlight"],
+    ),
+    ...lacking("people", row, [
+      "type",
+      "token",
+      "label",
+      "match",
+      "states",
+      "highlight",
+      "related",
+    ]),
+    ...lacking("people", businessItems, [
+      "type",
+      "token",
+      "label",
+      "matched",
+      "matched_name",
+      "highlight",
+      "address",
+      "states",
+      "domicile_state",
+    ]),
+    ...lacking("addresses", row, [
+      "type",
+      "token",
+      "label",
+      "match",
+      "components",
+      "highlight",
+      "related",
+    ]),
+    ...lacking(
+      "addresses",
+      [...row, "components"],
+      ["line1", "line2", "city", "state", "postal_code"],
+    ),
+    ...lacking(
+      "addresses",
+      [...row, "related", "people", "items", 0],
+      ["highlight"],
+    ),
+  ];
+  const routeOf = {
+    businesses: "businesses",
+    businesses_filtered: "businesses",
+    people: "people",
+    addresses: "addresses",
+    invalid_request: "businesses",
+  } as const;
+
+  it.each(CASES)(
+    "%s answer without %j is refused, naming the key",
+    (name, steps) => {
+      let caught: unknown;
+      try {
+        parseSuggestResponse(routeOf[name], without(golden(name), steps));
+      } catch (error) {
+        caught = error;
+      }
+
+      expect(caught).toBeInstanceOf(ContractViolation);
+      expect(caught).toMatchObject({ path: pathOf(steps) });
+    },
+  );
+});
+
+describe("a related item from before this contract", () => {
+  // The contract before this one named how a business filed an address, and
+  // the role a person held at one, `role`, as it names the role a person holds
+  // on a business. Read as today's, an address's `role` would be no listing at
+  // all, so it is refused, and the message says why. A person's `role` on a
+  // business is the same key and the same meaning, and is read.
+  const FORMER = /still serves the one before it/;
+
+  type Body = {
+    suggestions: {
+      related: Record<string, { items: Record<string, unknown>[] }>;
+    }[];
+  };
+
+  it.each([
+    ["an address under a business", "businesses", "addresses"],
+    ["a business under an address", "addresses", "businesses"],
+    ["a person under an address", "addresses", "people"],
+    ["an address under a person", "people", "addresses"],
+  ] as const)("refuses %s that carries `role`", (_, route, relation) => {
+    const body = golden(route) as Body;
+    body.suggestions[0]!.related[relation]!.items[0]!.role = "officer";
+    let caught: unknown;
+
+    try {
+      parseSuggestResponse(route, body);
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(ContractViolation);
+    expect(caught).toMatchObject({
+      path: `response.suggestions[0].related.${relation}.items[0].role`,
+      message: expect.stringMatching(FORMER) as string,
+    });
+  });
+
+  it("refuses one whose `role` is null too, as the key is what says it", () => {
+    const body = golden("addresses") as Body;
+    body.suggestions[0]!.related["people"]!.items[0]!.role = null;
+
+    expect(() => parseSuggestResponse("addresses", body)).toThrow(
+      "response.suggestions[0].related.people.items[0].role",
+    );
+  });
+
+  it.each([
+    ["a person under a business", "businesses", "people"],
+    ["a business under a person", "people", "businesses"],
+  ] as const)("reads the `role` of %s", (_, route, relation) => {
+    const body = golden(route) as Body;
+    body.suggestions[0]!.related[relation]!.items[0]!.role = "agent";
+
+    const read = parseSuggestResponse(route, body) as unknown as {
+      suggestions: {
+        related: Record<string, { items: { role: string | null }[] }>;
+      }[];
+    };
+
+    expect(read.suggestions[0]!.related[relation]!.items[0]!.role).toBe(
+      "agent",
+    );
+  });
+
+  it("reads the same answers without it, which is all that changed", () => {
+    for (const route of ["businesses", "people", "addresses"] as const) {
+      expect(() => parseSuggestResponse(route, golden(route))).not.toThrow();
+    }
+  });
+});
+
 describe("parseErrorEnvelope", () => {
   it("reads the catalog envelope the autocomplete service and the API refuse with", () => {
     expect(
@@ -428,26 +847,42 @@ describe("parseErrorEnvelope", () => {
     ).toEqual({
       code: 480,
       message: "The session's request budget is spent",
+      uri: null,
       metadata: { reason: "session_budget_spent" },
     });
+  });
+
+  it("reads the uri when there is one, and an absent one as null", () => {
+    expect(
+      parseErrorEnvelope({
+        code: 429,
+        message: "slow down",
+        uri: "https://docs.example.test/errors/rate-limited",
+        metadata: null,
+      }),
+    ).toMatchObject({ uri: "https://docs.example.test/errors/rate-limited" });
+    expect(
+      parseErrorEnvelope({ code: 429, message: "slow down" }),
+    ).toMatchObject({ uri: null });
   });
 
   it("reads absent or null metadata as null", () => {
     expect(parseErrorEnvelope({ code: 481, message: "off" })).toEqual({
       code: 481,
       message: "off",
+      uri: null,
       metadata: null,
     });
     expect(
       parseErrorEnvelope({ code: 481, message: "off", metadata: null }),
-    ).toEqual({ code: 481, message: "off", metadata: null });
+    ).toEqual({ code: 481, message: "off", uri: null, metadata: null });
   });
 
   it.each([
     ["null", null],
     ["a string", "Bad Gateway"],
     ["an array", [{ code: 480, message: "spent" }]],
-    ["a validation body", { detail: [{ msg: "too short" }] }],
+    ["a pydantic validation body", { detail: [{ msg: "too short" }] }],
     ["a string code", { code: "480", message: "spent" }],
     ["a fractional code", { code: 480.5, message: "spent" }],
     ["no message", { code: 480 }],
@@ -459,26 +894,123 @@ describe("parseErrorEnvelope", () => {
   });
 });
 
-describe("firstValidationMessage", () => {
-  it("reads the first detail's message", () => {
-    expect(
-      firstValidationMessage({
-        detail: [
-          { loc: ["query", "q"], msg: "String should have at least 2" },
-          { loc: ["query", "limit"], msg: "Input should be less than 21" },
-        ],
-      }),
-    ).toBe("String should have at least 2");
+describe("the 422 envelope", () => {
+  const invalid = (errors: unknown, reason = "request_invalid") =>
+    ({
+      code: 422,
+      message: "The request is invalid.",
+      uri: null,
+      metadata: { reason, errors },
+    }) satisfies ErrorEnvelope;
+
+  describe("firstValidationMessage", () => {
+    it("reads the first error's message", () => {
+      expect(
+        firstValidationMessage(
+          invalid([
+            {
+              type: "string_too_short",
+              loc: ["query", "q"],
+              msg: "String should have at least 2 characters",
+            },
+            {
+              type: "less_than_equal",
+              loc: ["query", "limit"],
+              msg: "Input should be less than or equal to 20",
+            },
+          ]),
+        ),
+      ).toBe("String should have at least 2 characters");
+    });
+
+    it("passes over an error it cannot read, to the first it can", () => {
+      expect(
+        firstValidationMessage(
+          invalid([
+            "too short",
+            { type: "missing", loc: ["query", "q"], msg: 2 },
+            { type: "missing", loc: ["query", "q"], msg: "Field required" },
+          ]),
+        ),
+      ).toBe("Field required");
+    });
+
+    it.each([
+      ["an envelope that names no errors", { ...invalid([]), metadata: null }],
+      ["an empty list", invalid([])],
+      ["errors that are not a list", invalid("invalid")],
+      [
+        "a message that is not a string",
+        invalid([{ type: "x", loc: [], msg: 2 }]),
+      ],
+      ["an error that is not an object", invalid(["too short"])],
+      ["an error with no `loc`", invalid([{ type: "x", msg: "too short" }])],
+      [
+        "errors under another reason",
+        invalid([{ type: "x", loc: [], msg: "too short" }], "rate_limited"),
+      ],
+    ])("is null for %s", (_, envelope) => {
+      expect(firstValidationMessage(envelope)).toBeNull();
+    });
   });
 
-  it.each([
-    ["an envelope", { code: 422, message: "invalid" }],
-    ["an empty detail", { detail: [] }],
-    ["a detail that is not a list", { detail: "invalid" }],
-    ["a message that is not a string", { detail: [{ msg: 2 }] }],
-    ["a detail item that is not an object", { detail: ["too short"] }],
-    ["null", null],
-  ])("is null for %s", (_, body) => {
-    expect(firstValidationMessage(body)).toBeNull();
+  describe("validationErrors", () => {
+    it("reads every error: where it failed, what was said and what the check held", () => {
+      expect(
+        validationErrors(
+          invalid([
+            {
+              type: "enum",
+              loc: ["query", "person.role"],
+              msg: "Input should be 'officer' or 'agent'",
+              ctx: { expected: "'officer' or 'agent'" },
+            },
+            { type: "missing", loc: ["query", "q"], msg: "Field required" },
+          ]),
+        ),
+      ).toEqual([
+        {
+          type: "enum",
+          loc: ["query", "person.role"],
+          msg: "Input should be 'officer' or 'agent'",
+          ctx: { expected: "'officer' or 'agent'" },
+        },
+        {
+          type: "missing",
+          loc: ["query", "q"],
+          msg: "Field required",
+          ctx: null,
+        },
+      ]);
+    });
+
+    it("keeps a type it does not know, and reads a number in `loc` as text", () => {
+      expect(
+        validationErrors(
+          invalid([{ type: "a_new_check", loc: ["query", 0], msg: "No." }]),
+        ),
+      ).toEqual([
+        { type: "a_new_check", loc: ["query", "0"], msg: "No.", ctx: null },
+      ]);
+    });
+
+    it("is empty for a refusal that is not a 422's, whatever it carries", () => {
+      expect(
+        validationErrors({
+          code: 429,
+          message: "slow down",
+          uri: null,
+          metadata: { reason: "rate_limited" },
+        }),
+      ).toEqual([]);
+      expect(
+        validationErrors({
+          code: 429,
+          message: "slow down",
+          uri: null,
+          metadata: null,
+        }),
+      ).toEqual([]);
+    });
   });
 });

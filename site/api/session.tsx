@@ -141,6 +141,15 @@ export function useNow(on: boolean, every = 1000): number {
   return now;
 }
 
+/**
+ * The time `useNow` held, or the time now when that is later. A countdown
+ * draws once with the time it held before its session existed, which would
+ * read a moment too long, so it never counts from before the render.
+ */
+function fresh(held: number): number {
+  return Math.max(held, Date.now());
+}
+
 /** `4:07`: what is left of a session, to the second, rounded up. */
 export function clock(milliseconds: number): string {
   const seconds = Math.max(0, Math.ceil(milliseconds / 1000));
@@ -192,7 +201,7 @@ export function SessionLine({
       </p>
     );
   }
-  const left = session.expiresAt - now;
+  const left = session.expiresAt - fresh(now);
   const expired = left <= 0;
   return (
     <p className="try-session" data-state={expired ? "expired" : "active"}>
@@ -228,7 +237,7 @@ export function SessionLine({
  */
 export function SessionCountdown({ expiresAt }: { expiresAt: number }) {
   const now = useNow(true);
-  const left = expiresAt - now;
+  const left = expiresAt - fresh(now);
   const expired = left <= 0;
   return (
     <span

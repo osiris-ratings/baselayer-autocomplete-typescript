@@ -11,6 +11,7 @@ import {
   BUSINESS_TOKEN_TTL_SECONDS,
   parseErrorEnvelope,
   type BusinessStructure,
+  type Open,
 } from "@baselayer-sdk/autocomplete";
 
 type FetchImpl = (input: string, init?: RequestInit) => Promise<Response>;
@@ -102,7 +103,7 @@ export interface SecRegistration {
 export interface Business {
   id: string;
   name: string;
-  structure?: BusinessStructure | null;
+  structure?: Open<BusinessStructure> | null;
   addresses?: AddressWithSources[];
   phone_numbers?: string[];
   email?: string | null;
