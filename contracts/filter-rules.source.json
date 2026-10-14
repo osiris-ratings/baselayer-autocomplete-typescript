@@ -1,6 +1,6 @@
 {
   "repository": "osiris-ratings/osiris-app",
-  "commit": "1202e805a9f7c21b6dad3f59a716551e88c7e87e",
+  "commit": "acfba592a6a10b7c0db07126a3bd5ce80899f04e",
   "files": {
     "filter-rules.json": {
       "path": "crates/autocomplete/tests/fixtures/filter_rules.json",
