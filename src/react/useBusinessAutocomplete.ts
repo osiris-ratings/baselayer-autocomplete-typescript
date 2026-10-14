@@ -241,11 +241,12 @@ export function useEntityAutocomplete<R extends Relation>({
     // A held session that already says the filters need more text: nothing to
     // wait for or to show, so the rows go at once, not after the pause and a
     // search state.
-    const missing =
+    const lacking = () =>
       resolved.charsToFilters?.(relation, {
         q: trimmedQuery,
         ...(stableFilters !== undefined ? { filters: stableFilters } : {}),
       }) ?? 0;
+    const missing = lacking();
     if (missing > 0) {
       setState(waitingState<R>(missing));
       return;
@@ -257,6 +258,13 @@ export function useEntityAutocomplete<R extends Relation>({
       // A new request retires the previous failure, and `unavailable` is reset
       // rather than carried forward, so an ended cooldown cannot keep the host
       // on its plain input.
+      // The session may have arrived during the pause: ask again before
+      // anything shows.
+      const lackingAfterPause = lacking();
+      if (lackingAfterPause > 0) {
+        setState(waitingState<R>(lackingAfterPause));
+        return;
+      }
       let searching = false;
       const markSearching = () => {
         if (searching) return;
@@ -282,11 +290,7 @@ export function useEntityAutocomplete<R extends Relation>({
         if (controller.signal.aborted) {
           return;
         }
-        const stillMissing =
-          resolved.charsToFilters?.(relation, {
-            q: trimmedQuery,
-            ...(stableFilters !== undefined ? { filters: stableFilters } : {}),
-          }) ?? 0;
+        const stillMissing = lacking();
         if (stillMissing > 0) {
           setState(waitingState<R>(stillMissing));
           return;

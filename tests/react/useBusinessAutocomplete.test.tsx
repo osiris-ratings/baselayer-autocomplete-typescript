@@ -877,6 +877,31 @@ describe("useBusinessAutocomplete, the SDK's own failures", () => {
       expect(client.suggest).not.toHaveBeenCalled();
     });
 
+    it("never flags a filtered query as searching when the session arrives during the pause", async () => {
+      const { result: hook, seen } = renderRecording("cin", {
+        state: ["DE"],
+      });
+
+      // Not held when the query was typed; held, and saying 2 are missing, by
+      // the time the pause is over.
+      client.getSnapshot.mockReturnValue(
+        snapshotWith({
+          phase: "ready",
+          grant: await client.getSession(),
+          refreshing: false,
+        }),
+      );
+      client.getSession.mockClear();
+      client.charsToFilters.mockReturnValue(2);
+      await settle();
+
+      expect(hook.current.filtersWaiting).toBe(true);
+      expect(hook.current.charsNeeded).toBe(2);
+      expect(seen).not.toContain(true);
+      expect(client.suggest).not.toHaveBeenCalled();
+      expect(client.getSession).not.toHaveBeenCalled();
+    });
+
     it("flags a filtered query as searching once the session is in hand, if it is asked", async () => {
       client.suggest.mockResolvedValue(result("cinder"));
       const arrive = slowMint();

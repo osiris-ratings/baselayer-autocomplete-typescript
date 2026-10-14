@@ -150,8 +150,9 @@ The first `mint` or `mintUrl` is kept for the component's life; a new
 - `debounceMs` (`250`): the pause after a keystroke before it is sent; a
   newer keystroke cancels it.
 - `filters`: narrowing filters sent with every query. While the text is shorter
-  than the session's `filterMinStem` nothing is asked and the menu stays
-  empty; a `client` you pass follows its own `onShortStem`
+  than the session's stem nothing is asked, and the menu asks for the
+  characters still missing (`messages.filtersNeedMore`); a `client` you pass
+  follows its own `onShortStem`
   ([Filters](docs/headless.md#filters)).
 - `onUnavailable({ unavailable })`: called when the deployment stops being
   able to mint (503 code 481), and again when it can; render your plain

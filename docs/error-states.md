@@ -103,7 +103,7 @@ means your backend did not forward the page's `Origin` (see
 | `limit` past the session's `scope.maxLimit`                   | `query_invalid`, nothing sent or shown |
 | a route the session's scope leaves out                        | `out_of_scope`, nothing sent           |
 | an `include` member or a filter on a relation it leaves out   | `out_of_scope`, nothing sent           |
-| filters on a name shorter than the session's stem             | nothing asked, empty state             |
+| filters on a name shorter than the session's stem             | nothing asked, a hint for the rest     |
 | a newer keystroke                                             | the older request is aborted           |
 
 The bounds are exported as `MIN_Q_CHARS`, `MAX_Q_CHARS` and `MAX_LIMIT`.
@@ -153,6 +153,7 @@ All of them are overridable through `messages`:
 | Key                    | Default                                                                                              |
 | ---------------------- | ---------------------------------------------------------------------------------------------------- |
 | `searching`            | Searching…                                                                                           |
+| `filtersNeedMore`      | Type 2 more letters to search with your filters (`Type 1 more letter` for one)                       |
 | `truncatedNoRows`      | Still searching — add a word to narrow it down                                                       |
 | `truncatedRows`        | Showing partial results — add a word to narrow it down                                               |
 | `match`, `matches`     | match, matches                                                                                       |

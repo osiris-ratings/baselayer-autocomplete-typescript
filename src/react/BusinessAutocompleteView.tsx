@@ -42,7 +42,11 @@ import type {
 } from "@baselayer-sdk/autocomplete";
 
 import { SegmentIcon, type IconSet } from "./icons";
-import { resolveMessages, type AutocompleteMessages } from "./messages";
+import {
+  defaultFiltersNeedMore,
+  resolveMessages,
+  type AutocompleteMessages,
+} from "./messages";
 import type { GroupedSelection } from "./selection";
 import { useSuggestionCombobox } from "./useBusinessCombobox";
 import { NO_FILL_ATTRIBUTES } from "./inputAttributes";
@@ -97,6 +101,9 @@ export interface BusinessAutocompleteViewProps {
   indexTag: string | null;
   roundTripMs: number | null;
   isSearching: boolean;
+  /** The query's filters wait for more text, `charsNeeded` characters of it. */
+  filtersWaiting?: boolean;
+  charsNeeded?: number;
   error: string | null;
   /**
    * Hold the menu open whatever focus does: a style preview, a design tool.
@@ -487,6 +494,8 @@ export function BusinessAutocompleteView({
   indexTag,
   roundTripMs,
   isSearching,
+  filtersWaiting = false,
+  charsNeeded = 0,
   error,
   open = false,
   layout: layoutInput,
@@ -519,7 +528,9 @@ export function BusinessAutocompleteView({
   );
   const text = resolveMessages(messageOverrides);
   const cx = classes(unstyled, classNames);
-  const hasFooter = isSearching || error !== null || roundTripMs !== null;
+  const waiting = filtersWaiting && charsNeeded > 0;
+  const hasFooter =
+    isSearching || waiting || error !== null || roundTripMs !== null;
   // A row that lists lines under it, or whose business is not itself a pick,
   // is a group of lines; any other is the one option a row has always been.
   // In the host's order: the lines are drawn in it, each relation once
@@ -585,6 +596,9 @@ export function BusinessAutocompleteView({
   function countRowLabel(): string {
     if (isSearching && suggestions.length === 0) {
       return text.searching;
+    }
+    if (waiting) {
+      return (text.filtersNeedMore ?? defaultFiltersNeedMore)(charsNeeded);
     }
     // A truncated answer is not a count: "0 matches" would read as "your
     // business is not in here", which is the one thing it must not say.
