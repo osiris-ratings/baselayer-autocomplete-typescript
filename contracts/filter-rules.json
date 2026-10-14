@@ -1,0 +1,1631 @@
+{
+  "about": "The filter rules of the autocomplete routes, shared by the service (Rust tests), the API (Python tests) and the SDK: the rule sets a session may carry, and, for each, whether a request on a route with this query and these filters is refused (the 422 `string_too_short` with `filters`), sent, or sent short (a short query the rule lets through behind a filter in `short_allowed_with`, which only the search can still refuse). `count` says how the query's characters are counted (`filter_counts.json` pins both readings). `numbers` is what the grant's `flt` claim carries for the set, `legacy_stem` its `stem` claim and `filter_min_stem` answer, the strictest route minimum. `overrides` are the override rows that make the set. A set may name a `scope`, the routes the API mints the session for (every route when it does not): its `numbers` and `filter_rules` hold those routes only and `legacy_stem` is the strictest of them, and a route outside the claim is held to that legacy stem, as a grant that names one route only leaves the others.",
+  "cases": [
+    {
+      "filters": {
+        "person.name": "smith"
+      },
+      "min_length": 5,
+      "name": "businesses: person.name waits for five characters",
+      "outcome": "refused",
+      "q": "osir",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "person.name": "smith"
+      },
+      "name": "businesses: person.name is honoured at five characters",
+      "outcome": "sent",
+      "q": "osiri",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "person.role": "officer"
+      },
+      "min_length": 5,
+      "name": "businesses: person.role waits for five characters",
+      "outcome": "refused",
+      "q": "osir",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "person.role": "officer"
+      },
+      "name": "businesses: person.role is honoured at five characters",
+      "outcome": "sent",
+      "q": "osiri",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 5,
+      "name": "businesses: state waits for five characters",
+      "outcome": "refused",
+      "q": "osir",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "businesses: state is honoured at five characters",
+      "outcome": "sent",
+      "q": "osiri",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "domicile_state": "DE"
+      },
+      "min_length": 5,
+      "name": "businesses: domicile_state waits for five characters",
+      "outcome": "refused",
+      "q": "osir",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "domicile_state": "DE"
+      },
+      "name": "businesses: domicile_state is honoured at five characters",
+      "outcome": "sent",
+      "q": "osiri",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "structure": "LLC"
+      },
+      "min_length": 5,
+      "name": "businesses: structure waits for five characters",
+      "outcome": "refused",
+      "q": "osir",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "structure": "LLC"
+      },
+      "name": "businesses: structure is honoured at five characters",
+      "outcome": "sent",
+      "q": "osiri",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "address.text": "main"
+      },
+      "min_length": 5,
+      "name": "businesses: address.text waits for five characters",
+      "outcome": "refused",
+      "q": "osir",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "address.text": "main"
+      },
+      "name": "businesses: address.text is honoured at five characters",
+      "outcome": "sent",
+      "q": "osiri",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "address.city": "austin"
+      },
+      "min_length": 5,
+      "name": "businesses: address.city waits for five characters",
+      "outcome": "refused",
+      "q": "osir",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "address.city": "austin"
+      },
+      "name": "businesses: address.city is honoured at five characters",
+      "outcome": "sent",
+      "q": "osiri",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "address.postal_code": "78701"
+      },
+      "min_length": 5,
+      "name": "businesses: address.postal_code waits for five characters",
+      "outcome": "refused",
+      "q": "osir",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "address.postal_code": "78701"
+      },
+      "name": "businesses: address.postal_code is honoured at five characters",
+      "outcome": "sent",
+      "q": "osiri",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "address.state": "TX"
+      },
+      "min_length": 5,
+      "name": "businesses: address.state waits for five characters",
+      "outcome": "refused",
+      "q": "osir",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "address.state": "TX"
+      },
+      "name": "businesses: address.state is honoured at five characters",
+      "outcome": "sent",
+      "q": "osiri",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {},
+      "name": "businesses: no filter, no wait",
+      "outcome": "sent",
+      "q": "a",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "limit": "3"
+      },
+      "name": "businesses: a parameter that is no filter never waits",
+      "outcome": "sent",
+      "q": "osir",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "person.name": "smith",
+        "state": "CA"
+      },
+      "min_length": 5,
+      "name": "businesses: the wait is for any one of several filters",
+      "outcome": "refused",
+      "q": "osir",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "min_length": 5,
+      "name": "people: business.state waits for five characters",
+      "outcome": "refused",
+      "q": "timo",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "name": "people: business.state is honoured at five characters",
+      "outcome": "sent",
+      "q": "timot",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.name": "osiris"
+      },
+      "name": "people: a business name lets a short name run",
+      "outcome": "sent_short",
+      "q": "timo",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.name": "osiris"
+      },
+      "name": "people: business.name is honoured at five characters",
+      "outcome": "sent",
+      "q": "timot",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.structure": "LLC"
+      },
+      "min_length": 5,
+      "name": "people: business.structure waits for five characters",
+      "outcome": "refused",
+      "q": "timo",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.structure": "LLC"
+      },
+      "name": "people: business.structure is honoured at five characters",
+      "outcome": "sent",
+      "q": "timot",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.domicile_state": "DE"
+      },
+      "min_length": 5,
+      "name": "people: business.domicile_state waits for five characters",
+      "outcome": "refused",
+      "q": "timo",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.domicile_state": "DE"
+      },
+      "name": "people: business.domicile_state is honoured at five characters",
+      "outcome": "sent",
+      "q": "timot",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "person.role": "officer"
+      },
+      "min_length": 5,
+      "name": "people: person.role waits for five characters",
+      "outcome": "refused",
+      "q": "timo",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "person.role": "officer"
+      },
+      "name": "people: person.role is honoured at five characters",
+      "outcome": "sent",
+      "q": "timot",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "address.text": "main"
+      },
+      "min_length": 5,
+      "name": "people: address.text waits for five characters",
+      "outcome": "refused",
+      "q": "timo",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "address.text": "main"
+      },
+      "name": "people: address.text is honoured at five characters",
+      "outcome": "sent",
+      "q": "timot",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "address.city": "austin"
+      },
+      "min_length": 5,
+      "name": "people: address.city waits for five characters",
+      "outcome": "refused",
+      "q": "timo",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "address.city": "austin"
+      },
+      "name": "people: address.city is honoured at five characters",
+      "outcome": "sent",
+      "q": "timot",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "address.postal_code": "78701"
+      },
+      "min_length": 5,
+      "name": "people: address.postal_code waits for five characters",
+      "outcome": "refused",
+      "q": "timo",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "address.postal_code": "78701"
+      },
+      "name": "people: address.postal_code is honoured at five characters",
+      "outcome": "sent",
+      "q": "timot",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "address.state": "TX"
+      },
+      "min_length": 5,
+      "name": "people: address.state waits for five characters",
+      "outcome": "refused",
+      "q": "timo",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "address.state": "TX"
+      },
+      "name": "people: address.state is honoured at five characters",
+      "outcome": "sent",
+      "q": "timot",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {},
+      "name": "people: no filter, no wait",
+      "outcome": "sent",
+      "q": "a",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "limit": "3"
+      },
+      "name": "people: a parameter that is no filter never waits",
+      "outcome": "sent",
+      "q": "timo",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS",
+        "person.role": "officer"
+      },
+      "min_length": 5,
+      "name": "people: the wait is for any one of several filters",
+      "outcome": "refused",
+      "q": "timo",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 5,
+      "name": "addresses: state waits for five characters",
+      "outcome": "refused",
+      "q": "535",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "addresses: state is honoured at five characters",
+      "outcome": "sent",
+      "q": "535mi",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "person.name": "smith"
+      },
+      "min_length": 5,
+      "name": "addresses: person.name waits for five characters",
+      "outcome": "refused",
+      "q": "535",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "person.name": "smith"
+      },
+      "name": "addresses: person.name is honoured at five characters",
+      "outcome": "sent",
+      "q": "535mi",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.name": "osiris"
+      },
+      "min_length": 5,
+      "name": "addresses: business.name waits for five characters",
+      "outcome": "refused",
+      "q": "535",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.name": "osiris"
+      },
+      "name": "addresses: business.name is honoured at five characters",
+      "outcome": "sent",
+      "q": "535mi",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "city": "san"
+      },
+      "min_length": 5,
+      "name": "addresses: city waits for five characters",
+      "outcome": "refused",
+      "q": "535",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "city": "san"
+      },
+      "name": "addresses: city is honoured at five characters",
+      "outcome": "sent",
+      "q": "535mi",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "postal_code": "941"
+      },
+      "min_length": 5,
+      "name": "addresses: postal_code waits for five characters",
+      "outcome": "refused",
+      "q": "535",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "postal_code": "941"
+      },
+      "name": "addresses: postal_code is honoured at five characters",
+      "outcome": "sent",
+      "q": "535mi",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "min_length": 5,
+      "name": "addresses: business.state waits for five characters",
+      "outcome": "refused",
+      "q": "535",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "name": "addresses: business.state is honoured at five characters",
+      "outcome": "sent",
+      "q": "535mi",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.structure": "LLC"
+      },
+      "min_length": 5,
+      "name": "addresses: business.structure waits for five characters",
+      "outcome": "refused",
+      "q": "535",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.structure": "LLC"
+      },
+      "name": "addresses: business.structure is honoured at five characters",
+      "outcome": "sent",
+      "q": "535mi",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.domicile_state": "DE"
+      },
+      "min_length": 5,
+      "name": "addresses: business.domicile_state waits for five characters",
+      "outcome": "refused",
+      "q": "535",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.domicile_state": "DE"
+      },
+      "name": "addresses: business.domicile_state is honoured at five characters",
+      "outcome": "sent",
+      "q": "535mi",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "person.role": "officer"
+      },
+      "min_length": 5,
+      "name": "addresses: person.role waits for five characters",
+      "outcome": "refused",
+      "q": "535",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "person.role": "officer"
+      },
+      "name": "addresses: person.role is honoured at five characters",
+      "outcome": "sent",
+      "q": "535mi",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {},
+      "name": "addresses: no filter, no wait",
+      "outcome": "sent",
+      "q": "a",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "limit": "3"
+      },
+      "name": "addresses: a parameter that is no filter never waits",
+      "outcome": "sent",
+      "q": "535",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.name": "osiris",
+        "state": "CA"
+      },
+      "min_length": 5,
+      "name": "addresses: the wait is for any one of several filters",
+      "outcome": "refused",
+      "q": "535",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 5,
+      "name": "businesses: four \u00f8 are four characters of a business",
+      "outcome": "refused",
+      "q": "\u00f8\u00f8\u00f8\u00f8",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "businesses: five \u00f8 are five",
+      "outcome": "sent",
+      "q": "\u00f8\u00f8\u00f8\u00f8\u00f8",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 5,
+      "name": "businesses: four Cyrillic letters are four",
+      "outcome": "refused",
+      "q": "\u0413\u0430\u0437\u043f",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "businesses: five Cyrillic letters are five",
+      "outcome": "sent",
+      "q": "\u0413\u0430\u0437\u043f\u0440",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "address.text": "main"
+      },
+      "min_length": 5,
+      "name": "businesses: St. J is four with the space",
+      "outcome": "refused",
+      "q": "St. J",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "address.text": "main"
+      },
+      "name": "businesses: St. Jo is five",
+      "outcome": "sent",
+      "q": "St. Jo",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "businesses: a&b is seven, as a and b",
+      "outcome": "sent",
+      "q": "a&b",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 5,
+      "name": "businesses: a lone & is three, as and",
+      "outcome": "refused",
+      "q": "&",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 5,
+      "name": "addresses: St. J is four",
+      "outcome": "refused",
+      "q": "St. J",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "addresses: St. Jo is five",
+      "outcome": "sent",
+      "q": "St. Jo",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "addresses: five \u00f8 are five",
+      "outcome": "sent",
+      "q": "\u00f8\u00f8\u00f8\u00f8\u00f8",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "name": "people: Stra\u00dfe is five as a person (strae)",
+      "outcome": "sent",
+      "q": "Stra\u00dfe",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "min_length": 5,
+      "name": "people: Stra is four",
+      "outcome": "refused",
+      "q": "Stra",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "min_length": 5,
+      "name": "people: Cyrillic counts nothing as a person",
+      "outcome": "refused",
+      "q": "\u0413\u0430\u0437\u043f\u0440\u043e\u043c",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "min_length": 5,
+      "name": "people: \u00f8 counts nothing as a person",
+      "outcome": "refused",
+      "q": "\u00f8\u00f8\u00f8\u00f8\u00f8\u00f8",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "min_length": 5,
+      "name": "people: Jos\u00e9 is four (jose)",
+      "outcome": "refused",
+      "q": "Jos\u00e9",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "name": "people: O'Brien keeps its apostrophe, seven",
+      "outcome": "sent",
+      "q": "O'Brien",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "name": "people: a hyphen is a space, Mary-Jane is nine",
+      "outcome": "sent",
+      "q": "Mary-Jane",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "name": "people: a long name is cut at 255 and counts them",
+      "outcome": "sent",
+      "q": "a",
+      "route": "people",
+      "rules": "default",
+      "times": 300
+    },
+    {
+      "filters": {
+        "business.name": "osiris"
+      },
+      "name": "people: a short name behind a business name runs",
+      "outcome": "sent_short",
+      "q": "tim",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.name": "osiris",
+        "business.state": "KS"
+      },
+      "name": "people: a short name behind a business name and a state runs",
+      "outcome": "sent_short",
+      "q": "tim",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "min_length": 5,
+      "name": "people: a short name behind only a state waits",
+      "outcome": "refused",
+      "q": "tim",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.name": "osiris"
+      },
+      "min_length": 5,
+      "name": "people: an empty name behind a business name waits",
+      "outcome": "refused",
+      "q": "",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.name": "osiris"
+      },
+      "min_length": 5,
+      "name": "people: a name with nothing countable behind a business name waits",
+      "outcome": "refused",
+      "q": "\u0413\u0430\u0437\u043f\u0440\u043e\u043c",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.name": ""
+      },
+      "name": "people: a short name behind an empty business name is no filter",
+      "outcome": "sent",
+      "q": "tim",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "name": "people at three: a state filter is honoured at three",
+      "outcome": "sent",
+      "q": "tim",
+      "route": "people",
+      "rules": "people_three"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "min_length": 3,
+      "name": "people at three: and waits below it, naming three",
+      "outcome": "refused",
+      "q": "ti",
+      "route": "people",
+      "rules": "people_three"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "min_length": 3,
+      "name": "people at three: a name with nothing countable is still refused",
+      "outcome": "refused",
+      "q": "\u00f8\u00f8\u00f8",
+      "route": "people",
+      "rules": "people_three"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 5,
+      "name": "businesses keep five when only people lowered theirs",
+      "outcome": "refused",
+      "q": "osir",
+      "route": "businesses",
+      "rules": "people_three"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 5,
+      "name": "addresses keep five when only people lowered theirs",
+      "outcome": "refused",
+      "q": "535",
+      "route": "addresses",
+      "rules": "people_three"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 4,
+      "name": "three different numbers: businesses at 3 characters waits, naming 4",
+      "outcome": "refused",
+      "q": "osi",
+      "route": "businesses",
+      "rules": "three_numbers"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "three different numbers: businesses at 4 characters is sent",
+      "outcome": "sent",
+      "q": "osir",
+      "route": "businesses",
+      "rules": "three_numbers"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "min_length": 3,
+      "name": "three different numbers: people at 2 characters waits, naming 3",
+      "outcome": "refused",
+      "q": "ti",
+      "route": "people",
+      "rules": "three_numbers"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "name": "three different numbers: people at 3 characters is sent",
+      "outcome": "sent",
+      "q": "tim",
+      "route": "people",
+      "rules": "three_numbers"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 6,
+      "name": "three different numbers: addresses at 5 characters waits, naming 6",
+      "outcome": "refused",
+      "q": "535mi",
+      "route": "addresses",
+      "rules": "three_numbers"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "three different numbers: addresses at 6 characters is sent",
+      "outcome": "sent",
+      "q": "535mis",
+      "route": "addresses",
+      "rules": "three_numbers"
+    },
+    {
+      "filters": {
+        "business.name": "osiris"
+      },
+      "name": "three different numbers: people under 3 characters with a business name run short",
+      "outcome": "sent_short",
+      "q": "ti",
+      "route": "people",
+      "rules": "three_numbers"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 7,
+      "name": "businesses strictest: businesses at 6 characters waits, naming 7",
+      "outcome": "refused",
+      "q": "osiris",
+      "route": "businesses",
+      "rules": "businesses_strictest"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "businesses strictest: businesses at 7 characters is sent",
+      "outcome": "sent",
+      "q": "osirisr",
+      "route": "businesses",
+      "rules": "businesses_strictest"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "min_length": 3,
+      "name": "businesses strictest: people at 2 characters waits, naming 3",
+      "outcome": "refused",
+      "q": "ti",
+      "route": "people",
+      "rules": "businesses_strictest"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "name": "businesses strictest: people at 3 characters is sent",
+      "outcome": "sent",
+      "q": "tim",
+      "route": "people",
+      "rules": "businesses_strictest"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 4,
+      "name": "businesses strictest: addresses at 3 characters waits, naming 4",
+      "outcome": "refused",
+      "q": "535",
+      "route": "addresses",
+      "rules": "businesses_strictest"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "businesses strictest: addresses at 4 characters is sent",
+      "outcome": "sent",
+      "q": "535m",
+      "route": "addresses",
+      "rules": "businesses_strictest"
+    },
+    {
+      "filters": {
+        "business.name": "osiris"
+      },
+      "name": "businesses strictest: people under 3 characters with a business name run short",
+      "outcome": "sent_short",
+      "q": "ti",
+      "route": "people",
+      "rules": "businesses_strictest"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 4,
+      "name": "people strictest: businesses at 3 characters waits, naming 4",
+      "outcome": "refused",
+      "q": "osi",
+      "route": "businesses",
+      "rules": "people_strictest"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "people strictest: businesses at 4 characters is sent",
+      "outcome": "sent",
+      "q": "osir",
+      "route": "businesses",
+      "rules": "people_strictest"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "min_length": 6,
+      "name": "people strictest: people at 5 characters waits, naming 6",
+      "outcome": "refused",
+      "q": "timot",
+      "route": "people",
+      "rules": "people_strictest"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "name": "people strictest: people at 6 characters is sent",
+      "outcome": "sent",
+      "q": "timoth",
+      "route": "people",
+      "rules": "people_strictest"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 3,
+      "name": "people strictest: addresses at 2 characters waits, naming 3",
+      "outcome": "refused",
+      "q": "53",
+      "route": "addresses",
+      "rules": "people_strictest"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "people strictest: addresses at 3 characters is sent",
+      "outcome": "sent",
+      "q": "535",
+      "route": "addresses",
+      "rules": "people_strictest"
+    },
+    {
+      "filters": {
+        "business.name": "osiris"
+      },
+      "name": "people strictest: people under 6 characters with a business name run short",
+      "outcome": "sent_short",
+      "q": "timot",
+      "route": "people",
+      "rules": "people_strictest"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 6,
+      "name": "a claim for addresses alone: addresses at 5 characters waits, naming 6",
+      "outcome": "refused",
+      "q": "535mi",
+      "route": "addresses",
+      "rules": "addresses_alone"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "a claim for addresses alone: addresses at 6 characters is sent",
+      "outcome": "sent",
+      "q": "535mis",
+      "route": "addresses",
+      "rules": "addresses_alone"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 6,
+      "name": "a claim for addresses alone: businesses at 5 characters waits, naming 6",
+      "outcome": "refused",
+      "q": "osiri",
+      "route": "businesses",
+      "rules": "addresses_alone"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "a claim for addresses alone: businesses at 6 characters is sent",
+      "outcome": "sent",
+      "q": "osiris",
+      "route": "businesses",
+      "rules": "addresses_alone"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "min_length": 6,
+      "name": "a claim for addresses alone: people at 5 characters waits, naming 6",
+      "outcome": "refused",
+      "q": "timot",
+      "route": "people",
+      "rules": "addresses_alone"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "name": "a claim for addresses alone: people at 6 characters is sent",
+      "outcome": "sent",
+      "q": "timoth",
+      "route": "people",
+      "rules": "addresses_alone"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 6,
+      "name": "a claim for addresses alone: businesses at 4 characters wait for the legacy 6, not for a row of 4",
+      "outcome": "refused",
+      "q": "osir",
+      "route": "businesses",
+      "rules": "addresses_alone"
+    }
+  ],
+  "rules": {
+    "addresses_alone": {
+      "filter_rules": {
+        "addresses": {
+          "count": "stem",
+          "gated": [
+            "state",
+            "person.name",
+            "business.name",
+            "city",
+            "postal_code",
+            "business.state",
+            "business.structure",
+            "business.domicile_state",
+            "person.role"
+          ],
+          "min_stem": 6,
+          "short_allowed_with": []
+        }
+      },
+      "legacy_stem": 6,
+      "min_query_chars": 2,
+      "numbers": {
+        "a": 6
+      },
+      "overrides": {
+        "autocomplete.addresses.filter_min_stem": 6,
+        "autocomplete.businesses.filter_min_stem": 4
+      },
+      "scope": [
+        "addresses"
+      ]
+    },
+    "businesses_strictest": {
+      "filter_rules": {
+        "addresses": {
+          "count": "stem",
+          "gated": [
+            "state",
+            "person.name",
+            "business.name",
+            "city",
+            "postal_code",
+            "business.state",
+            "business.structure",
+            "business.domicile_state",
+            "person.role"
+          ],
+          "min_stem": 4,
+          "short_allowed_with": []
+        },
+        "businesses": {
+          "count": "stem",
+          "gated": [
+            "person.name",
+            "person.role",
+            "state",
+            "domicile_state",
+            "structure",
+            "address.text",
+            "address.city",
+            "address.postal_code",
+            "address.state"
+          ],
+          "min_stem": 7,
+          "short_allowed_with": []
+        },
+        "people": {
+          "count": "person_name",
+          "gated": [
+            "business.state",
+            "business.name",
+            "business.structure",
+            "business.domicile_state",
+            "person.role",
+            "address.text",
+            "address.city",
+            "address.postal_code",
+            "address.state"
+          ],
+          "min_stem": 3,
+          "short_allowed_with": [
+            "business.name"
+          ]
+        }
+      },
+      "legacy_stem": 7,
+      "min_query_chars": 2,
+      "numbers": {
+        "a": 4,
+        "b": 7,
+        "p": 3
+      },
+      "overrides": {
+        "autocomplete.addresses.filter_min_stem": 4,
+        "autocomplete.businesses.filter_min_stem": 7,
+        "autocomplete.people.filter_min_stem": 3
+      }
+    },
+    "default": {
+      "filter_rules": {
+        "addresses": {
+          "count": "stem",
+          "gated": [
+            "state",
+            "person.name",
+            "business.name",
+            "city",
+            "postal_code",
+            "business.state",
+            "business.structure",
+            "business.domicile_state",
+            "person.role"
+          ],
+          "min_stem": 5,
+          "short_allowed_with": []
+        },
+        "businesses": {
+          "count": "stem",
+          "gated": [
+            "person.name",
+            "person.role",
+            "state",
+            "domicile_state",
+            "structure",
+            "address.text",
+            "address.city",
+            "address.postal_code",
+            "address.state"
+          ],
+          "min_stem": 5,
+          "short_allowed_with": []
+        },
+        "people": {
+          "count": "person_name",
+          "gated": [
+            "business.state",
+            "business.name",
+            "business.structure",
+            "business.domicile_state",
+            "person.role",
+            "address.text",
+            "address.city",
+            "address.postal_code",
+            "address.state"
+          ],
+          "min_stem": 5,
+          "short_allowed_with": [
+            "business.name"
+          ]
+        }
+      },
+      "legacy_stem": 5,
+      "min_query_chars": 2,
+      "numbers": {
+        "a": 5,
+        "b": 5,
+        "p": 5
+      },
+      "overrides": {}
+    },
+    "people_strictest": {
+      "filter_rules": {
+        "addresses": {
+          "count": "stem",
+          "gated": [
+            "state",
+            "person.name",
+            "business.name",
+            "city",
+            "postal_code",
+            "business.state",
+            "business.structure",
+            "business.domicile_state",
+            "person.role"
+          ],
+          "min_stem": 3,
+          "short_allowed_with": []
+        },
+        "businesses": {
+          "count": "stem",
+          "gated": [
+            "person.name",
+            "person.role",
+            "state",
+            "domicile_state",
+            "structure",
+            "address.text",
+            "address.city",
+            "address.postal_code",
+            "address.state"
+          ],
+          "min_stem": 4,
+          "short_allowed_with": []
+        },
+        "people": {
+          "count": "person_name",
+          "gated": [
+            "business.state",
+            "business.name",
+            "business.structure",
+            "business.domicile_state",
+            "person.role",
+            "address.text",
+            "address.city",
+            "address.postal_code",
+            "address.state"
+          ],
+          "min_stem": 6,
+          "short_allowed_with": [
+            "business.name"
+          ]
+        }
+      },
+      "legacy_stem": 6,
+      "min_query_chars": 2,
+      "numbers": {
+        "a": 3,
+        "b": 4,
+        "p": 6
+      },
+      "overrides": {
+        "autocomplete.addresses.filter_min_stem": 3,
+        "autocomplete.businesses.filter_min_stem": 4,
+        "autocomplete.people.filter_min_stem": 6
+      }
+    },
+    "people_three": {
+      "filter_rules": {
+        "addresses": {
+          "count": "stem",
+          "gated": [
+            "state",
+            "person.name",
+            "business.name",
+            "city",
+            "postal_code",
+            "business.state",
+            "business.structure",
+            "business.domicile_state",
+            "person.role"
+          ],
+          "min_stem": 5,
+          "short_allowed_with": []
+        },
+        "businesses": {
+          "count": "stem",
+          "gated": [
+            "person.name",
+            "person.role",
+            "state",
+            "domicile_state",
+            "structure",
+            "address.text",
+            "address.city",
+            "address.postal_code",
+            "address.state"
+          ],
+          "min_stem": 5,
+          "short_allowed_with": []
+        },
+        "people": {
+          "count": "person_name",
+          "gated": [
+            "business.state",
+            "business.name",
+            "business.structure",
+            "business.domicile_state",
+            "person.role",
+            "address.text",
+            "address.city",
+            "address.postal_code",
+            "address.state"
+          ],
+          "min_stem": 3,
+          "short_allowed_with": [
+            "business.name"
+          ]
+        }
+      },
+      "legacy_stem": 5,
+      "min_query_chars": 2,
+      "numbers": {
+        "a": 5,
+        "b": 5,
+        "p": 3
+      },
+      "overrides": {
+        "autocomplete.people.filter_min_stem": 3
+      }
+    },
+    "three_numbers": {
+      "filter_rules": {
+        "addresses": {
+          "count": "stem",
+          "gated": [
+            "state",
+            "person.name",
+            "business.name",
+            "city",
+            "postal_code",
+            "business.state",
+            "business.structure",
+            "business.domicile_state",
+            "person.role"
+          ],
+          "min_stem": 6,
+          "short_allowed_with": []
+        },
+        "businesses": {
+          "count": "stem",
+          "gated": [
+            "person.name",
+            "person.role",
+            "state",
+            "domicile_state",
+            "structure",
+            "address.text",
+            "address.city",
+            "address.postal_code",
+            "address.state"
+          ],
+          "min_stem": 4,
+          "short_allowed_with": []
+        },
+        "people": {
+          "count": "person_name",
+          "gated": [
+            "business.state",
+            "business.name",
+            "business.structure",
+            "business.domicile_state",
+            "person.role",
+            "address.text",
+            "address.city",
+            "address.postal_code",
+            "address.state"
+          ],
+          "min_stem": 3,
+          "short_allowed_with": [
+            "business.name"
+          ]
+        }
+      },
+      "legacy_stem": 6,
+      "min_query_chars": 2,
+      "numbers": {
+        "a": 6,
+        "b": 4,
+        "p": 3
+      },
+      "overrides": {
+        "autocomplete.addresses.filter_min_stem": 6,
+        "autocomplete.businesses.filter_min_stem": 4,
+        "autocomplete.people.filter_min_stem": 3
+      }
+    }
+  },
+  "version": 1
+}

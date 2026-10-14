@@ -176,14 +176,16 @@ export function reachableStem(count: FilterCount, stem: number): number {
 /**
  * The characters a query still lacks before its filters are asked, under
  * `rule`: 0 when it carries no gated filter, its text is long enough, or a
- * filter the rule lets a short text through with is set.
+ * filter the rule lets a short text through with is set. `params` are the
+ * wire names of the filters set; one that is blank is no filter, and so are
+ * `limit` and `include`, which narrow nothing.
  */
-export function charsUntilFilters(
-  route: Route,
-  query: { q: string; filters?: object | undefined },
+export function charsUntilParams(
+  q: string,
+  params: readonly string[],
   rule: FilterRule,
 ): number {
-  const set = setFilters(route, query.filters).map(({ param }) => param);
+  const set = params.filter(param => param !== "limit" && param !== "include");
   const gated =
     rule.gated === "all"
       ? set.length > 0
@@ -191,7 +193,7 @@ export function charsUntilFilters(
   if (!gated) {
     return 0;
   }
-  const length = (rule.count === "stem" ? stemCount : personNameCount)(query.q);
+  const length = (rule.count === "stem" ? stemCount : personNameCount)(q);
   const stem = reachableStem(rule.count, rule.minStem);
   if (length >= stem) {
     return 0;
@@ -200,6 +202,34 @@ export function charsUntilFilters(
     return 0;
   }
   return stem - length;
+}
+
+/** `charsUntilParams` for the filters of a query, as the SDK holds them. */
+export function charsUntilFilters(
+  route: Route,
+  query: { q: string; filters?: object | undefined },
+  rule: FilterRule,
+): number {
+  return charsUntilParams(
+    query.q,
+    setFilters(route, query.filters).map(({ param }) => param),
+    rule,
+  );
+}
+
+/**
+ * The rule for `route` under a grant: the one the session carries, else
+ * today's, with the grant's own stem (the strictest route's, which a route
+ * outside a session's claim is held to), capped at the longest query.
+ */
+export function ruleFor(
+  grant: { filterMinStem: number; filterRules?: Partial<FilterRules> },
+  route: Route,
+): FilterRule {
+  return (
+    grant.filterRules?.[route] ??
+    fallbackFilterRules(Math.min(grant.filterMinStem, MAX_Q_CHARS))[route]
+  );
 }
 
 function names(value: unknown): readonly string[] | null {

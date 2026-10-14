@@ -48,9 +48,12 @@ breaking change bumps the minor version.
     while a filter is set and its text is too short.
   - Nothing is removed or renamed, and the new fields and the client method are
     optional. New exports: `stemCount`, `stemText`, `personNameCount`,
-    `personNameText`, `charsUntilFilters`, `fallbackFilterRules`,
-    `parseFilterRules` and the types `FilterRule`, `FilterRules` and
-    `FilterCount`. A test holds every 0.7.0 export of the three entry points.
+    `personNameText`, `charsUntilFilters`, `charsUntilParams`,
+    `fallbackFilterRules`, `parseFilterRules`, `reachableStem`, `ruleFor` and the
+    types `FilterRule`, `FilterRules` and `FilterCount`. A test holds every 0.7.0
+    export of the three entry points, and another runs the service's own filter
+    rule cases (`contracts/filter-rules.json`, vendored with the commit it came
+    from).
   - The demo's session grants a stem of 5, as the autocomplete service does by
     default, where it granted 3.
 

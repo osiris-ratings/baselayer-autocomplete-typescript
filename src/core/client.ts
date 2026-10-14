@@ -15,10 +15,10 @@ import {
 import { ROUTE_NAMES, type Relation, type Route } from "./entities";
 import {
   charsUntilFilters,
-  fallbackFilterRules,
   parseFilterRules,
   personNameCount,
   reachableStem,
+  ruleFor,
   stemCount,
   type FilterRule,
 } from "./filter-gate";
@@ -787,7 +787,7 @@ export function createAutocompleteClient(
         // request before admitting it, so none was spent.
         requestsSinceMint = Math.max(0, requestsSinceMint - 1);
         requestsByRoute[relation] = Math.max(0, requestsByRoute[relation] - 1);
-        const counted = countOf(ruleFor(relation, grant), query.q);
+        const counted = countOf(ruleOf(relation, grant), query.q);
         if (refusedFor !== grant.sessionToken || refusedStems.size >= 50) {
           refusedStems.clear();
           refusedFor = grant.sessionToken;
@@ -901,12 +901,8 @@ export function createAutocompleteClient(
   }
 
   /** The service's rule for `relation` filters under `grant`. */
-  function ruleFor(relation: Relation, grant: Grant): FilterRule {
-    // A stem past the longest query there is could never be met.
-    return (
-      grant.filterRules?.[relation] ??
-      fallbackFilterRules(Math.min(grant.filterMinStem, MAX_Q_CHARS))[relation]
-    );
+  function ruleOf(relation: Relation, grant: Grant): FilterRule {
+    return ruleFor(grant, relation);
   }
 
   /**
@@ -920,7 +916,7 @@ export function createAutocompleteClient(
     grant: Grant,
   ): number {
     if (shortStem === "wait") {
-      const rule = ruleFor(relation, grant);
+      const rule = ruleOf(relation, grant);
       const lacking = charsUntilFilters(relation, query, rule);
       const named =
         refusedFor === grant.sessionToken

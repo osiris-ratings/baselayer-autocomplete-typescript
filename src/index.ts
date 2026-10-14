@@ -37,10 +37,13 @@ export {
 } from "./core/businesses";
 export {
   charsUntilFilters,
+  charsUntilParams,
   fallbackFilterRules,
   parseFilterRules,
   personNameCount,
   personNameText,
+  reachableStem,
+  ruleFor,
   stemCount,
   stemText,
   type FilterCount,

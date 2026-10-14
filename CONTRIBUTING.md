@@ -47,6 +47,7 @@ The specs the Baselayer API publishes, vendored:
 | `contracts/autocomplete-scope.json`         | the session scope's routes and relations | the API's scope fixture                     |
 | `contracts/sessions-openapi.json`           | `POST /autocomplete/sessions`            | the API's public OpenAPI                    |
 | `contracts/mint-grant-response.schema.json` | the mint's 201 body                      | the API's schema                            |
+| `contracts/filter-rules.json`               | the filter rules and their cases         | the autocomplete service's fixture          |
 | `contracts/autocomplete.overlay.yaml`       | the reference's extra docs               | written here                                |
 
 The wire tests read the autocomplete service's OpenAPI and the scope: every
@@ -60,12 +61,19 @@ Each file has its command, given the upstream file:
 pnpm contracts:autocomplete path/to/openapi.json
 pnpm contracts:scope path/to/autocomplete_scope.json
 pnpm contracts:sessions path/to/public_openapi.json
+pnpm contracts:filter-rules path/to/filter_rules.json <osiris-app commit>
+pnpm contracts:filter-rules --check
 ```
 
 The first words the document for readers of this repository (it names the
 autocomplete service wherever upstream says only "the service"), the second
 keeps the three tables and drops the fixture's comment, and the third cuts the
 API's operation out of its public spec, with the schemas it reaches.
+
+The fourth copies the filter rules fixture as it is and records the osiris-app
+commit it came from (`contracts/filter-rules.source.json`); `--check` fetches it
+at that commit with `gh` and fails when the copy differs, and a test holds it to
+the blob id recorded. The service, the API and this SDK all run its cases.
 
 ## The API reference
 
