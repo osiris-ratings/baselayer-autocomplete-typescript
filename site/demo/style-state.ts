@@ -316,6 +316,32 @@ export interface StyleState {
 
 export const DEFAULT_LABEL = "Business name";
 
+/**
+ * The one table of the fields each search's row accepts that the service never
+ * sends on it: a role exists only between a person and a business, so a person
+ * listed at an address and an address listed under a person have none. The
+ * editors' lists, the starting layouts, the presets and the props all read it;
+ * the library's own defaults still place them, where they draw nothing.
+ */
+const UNSENT_FIELDS: Record<Route, readonly string[]> = {
+  businesses: [],
+  people: ["addressRole"],
+  addresses: ["personRole"],
+};
+
+/** A layout with the fields the service never sends on `route` taken out. */
+export function withoutUnsent<L extends Record<string, string | null>>(
+  route: Route,
+  layout: L,
+): L {
+  return Object.fromEntries(
+    Object.entries(layout).map(([place, field]) => [
+      place,
+      field !== null && UNSENT_FIELDS[route].includes(field) ? null : field,
+    ]),
+  ) as L;
+}
+
 export const DEFAULT_STYLE: StyleState = {
   look: { ...DEFAULT_LOOK },
   rows: {
@@ -326,13 +352,13 @@ export const DEFAULT_STYLE: StyleState = {
       iconSegments: [...DEFAULT_ICON_SEGMENTS.businesses],
     },
     people: {
-      layout: resolveLayout(PERSON_ROW),
+      layout: withoutUnsent("people", resolveLayout(PERSON_ROW)),
       list: [...DEFAULT_LIST.people] as IncludeOf<"people">[],
       enabled: [...DEFAULT_ENABLED_LINES],
       iconSegments: [...DEFAULT_ICON_SEGMENTS.people],
     },
     addresses: {
-      layout: resolveLayout(ADDRESS_ROW),
+      layout: withoutUnsent("addresses", resolveLayout(ADDRESS_ROW)),
       list: [...DEFAULT_LIST.addresses] as IncludeOf<"addresses">[],
       enabled: [...DEFAULT_ENABLED_LINES],
       iconSegments: [...DEFAULT_ICON_SEGMENTS.addresses],
@@ -442,6 +468,13 @@ export interface RowEditor<P extends string, F extends string> {
    * names it: its handle shows or hides it, its toggle enables it.
    */
   kindNames: Record<string, string>;
+  /**
+   * Fields the row's kind accepts that the service never sends on this route,
+   * which the editor does not offer: a role exists only between a person and a
+   * business, so a person listed at an address and an address listed under a
+   * person have none to show.
+   */
+  unsent?: readonly F[];
 }
 
 /**
@@ -456,6 +489,8 @@ export function editorOps<P extends string, F extends string>(
   type Spot = P | typeof TRAY;
   type Choice = F | typeof EMPTY_PLACE;
   const { kind } = editor;
+  /** The fields the editor offers: those the service sends. */
+  const fields = kind.fields.filter(field => !editor.unsent?.includes(field));
   const placeOf = (layout: Layout, field: F) =>
     kind.places.find(place => layout[place] === field);
 
@@ -493,7 +528,7 @@ export function editorOps<P extends string, F extends string>(
   /** The fields the layout places nowhere, in their own order. */
   function unplacedFields(layout: Layout): F[] {
     const placed = new Set(kind.places.map(place => layout[place]));
-    return kind.fields.filter(field => !placed.has(field));
+    return fields.filter(field => !placed.has(field));
   }
 
   /**
@@ -520,7 +555,7 @@ export function editorOps<P extends string, F extends string>(
     layout: Layout,
     place: P,
   ): { value: Choice; label: string }[] {
-    const choices: Choice[] = [EMPTY_PLACE, ...kind.fields];
+    const choices: Choice[] = [EMPTY_PLACE, ...fields];
     const drawnHere = choices.filter(
       choice =>
         choice === EMPTY_PLACE ||
@@ -689,6 +724,7 @@ export const PERSON_EDITOR: RowEditor<PersonRowPlace, PersonRowField> = {
     businesses: "businesses",
     addresses: "their addresses",
   },
+  unsent: UNSENT_FIELDS.people as readonly PersonRowField[],
 };
 
 /** An address's row. */
@@ -728,6 +764,7 @@ export const ADDRESS_EDITOR: RowEditor<AddressRowPlace, AddressRowField> = {
     businesses: "businesses",
     people: "people there",
   },
+  unsent: UNSENT_FIELDS.addresses as readonly AddressRowField[],
 };
 
 export const { canDrop, moveField, placeOptions, unplacedFields, withPlaced } =
@@ -775,7 +812,9 @@ export function lineKinds(route: Route): LineKind[] {
  * in the row's own order.
  */
 export function lineFields(route: Route, relation: Relation | null): string[] {
-  const fields: readonly string[] = ROW_KINDS[route].fields;
+  const fields: readonly string[] = ROW_KINDS[route].fields.filter(
+    field => !UNSENT_FIELDS[route].includes(field),
+  );
   const accepts = ROW_KINDS[route].accepts as
     ((place: string, field: string) => boolean) | undefined;
   const places = lineKinds(route)
@@ -1004,7 +1043,9 @@ export function componentProps<R extends Route>(
   // not drawn can be chosen.
   const shown = shownEntities(route, state);
   return {
-    layout,
+    // A config saved before a field stopped being offered may still place it:
+    // it is dropped here, quietly, and the cell it held is simply not drawn.
+    layout: withoutUnsent(route, layout),
     list,
     enabledLines: enabled.filter(entity => shown.includes(entity)),
     iconSegments,
@@ -1036,8 +1077,9 @@ export function changedRowLayout(
     route,
   ).layout;
   const kind: { places: readonly string[] } = ROW_KINDS[route];
-  const defaults: Readonly<Record<string, string | null>> = resolveLayout(
-    ROW_KINDS[route] as RowKind<string, string>,
+  const defaults: Readonly<Record<string, string | null>> = withoutUnsent(
+    route,
+    resolveLayout(ROW_KINDS[route] as RowKind<string, string>),
   );
   const list: readonly Relation[] = state.rows[route].list;
   const drawn = new Set(
@@ -1276,14 +1318,12 @@ const PERSON_LAYOUTS = {
   countsBeside: { headBadge: "counts", headTrailing: "firstAddress" },
   addressRight: { businessBadge: null, businessTrailingBadge: "address" },
   noStates: { businessTrailingBadge: null },
-  addressRoleInline: { addressBadge: "addressRole", addressTrailing: null },
 } as const satisfies Record<string, Partial<PersonRowLayout>>;
 
 const ADDRESS_LAYOUTS = {
   noCounts: { headTrailing: null },
   countsBeside: { headBadge: "counts", headTrailing: null },
   noStates: { businessTrailingBadge: null },
-  personRoleInline: { personBadge: "personRole", personTrailing: null },
   noAddress: { businessBadge: null },
 } as const satisfies Record<string, Partial<AddressRowLayout>>;
 
@@ -1631,7 +1671,6 @@ export const PRESETS: Preset[] = [
       },
       people: { layout: PERSON_LAYOUTS.countsBeside, iconSegments: ["name"] },
       addresses: {
-        layout: ADDRESS_LAYOUTS.personRoleInline,
         list: ["businesses", "people"],
         iconSegments: ["name"],
       },
@@ -1760,7 +1799,7 @@ export const PRESETS: Preset[] = [
     rows: {
       businesses: { layout: BUSINESS_LAYOUTS.statesBeside, iconSegments: [] },
       people: {
-        layout: PERSON_LAYOUTS.addressRoleInline,
+        layout: PERSON_LAYOUTS.noStates,
         list: ["businesses", "addresses"],
         enabled: ["business", "person"],
       },
@@ -1972,7 +2011,7 @@ export const PRESETS: Preset[] = [
         iconSegments: ["name"],
       },
       people: { list: ["businesses", "addresses"] },
-      addresses: { layout: ADDRESS_LAYOUTS.personRoleInline },
+      addresses: { layout: ADDRESS_LAYOUTS.noStates },
     },
   },
   {
@@ -2011,7 +2050,7 @@ export const PRESETS: Preset[] = [
         iconSegments: [],
       },
       people: {
-        layout: PERSON_LAYOUTS.addressRoleInline,
+        layout: PERSON_LAYOUTS.noCounts,
         list: ["businesses", "addresses"],
       },
       addresses: { list: ["people", "businesses"] },
@@ -2076,9 +2115,12 @@ function presetRow<R extends Route>(
   const kind = ROW_KINDS[route] as RowKind<string, string>;
   return {
     ...state.rows[route],
-    layout: resolveLayout(
-      kind,
-      (row.layout ?? {}) as Readonly<Record<string, string | null>>,
+    layout: withoutUnsent(
+      route,
+      resolveLayout(
+        kind,
+        (row.layout ?? {}) as Readonly<Record<string, string | null>>,
+      ),
     ) as RowStates[R]["layout"],
     list: [...(row.list ?? base.list)],
     enabled: [...(row.enabled ?? base.enabled)],

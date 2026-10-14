@@ -25,6 +25,7 @@ import {
   withIconSegment,
   withListOrder,
   withListed,
+  withoutUnsent,
   type Preset,
 } from "../../site/demo/style-state";
 
@@ -97,10 +98,14 @@ describe("a preset", () => {
     for (const preset of PRESETS) {
       const state = applyPreset(moved, preset);
       for (const route of ROUTES) {
+        // The library's layout, less the roles the service never sends.
         expect(state.rows[route].layout, `${preset.name} ${route}`).toEqual(
-          resolveLayout(
-            ROW_KINDS[route] as RowKind<string, string>,
-            preset.rows?.[route]?.layout ?? {},
+          withoutUnsent(
+            route,
+            resolveLayout(
+              ROW_KINDS[route] as RowKind<string, string>,
+              preset.rows?.[route]?.layout ?? {},
+            ),
           ),
         );
       }
@@ -386,9 +391,9 @@ describe("a preset's rows", () => {
         const at = `${preset.name} ${route}`;
         const { layout, list, icons } = exported(exportCode(state, route).tsx);
         const row = state.rows[route];
-        const back: Readonly<Record<string, string | null>> = resolveLayout(
-          ROW_KINDS[route] as RowKind<string, string>,
-          layout,
+        const back: Readonly<Record<string, string | null>> = withoutUnsent(
+          route,
+          resolveLayout(ROW_KINDS[route] as RowKind<string, string>, layout),
         );
         const drawn = lineKinds(route)
           .filter(

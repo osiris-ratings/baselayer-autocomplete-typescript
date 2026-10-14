@@ -922,12 +922,12 @@ describe("the row map as the row's configuration", () => {
           ".row-map-reads tbody tr",
         ),
       ].map(row => row.dataset.field);
-    const hidden = mountOn("people");
+    const hidden = mountOn("businesses");
     expect(reads(hidden.view)).not.toContain("addressRole");
     cleanup();
     const shown = mountOn(
-      "people",
-      withListed(DEFAULT_STYLE, "people", "addresses", true),
+      "businesses",
+      withListed(DEFAULT_STYLE, "businesses", "addresses", true),
     );
     expect(reads(shown.view)).toContain("addressRole");
   });
