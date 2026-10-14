@@ -64,6 +64,9 @@ function fakeClient() {
       refreshAt: 480_000,
       expiresAt: 600_000,
     })),
+    charsToFilters: vi.fn<NonNullable<AutocompleteClient["charsToFilters"]>>(
+      () => 0,
+    ),
     prewarm: vi.fn<AutocompleteClient["prewarm"]>(),
     reset: vi.fn<AutocompleteClient["reset"]>(),
     on: vi.fn<AutocompleteClient["on"]>(() => () => undefined),
@@ -794,6 +797,135 @@ describe("useBusinessAutocomplete, the SDK's own failures", () => {
     expect(hook.current.expanded).toEqual([]);
     expect(hook.current.isSearching).toBe(false);
     expect(hook.current.error).toBeNull();
+  });
+
+  it("empties the rows at once when the held session says the filters wait, asking nothing", async () => {
+    client.suggest.mockResolvedValueOnce(result("cinder"));
+    const { result: hook, rerender } = renderHook(
+      (props: { query: string }) =>
+        useBusinessAutocomplete({
+          query: props.query,
+          enabled: true,
+          client,
+          filters: { state: ["DE"] },
+        }),
+      { initialProps: { query: "cinder" } },
+    );
+    await settle();
+    expect(hook.current.suggestions).toHaveLength(1);
+    client.suggest.mockClear();
+    client.getSession.mockClear();
+
+    client.charsToFilters.mockReturnValue(2);
+    rerender({ query: "cin" });
+
+    // No timer has run: not the debounce, and no in-flight state either.
+    expect(hook.current.suggestions).toEqual([]);
+    expect(hook.current.filtersWaiting).toBe(true);
+    expect(hook.current.charsNeeded).toBe(2);
+    expect(hook.current.isSearching).toBe(false);
+    await settle();
+    expect(client.suggest).not.toHaveBeenCalled();
+    expect(client.getSession).not.toHaveBeenCalled();
+  });
+
+  describe("while no session is held and the mint is slow", () => {
+    /** A client whose session arrives when `release` is called. */
+    function slowMint() {
+      let release: () => void = () => {};
+      const arrived = client.getSession.getMockImplementation()!;
+      client.getSession.mockImplementation(
+        () => new Promise(resolve => (release = () => resolve(arrived()))),
+      );
+      return () => release();
+    }
+
+    /** Every `isSearching` the hook rendered with. */
+    function renderRecording(query: string, filters?: { state: string[] }) {
+      const seen: boolean[] = [];
+      const rendered = renderHook(() => {
+        const state = useBusinessAutocomplete({
+          query,
+          enabled: true,
+          client,
+          ...(filters !== undefined ? { filters } : {}),
+        });
+        seen.push(state.isSearching);
+        return state;
+      });
+      return { ...rendered, seen };
+    }
+
+    it("never flags a filtered query as searching when its filters then wait", async () => {
+      const arrive = slowMint();
+      const { result: hook, seen } = renderRecording("cin", {
+        state: ["DE"],
+      });
+      await settle();
+      expect(hook.current.isSearching).toBe(false);
+
+      client.charsToFilters.mockReturnValue(2);
+      await act(async () => {
+        arrive();
+        await Promise.resolve();
+      });
+
+      expect(hook.current.filtersWaiting).toBe(true);
+      expect(hook.current.charsNeeded).toBe(2);
+      expect(hook.current.suggestions).toEqual([]);
+      expect(seen).not.toContain(true);
+      expect(client.suggest).not.toHaveBeenCalled();
+    });
+
+    it("flags a filtered query as searching once the session is in hand, if it is asked", async () => {
+      client.suggest.mockResolvedValue(result("cinder"));
+      const arrive = slowMint();
+      const { result: hook } = renderRecording("cinder", { state: ["DE"] });
+      await settle();
+      expect(hook.current.isSearching).toBe(false);
+
+      await act(async () => {
+        arrive();
+        await Promise.resolve();
+      });
+
+      expect(hook.current.suggestions).toHaveLength(1);
+      expect(client.suggest).toHaveBeenCalledTimes(1);
+    });
+
+    it("flags a query with no filter as searching during the mint, as before", async () => {
+      slowMint();
+      const { result: hook } = renderRecording("cinder");
+      await settle();
+
+      expect(hook.current.isSearching).toBe(true);
+    });
+  });
+
+  it("works with a client and results written before the waiting fields existed", async () => {
+    // What a 0.7.0 test double looks like: no `charsToFilters`, and a result
+    // without `filtersWaiting` or `charsNeeded`.
+    const { charsToFilters, ...before } = client;
+    void charsToFilters;
+    const { filtersWaiting, charsNeeded, ...legacy } = result("cinder");
+    void filtersWaiting;
+    void charsNeeded;
+    before.suggest.mockResolvedValue(legacy);
+
+    const { result: hook } = renderHook(() =>
+      useBusinessAutocomplete({
+        query: "cinder",
+        enabled: true,
+        client: before,
+        filters: { state: ["DE"] },
+      }),
+    );
+    await settle();
+
+    expect(hook.current.suggestions).toHaveLength(1);
+    expect(hook.current.filtersWaiting).toBe(false);
+    expect(hook.current.charsNeeded).toBe(0);
+    expect(hook.current.appliedFilters).toEqual({ state: ["DE"] });
   });
 
   it("reports nothing waiting for a query that carried no filter", async () => {

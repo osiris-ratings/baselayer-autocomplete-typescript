@@ -258,6 +258,83 @@ describe.each(ROUTES)("a filtered $route query", spec => {
   });
 });
 
+describe.each(ROUTES)("charsToFilters on the $route route", spec => {
+  const query = (q: string, withFilters = true) =>
+    ({ q, ...(withFilters ? { filters: spec.filters } : {}) }) as never;
+
+  it("is 0 while no session is held, which only a mint can tell", () => {
+    const { client, mint } = setup();
+
+    expect(client.charsToFilters?.(spec.route, query(spec.short))).toBe(0);
+    expect(mint).not.toHaveBeenCalled();
+  });
+
+  it("counts the characters a filtered query lacks, once a session is held", async () => {
+    const { client, fetch } = setup();
+    await client.getSession();
+
+    expect(client.charsToFilters?.(spec.route, query(spec.short))).toBe(1);
+    expect(
+      client.charsToFilters?.(spec.route, query(spec.short.slice(0, 3))),
+    ).toBe(2);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("is 0 at the stem, with no filter, and with only empty ones", async () => {
+    const { client } = setup();
+    await client.getSession();
+
+    expect(client.charsToFilters?.(spec.route, query(spec.long))).toBe(0);
+    expect(client.charsToFilters?.(spec.route, query(spec.short, false))).toBe(
+      0,
+    );
+    expect(
+      client.charsToFilters?.(spec.route, {
+        q: spec.short,
+        filters: { state: [] },
+      } as never),
+    ).toBe(0);
+  });
+
+  it.each(["withhold", "send", "throw"] as const)(
+    "is 0 under onShortStem: %s, which does not wait",
+    async policy => {
+      const { client } = setup({ onShortStem: policy });
+      await client.getSession();
+
+      expect(client.charsToFilters?.(spec.route, query(spec.short))).toBe(0);
+    },
+  );
+});
+
+describe("charsToFilters", () => {
+  it("is 0 for a filter the session's scope leaves out, which search refuses", async () => {
+    const client = createAutocompleteClient({
+      baseUrl: "https://api.test",
+      fetch: vi.fn<FetchLike>(),
+      mint: async () => ({
+        kind: "granted",
+        grant: {
+          sessionToken: "grant-1",
+          expiresIn: 600,
+          requestBudget: 50,
+          pivotAllowance: 5,
+          filterMinStem: STEM,
+          scope: { routes: { people: ["businesses"] }, maxLimit: 5 },
+        },
+      }),
+    });
+    await client.getSession();
+
+    expect(
+      client.charsToFilters?.("people", {
+        q: "mari",
+        filters: { address: { text: "77 quillback ln" } },
+      }),
+    ).toBe(0);
+  });
+});
+
 describe("a query waiting for its filters", () => {
   it("is still refused when the session's scope leaves its filter out", async () => {
     const fetch = vi.fn<FetchLike>();

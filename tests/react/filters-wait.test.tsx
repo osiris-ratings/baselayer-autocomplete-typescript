@@ -62,22 +62,29 @@ function reply(body: unknown): ResponseLike {
   };
 }
 
-function setup(config: Partial<AutocompleteClientConfig> = {}) {
+function setup(
+  config: Partial<AutocompleteClientConfig> = {},
+  /** Held back until the test lets the session through. */
+  gate: Promise<void> = Promise.resolve(),
+) {
   const fetch = vi.fn<FetchLike>(async url => {
     const field = FIELDS.find(f => url.includes(`/autocomplete/${f.route}`));
     return reply(golden(field?.answer ?? "businesses"));
   });
-  const mint = vi.fn<MintFunction>(async () => ({
-    kind: "granted",
-    grant: {
-      sessionToken: "grant-1",
-      expiresIn: 600,
-      requestBudget: 50,
-      pivotAllowance: 5,
-      filterMinStem: 5,
-      scope: SCOPE,
-    },
-  }));
+  const mint = vi.fn<MintFunction>(async () => {
+    await gate;
+    return {
+      kind: "granted",
+      grant: {
+        sessionToken: "grant-1",
+        expiresIn: 600,
+        requestBudget: 50,
+        pivotAllowance: 5,
+        filterMinStem: 5,
+        scope: SCOPE,
+      },
+    };
+  });
   return {
     fetch,
     client: createAutocompleteClient({
@@ -189,8 +196,11 @@ describe.each(FIELDS)("the $route field, with a filter set", field => {
     await screen.findAllByRole("option");
 
     await user.keyboard("{Backspace}");
-    await aMoment();
 
+    // At once: the held session already says this query waits.
+    expect(screen.queryAllByRole("option")).toEqual([]);
+    expect(screen.queryByText("Searching…")).toBeNull();
+    await aMoment();
     expect(screen.queryAllByRole("option")).toEqual([]);
     expect(fetch).toHaveBeenCalledTimes(1);
   });
@@ -206,6 +216,45 @@ describe.each(FIELDS)("the $route field, with a filter set", field => {
     expect(urls[0]?.searchParams.has(field.param)).toBe(false);
   });
 });
+
+describe.each(FIELDS)(
+  "the $route field, on a session still being minted",
+  field => {
+    it("never shows a search state for a filtered query whose filters wait", async () => {
+      let letThrough: () => void = () => {};
+      const gate = new Promise<void>(resolve => (letThrough = resolve));
+      const { client, fetch } = setup({}, gate);
+      render(<Field route={field.route} client={client} filtered />);
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("combobox"));
+
+      await user.keyboard(field.typed.slice(0, 3));
+      await aMoment();
+      expect(screen.queryByText("Searching…")).toBeNull();
+
+      await act(async () => letThrough());
+      await aMoment();
+      expect(screen.queryByText("Searching…")).toBeNull();
+      expect(screen.queryAllByRole("option")).toEqual([]);
+      expect(fetch).not.toHaveBeenCalled();
+    });
+
+    it("shows the search state during the mint for a query with no filter, as before", async () => {
+      let letThrough: () => void = () => {};
+      const gate = new Promise<void>(resolve => (letThrough = resolve));
+      const { client } = setup({}, gate);
+      render(<Field route={field.route} client={client} filtered={false} />);
+      const user = userEvent.setup();
+      await user.click(screen.getByRole("combobox"));
+
+      await user.keyboard(field.typed.slice(0, 3));
+
+      expect(await screen.findByText("Searching…")).toBeTruthy();
+      await act(async () => letThrough());
+      expect((await screen.findAllByRole("option")).length).toBeGreaterThan(0);
+    });
+  },
+);
 
 describe.each(FIELDS)("the $route field, with no filter set", field => {
   it("shows its rows at 3 characters, as before", async () => {

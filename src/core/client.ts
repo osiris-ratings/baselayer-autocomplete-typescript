@@ -109,11 +109,12 @@ export interface SearchResult<R extends Relation = "businesses"> {
   /**
    * The query carried filters and the stem was too short for them: not asked.
    * `response` is then empty, not the autocomplete service's answer, and
-   * `requestId` and `indexTag` are null.
+   * `requestId` and `indexTag` are null. Absent reads as false: a result built
+   * before this field existed has none.
    */
-  filtersWaiting: boolean;
-  /** Characters the query still lacks before its filters engage; 0 unless `filtersWaiting`. */
-  charsNeeded: number;
+  filtersWaiting?: boolean;
+  /** Characters the query still lacks before its filters engage; 0 or absent unless `filtersWaiting`. */
+  charsNeeded?: number;
 }
 
 /** A search on `GET /autocomplete/businesses`. */
@@ -188,6 +189,18 @@ export interface AutocompleteClient {
     query: RouteQuery<R>,
     options?: { signal?: AbortSignal },
   ): Promise<SearchResult<R>>;
+  /**
+   * The characters a query still lacks before the client would ask it, when
+   * the grant in hand already says so: its filters need more text than it has
+   * and `onShortStem` is `wait`. Synchronous, and 0 when the query would be
+   * asked, when a filter is outside the scope (`search` refuses that), and
+   * while no grant is held, which only a mint can tell. Optional so that a
+   * client written before it existed, a test double say, is still a client.
+   */
+  charsToFilters?<R extends Relation>(
+    relation: R,
+    query: RouteQuery<R>,
+  ): number;
   /** The current grant, minting or refreshing when needed. */
   getSession(options?: { force?: boolean }): Promise<Grant>;
   /** Mint ahead of the first keystroke; failures are not reported. */
@@ -583,7 +596,6 @@ export function createAutocompleteClient(
         until: authBrakeUntil,
       });
     }
-    const filtered = hasFilters(relation, query.filters);
     let grant = await session.getSession();
     // What this call already tried, not merely that it tried something. The
     // brake counts one thing, a grant just re-minted and refused again, and a
@@ -600,9 +612,7 @@ export function createAutocompleteClient(
       if (refused !== null) {
         throw refused;
       }
-      const missing = filtered
-        ? Math.max(0, grant.filterMinStem - stemLength(query.q))
-        : 0;
+      const missing = missingChars(relation, query, grant);
       if (missing > 0 && shortStem === "throw") {
         throw new AutocompleteError({
           kind: "query_invalid",
@@ -793,6 +803,33 @@ export function createAutocompleteClient(
     }
   }
 
+  /** Characters the filters of `query` need beyond what its text has. */
+  function missingChars<R extends Relation>(
+    relation: R,
+    query: RouteQuery<R>,
+    grant: Grant,
+  ): number {
+    return hasFilters(relation, query.filters)
+      ? Math.max(0, grant.filterMinStem - stemLength(query.q))
+      : 0;
+  }
+
+  function charsToFilters<R extends Relation>(
+    relation: R,
+    query: RouteQuery<R>,
+  ): number {
+    if (shortStem !== "wait") {
+      return 0;
+    }
+    const held = session.phase();
+    if (held.phase !== "ready") {
+      return 0;
+    }
+    return outOfScope(relation, query, held.grant.scope) === null
+      ? missingChars(relation, query, held.grant)
+      : 0;
+  }
+
   function headerRetryAfterMs(response: ResponseLike): number | null {
     const seconds = Number(response.headers.get("Retry-After"));
     return Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : null;
@@ -830,6 +867,7 @@ export function createAutocompleteClient(
     baseUrl,
     suggest: (query, options) => search("businesses", query, options),
     search,
+    charsToFilters,
     getSession: options => session.getSession(options),
     prewarm: () => {
       void session.getSession({ prewarm: true }).catch(() => undefined);

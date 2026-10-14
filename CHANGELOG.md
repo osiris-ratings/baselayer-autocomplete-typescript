@@ -24,7 +24,9 @@ breaking change bumps the minor version.
     request event.
   - `useBusinessAutocomplete` and `useEntityAutocomplete` report the same two
     fields, for an app that wants to say what a field is waiting for. The
-    components draw no hint of their own.
+    components draw no hint of their own. With a session in hand they empty
+    their rows at once, asking nothing and showing no search state;
+    `client.charsToFilters(route, query)` is the synchronous answer they read.
   - The demo's session grants a stem of 5, as the autocomplete service does by
     default, where it granted 3.
 

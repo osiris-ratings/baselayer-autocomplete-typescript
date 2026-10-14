@@ -72,6 +72,9 @@ an unfiltered set to a filtered one, and the session is minted all the same.
 `onShortStem: "withhold"` asks without the filters instead, as 0.7.0 did, and
 says so with `filtersWithheld: true`; `"send"` sends them anyway; `"throw"`
 rejects locally. A query with no filter is not affected.
+`client.charsToFilters(route, query)` answers the same question at once from
+the session in hand, 0 while none is held; it is how the hooks empty their
+rows without waiting for a search.
 
 ### Other routes, and the session's scope
 
