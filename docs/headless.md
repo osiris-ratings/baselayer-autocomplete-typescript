@@ -69,6 +69,14 @@ The search answers at once with no suggestions and `filtersWaiting: true`, and
 `charsNeeded` counts the characters still missing, so a field shows nothing
 until its filters can engage and never sees a 422. Its rows do not change from
 an unfiltered set to a filtered one, and the session is minted all the same.
+Which filters wait, and how the text is counted, are the service's own rules for
+each route. Businesses and addresses count it as `stemCount` does (folded,
+`&` read as `and`, runs of letters and numbers one space apart); people count
+the name as the people index spells it, `personNameCount` (ASCII letters and
+digits only, so a name with no ASCII spelling counts 0). People let a short name
+through beside a business name, which the service answers when that name is
+narrow; if it still refuses, for this or any other reason about the filters'
+stem, the client reads it as waiting too, never as an error.
 `onShortStem: "withhold"` asks without the filters instead, as 0.7.0 did, and
 says so with `filtersWithheld: true`; `"send"` sends them anyway; `"throw"`
 rejects locally. A query with no filter is not affected.

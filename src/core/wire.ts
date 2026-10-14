@@ -822,6 +822,34 @@ export function validationErrors(envelope: ErrorEnvelope): ValidationItem[] {
   return errors.flatMap(entry => validationItem(entry) ?? []);
 }
 
+/**
+ * The stem a 422 says the filters wait for, or null when it says no such thing:
+ * `string_too_short` on `q`, with `ctx.with` naming the filters and
+ * `ctx.min_length` the length. A too short `q` on its own carries no `with`.
+ */
+export function filterStemRefused(envelope: ErrorEnvelope): number | null {
+  for (const item of validationErrors(envelope)) {
+    const ctx = item.ctx;
+    if (
+      item.type === "string_too_short" &&
+      item.loc[item.loc.length - 1] === "q" &&
+      typeof ctx === "object" &&
+      ctx !== null &&
+      (ctx as { with?: unknown }).with === "filters"
+    ) {
+      const length = (ctx as { min_length?: unknown }).min_length;
+      if (
+        typeof length === "number" &&
+        Number.isInteger(length) &&
+        length > 0
+      ) {
+        return length;
+      }
+    }
+  }
+  return null;
+}
+
 /** What the first parameter a 422 names says, or null. */
 export function firstValidationMessage(envelope: ErrorEnvelope): string | null {
   return validationErrors(envelope)[0]?.msg ?? null;

@@ -17,7 +17,17 @@ breaking change bumps the minor version.
   no filter is unaffected. To keep the 0.7.0 behaviour, create the client with
   `onShortStem: "withhold"` and pass it to the component as `client`.
   - `ShortStemPolicy` gains `wait`, now the default; `withhold`, `send` and
-    `throw` are as before.
+    `throw` are as before, and `stemLength` counts as it did.
+  - `wait` follows the service's own rules for each route. Businesses and
+    addresses count the text as `stemCount` does, and people count the name as
+    the people index spells it, `personNameCount`, so a name with no ASCII
+    spelling counts 0. People let a short name through beside a business name,
+    which the service answers when that name is narrow. A refusal for the
+    filters' stem that still comes back reads as waiting, not as an error.
+  - New exports, nothing removed or renamed: `stemCount`, `stemText`,
+    `personNameCount`, `personNameText`, `charsUntilFilters`,
+    `fallbackFilterRules`, and the types `FilterRule`, `FilterRules` and
+    `FilterCount`. A test holds every 0.7.0 export of the three entry points.
   - `SearchResult` gains `filtersWaiting` and `charsNeeded`, the characters the
     query still lacks. A waiting search resolves with an empty `response`
     (every relation `not_requested`) and a null `requestId`, and emits no

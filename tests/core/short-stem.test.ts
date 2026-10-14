@@ -398,3 +398,123 @@ describe("a query waiting for its filters", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("the people search's short name beside a business name", () => {
+  const tooShort = (minLength = 5, extra: object = { with: "filters" }) => ({
+    code: 422,
+    message: "The request is invalid.",
+    uri: null,
+    metadata: {
+      reason: "request_invalid",
+      errors: [
+        {
+          type: "string_too_short",
+          loc: ["query", "q"],
+          msg: `Filters need a query of at least ${minLength} characters`,
+          ctx: { min_length: minLength, ...extra },
+        },
+      ],
+    },
+  });
+  const refused = (body: unknown): ResponseLike => ({
+    ok: false,
+    status: 422,
+    headers: { get: () => null },
+    json: async () => body,
+  });
+  const query = {
+    q: "tim",
+    filters: { business: { name: "osiris" } },
+  } as const;
+
+  it("is sent, because the service answers it when the business name is narrow", async () => {
+    const { client, fetch } = setup();
+
+    const result = await client.search("people", query);
+
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(
+      new URL(String(fetch.mock.calls[0]?.[0])).searchParams.get("q"),
+    ).toBe("tim");
+    expect(result.filtersWaiting).toBe(false);
+    expect(result.response.suggestions.length).toBeGreaterThan(0);
+  });
+
+  it("reads the service's refusal, for a business name too wide, as waiting and not as an error", async () => {
+    const { client, fetch, events } = setup();
+    fetch.mockResolvedValue(refused(tooShort(5)));
+
+    const result = await client.search("people", query);
+
+    expect(result.filtersWaiting).toBe(true);
+    expect(result.charsNeeded).toBe(2);
+    expect(result.response.suggestions).toEqual([]);
+    expect(result.filtersWithheld).toBe(false);
+    expect(events).toEqual([
+      expect.objectContaining({ status: 422, error: null }),
+    ]);
+    // The service refused it before admitting it: nothing was spent.
+    const { usage } = client.getSnapshot();
+    expect(usage.requestsSinceMint).toBe(0);
+    expect(usage.requestsByRoute.people).toBe(0);
+  });
+
+  it("takes the stem from the refusal, not from what the client counted", async () => {
+    const { client, fetch } = setup();
+    fetch.mockResolvedValue(refused(tooShort(8)));
+
+    const result = await client.search("people", query);
+
+    expect(result.charsNeeded).toBe(5);
+  });
+
+  it.each([
+    ["a too short q that is not about filters", tooShort(2, {})],
+    ["a refusal that names no length", tooShort(5, { with: "filters" })],
+  ])("still reads %s as an error", async (name, body) => {
+    const { client, fetch } = setup();
+    fetch.mockResolvedValue(
+      refused(
+        name.startsWith("a refusal")
+          ? {
+              ...(body as object),
+              metadata: {
+                reason: "request_invalid",
+                errors: [
+                  {
+                    type: "string_too_short",
+                    loc: ["query", "q"],
+                    msg: "Filters need a query",
+                    ctx: { with: "filters" },
+                  },
+                ],
+              },
+            }
+          : body,
+      ),
+    );
+
+    await expect(client.search("people", query)).rejects.toMatchObject({
+      kind: "request_failed",
+      status: 422,
+    });
+  });
+
+  it("is an error when the query carried no filter to wait for", async () => {
+    const { client, fetch } = setup();
+    fetch.mockResolvedValue(refused(tooShort(5)));
+
+    await expect(client.search("people", { q: "tim" })).rejects.toMatchObject({
+      status: 422,
+    });
+  });
+
+  it("is an error under onShortStem: send, which asks for exactly that", async () => {
+    const { client, fetch } = setup({ onShortStem: "send" });
+    fetch.mockResolvedValue(refused(tooShort(5)));
+
+    await expect(client.search("people", query)).rejects.toMatchObject({
+      status: 422,
+    });
+  });
+});

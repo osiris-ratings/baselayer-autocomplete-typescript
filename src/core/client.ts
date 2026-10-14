@@ -13,6 +13,13 @@ import {
 } from "./businesses";
 import { ROUTE_NAMES, type Relation, type Route } from "./entities";
 import {
+  charsUntilFilters,
+  fallbackFilterRules,
+  personNameCount,
+  stemCount,
+  type FilterRule,
+} from "./filter-gate";
+import {
   AutocompleteError,
   abortError,
   isAbortError,
@@ -43,6 +50,7 @@ import {
 import {
   ContractViolation,
   ROUTE_UNSERVED_REASONS,
+  filterStemRefused,
   firstValidationMessage,
   parseErrorEnvelope,
   parseSuggestResponse,
@@ -107,9 +115,9 @@ export interface SearchResult<R extends Relation = "businesses"> {
   /** The query carried filters and the stem was too short for them: asked without. */
   filtersWithheld: boolean;
   /**
-   * The query carried filters and the stem was too short for them: not asked.
-   * `response` is then empty, not the autocomplete service's answer, and
-   * `requestId` and `indexTag` are null. Absent reads as false: a result built
+   * The query carried filters and its text was too short for them: not asked,
+   * or asked and refused by the service for that. `response` is then empty,
+   * not the autocomplete service's answer, and `indexTag` is null. Absent reads as false: a result built
    * before this field existed has none.
    */
   filtersWaiting?: boolean;
@@ -299,6 +307,8 @@ interface Failure {
   reason: string | null;
   code: number | null;
   metadata: Record<string, unknown> | null;
+  /** The stem a 422 says the filters wait for; null when it says none. */
+  filterStem: number | null;
 }
 
 async function readFailure(response: ResponseLike): Promise<Failure> {
@@ -313,6 +323,7 @@ async function readFailure(response: ResponseLike): Promise<Failure> {
       reason: null,
       code: null,
       metadata: null,
+      filterStem: null,
     };
   }
   const envelope = parseErrorEnvelope(body);
@@ -323,6 +334,7 @@ async function readFailure(response: ResponseLike): Promise<Failure> {
       reason: null,
       code: null,
       metadata: null,
+      filterStem: null,
     };
   }
   const reason = envelope.metadata?.reason;
@@ -334,6 +346,7 @@ async function readFailure(response: ResponseLike): Promise<Failure> {
     reason: typeof reason === "string" ? reason : null,
     code: envelope.code,
     metadata: envelope.metadata,
+    filterStem: filterStemRefused(envelope),
   };
 }
 
@@ -741,6 +754,47 @@ export function createAutocompleteClient(
       if (failure.reason === "session_pivots_exceeded") {
         pivotsExceededEvents += 1;
       }
+      if (
+        shortStem === "wait" &&
+        response.status === 422 &&
+        failure.filterStem !== null &&
+        hasFilters(relation, query.filters)
+      ) {
+        // The service still refuses what the client let through (a business
+        // name too wide for a short name, a count that drifted, a stem since
+        // changed): not an outage, only the filters waiting. It refused the
+        // request before admitting it, so none was spent.
+        requestsSinceMint -= 1;
+        requestsByRoute[relation] -= 1;
+        const rule = ruleFor(relation, grant);
+        const counted = (rule.count === "stem" ? stemCount : personNameCount)(
+          query.q,
+        );
+        emitRequest(
+          requestEvent(
+            relation,
+            query,
+            response.status,
+            roundTripMs,
+            response,
+            attempted,
+            false,
+            grant,
+            null,
+          ),
+        );
+        return {
+          response: unaskedResponse(relation, query.q),
+          indexTag: null,
+          requestId: response.headers.get("X-Request-ID"),
+          serverTiming: response.headers.get("Server-Timing"),
+          roundTripMs,
+          recovery: attempted,
+          filtersWithheld: false,
+          filtersWaiting: true,
+          charsNeeded: Math.max(1, failure.filterStem - counted),
+        };
+      }
       const recovery = recoveryFor(response.status, failure.reason);
       if (attempted !== "none" || recovery === "none") {
         // A re-mint that did not help is what the brake counts: the grant was
@@ -803,12 +857,24 @@ export function createAutocompleteClient(
     }
   }
 
-  /** Characters the filters of `query` need beyond what its text has. */
+  /** The service's rule for `relation` filters under `grant`. */
+  function ruleFor(relation: Relation, grant: Grant): FilterRule {
+    return fallbackFilterRules(grant.filterMinStem)[relation];
+  }
+
+  /**
+   * Characters the filters of `query` need beyond what its text has. `wait`
+   * reads the service's rules; `withhold` and `throw` keep the one stem and
+   * count they always had.
+   */
   function missingChars<R extends Relation>(
     relation: R,
     query: RouteQuery<R>,
     grant: Grant,
   ): number {
+    if (shortStem === "wait") {
+      return charsUntilFilters(relation, query, ruleFor(relation, grant));
+    }
     return hasFilters(relation, query.filters)
       ? Math.max(0, grant.filterMinStem - stemLength(query.q))
       : 0;
