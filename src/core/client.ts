@@ -18,6 +18,7 @@ import {
   fallbackFilterRules,
   parseFilterRules,
   personNameCount,
+  reachableStem,
   stemCount,
   type FilterRule,
 } from "./filter-gate";
@@ -929,7 +930,10 @@ export function createAutocompleteClient(
       // rule, so the count does not shrink and jump back up.
       return named === undefined
         ? lacking
-        : Math.max(lacking, named - countOf(rule, query.q));
+        : Math.max(
+            lacking,
+            reachableStem(rule.count, named) - countOf(rule, query.q),
+          );
     }
     return hasFilters(relation, query.filters)
       ? Math.max(0, grant.filterMinStem - stemLength(query.q))

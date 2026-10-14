@@ -166,6 +166,14 @@ export function fallbackFilterRules(minStem: number): FilterRules {
 }
 
 /**
+ * The stem a count can reach: no query is longer than `MAX_Q_CHARS`, and a name
+ * is cut at 255 counted characters, so a longer stem could never be met.
+ */
+export function reachableStem(count: FilterCount, stem: number): number {
+  return Math.min(stem, count === "person_name" ? 255 : MAX_Q_CHARS);
+}
+
+/**
  * The characters a query still lacks before its filters are asked, under
  * `rule`: 0 when it carries no gated filter, its text is long enough, or a
  * filter the rule lets a short text through with is set.
@@ -184,13 +192,14 @@ export function charsUntilFilters(
     return 0;
   }
   const length = (rule.count === "stem" ? stemCount : personNameCount)(query.q);
-  if (length >= rule.minStem) {
+  const stem = reachableStem(rule.count, rule.minStem);
+  if (length >= stem) {
     return 0;
   }
   if (length > 0 && rule.shortAllowedWith.some(param => set.includes(param))) {
     return 0;
   }
-  return rule.minStem - length;
+  return stem - length;
 }
 
 function names(value: unknown): readonly string[] | null {

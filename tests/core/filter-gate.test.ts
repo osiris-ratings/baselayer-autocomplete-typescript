@@ -135,3 +135,33 @@ describe("charsUntilFilters, on a rule that gates only some filters", () => {
     ).toBe(2);
   });
 });
+
+describe("a stem no name can reach", () => {
+  const people = (minStem: number): FilterRule => ({
+    minStem,
+    count: "person_name",
+    gated: "all",
+    shortAllowedWith: [],
+  });
+  const name = (length: number) => ({
+    q: "a".repeat(length),
+    filters: { business: { state: ["DE"] } },
+  });
+
+  it("is met by the longest name the people count reports, 255", () => {
+    expect(charsUntilFilters("people", name(255), people(256))).toBe(0);
+    expect(charsUntilFilters("people", name(254), people(256))).toBe(1);
+  });
+
+  it("is 256 for the text businesses and addresses count, the longest query there is", () => {
+    const stem: FilterRule = { ...people(256), count: "stem" };
+
+    expect(
+      charsUntilFilters(
+        "addresses",
+        { q: "a".repeat(256), filters: { state: ["DE"] } },
+        stem,
+      ),
+    ).toBe(0);
+  });
+});
