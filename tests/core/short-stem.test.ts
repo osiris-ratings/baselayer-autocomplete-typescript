@@ -75,7 +75,10 @@ function reply(body: unknown): ResponseLike {
   };
 }
 
-function setup(config: Partial<AutocompleteClientConfig> = {}) {
+function setup(
+  config: Partial<AutocompleteClientConfig> = {},
+  grantStem: number = STEM,
+) {
   const fetch = vi.fn<FetchLike>(async url => {
     const route = ROUTES.find(r => url.includes(`/autocomplete/${r.route}`));
     return reply(golden(route?.answer ?? "businesses"));
@@ -87,7 +90,7 @@ function setup(config: Partial<AutocompleteClientConfig> = {}) {
       expiresIn: 600,
       requestBudget: 50,
       pivotAllowance: 5,
-      filterMinStem: STEM,
+      filterMinStem: grantStem,
       scope: SCOPE,
     },
   }));
@@ -678,5 +681,60 @@ describe("a short people name the service refused beside a business name", () =>
 
     expect(again.filtersWaiting).toBe(false);
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("a stem the service named that the rules did not", () => {
+  const refused = (minLength: number): ResponseLike => ({
+    ok: false,
+    status: 422,
+    headers: { get: () => null },
+    json: async () => ({
+      code: 422,
+      message: "The request is invalid.",
+      uri: null,
+      metadata: {
+        reason: "request_invalid",
+        errors: [
+          {
+            type: "string_too_short",
+            loc: ["query", "q"],
+            msg: "Too short",
+            ctx: { min_length: minLength, with: "filters" },
+          },
+        ],
+      },
+    }),
+  });
+  const businesses = (q: string) => ({ q, filters: { state: ["DE"] } });
+
+  it("is what the characters still missing count after backspacing, not the smaller deficit of the rule", async () => {
+    const { client, fetch } = setup();
+    fetch.mockResolvedValueOnce(refused(8));
+    await client.search("businesses", businesses("halcy"));
+
+    // The rule needs 5, so "halc" lacks 1 by it; the service named 8, so 4.
+    expect(client.charsToFilters?.("businesses", businesses("halc"))).toBe(4);
+    const waiting = await client.search("businesses", businesses("halc"));
+    expect(waiting.charsNeeded).toBe(4);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("is not believed when it is past the longest query there is: that is an error, not a wait for ever", async () => {
+    const { client, fetch } = setup();
+    fetch.mockResolvedValue(refused(300));
+
+    await expect(
+      client.search("businesses", businesses("halcy")),
+    ).rejects.toMatchObject({ kind: "request_failed", status: 422 });
+  });
+
+  it("is capped, in a grant's own stem, at the longest query there is", async () => {
+    const { client } = setup({}, 999);
+
+    const waiting = await client.search("businesses", businesses("halcy"));
+
+    expect(waiting.filtersWaiting).toBe(true);
+    expect(waiting.charsNeeded).toBe(256 - 5);
   });
 });

@@ -326,6 +326,11 @@ interface Failure {
   filterStem: number | null;
 }
 
+/** A stem a query could reach, or null: a longer one is not believed. */
+function boundedStem(stem: number | null): number | null {
+  return stem !== null && stem <= MAX_Q_CHARS ? stem : null;
+}
+
 async function readFailure(response: ResponseLike): Promise<Failure> {
   const fallback = `Autocomplete unavailable (HTTP ${response.status})`;
   let body: unknown;
@@ -361,7 +366,7 @@ async function readFailure(response: ResponseLike): Promise<Failure> {
     reason: typeof reason === "string" ? reason : null,
     code: envelope.code,
     metadata: envelope.metadata,
-    filterStem: filterStemRefused(envelope),
+    filterStem: boundedStem(filterStemRefused(envelope)),
   };
 }
 
@@ -896,9 +901,10 @@ export function createAutocompleteClient(
 
   /** The service's rule for `relation` filters under `grant`. */
   function ruleFor(relation: Relation, grant: Grant): FilterRule {
+    // A stem past the longest query there is could never be met.
     return (
       grant.filterRules?.[relation] ??
-      fallbackFilterRules(grant.filterMinStem)[relation]
+      fallbackFilterRules(Math.min(grant.filterMinStem, MAX_Q_CHARS))[relation]
     );
   }
 
@@ -915,13 +921,15 @@ export function createAutocompleteClient(
     if (shortStem === "wait") {
       const rule = ruleFor(relation, grant);
       const lacking = charsUntilFilters(relation, query, rule);
-      if (lacking > 0 || refusedFor !== grant.sessionToken) {
-        return lacking;
-      }
-      const named = refusedStems.get(refusalKey(relation, query));
+      const named =
+        refusedFor === grant.sessionToken
+          ? refusedStems.get(refusalKey(relation, query))
+          : undefined;
+      // The service's own word on the stem outranks a smaller deficit by the
+      // rule, so the count does not shrink and jump back up.
       return named === undefined
-        ? 0
-        : Math.max(0, named - countOf(rule, query.q));
+        ? lacking
+        : Math.max(lacking, named - countOf(rule, query.q));
     }
     return hasFilters(relation, query.filters)
       ? Math.max(0, grant.filterMinStem - stemLength(query.q))
