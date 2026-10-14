@@ -901,6 +901,88 @@ describe("AddressAutocomplete", () => {
   });
 });
 
+// An integrator may enable the person line under an address while leaving the
+// address itself off, as the demo's Styling panel lets them: the head is then
+// greyed, and the people listed under it must still take hover, the keyboard
+// and a click, though the service seals no token for a person at an address.
+describe("a person listed under an address, with only person and business enabled", () => {
+  async function open() {
+    const { client } = setup();
+    const onPick = vi.fn<(pick: BusinessPick) => void>();
+    const onPickEntity = vi.fn<(pick: EntityPick) => void>();
+    const user = userEvent.setup();
+    render(
+      <AddressHost
+        client={client}
+        onPick={onPick}
+        onPickEntity={onPickEntity}
+        list={["businesses", "people"]}
+        enabledLines={["person", "business"]}
+      />,
+    );
+    await user.type(screen.getByRole("combobox"), "45 corvel");
+    const person = await screen.findByRole("option", { name: /Ada Fox/ });
+    return { user, person, onPick, onPickEntity };
+  }
+
+  it("is not greyed, while the address itself is", async () => {
+    const { person } = await open();
+
+    expect(person.getAttribute("aria-disabled")).not.toBe("true");
+    expect(screen.getByTestId("group-head").getAttribute("aria-disabled")).toBe(
+      "true",
+    );
+  });
+
+  it("is highlighted by the mouse, as a business is", async () => {
+    const { user, person } = await open();
+    const business = (await screen.findAllByRole("option")).find(option =>
+      /Ridgeline/i.test(option.textContent ?? ""),
+    )!;
+
+    await user.hover(business);
+    expect(business.getAttribute("aria-selected")).toBe("true");
+    await user.hover(person);
+
+    expect(person.getAttribute("aria-selected")).toBe("true");
+    expect(business.getAttribute("aria-selected")).not.toBe("true");
+  });
+
+  it("is picked by a click, handing the person", async () => {
+    const { user, person, onPickEntity, onPick } = await open();
+
+    await user.click(person);
+
+    expect(onPickEntity).toHaveBeenCalledTimes(1);
+    expect(onPickEntity).toHaveBeenCalledWith({
+      type: "person",
+      token: null,
+      label: "Ada Fox",
+    });
+    expect(onPick).not.toHaveBeenCalled();
+  });
+
+  it("is reached by the arrow keys and picked with Enter", async () => {
+    const { user, person, onPickEntity } = await open();
+
+    for (
+      let i = 0;
+      i < 12 && person.getAttribute("aria-selected") !== "true";
+      i++
+    ) {
+      await user.keyboard("{ArrowDown}");
+    }
+    expect(person.getAttribute("aria-selected")).toBe("true");
+    await user.keyboard("{Enter}");
+
+    expect(onPickEntity).toHaveBeenCalledWith({
+      type: "person",
+      token: null,
+      label: "Ada Fox",
+    });
+  });
+});
+
 // The roles are an open enum: the service may send one this build does not
 // list. Its line draws the value as sent, and a pick keeps it, rather than the
 // line going blank or the answer being refused.
