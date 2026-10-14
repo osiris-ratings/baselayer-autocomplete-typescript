@@ -48,6 +48,7 @@ The specs the Baselayer API publishes, vendored:
 | `contracts/sessions-openapi.json`           | `POST /autocomplete/sessions`            | the API's public OpenAPI                    |
 | `contracts/mint-grant-response.schema.json` | the mint's 201 body                      | the API's schema                            |
 | `contracts/filter-rules.json`               | the filter rules and their cases         | the autocomplete service's fixture          |
+| `contracts/filter-counts.json`              | how a query's characters are counted     | the autocomplete service's fixture          |
 | `contracts/autocomplete.overlay.yaml`       | the reference's extra docs               | written here                                |
 
 The wire tests read the autocomplete service's OpenAPI and the scope: every
@@ -61,7 +62,7 @@ Each file has its command, given the upstream file:
 pnpm contracts:autocomplete path/to/openapi.json
 pnpm contracts:scope path/to/autocomplete_scope.json
 pnpm contracts:sessions path/to/public_openapi.json
-pnpm contracts:filter-rules path/to/filter_rules.json <osiris-app commit>
+pnpm contracts:filter-rules path/to/fixtures <osiris-app commit>
 pnpm contracts:filter-rules --check
 ```
 
@@ -70,10 +71,12 @@ autocomplete service wherever upstream says only "the service"), the second
 keeps the three tables and drops the fixture's comment, and the third cuts the
 API's operation out of its public spec, with the schemas it reaches.
 
-The fourth copies the filter rules fixture as it is and records the osiris-app
-commit it came from (`contracts/filter-rules.source.json`); `--check` fetches it
-at that commit with `gh` and fails when the copy differs, and a test holds it to
-the blob id recorded. The service, the API and this SDK all run its cases.
+The fourth copies the two filter fixtures as they are (`filter_rules.json` and
+`filter_counts.json`, from the directory it is given) and records the osiris-app
+commit they came from (`contracts/filter-rules.source.json`); `--check` fetches
+each at that commit with `gh` and fails when a copy differs, and a test holds
+them to the blob ids recorded. The service, the API and this SDK all run their
+cases.
 
 ## The API reference
 

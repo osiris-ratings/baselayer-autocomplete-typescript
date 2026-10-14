@@ -52,8 +52,8 @@ breaking change bumps the minor version.
     `fallbackFilterRules`, `parseFilterRules`, `reachableStem`, `ruleFor` and the
     types `FilterRule`, `FilterRules` and `FilterCount`. A test holds every 0.7.0
     export of the three entry points, and another runs the service's own filter
-    rule cases (`contracts/filter-rules.json`, vendored with the commit it came
-    from).
+    rule cases and its count rows (`contracts/filter-rules.json` and
+    `contracts/filter-counts.json`, vendored with the commit they came from).
   - The demo's session grants a stem of 5, as the autocomplete service does by
     default, where it granted 3.
 

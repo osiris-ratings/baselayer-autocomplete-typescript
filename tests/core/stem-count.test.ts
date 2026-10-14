@@ -1,38 +1,67 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
   personNameCount,
+  personNameText,
   stemCount,
   stemText,
 } from "@baselayer-sdk/autocomplete";
 
-import vectors from "./fixtures/stem-vectors.json";
-
 // The characters a query counts against the filters' stem, as the autocomplete
 // service counts them: businesses and addresses read the text as `stem`, people
-// read the name as `person_name`. The rows are shared with the service.
+// read the name as `person_name`. The rows are the service's own
+// (`contracts/filter-counts.json`, vendored); a few more are this SDK's.
 
 interface Row {
   q: string;
+  /** The query is `q` repeated this many times. */
+  times?: number;
   stem?: string;
-  stemLen?: number;
+  stem_len?: number;
   person?: string;
-  personLen?: number;
-  utf16Len?: number;
+  person_len?: number;
 }
 
-const rows = vectors.rows as Row[];
+const service = JSON.parse(
+  readFileSync(
+    resolve(__dirname, "../../contracts/filter-counts.json"),
+    "utf8",
+  ),
+) as { version: number; rows: Row[] };
+
+/** Cases of the SDK's own, on top of the service's. */
+const own: Row[] = [
+  { q: "AT&T Corp.", stem: "at and t corp", stem_len: 13 },
+  { q: "Tri-City  o'brien", stem: "tri city o brien", stem_len: 16 },
+  { q: "José", person: "jose", person_len: 4 },
+];
+
+const rows = [...service.rows, ...own].map(row => ({
+  ...row,
+  q: row.times !== undefined ? row.q.repeat(row.times) : row.q,
+  /** What a failing case is called: a repeated query is not printed in full. */
+  label: row.times !== undefined ? `${row.q} × ${row.times}` : row.q,
+}));
+
+describe("the service's count rows", () => {
+  it("are version 1", () => {
+    expect(service.version).toBe(1);
+  });
+});
 
 describe("stemCount, the businesses and addresses count", () => {
-  it.each(rows.filter(row => row.stemLen !== undefined))(
-    "counts $q as $stemLen",
+  it.each(rows.filter(row => row.stem_len !== undefined))(
+    "counts $label as $stem_len",
     row => {
-      expect(stemCount(row.q)).toBe(row.stemLen);
+      expect(stemCount(row.q)).toBe(row.stem_len);
     },
   );
 
   it.each(rows.filter(row => row.stem !== undefined))(
-    "reads $q as $stem",
+    "reads $label as $stem",
     row => {
       expect(stemText(row.q)).toBe(row.stem);
     },
@@ -45,10 +74,17 @@ describe("stemCount, the businesses and addresses count", () => {
 });
 
 describe("personNameCount, the people count", () => {
-  it.each(rows.filter(row => row.personLen !== undefined))(
-    "counts $q as $personLen",
+  it.each(rows.filter(row => row.person_len !== undefined))(
+    "counts $label as $person_len",
     row => {
-      expect(personNameCount(row.q)).toBe(row.personLen);
+      expect(personNameCount(row.q)).toBe(row.person_len);
+    },
+  );
+
+  it.each(rows.filter(row => row.person !== undefined))(
+    "reads $label as $person",
+    row => {
+      expect(personNameText(row.q)).toBe(row.person);
     },
   );
 

@@ -64,6 +64,15 @@ describe("the filter rule sets", () => {
     },
   );
 
+  it.each(Object.entries(fixture.rules).filter(([, set]) => set.scope))(
+    "%s: holds the routes of its scope only",
+    (_, set) => {
+      expect(Object.keys(set.filter_rules).sort()).toEqual(
+        [...set.scope!].sort(),
+      );
+    },
+  );
+
   it.each(Object.entries(fixture.rules))(
     "%s: the legacy stem is the strictest route's",
     (_, set) => {

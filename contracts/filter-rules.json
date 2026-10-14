@@ -1,5 +1,5 @@
 {
-  "about": "The filter rules of the autocomplete routes, shared by the service (Rust tests), the API (Python tests) and the SDK: the rule sets a session may carry, and, for each, whether a request on a route with this query and these filters is refused (the 422 `string_too_short` with `filters`), sent, or sent short (a short query the rule lets through behind a filter in `short_allowed_with`, which only the search can still refuse). `count` says how the query's characters are counted (`filter_counts.json` pins both readings). `numbers` is what the grant's `flt` claim carries for the set, `legacy_stem` its `stem` claim and `filter_min_stem` answer, the strictest route minimum. `overrides` are the override rows that make the set. A set may name a `scope`, the routes the API mints the session for (every route when it does not): its `numbers` and `filter_rules` hold those routes only and `legacy_stem` is the strictest of them, and a route outside the claim is held to that legacy stem, as a grant that names one route only leaves the others.",
+  "about": "The filter rules of the autocomplete routes, shared by the service (Rust tests), the API (Python tests) and the SDK: the rule sets a session may carry, and, for each, whether a request on a route with this query and these filters is refused (the 422 `string_too_short` with `filters`), sent, or sent short (a short query the rule lets through behind a filter in `short_allowed_with`, which only the search can still refuse). `count` says how the query's characters are counted (`filter_counts.json` pins both readings). `numbers` is what the grant's `flt` claim carries for the set, `legacy_stem` its `stem` claim and `filter_min_stem` answer, the strictest route minimum. `overrides` are the override rows that make the set. A set may name a `scope`, the routes the API mints the session for (every route when it does not): its `numbers` and `filter_rules` hold those routes only and `legacy_stem` is the strictest of them, and a route outside the claim is held to that legacy stem, as a grant that names one route only leaves the others. A filter whose value is empty is not present, which holds for the free-text parameters (`person.name`, `business.name`, `address.text`, `address.city`, `city`); a coded one (a state, a structure, a role, a postal code) sent empty is a 422 for its value, whatever the query.",
   "cases": [
     {
       "filters": {
@@ -1267,6 +1267,289 @@
       "q": "osir",
       "route": "businesses",
       "rules": "addresses_alone"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "businesses: a Hangul name of five jamo is sent",
+      "outcome": "sent",
+      "q": "\uc11c\uc6b8",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "addresses: a Hangul name of five jamo is sent",
+      "outcome": "sent",
+      "q": "\uc11c\uc6b8",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 5,
+      "name": "businesses: two CJK letters wait for five",
+      "outcome": "refused",
+      "q": "\u5317\u4eac",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 5,
+      "name": "businesses: three CJK letters wait for five",
+      "outcome": "refused",
+      "q": "\ud842\udfb7\u91ce\u5bb6",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 5,
+      "name": "addresses: two CJK letters wait for five",
+      "outcome": "refused",
+      "q": "\u5317\u4eac",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "min_length": 5,
+      "name": "people: Hangul counts nothing, so it waits",
+      "outcome": "refused",
+      "q": "\uc11c\uc6b8",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "min_length": 5,
+      "name": "people: CJK counts nothing, so it waits",
+      "outcome": "refused",
+      "q": "\u5317\u4eac",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 5,
+      "name": "businesses: an ampersand alone counts as three and waits",
+      "outcome": "refused",
+      "q": "&",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "businesses: a&b counts as seven and is sent",
+      "outcome": "sent",
+      "q": "a&b",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "min_length": 5,
+      "name": "people: an ampersand alone counts as three and waits",
+      "outcome": "refused",
+      "q": "&",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "name": "people: a&b counts as seven and is sent",
+      "outcome": "sent",
+      "q": "a&b",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 5,
+      "name": "addresses: an ampersand alone counts as three and waits",
+      "outcome": "refused",
+      "q": "&",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "addresses: a&b counts as seven and is sent",
+      "outcome": "sent",
+      "q": "a&b",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "businesses: O'Bri is five characters and is sent",
+      "outcome": "sent",
+      "q": "O'Bri",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "min_length": 5,
+      "name": "businesses: O'Br is four and waits",
+      "outcome": "refused",
+      "q": "O'Br",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "name": "people: O'Bri is five characters and is sent",
+      "outcome": "sent",
+      "q": "O'Bri",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "min_length": 5,
+      "name": "people: O'Br is four and waits",
+      "outcome": "refused",
+      "q": "O'Br",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.state": "KS"
+      },
+      "min_length": 5,
+      "name": "people: three hundred Cyrillic letters count nothing and wait",
+      "outcome": "refused",
+      "q": "\u044f",
+      "route": "people",
+      "rules": "default",
+      "times": 300
+    },
+    {
+      "filters": {
+        "state": "CA"
+      },
+      "name": "addresses: three hundred letters are sent",
+      "outcome": "sent",
+      "q": "a",
+      "route": "addresses",
+      "rules": "default",
+      "times": 300
+    },
+    {
+      "filters": {
+        "business.name": "osiris"
+      },
+      "name": "people at three: a two-letter name behind a business name runs short",
+      "outcome": "sent_short",
+      "q": "ti",
+      "route": "people",
+      "rules": "people_three"
+    },
+    {
+      "filters": {
+        "business.name": "osiris"
+      },
+      "name": "people at three: a three-letter name behind a business name is sent",
+      "outcome": "sent",
+      "q": "tim",
+      "route": "people",
+      "rules": "people_three"
+    },
+    {
+      "filters": {
+        "person.name": ""
+      },
+      "name": "businesses: an empty person.name is no filter and a short query is sent",
+      "outcome": "sent",
+      "q": "os",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "address.city": ""
+      },
+      "name": "businesses: an empty address.city is no filter and a short query is sent",
+      "outcome": "sent",
+      "q": "os",
+      "route": "businesses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "address.text": ""
+      },
+      "name": "people: an empty address.text is no filter and a short query is sent",
+      "outcome": "sent",
+      "q": "os",
+      "route": "people",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.name": ""
+      },
+      "name": "addresses: an empty business.name is no filter and a short query is sent",
+      "outcome": "sent",
+      "q": "os",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "city": ""
+      },
+      "name": "addresses: an empty city is no filter and a short query is sent",
+      "outcome": "sent",
+      "q": "os",
+      "route": "addresses",
+      "rules": "default"
+    },
+    {
+      "filters": {
+        "business.name": ""
+      },
+      "name": "people: an empty business.name is no filter and a short query is sent",
+      "outcome": "sent",
+      "q": "os",
+      "route": "people",
+      "rules": "default"
     }
   ],
   "rules": {

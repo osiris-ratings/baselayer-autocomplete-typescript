@@ -1,0 +1,404 @@
+{
+  "about": "How the autocomplete service counts a query's characters before a filter may narrow it: `stem` on the businesses and addresses routes, `person_name` on the people route. A row with `times` repeats `q` that many times.",
+  "rows": [
+    {
+      "person": "",
+      "person_len": 0,
+      "q": "",
+      "stem": "",
+      "stem_len": 0
+    },
+    {
+      "person": "",
+      "person_len": 0,
+      "q": "   ",
+      "stem": "",
+      "stem_len": 0
+    },
+    {
+      "person": "a",
+      "person_len": 1,
+      "q": "a",
+      "stem": "a",
+      "stem_len": 1
+    },
+    {
+      "person": "ab",
+      "person_len": 2,
+      "q": "ab",
+      "stem": "ab",
+      "stem_len": 2
+    },
+    {
+      "person": "abc",
+      "person_len": 3,
+      "q": "abc",
+      "stem": "abc",
+      "stem_len": 3
+    },
+    {
+      "person": "abcd",
+      "person_len": 4,
+      "q": "abcd",
+      "stem": "abcd",
+      "stem_len": 4
+    },
+    {
+      "person": "abcde",
+      "person_len": 5,
+      "q": "abcde",
+      "stem": "abcde",
+      "stem_len": 5
+    },
+    {
+      "person": "abcdef",
+      "person_len": 6,
+      "q": "abcdef",
+      "stem": "abcdef",
+      "stem_len": 6
+    },
+    {
+      "person": "tim",
+      "person_len": 3,
+      "q": " tim ",
+      "stem": "tim",
+      "stem_len": 3
+    },
+    {
+      "person": "tim osiris",
+      "person_len": 10,
+      "q": "tim  osiris",
+      "stem": "tim osiris",
+      "stem_len": 10
+    },
+    {
+      "person": "tim osiris",
+      "person_len": 10,
+      "q": "tim osiris",
+      "stem": "tim osiris",
+      "stem_len": 10
+    },
+    {
+      "person": "tim osiris",
+      "person_len": 10,
+      "q": "tim\tosiris",
+      "stem": "tim osiris",
+      "stem_len": 10
+    },
+    {
+      "person": "tim osiris",
+      "person_len": 10,
+      "q": "tim\u00a0osiris",
+      "stem": "tim osiris",
+      "stem_len": 10
+    },
+    {
+      "person": "o'brien",
+      "person_len": 7,
+      "q": "o'brien",
+      "stem": "o brien",
+      "stem_len": 7
+    },
+    {
+      "person": "obrien",
+      "person_len": 6,
+      "q": "O\u2019Brien",
+      "stem": "o brien",
+      "stem_len": 7
+    },
+    {
+      "person": "d'angelo",
+      "person_len": 8,
+      "q": "d'angelo",
+      "stem": "d angelo",
+      "stem_len": 8
+    },
+    {
+      "person": "at and t",
+      "person_len": 8,
+      "q": "AT&T",
+      "stem": "at and t",
+      "stem_len": 8
+    },
+    {
+      "person": "at and",
+      "person_len": 6,
+      "q": "at&",
+      "stem": "at and",
+      "stem_len": 6
+    },
+    {
+      "person": "a and b",
+      "person_len": 7,
+      "q": "a & b",
+      "stem": "a and b",
+      "stem_len": 7
+    },
+    {
+      "person": "h and r block",
+      "person_len": 13,
+      "q": "H&R Block",
+      "stem": "h and r block",
+      "stem_len": 13
+    },
+    {
+      "person": "and",
+      "person_len": 3,
+      "q": "&",
+      "stem": "and",
+      "stem_len": 3
+    },
+    {
+      "person": "",
+      "person_len": 0,
+      "q": "-",
+      "stem": "",
+      "stem_len": 0
+    },
+    {
+      "person": "5",
+      "person_len": 1,
+      "q": "#5",
+      "stem": "5",
+      "stem_len": 1
+    },
+    {
+      "person": "",
+      "person_len": 0,
+      "q": "@@@",
+      "stem": "",
+      "stem_len": 0
+    },
+    {
+      "person": "tri city",
+      "person_len": 8,
+      "q": "Tri-City",
+      "stem": "tri city",
+      "stem_len": 8
+    },
+    {
+      "person": "mary jane",
+      "person_len": 9,
+      "q": "mary-jane",
+      "stem": "mary jane",
+      "stem_len": 9
+    },
+    {
+      "person": "snake case",
+      "person_len": 10,
+      "q": "snake_case",
+      "stem": "snake case",
+      "stem_len": 10
+    },
+    {
+      "person": "ab",
+      "person_len": 2,
+      "q": "a.b",
+      "stem": "a b",
+      "stem_len": 3
+    },
+    {
+      "person": "jr",
+      "person_len": 2,
+      "q": "j.r.",
+      "stem": "j r",
+      "stem_len": 3
+    },
+    {
+      "person": "st louis",
+      "person_len": 8,
+      "q": "St. Louis",
+      "stem": "st louis",
+      "stem_len": 8
+    },
+    {
+      "person": "1st ave",
+      "person_len": 7,
+      "q": "1st ave",
+      "stem": "1st ave",
+      "stem_len": 7
+    },
+    {
+      "person": "123",
+      "person_len": 3,
+      "q": "123",
+      "stem": "123",
+      "stem_len": 3
+    },
+    {
+      "person": "jose munoz pena",
+      "person_len": 15,
+      "q": "Jos\u00e9 Mu\u00f1oz-Pe\u00f1a",
+      "stem": "jose munoz pena",
+      "stem_len": 15
+    },
+    {
+      "person": "cafe",
+      "person_len": 4,
+      "q": "Caf\u00e9",
+      "stem": "cafe",
+      "stem_len": 4
+    },
+    {
+      "person": "zoe",
+      "person_len": 3,
+      "q": "Zo\u00eb",
+      "stem": "zoe",
+      "stem_len": 3
+    },
+    {
+      "person": "ecole",
+      "person_len": 5,
+      "q": "e\u0301cole",
+      "stem": "ecole",
+      "stem_len": 5
+    },
+    {
+      "person": "rsted",
+      "person_len": 5,
+      "q": "\u00d8rsted",
+      "stem": "\u00f8rsted",
+      "stem_len": 6
+    },
+    {
+      "person": "strae",
+      "person_len": 5,
+      "q": "Stra\u00dfe",
+      "stem": "stra\u00dfe",
+      "stem_len": 6
+    },
+    {
+      "person": "",
+      "person_len": 0,
+      "q": "\u00df",
+      "stem": "\u00df",
+      "stem_len": 1
+    },
+    {
+      "person": "istanbul",
+      "person_len": 8,
+      "q": "\u0130stanbul",
+      "stem": "istanbul",
+      "stem_len": 8
+    },
+    {
+      "person": "",
+      "person_len": 0,
+      "q": "\u039f\u0394\u03a5\u03a3\u03a3\u0395\u03a5\u03a3",
+      "stem": "\u03bf\u03b4\u03c5\u03c3\u03c3\u03b5\u03c5\u03c2",
+      "stem_len": 8
+    },
+    {
+      "person": "",
+      "person_len": 0,
+      "q": "\u0413\u0430\u0437\u043f\u0440\u043e\u043c",
+      "stem": "\u0433\u0430\u0437\u043f\u0440\u043e\u043c",
+      "stem_len": 7
+    },
+    {
+      "person": "",
+      "person_len": 0,
+      "q": "\u03a9\u03bc\u03ad\u03b3\u03b1",
+      "stem": "\u03c9\u03bc\u03b5\u03b3\u03b1",
+      "stem_len": 5
+    },
+    {
+      "person": "",
+      "person_len": 0,
+      "q": "\u5317\u4eac",
+      "stem": "\u5317\u4eac",
+      "stem_len": 2
+    },
+    {
+      "person": "",
+      "person_len": 0,
+      "q": "\uc11c\uc6b8",
+      "stem": "\u1109\u1165\u110b\u116e\u11af",
+      "stem_len": 5
+    },
+    {
+      "person": "",
+      "person_len": 0,
+      "q": "\u0645\u062d\u0645\u062f",
+      "stem": "\u0645\u062d\u0645\u062f",
+      "stem_len": 4
+    },
+    {
+      "person": "ab",
+      "person_len": 2,
+      "q": "\ud83d\ude42ab",
+      "stem": "ab",
+      "stem_len": 2
+    },
+    {
+      "person": "ab",
+      "person_len": 2,
+      "q": "ab\ud83d\ude42",
+      "stem": "ab",
+      "stem_len": 2
+    },
+    {
+      "person": "",
+      "person_len": 0,
+      "q": "\ud842\udfb7\u91ce\u5bb6",
+      "stem": "\ud842\udfb7\u91ce\u5bb6",
+      "stem_len": 3
+    },
+    {
+      "person": "osir",
+      "person_len": 4,
+      "q": "osir\u24d8",
+      "stem": "osir\u24d8",
+      "stem_len": 5
+    },
+    {
+      "person": "",
+      "person_len": 0,
+      "q": "\uff21\uff22\uff23",
+      "stem": "\uff41\uff42\uff43",
+      "stem_len": 3
+    },
+    {
+      "person": "",
+      "person_len": 0,
+      "q": "\u0663\u0664\u0665",
+      "stem": "\u0663\u0664\u0665",
+      "stem_len": 3
+    },
+    {
+      "person": "",
+      "person_len": 0,
+      "q": "\u00f8",
+      "stem": "\u00f8",
+      "stem_len": 1
+    },
+    {
+      "person": "st j",
+      "person_len": 4,
+      "q": "St. J",
+      "stem": "st j",
+      "stem_len": 4
+    },
+    {
+      "person": "a and b",
+      "person_len": 7,
+      "q": "a&b",
+      "stem": "a and b",
+      "stem_len": 7
+    },
+    {
+      "person": "o'brien",
+      "person_len": 7,
+      "q": "O'Brien",
+      "stem": "o brien",
+      "stem_len": 7
+    },
+    {
+      "person_len": 255,
+      "q": "a",
+      "stem_len": 300,
+      "times": 300
+    }
+  ],
+  "version": 1
+}

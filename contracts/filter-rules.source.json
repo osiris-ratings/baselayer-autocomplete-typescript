@@ -1,6 +1,14 @@
 {
   "repository": "osiris-ratings/osiris-app",
-  "path": "crates/autocomplete/tests/fixtures/filter_rules.json",
-  "commit": "08d64ecabb57e21201fda226e94fdd38f13d336a",
-  "blob": "dac2042d37a3bace84f429179c76c274caed7b6e"
+  "commit": "1202e805a9f7c21b6dad3f59a716551e88c7e87e",
+  "files": {
+    "filter-rules.json": {
+      "path": "crates/autocomplete/tests/fixtures/filter_rules.json",
+      "blob": "90b06772c7a0e87f2ccb97fc9db1bbf93a2ab420"
+    },
+    "filter-counts.json": {
+      "path": "crates/autocomplete/tests/fixtures/filter_counts.json",
+      "blob": "d2f29d240ecd6a8ab9b7a45e7c50bd71be2b90f9"
+    }
+  }
 }
