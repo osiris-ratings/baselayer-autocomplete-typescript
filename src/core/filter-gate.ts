@@ -1,5 +1,5 @@
 import { setFilters } from "./businesses";
-import type { Route } from "./entities";
+import { ROUTE_NAMES, type Route } from "./entities";
 
 // The autocomplete service refuses a filter while the text beside it is too
 // short, and which filters, how the text is counted and how long it must be are
@@ -191,4 +191,50 @@ export function charsUntilFilters(
     return 0;
   }
   return rule.minStem - length;
+}
+
+function names(value: unknown): readonly string[] | null {
+  return Array.isArray(value) && value.every(item => typeof item === "string")
+    ? (value as string[])
+    : null;
+}
+
+/**
+ * The rules a session carries, snake_case or camelCase, for the routes it
+ * names. A route whose rule is not one this client can read (a stem that is not
+ * a positive integer, a count it does not know, gated filters that are not
+ * names) is left out, so it falls back to today's rules, and the others are
+ * kept: a rule it cannot read never refuses a session. Undefined when there is
+ * nothing to read.
+ */
+export function parseFilterRules(
+  value: unknown,
+): Partial<FilterRules> | undefined {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+  const record = value as Record<string, unknown>;
+  const rules: Partial<FilterRules> = {};
+  for (const route of ROUTE_NAMES) {
+    const entry = record[route];
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) {
+      continue;
+    }
+    const e = entry as Record<string, unknown>;
+    const minStem = e.min_stem ?? e.minStem;
+    const gated = e.gated === "all" ? "all" : names(e.gated);
+    const allowed = e.short_allowed_with ?? e.shortAllowedWith ?? [];
+    const shortAllowedWith = names(allowed);
+    if (
+      typeof minStem === "number" &&
+      Number.isInteger(minStem) &&
+      minStem > 0 &&
+      (e.count === "stem" || e.count === "person_name") &&
+      gated !== null &&
+      shortAllowedWith !== null
+    ) {
+      rules[route] = { minStem, count: e.count, gated, shortAllowedWith };
+    }
+  }
+  return Object.keys(rules).length > 0 ? rules : undefined;
 }

@@ -38,6 +38,7 @@ export {
 export {
   charsUntilFilters,
   fallbackFilterRules,
+  parseFilterRules,
   personNameCount,
   personNameText,
   stemCount,

@@ -15,6 +15,7 @@ import { ROUTE_NAMES, type Relation, type Route } from "./entities";
 import {
   charsUntilFilters,
   fallbackFilterRules,
+  parseFilterRules,
   personNameCount,
   stemCount,
   type FilterRule,
@@ -271,7 +272,14 @@ function readStoredGrant(key: string, now: number): Grant | null {
       store.removeItem(key);
       return null;
     }
-    return { ...stored.grant, scope };
+    // The rules are read again, not trusted: storage is the page's to change.
+    const { filterRules: storedRules, ...rest } = stored.grant;
+    const filterRules = parseFilterRules(storedRules);
+    return {
+      ...rest,
+      scope,
+      ...(filterRules !== undefined ? { filterRules } : {}),
+    };
   } catch {
     return null;
   }
@@ -859,7 +867,10 @@ export function createAutocompleteClient(
 
   /** The service's rule for `relation` filters under `grant`. */
   function ruleFor(relation: Relation, grant: Grant): FilterRule {
-    return fallbackFilterRules(grant.filterMinStem)[relation];
+    return (
+      grant.filterRules?.[relation] ??
+      fallbackFilterRules(grant.filterMinStem)[relation]
+    );
   }
 
   /**
