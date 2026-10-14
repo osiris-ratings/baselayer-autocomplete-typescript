@@ -792,7 +792,14 @@ export function createAutocompleteClient(
           refusedStems.clear();
           refusedFor = grant.sessionToken;
         }
-        refusedStems.set(refusalKey(relation, query), failure.filterStem);
+        // One number for the hint and the gate: the stem the service named as
+        // far as the count can reach it, and at least one more than the text
+        // already counted, which it refused.
+        const named = Math.max(
+          reachableStem(ruleOf(relation, grant).count, failure.filterStem),
+          counted + 1,
+        );
+        refusedStems.set(refusalKey(relation, query), named);
         emitRequest(
           requestEvent(
             relation,
@@ -815,7 +822,10 @@ export function createAutocompleteClient(
           recovery: attempted,
           filtersWithheld: false,
           filtersWaiting: true,
-          charsNeeded: Math.max(1, failure.filterStem - counted),
+          charsNeeded: Math.max(
+            1,
+            (refusedStems.get(refusalKey(relation, query)) ?? 0) - counted,
+          ),
         };
       }
       const recovery = recoveryFor(response.status, failure.reason);

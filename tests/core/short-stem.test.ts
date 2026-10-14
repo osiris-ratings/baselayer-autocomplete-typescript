@@ -738,3 +738,37 @@ describe("a stem the service named that the rules did not", () => {
     expect(waiting.charsNeeded).toBe(256 - 5);
   });
 });
+
+describe("a refusal for a stem the text already counts", () => {
+  it("is not asked again at the same text, and the hint and the gate agree on 1", async () => {
+    const { client, fetch } = setup();
+    fetch.mockResolvedValueOnce({
+      ok: false,
+      status: 422,
+      headers: { get: () => null },
+      json: async () => ({
+        code: 422,
+        message: "The request is invalid.",
+        uri: null,
+        metadata: {
+          reason: "request_invalid",
+          errors: [
+            {
+              type: "string_too_short",
+              loc: ["query", "q"],
+              msg: "Too short",
+              ctx: { min_length: 4, with: "filters" },
+            },
+          ],
+        },
+      }),
+    });
+    const query = { q: "halcy", filters: { state: ["DE"] } };
+
+    const refused = await client.search("businesses", query);
+
+    expect(refused.filtersWaiting).toBe(true);
+    expect(refused.charsNeeded).toBe(1);
+    expect(client.charsToFilters?.("businesses", query)).toBe(1);
+  });
+});
