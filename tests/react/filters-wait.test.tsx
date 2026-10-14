@@ -285,10 +285,10 @@ describe.each(FIELDS)("the $route field, with no filter set", field => {
   });
 });
 
-const HINT = (count: number) =>
-  count === 1
-    ? "Type 1 more letter to search with your filters"
-    : `Type ${count} more letters to search with your filters`;
+const DEFAULT_HINT = "Keep typing to see suggestions";
+/** An app that wants a number writes its own: the count is passed to it. */
+const NEED = (count: number) => `need ${count} more`;
+const WITH_NUMBER = { filtersNeedMore: NEED };
 
 describe.each(FIELDS)(
   "the $route field's hint while its filter waits",
@@ -320,43 +320,61 @@ describe.each(FIELDS)(
       return { user, fetch };
     };
 
-    it("asks for what the session says is missing: 2 more at 3 characters, 1 more at 4, none at 5", async () => {
+    it("asks a person who never chose the filters to keep typing, with no filters and no number in it", async () => {
       const { user } = await show();
 
       await user.keyboard(field.typed.slice(0, 3));
-      expect(await screen.findByText(HINT(2))).toBeTruthy();
+      expect(await screen.findByText(DEFAULT_HINT)).toBeTruthy();
       await user.keyboard(field.typed.slice(3, 4));
-      expect(await screen.findByText(HINT(1))).toBeTruthy();
+      expect(await screen.findByText(DEFAULT_HINT)).toBeTruthy();
       await user.keyboard(field.typed.slice(4));
       await screen.findAllByRole("option");
-      expect(screen.queryByText(/more letters? to search/)).toBeNull();
+      expect(screen.queryByText(DEFAULT_HINT)).toBeNull();
+    });
+
+    it("passes an app that wants a number the characters missing: 2 more at 3, 1 more at 4, none at 5", async () => {
+      const { user } = await show({}, { messages: WITH_NUMBER });
+
+      await user.keyboard(field.typed.slice(0, 3));
+      expect(await screen.findByText(NEED(2))).toBeTruthy();
+      await user.keyboard(field.typed.slice(3, 4));
+      expect(await screen.findByText(NEED(1))).toBeTruthy();
+      await user.keyboard(field.typed.slice(4));
+      await screen.findAllByRole("option");
+      expect(screen.queryByText(/need \d more/)).toBeNull();
     });
 
     it("follows the session, not a constant: a stem of 4 asks for 4 minus what is typed", async () => {
       const stem = 4;
-      const { user } = await show({
-        filterMinStem: stem,
-        filterRules: {
-          [field.route]: {
-            minStem: stem,
-            count: field.route === "people" ? "person_name" : "stem",
-            gated: "all",
-            shortAllowedWith: [],
+      const { user } = await show(
+        {
+          filterMinStem: stem,
+          filterRules: {
+            [field.route]: {
+              minStem: stem,
+              count: field.route === "people" ? "person_name" : "stem",
+              gated: "all",
+              shortAllowedWith: [],
+            },
           },
         },
-      });
+        { messages: WITH_NUMBER },
+      );
 
       await user.keyboard(field.typed.slice(0, 3));
 
-      expect(await screen.findByText(HINT(1))).toBeTruthy();
+      expect(await screen.findByText(NEED(1))).toBeTruthy();
     });
 
     it("follows an older API's session, which sends no rules, by its filter stem", async () => {
-      const { user } = await show({ filterMinStem: 7 });
+      const { user } = await show(
+        { filterMinStem: 7 },
+        { messages: WITH_NUMBER },
+      );
 
       await user.keyboard(field.typed.slice(0, 3));
 
-      expect(await screen.findByText(HINT(4))).toBeTruthy();
+      expect(await screen.findByText(NEED(4))).toBeTruthy();
     });
 
     it("says nothing when no filter is set", async () => {
@@ -365,18 +383,24 @@ describe.each(FIELDS)(
       await user.keyboard(field.typed.slice(0, 3));
       await screen.findAllByRole("option");
 
-      expect(screen.queryByText(/more letters? to search/)).toBeNull();
+      expect(screen.queryByText(DEFAULT_HINT)).toBeNull();
     });
 
-    it("is the host's own text when it overrides it", async () => {
+    it("is the host's own text when it overrides it, through the same `messages` as every other string", async () => {
       const { user } = await show(
         {},
-        { messages: { filtersNeedMore: n => `${n} to go` } },
+        {
+          messages: {
+            filtersNeedMore: n => `Encore ${n} lettres`,
+            searching: "Recherche…",
+          },
+        },
       );
 
       await user.keyboard(field.typed.slice(0, 3));
 
-      expect(await screen.findByText("2 to go")).toBeTruthy();
+      expect(await screen.findByText("Encore 2 lettres")).toBeTruthy();
+      expect(screen.queryByText(DEFAULT_HINT)).toBeNull();
     });
   },
 );
@@ -398,7 +422,7 @@ describe("the people field's short name beside a business name", () => {
     await user.keyboard("tim");
 
     expect((await screen.findAllByRole("option")).length).toBeGreaterThan(0);
-    expect(screen.queryByText(/more letters? to search/)).toBeNull();
+    expect(screen.queryByText(DEFAULT_HINT)).toBeNull();
     expect(
       new URL(String(fetch.mock.calls[0]?.[0])).searchParams.get(
         "business.name",

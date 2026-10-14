@@ -40,10 +40,12 @@ breaking change bumps the minor version.
     resolves with an empty `response` (every relation `not_requested`). With a
     session in hand the hooks empty their rows at once, asking nothing and
     showing no search state, which `client.charsToFilters(route, query)` tells
-    them. The components say so in the menu, one line asking for the characters
-    still missing ("Type 2 more letters to search with your filters"), from the
-    new `messages.filtersNeedMore`, which an app overrides like the others or
-    leaves out. It shows only while a filter is set and its text is too short.
+    them. The components say so in the menu, one line asking the person to keep
+    typing ("Keep typing to see suggestions", words for someone who never chose
+    the filters), from the new `messages.filtersNeedMore`. An app overrides or
+    localizes it like every other message, and is passed the characters still
+    missing if it wants to say a number ("Type 2 more letters"). It shows only
+    while a filter is set and its text is too short.
   - Nothing is removed or renamed, and the new fields and the client method are
     optional. New exports: `stemCount`, `stemText`, `personNameCount`,
     `personNameText`, `charsUntilFilters`, `fallbackFilterRules`,

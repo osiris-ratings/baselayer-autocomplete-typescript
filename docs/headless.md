@@ -67,8 +67,9 @@ enough to be what someone is typing (the session's stem, 5 characters by
 default). By default the client waits: a filtered query that is too short is not
 asked. The search answers at once with no suggestions and `filtersWaiting:
 true`, and `charsNeeded` counts the characters still missing, so a field shows
-nothing but that count until its filters can engage. Its rows do not change from
-an unfiltered set to a filtered one, and the session is minted all the same.
+nothing but a line asking to keep typing until its filters can engage. Its rows
+do not change from an unfiltered set to a filtered one, and the session is
+minted all the same.
 
 Which filters wait, how the text is counted and how long it must be are the
 service's own rules for each route, and the session carries them (`filter_rules`,

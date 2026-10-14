@@ -603,3 +603,80 @@ describe("the characters a refused query still needs", () => {
     expect(businesses.charsNeeded).toBe(1);
   });
 });
+
+describe("a short people name the service refused beside a business name", () => {
+  const tooShort = (minLength: number): ResponseLike => ({
+    ok: false,
+    status: 422,
+    headers: { get: () => null },
+    json: async () => ({
+      code: 422,
+      message: "The request is invalid.",
+      uri: null,
+      metadata: {
+        reason: "request_invalid",
+        errors: [
+          {
+            type: "string_too_short",
+            loc: ["query", "q"],
+            msg: "Too short",
+            ctx: { min_length: minLength, with: "filters" },
+          },
+        ],
+      },
+    }),
+  });
+  const wide = (q: string, name = "inc") => ({
+    q,
+    filters: { business: { name } },
+  });
+
+  it("is not asked again at the next keystroke, until the text reaches the stem the service named", async () => {
+    const { client, fetch } = setup();
+    fetch.mockResolvedValueOnce(tooShort(5));
+
+    const first = await client.search("people", wide("tim"));
+    const second = await client.search("people", wide("timo"));
+
+    expect(first.filtersWaiting).toBe(true);
+    expect(second.filtersWaiting).toBe(true);
+    expect(second.charsNeeded).toBe(1);
+    expect(fetch).toHaveBeenCalledTimes(1);
+
+    const third = await client.search("people", wide("timot"));
+    expect(third.filtersWaiting).toBe(false);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("is asked again when the business name changes, which may be narrow", async () => {
+    const { client, fetch } = setup();
+    fetch.mockResolvedValueOnce(tooShort(5));
+
+    await client.search("people", wide("tim"));
+    const other = await client.search("people", wide("tim", "osiris"));
+
+    expect(other.filtersWaiting).toBe(false);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("tells the synchronous check the same, so the hook empties without asking", async () => {
+    const { client, fetch } = setup();
+    fetch.mockResolvedValueOnce(tooShort(5));
+    await client.search("people", wide("tim"));
+
+    expect(client.charsToFilters?.("people", wide("timo"))).toBe(1);
+    expect(client.charsToFilters?.("people", wide("tim", "osiris"))).toBe(0);
+  });
+
+  it("is forgotten with the session", async () => {
+    const { client, fetch } = setup();
+    fetch.mockResolvedValueOnce(tooShort(5));
+    await client.search("people", wide("tim"));
+
+    client.reset();
+    const again = await client.search("people", wide("timo"));
+
+    expect(again.filtersWaiting).toBe(false);
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+});

@@ -4,6 +4,7 @@ import {
   buildSuggestUrl,
   hasFilters,
   recoveryFor,
+  setFilters,
   stemLength,
   strippedQuery,
   type Query,
@@ -780,10 +781,12 @@ export function createAutocompleteClient(
         // request before admitting it, so none was spent.
         requestsSinceMint = Math.max(0, requestsSinceMint - 1);
         requestsByRoute[relation] = Math.max(0, requestsByRoute[relation] - 1);
-        const rule = ruleFor(relation, grant);
-        const counted = (rule.count === "stem" ? stemCount : personNameCount)(
-          query.q,
-        );
+        const counted = countOf(ruleFor(relation, grant), query.q);
+        if (refusedFor !== grant.sessionToken || refusedStems.size >= 50) {
+          refusedStems.clear();
+          refusedFor = grant.sessionToken;
+        }
+        refusedStems.set(refusalKey(relation, query), failure.filterStem);
         emitRequest(
           requestEvent(
             relation,
@@ -871,6 +874,26 @@ export function createAutocompleteClient(
     }
   }
 
+  // What the service refused for the filters' stem when the rules let the
+  // query through (a short name beside a business name too wide for it), by
+  // route and filters, with the stem it named: until the text reaches that, or
+  // the filters change, or the session does, the query is not asked again.
+  const refusedStems = new Map<string, number>();
+  let refusedFor = "";
+
+  function refusalKey(relation: Relation, query: RouteQuery<Relation>): string {
+    return `${relation}|${JSON.stringify(
+      setFilters(relation, query.filters).map(({ param, value }) => [
+        param,
+        value,
+      ]),
+    )}`;
+  }
+
+  function countOf(rule: FilterRule, q: string): number {
+    return (rule.count === "stem" ? stemCount : personNameCount)(q);
+  }
+
   /** The service's rule for `relation` filters under `grant`. */
   function ruleFor(relation: Relation, grant: Grant): FilterRule {
     return (
@@ -890,7 +913,15 @@ export function createAutocompleteClient(
     grant: Grant,
   ): number {
     if (shortStem === "wait") {
-      return charsUntilFilters(relation, query, ruleFor(relation, grant));
+      const rule = ruleFor(relation, grant);
+      const lacking = charsUntilFilters(relation, query, rule);
+      if (lacking > 0 || refusedFor !== grant.sessionToken) {
+        return lacking;
+      }
+      const named = refusedStems.get(refusalKey(relation, query));
+      return named === undefined
+        ? 0
+        : Math.max(0, named - countOf(rule, query.q));
     }
     return hasFilters(relation, query.filters)
       ? Math.max(0, grant.filterMinStem - stemLength(query.q))
@@ -959,6 +990,7 @@ export function createAutocompleteClient(
     reset: () => {
       consecutiveAuthFailures = 0;
       authBrakeUntil = 0;
+      refusedStems.clear();
       requestsSinceMint = 0;
       requestsByRoute = noRequests();
       pivotsExceededEvents = 0;

@@ -14,10 +14,11 @@ function counted(count: number, one: string, many: string): string {
 export interface AutocompleteMessages {
   searching: string;
   /**
-   * The line a menu shows while a query's filters wait for more text, given the
-   * characters still missing: "Type 2 more letters to search with your
-   * filters". Optional so a full set of messages written before it still
-   * type-checks; the default is used when it is absent.
+   * The line a menu shows while a query's filters wait for more text, called
+   * with the characters still missing. The default ignores the count and asks
+   * the person to keep typing, in words for someone who never chose the filters;
+   * an app that wants a number writes its own ("Type 2 more letters"). Optional
+   * so a full set of messages written before it still type-checks.
    */
   filtersNeedMore?: (count: number) => string;
   /**
@@ -91,10 +92,8 @@ export interface AutocompleteMessages {
 }
 
 /** The default of `filtersNeedMore`, which a set of messages may leave out. */
-export function defaultFiltersNeedMore(count: number): string {
-  return count === 1
-    ? "Type 1 more letter to search with your filters"
-    : `Type ${count} more letters to search with your filters`;
+export function defaultFiltersNeedMore(): string {
+  return "Keep typing to see suggestions";
 }
 
 export const DEFAULT_MESSAGES: Readonly<AutocompleteMessages> = Object.freeze({

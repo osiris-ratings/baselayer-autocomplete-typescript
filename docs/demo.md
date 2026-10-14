@@ -133,7 +133,7 @@ the address's own state), fold away behind **Add filters**, beside the title,
 which counts the ones set; they sit side by side, and stack on a narrow pane.
 They wait until the business name (not the officer's) has as many characters as
 the session asks for, which the hint above the filters names; until then the SDK
-asks nothing and the menu says how many more it needs. The menu stays open while
+asks nothing and the menu asks the visitor to keep typing. The menu stays open while
 you type in a filter, and the list narrows as you do, after a pick too: editing
 a filter searches the picked name again. A filter narrows the list, and the row
 says which one it matched: the officer or the address is marked, a state on its
