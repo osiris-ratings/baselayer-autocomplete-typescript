@@ -110,8 +110,30 @@ function result(
     roundTripMs: 23,
     recovery: "none",
     filtersWithheld: false,
+    filtersWaiting: false,
+    charsNeeded: 0,
     ...overrides,
   };
+}
+
+/** What the client answers a query it held back for its filters: no rows. */
+function waiting(query: string, charsNeeded: number): SuggestResult {
+  return result(query, {
+    response: {
+      query,
+      found: 0,
+      found_capped: false,
+      truncated: false,
+      sources: {
+        people: { status: "not_requested" },
+        addresses: { status: "not_requested" },
+      },
+      suggestions: [],
+    },
+    roundTripMs: 0,
+    filtersWaiting: true,
+    charsNeeded,
+  });
 }
 
 /** A failed autocomplete service request. */
@@ -741,6 +763,46 @@ describe("useBusinessAutocomplete, the SDK's own failures", () => {
     await settle();
     expect(withheld.current.filtersWithheld).toBe(true);
     expect(withheld.current.appliedFilters).toBeUndefined();
+  });
+
+  it("empties the rows and reports what a waiting query still needs", async () => {
+    client.suggest.mockResolvedValueOnce(result("cinder"));
+    const { result: hook, rerender } = renderHook(
+      (props: { query: string }) =>
+        useBusinessAutocomplete({
+          query: props.query,
+          enabled: true,
+          client,
+          filters: { state: ["DE"] },
+        }),
+      { initialProps: { query: "cinder" } },
+    );
+    await settle();
+    expect(hook.current.suggestions).toHaveLength(1);
+    expect(hook.current.filtersWaiting).toBe(false);
+
+    client.suggest.mockResolvedValue(waiting("cind", 1));
+    rerender({ query: "cind" });
+    await settle();
+
+    expect(hook.current.suggestions).toEqual([]);
+    expect(hook.current.found).toBe(0);
+    expect(hook.current.filtersWaiting).toBe(true);
+    expect(hook.current.charsNeeded).toBe(1);
+    expect(hook.current.filtersWithheld).toBe(false);
+    expect(hook.current.appliedFilters).toBeUndefined();
+    expect(hook.current.expanded).toEqual([]);
+    expect(hook.current.isSearching).toBe(false);
+    expect(hook.current.error).toBeNull();
+  });
+
+  it("reports nothing waiting for a query that carried no filter", async () => {
+    client.suggest.mockResolvedValue(result("cinder"));
+    const { result: hook } = renderQuery("cinder");
+    await settle();
+
+    expect(hook.current.filtersWaiting).toBe(false);
+    expect(hook.current.charsNeeded).toBe(0);
   });
 
   it("reads the client from the provider", async () => {

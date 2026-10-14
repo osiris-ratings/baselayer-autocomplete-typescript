@@ -290,6 +290,8 @@ function Connected({
   const {
     errorKind,
     filtersWithheld,
+    filtersWaiting,
+    charsNeeded,
     appliedFilters,
     requestId,
     expanded,
@@ -302,6 +304,8 @@ function Connected({
   const listed = request.list.filter(relation => expanded.includes(relation));
   void errorKind;
   void filtersWithheld;
+  void filtersWaiting;
+  void charsNeeded;
   void shownUnavailable;
   void requestId;
   const reported = useRef(false);

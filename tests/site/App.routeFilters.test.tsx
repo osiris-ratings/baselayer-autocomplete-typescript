@@ -16,7 +16,7 @@ useDemoPage();
 const ALL = ["businesses", "people", "addresses"] as const;
 
 /** A `fetch` the made-up API answers, each URL asked kept. */
-function sampleFetch() {
+function sampleFetch(stem: number) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
     const path = url.slice(url.indexOf("/_baselayer") + "/_baselayer".length);
@@ -30,7 +30,7 @@ function sampleFetch() {
         headers: { ...headers, origin: "http://localhost:3000" },
         body: typeof init?.body === "string" ? init.body : null,
       },
-      { routes: ALL },
+      { routes: ALL, stem },
     );
     if (reply === null) {
       throw new Error(`the page called something unexpected: ${url}`);
@@ -42,24 +42,27 @@ function sampleFetch() {
   });
 }
 
-async function connect() {
-  const fetch = sampleFetch();
+/**
+ * Connected to the made-up API. Most tests type a short name beside a filter,
+ * so the session's stem is short, unless the test is about the stem.
+ */
+async function connect(stem = 3) {
+  const fetch = sampleFetch(stem);
   vi.stubGlobal("fetch", fetch);
   const user = userEvent.setup();
   render(<App />);
   await user.type(screen.getByTestId("demo-key"), "any-key");
   await user.click(screen.getByTestId("demo-apply"));
   await screen.findByText(/key accepted/i);
-  /** The last search a route was asked, as its parameters. */
-  const last = (route: string) => {
-    const asked = fetch.mock.calls
+  /** The searches a route was asked, as their parameters. */
+  const asked = (route: string) =>
+    fetch.mock.calls
       .map(([input]) => String(input))
-      .filter(url => url.includes(`/autocomplete/${route}?`));
-    return asked.length === 0
-      ? null
-      : Object.fromEntries(new URL(asked.at(-1)!).searchParams);
-  };
-  return { user, last };
+      .filter(url => url.includes(`/autocomplete/${route}?`))
+      .map(url => Object.fromEntries(new URL(url).searchParams));
+  /** The last search a route was asked, as its parameters. */
+  const last = (route: string) => asked(route).at(-1) ?? null;
+  return { user, last, asked };
 }
 
 const field = (id: string): HTMLInputElement =>
@@ -180,6 +183,35 @@ describe("the filters each search takes", () => {
       "business.name": "bayside",
     });
   });
+
+  it.each([
+    ["a business search", "demo-business", "harbor", "businesses", "state"],
+    ["a person search", "demo-person", "dana k", "people", "business.state"],
+    ["an address search", "demo-address", "1200 t", "addresses", "state"],
+  ])(
+    "waits for the session's stem in %s, with a state filter set, and shows nothing until then",
+    async (_, id, typed, route, param) => {
+      const { user, asked } = await connect(5);
+      const tab = { businesses: "a business", people: "a person" }[route];
+      if (tab !== undefined) {
+        await user.click(screen.getByRole("tab", { name: tab }));
+      } else {
+        await user.click(screen.getByRole("tab", { name: "an address" }));
+      }
+      await openFilters(user);
+      await user.type(filter(/states/i), "PA");
+      await user.click(field(id));
+
+      await user.type(field(id), typed.slice(0, 4));
+      await new Promise(resolve => setTimeout(resolve, 400));
+      expect(asked(route)).toEqual([]);
+      expect(screen.queryAllByRole("group")).toEqual([]);
+
+      await user.type(field(id), typed.slice(4));
+      await waitFor(() => expect(asked(route)).toHaveLength(1));
+      expect(asked(route)[0]).toMatchObject({ [param]: "PA" });
+    },
+  );
 
   it("holds each name and address to the service's 256 characters", async () => {
     const { user } = await connect();

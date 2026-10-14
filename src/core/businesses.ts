@@ -85,8 +85,18 @@ export interface RouteQuery<R extends Route> {
 /** A query on `GET /autocomplete/businesses`. */
 export type Query = RouteQuery<"businesses">;
 
-/** What to do with filters on a query shorter than the grant's filter stem. */
-export type ShortStemPolicy = "withhold" | "send" | "throw";
+/**
+ * What to do with a filtered query shorter than the grant's filter stem, which
+ * the autocomplete service refuses:
+ *
+ * - `wait` (the default) asks nothing and answers with no suggestions, so a
+ *   field shows nothing until its filters can engage, and its rows never
+ *   change from an unfiltered set to a filtered one.
+ * - `withhold` asks without the filters, and says so.
+ * - `send` asks with them anyway, and the autocomplete service refuses.
+ * - `throw` refuses locally with a `query_invalid` error.
+ */
+export type ShortStemPolicy = "wait" | "withhold" | "send" | "throw";
 
 /** The autocomplete service's own floor and ceiling on `q`. */
 export const MIN_Q_CHARS = 2;

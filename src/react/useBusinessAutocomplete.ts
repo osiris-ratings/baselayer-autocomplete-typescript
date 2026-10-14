@@ -69,7 +69,17 @@ export interface EntityAutocompleteState<R extends Relation> {
    */
   unavailable: boolean;
   errorKind: AutocompleteErrorKind | null;
+  /** The query was asked without its filters, which its text was too short for. */
   filtersWithheld: boolean;
+  /**
+   * The query was not asked, its filters needing more text than it has: no
+   * `suggestions`, until it reaches the session's filter stem. Only a query
+   * long enough to be asked says so, one of at least `minChars`, and only
+   * under the client's default `onShortStem`.
+   */
+  filtersWaiting: boolean;
+  /** Characters the query still lacks before its filters engage; 0 unless `filtersWaiting`. */
+  charsNeeded: number;
   /**
    * The filters `suggestions` were fetched with: undefined when there were
    * none or the client withheld them (`filtersWithheld`). Rows stay on screen
@@ -102,6 +112,8 @@ export const EMPTY_AUTOCOMPLETE_STATE: BusinessAutocompleteState =
     unavailable: false,
     errorKind: null,
     filtersWithheld: false,
+    filtersWaiting: false,
+    charsNeeded: 0,
     appliedFilters: undefined,
     expanded: [],
     requestId: null,
@@ -255,13 +267,18 @@ export function useEntityAutocomplete<R extends Relation>({
           foundCapped: result.response.found_capped,
           truncated: result.response.truncated,
           indexTag: result.indexTag,
-          roundTripMs: result.roundTripMs,
+          roundTripMs: result.filtersWaiting ? null : result.roundTripMs,
           isSearching: false,
           error: null,
           unavailable: false,
           errorKind: null,
           filtersWithheld: result.filtersWithheld,
-          appliedFilters: result.filtersWithheld ? undefined : stableFilters,
+          filtersWaiting: result.filtersWaiting,
+          charsNeeded: result.charsNeeded,
+          appliedFilters:
+            result.filtersWithheld || result.filtersWaiting
+              ? undefined
+              : stableFilters,
           expanded: expandedIn(result.response.sources),
           requestId: result.requestId,
         });

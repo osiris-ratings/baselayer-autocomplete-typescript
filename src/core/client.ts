@@ -46,6 +46,7 @@ import {
   firstValidationMessage,
   parseErrorEnvelope,
   parseSuggestResponse,
+  unaskedResponse,
   type SuggestResponse,
 } from "./wire";
 
@@ -86,7 +87,11 @@ export interface AutocompleteClientConfig {
   storageKey?: string;
   session?: Partial<SessionPolicy>;
   request?: Partial<RequestPolicy>;
-  /** Filters on a query shorter than the grant's stem: dropped (default), sent, or refused locally. */
+  /**
+   * Filters on a query shorter than the grant's stem: the query waits, asked
+   * of no one (default), is asked without them, is sent with them anyway, or is
+   * refused locally.
+   */
   onShortStem?: ShortStemPolicy;
 }
 
@@ -99,8 +104,16 @@ export interface SearchResult<R extends Relation = "businesses"> {
   /** The round trip of the reply that succeeded, not the recovery before it. */
   roundTripMs: number;
   recovery: Recovery;
-  /** The query carried filters and the stem was too short for them. */
+  /** The query carried filters and the stem was too short for them: asked without. */
   filtersWithheld: boolean;
+  /**
+   * The query carried filters and the stem was too short for them: not asked.
+   * `response` is then empty, not the autocomplete service's answer, and
+   * `requestId` and `indexTag` are null.
+   */
+  filtersWaiting: boolean;
+  /** Characters the query still lacks before its filters engage; 0 unless `filtersWaiting`. */
+  charsNeeded: number;
 }
 
 /** A search on `GET /autocomplete/businesses`. */
@@ -413,7 +426,7 @@ export function createAutocompleteClient(
   };
   const fetchImpl: FetchLike =
     config.fetch ?? ((url, init) => globalThis.fetch(url, init));
-  const shortStem = config.onShortStem ?? "withhold";
+  const shortStem = config.onShortStem ?? "wait";
   const storageKey = config.storageKey ?? "bl.autocomplete.grant.v1";
   const persist = config.persistGrant === "sessionStorage";
   const elapsed = clock();
@@ -587,14 +600,29 @@ export function createAutocompleteClient(
       if (refused !== null) {
         throw refused;
       }
-      const shortStem_ = filtered && stemLength(query.q) < grant.filterMinStem;
-      if (shortStem_ && shortStem === "throw") {
+      const missing = filtered
+        ? Math.max(0, grant.filterMinStem - stemLength(query.q))
+        : 0;
+      if (missing > 0 && shortStem === "throw") {
         throw new AutocompleteError({
           kind: "query_invalid",
           message: `Filters need a query of at least ${grant.filterMinStem} characters`,
         });
       }
-      filtersWithheld = shortStem_ && shortStem === "withhold";
+      if (missing > 0 && shortStem === "wait") {
+        return {
+          response: unaskedResponse(relation, query.q),
+          indexTag: null,
+          requestId: null,
+          serverTiming: null,
+          roundTripMs: 0,
+          recovery: attempted,
+          filtersWithheld: false,
+          filtersWaiting: true,
+          charsNeeded: missing,
+        };
+      }
+      filtersWithheld = missing > 0 && shortStem === "withhold";
       const url = buildSuggestUrl(baseUrl, relation, query, {
         withFilters: !filtersWithheld,
       });
@@ -695,6 +723,8 @@ export function createAutocompleteClient(
           roundTripMs,
           recovery: attempted,
           filtersWithheld,
+          filtersWaiting: false,
+          charsNeeded: 0,
         };
       }
       const failure = await readFailure(response);

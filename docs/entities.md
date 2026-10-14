@@ -183,8 +183,8 @@ written as that relation, singular, with its field: `{ person: { name:
 | `addresses`  | `state`: the address's own state; `person.name`: a person whose name fits filed from it; `business.name`: a business whose name fits has its own principal or mailing office there, never its registered agent's                                                                                              |
 
 A name or an address is free text of at most 256 characters, and an empty one
-filters nothing. Every filter waits for the grant's filter stem
-(`onShortStem`).
+filters nothing. Every filter waits for the grant's filter stem: a query
+shorter than it is not asked (`onShortStem`).
 
 `FILTER_PARAMS` lists them per route, each with the relation it narrows by,
 which the session's scope must grant (null for a direct filter such as the

@@ -345,6 +345,30 @@ export interface SuggestResponse<R extends Route = "businesses"> {
 export type BusinessesResponse = SuggestResponse<"businesses">;
 
 /**
+ * The answer for a query nothing was asked for: no suggestions, and every
+ * relation `not_requested`. Not the autocomplete service's, so no count in it
+ * is a finding.
+ */
+export function unaskedResponse<R extends Route>(
+  route: R,
+  q: string,
+): SuggestResponse<R> {
+  return {
+    query: q,
+    found: 0,
+    found_capped: false,
+    truncated: false,
+    sources: Object.fromEntries(
+      ROUTES[route].includes.map(relation => [
+        relation,
+        { status: "not_requested" },
+      ]),
+    ) as SuggestResponse<R>["sources"],
+    suggestions: [],
+  };
+}
+
+/**
  * The catalog envelope the API and the autocomplete service answer refusals
  * with.
  */

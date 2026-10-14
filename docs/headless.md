@@ -64,10 +64,14 @@ parameter with a 422.
 
 The autocomplete service refuses filters until the name is long enough to be a
 name someone is typing (the session's `filterMinStem`, 5 characters by default).
-By default the client holds the filters back below that length and says so with
-`filtersWithheld: true`, so a field narrows from the fifth character without
-ever seeing a 422. `onShortStem: "send"` sends them anyway; `"throw"` rejects
-locally.
+By default the client waits: a filtered query shorter than that is not asked.
+The search answers at once with no suggestions and `filtersWaiting: true`, and
+`charsNeeded` counts the characters still missing, so a field shows nothing
+until its filters can engage and never sees a 422. Its rows do not change from
+an unfiltered set to a filtered one, and the session is minted all the same.
+`onShortStem: "withhold"` asks without the filters instead, as 0.7.0 did, and
+says so with `filtersWithheld: true`; `"send"` sends them anyway; `"throw"`
+rejects locally. A query with no filter is not affected.
 
 ### Other routes, and the session's scope
 
@@ -114,7 +118,7 @@ createAutocompleteClient({
     authBrakeMs: 60_000, // then stop minting this long
   },
   persistGrant: "memory", // or "sessionStorage"
-  onShortStem: "withhold",
+  onShortStem: "wait", // or "withhold", "send", "throw"
 });
 ```
 
@@ -231,6 +235,10 @@ Its state, besides `suggestions`, `isSearching` and `unavailable`:
   is null (a window backoff, an invalid query)
 - `indexTag`, `roundTripMs` and `requestId`: the shown answer's, or null
 - `filtersWithheld`: the filters were held back for a short stem
+- `filtersWaiting` and `charsNeeded`: the query was not asked, its filters
+  needing more text than it has, and by how many characters. Only a query long
+  enough to be asked (`minChars`) says so; a shorter one is empty and says
+  nothing
 - `expanded`: the relations the shown rows expanded, those the answer's
   `sources` mark `ok`, whatever was asked for; list only these under a row,
   since any other came back empty (`not_requested`) or was not looked at

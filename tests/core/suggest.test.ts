@@ -919,8 +919,11 @@ describe("client.suggest", () => {
   describe("the filter stem", () => {
     const filters = { state: ["DE"] };
 
-    it("withholds the filters from a query shorter than the grant's stem, and says so", async () => {
-      const { client, fetchImpl } = setup({}, { filterMinStem: 4 });
+    it("withholds the filters from a query shorter than the grant's stem, and says so, under onShortStem: withhold", async () => {
+      const { client, fetchImpl } = setup(
+        { onShortStem: "withhold" },
+        { filterMinStem: 4 },
+      );
       fetchImpl.mockResolvedValue(reply(200, okBody));
       const events = recordRequests(client);
 
@@ -935,7 +938,10 @@ describe("client.suggest", () => {
 
     it("measures the stem the way the autocomplete service does, not the raw length", async () => {
       // Four characters typed, three once the metacharacter is stripped.
-      const { client, fetchImpl } = setup({}, { filterMinStem: 4 });
+      const { client, fetchImpl } = setup(
+        { onShortStem: "withhold" },
+        { filterMinStem: 4 },
+      );
       fetchImpl.mockResolvedValue(reply(200, okBody));
 
       const result = await client.suggest({ q: "cin%", filters });

@@ -324,7 +324,7 @@ function SessionMeters({ client }: { client: AutocompleteClient }) {
               <span className="hint">
                 Officer, state and address filters wait until the name has{" "}
                 {facts.stem} characters (punctuation aside); until then the SDK
-                holds them back.
+                asks nothing and the list stays empty.
               </span>
             </dd>
           </div>
@@ -1012,7 +1012,7 @@ export function App() {
               {...filterFocus}
             >
               <p className="hint" data-testid="demo-filters-hint">
-                Filters apply once the{" "}
+                Filters engage once the{" "}
                 {mode === "businesses"
                   ? "business name"
                   : mode === "people"
@@ -1024,9 +1024,11 @@ export function App() {
                 ) : (
                   <FilterStem client={client} />
                 )}
-                . Until then the SDK holds them back, and says so in the log. A
-                filter narrows the list, and the row says which one it matched:
-                the officer or the address is marked, a state on its flag.
+                . Until then the SDK asks nothing and the list stays empty, so
+                the suggestions never change from unfiltered ones to filtered
+                ones. A filter narrows the list, and the row says which one it
+                matched: the officer or the address is marked, a state on its
+                flag.
               </p>
               {showPerson && (
                 <Field

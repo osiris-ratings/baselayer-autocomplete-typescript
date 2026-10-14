@@ -6,6 +6,28 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+### Changed
+
+- **Behaviour change:** a filtered query shorter than the session's filter stem
+  (`filterMinStem`, 5 by default) waits instead of being asked without its
+  filters. The new default `onShortStem: "wait"` sends no request and answers
+  with no suggestions, so a field shows nothing until its filters can engage,
+  where it showed unfiltered suggestions that changed at the fifth character.
+  It holds on all three routes. The session is still minted, and a query with
+  no filter is unaffected. To keep the 0.7.0 behaviour, create the client with
+  `onShortStem: "withhold"` and pass it to the component as `client`.
+  - `ShortStemPolicy` gains `wait`, now the default; `withhold`, `send` and
+    `throw` are as before.
+  - `SearchResult` gains `filtersWaiting` and `charsNeeded`, the characters the
+    query still lacks. A waiting search resolves with an empty `response`
+    (every relation `not_requested`) and a null `requestId`, and emits no
+    request event.
+  - `useBusinessAutocomplete` and `useEntityAutocomplete` report the same two
+    fields, for an app that wants to say what a field is waiting for. The
+    components draw no hint of their own.
+  - The demo's session grants a stem of 5, as the autocomplete service does by
+    default, where it granted 3.
+
 ## [0.7.0] - 2026-10-12
 
 ### Changed
