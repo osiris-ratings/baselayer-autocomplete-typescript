@@ -62,31 +62,34 @@ its root registration's state. The route's full set of filters is under
 [Filters](entities.md#filters); the autocomplete service answers any other
 parameter with a 422.
 
-The autocomplete service refuses filters until the name is long enough to be a
-name someone is typing (the session's `filterMinStem`, 5 characters by default).
-By default the client waits: a filtered query shorter than that is not asked.
-The search answers at once with no suggestions and `filtersWaiting: true`, and
-`charsNeeded` counts the characters still missing, so a field shows nothing
-until its filters can engage and never sees a 422. Its rows do not change from
+The autocomplete service refuses filters until the text beside them is long
+enough to be what someone is typing (the session's stem, 5 characters by
+default). By default the client waits: a filtered query that is too short is not
+asked. The search answers at once with no suggestions and `filtersWaiting:
+true`, and `charsNeeded` counts the characters still missing, so a field shows
+nothing but that count until its filters can engage. Its rows do not change from
 an unfiltered set to a filtered one, and the session is minted all the same.
+
 Which filters wait, how the text is counted and how long it must be are the
 service's own rules for each route, and the session carries them (`filter_rules`,
 read as `grant.filterRules`, for the routes the session may search), so a change
 of stem needs no release. A session that carries none, an older API's, gets
-today's rules with `filterMinStem`. Businesses and addresses count it as
+today's rules with `filterMinStem`. Businesses and addresses count the text as
 `stemCount` does (folded, `&` read as `and`, runs of letters and numbers one
-space apart); people count
-the name as the people index spells it, `personNameCount` (ASCII letters and
-digits only, so a name with no ASCII spelling counts 0). People let a short name
-through beside a business name, which the service answers when that name is
-narrow; if it still refuses, for this or any other reason about the filters'
-stem, the client reads it as waiting too, never as an error.
+space apart). People count the name as the people index spells it,
+`personNameCount`: ASCII letters and digits only, so a name with no ASCII
+spelling (Cyrillic, Greek, CJK, `ø`, `ß`) counts 0 and, with a filter set, never
+reaches the stem, which the service refuses too. People let a short name through
+beside a business name, which the service answers when that name is narrow; if
+it still refuses, for this or any other reason about the filters' stem, the
+client reads it as waiting too, never as an error.
+
 `onShortStem: "withhold"` asks without the filters instead, as 0.7.0 did, and
 says so with `filtersWithheld: true`; `"send"` sends them anyway; `"throw"`
 rejects locally. A query with no filter is not affected.
-`client.charsToFilters(route, query)` answers the same question at once from
-the session in hand, 0 while none is held; it is how the hooks empty their
-rows without waiting for a search.
+`client.charsToFilters(route, query)` answers the same question at once from the
+session in hand, 0 while none is held; it is how the hooks empty their rows
+without waiting for a search.
 
 ### Other routes, and the session's scope
 

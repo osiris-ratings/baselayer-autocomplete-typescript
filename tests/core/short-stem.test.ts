@@ -518,3 +518,88 @@ describe("the people search's short name beside a business name", () => {
     });
   });
 });
+
+describe.each(ROUTES)("a 422 the $route search did not expect", spec => {
+  const refusal = (extra: object): ResponseLike => ({
+    ok: false,
+    status: 422,
+    headers: { get: () => null },
+    json: async () => ({
+      code: 422,
+      message: "The request is invalid.",
+      uri: null,
+      metadata: {
+        reason: "request_invalid",
+        errors: [
+          {
+            type: "string_too_short",
+            loc: ["query", "q"],
+            msg: "Too short",
+            ctx: { min_length: 8, ...extra },
+          },
+        ],
+      },
+    }),
+  });
+
+  it("reads the filters' refusal as waiting, with the stem the service named", async () => {
+    const { client, fetch } = setup();
+    fetch.mockResolvedValue(refusal({ with: "filters" }));
+
+    const result = await ask(client, spec, spec.long);
+
+    expect(result.filtersWaiting).toBe(true);
+    expect(result.charsNeeded).toBe(3);
+  });
+
+  it("reads a too short q that is not about filters as the error it is", async () => {
+    const { client, fetch } = setup();
+    fetch.mockResolvedValue(refusal({}));
+
+    await expect(ask(client, spec, spec.long)).rejects.toMatchObject({
+      kind: "request_failed",
+      status: 422,
+    });
+  });
+});
+
+describe("the characters a refused query still needs", () => {
+  it("are counted the way the route's rule counts, not one way for every route", async () => {
+    // "a.b" is 3 for businesses and addresses ("a b") and 2 for people ("ab").
+    const refusal = (): ResponseLike => ({
+      ok: false,
+      status: 422,
+      headers: { get: () => null },
+      json: async () => ({
+        code: 422,
+        message: "The request is invalid.",
+        uri: null,
+        metadata: {
+          reason: "request_invalid",
+          errors: [
+            {
+              type: "string_too_short",
+              loc: ["query", "q"],
+              msg: "Too short",
+              ctx: { min_length: 5, with: "filters" },
+            },
+          ],
+        },
+      }),
+    });
+    const { client, fetch } = setup();
+    fetch.mockResolvedValue(refusal());
+
+    const people = await client.search("people", {
+      q: "a.b",
+      filters: { business: { name: "osiris" } },
+    });
+    const businesses = await client.search("businesses", {
+      q: "a.bcd",
+      filters: { state: ["DE"] },
+    });
+
+    expect(people.charsNeeded).toBe(3);
+    expect(businesses.charsNeeded).toBe(1);
+  });
+});

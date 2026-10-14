@@ -572,11 +572,11 @@ when it does not say or both roles matched; a `principal` address is one the
 business filed itself, its principal or mailing address. The wire flags
 nothing for a state: the entry is the family's states that `state` names, so
 pass the filters the rows were fetched with, which `useBusinessAutocomplete`
-returns as `appliedFilters` (none while the client withholds the filters from
-a short name). `<BusinessAutocomplete>` does that itself, and hands a pick
-the same answer as `pick.matchedOn`. A search placed from the pick's token
-needs none of it: the API records the address the pick matched and, when you
-send no `officer_names`, the officer.
+returns as `appliedFilters` (none while the filters wait, or the client
+withholds them, for a short name). `<BusinessAutocomplete>` does that itself,
+and hands a pick the same answer as `pick.matchedOn`. A search placed from the
+pick's token needs none of it: the API records the address the pick matched and,
+when you send no `officer_names`, the officer.
 `orderedStates(suggestion, matched)`, `peopleLineOf` (matched people first, and
 `matched`, how many of the names) and `addressLineOf` (the lead address,
 whether it matched, and whose it is) are the readers the row draws from.

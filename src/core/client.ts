@@ -223,6 +223,12 @@ export interface AutocompleteClient {
     handler: ClientEvents[E],
   ): () => void;
   readonly baseUrl: string;
+  /**
+   * The policy for a filtered query too short for its filters, as the client
+   * was configured with it. Optional, so a client written before it existed is
+   * still a client; the hooks read it to know whether a query may wait.
+   */
+  readonly onShortStem?: ShortStemPolicy | undefined;
 }
 
 interface StoredGrant {
@@ -772,8 +778,8 @@ export function createAutocompleteClient(
         // name too wide for a short name, a count that drifted, a stem since
         // changed): not an outage, only the filters waiting. It refused the
         // request before admitting it, so none was spent.
-        requestsSinceMint -= 1;
-        requestsByRoute[relation] -= 1;
+        requestsSinceMint = Math.max(0, requestsSinceMint - 1);
+        requestsByRoute[relation] = Math.max(0, requestsByRoute[relation] - 1);
         const rule = ruleFor(relation, grant);
         const counted = (rule.count === "stem" ? stemCount : personNameCount)(
           query.q,
@@ -944,6 +950,7 @@ export function createAutocompleteClient(
     baseUrl,
     suggest: (query, options) => search("businesses", query, options),
     search,
+    onShortStem: shortStem,
     charsToFilters,
     getSession: options => session.getSession(options),
     prewarm: () => {

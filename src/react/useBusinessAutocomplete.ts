@@ -34,7 +34,7 @@ export interface UseEntityAutocompleteOptions<R extends Relation> {
   enabled: boolean;
   /** Else the one from `<AutocompleteClientProvider>`. */
   client?: AutocompleteClient;
-  /** Narrowing filters; held back while the text is shorter than the grant's stem. */
+  /** Narrowing filters; they wait while the text is shorter than the grant's stem. */
   filters?: FiltersByRelation[R];
   /** Rows to ask for; left out, `DEFAULT_LIMIT` or the session's most, whichever is fewer. */
   limit?: number;
@@ -272,14 +272,22 @@ export function useEntityAutocomplete<R extends Relation>({
         setState(previous => ({
           ...previous,
           isSearching: true,
+          filtersWaiting: false,
+          charsNeeded: 0,
           error: null,
           errorKind: null,
           unavailable: false,
         }));
       };
-      // Filters wait for the grant's stem, so with no grant in hand the mint
-      // comes first: a query that then waits never shows a search state.
-      if (!filtered || resolved.getSnapshot().session.phase === "ready") {
+      // A client that waits has the filters wait for the grant's stem, so with
+      // no grant in hand the mint comes first: a query that then waits never
+      // shows a search state. Any other policy, or a client that does not say,
+      // is searching from the start, as it always was.
+      if (
+        !filtered ||
+        resolved.onShortStem !== "wait" ||
+        resolved.getSnapshot().session.phase === "ready"
+      ) {
         markSearching();
       }
       try {

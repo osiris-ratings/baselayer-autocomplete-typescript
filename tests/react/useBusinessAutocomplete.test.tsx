@@ -64,6 +64,7 @@ function fakeClient() {
       refreshAt: 480_000,
       expiresAt: 600_000,
     })),
+    onShortStem: "wait" as AutocompleteClient["onShortStem"],
     charsToFilters: vi.fn<NonNullable<AutocompleteClient["charsToFilters"]>>(
       () => 0,
     ),
@@ -918,6 +919,23 @@ describe("useBusinessAutocomplete, the SDK's own failures", () => {
       expect(client.suggest).toHaveBeenCalledTimes(1);
     });
 
+    it.each([
+      ["withhold", "withhold"],
+      ["send", "send"],
+      ["throw", "throw"],
+      ["a client written before the policy was readable", undefined],
+    ] as const)(
+      "flags a filtered query as searching during the mint, as 0.7.0 did, under %s",
+      async (_, policy) => {
+        client.onShortStem = policy;
+        slowMint();
+        const { result: hook } = renderRecording("cinder", { state: ["DE"] });
+        await settle();
+
+        expect(hook.current.isSearching).toBe(true);
+      },
+    );
+
     it("flags a query with no filter as searching during the mint, as before", async () => {
       slowMint();
       const { result: hook } = renderRecording("cinder");
@@ -951,6 +969,40 @@ describe("useBusinessAutocomplete, the SDK's own failures", () => {
     expect(hook.current.filtersWaiting).toBe(false);
     expect(hook.current.charsNeeded).toBe(0);
     expect(hook.current.appliedFilters).toEqual({ state: ["DE"] });
+  });
+
+  it("is no longer waiting once a search for the longer text is in flight", async () => {
+    // Waiting at "cin"; then the text is long enough, and the search is out.
+    client.charsToFilters.mockReturnValue(2);
+    const { result: hook, rerender } = renderHook(
+      (props: { query: string }) =>
+        useBusinessAutocomplete({
+          query: props.query,
+          enabled: true,
+          client,
+          filters: { state: ["DE"] },
+        }),
+      { initialProps: { query: "cin" } },
+    );
+    expect(hook.current.filtersWaiting).toBe(true);
+
+    client.charsToFilters.mockReturnValue(0);
+    client.suggest.mockReturnValue(new Promise(() => undefined));
+    rerender({ query: "cinder" });
+    await settle();
+
+    expect(hook.current.isSearching).toBe(true);
+    expect(hook.current.filtersWaiting).toBe(false);
+    expect(hook.current.charsNeeded).toBe(0);
+  });
+
+  it("reports no round trip for a search that was waiting", async () => {
+    client.suggest.mockResolvedValue(waiting("cin", 2));
+    const { result: hook } = renderQuery("cin");
+    await settle();
+
+    expect(hook.current.filtersWaiting).toBe(true);
+    expect(hook.current.roundTripMs).toBeNull();
   });
 
   it("reports nothing waiting for a query that carried no filter", async () => {

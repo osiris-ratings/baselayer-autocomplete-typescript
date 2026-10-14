@@ -129,14 +129,14 @@ held.
 The filters each search can carry, where the session's scope allows them (on
 Business an officer or agent's name, the states the business is registered
 in and an address; on Person the states their businesses are in; on Address
-the address's own state), fold away behind **Add filters**, beside the title, which
-counts the ones set; they sit side by side, and stack on a narrow pane. The SDK
-holds them back until the business name (not the officer's) has as many
-characters as the session's `filter_min_stem` asks for, which the hint above the
-filters names, and the log says when it did. The menu stays open while you type
-in a filter, and the list narrows as you do, after a pick too: editing a filter
-searches the picked name again. A filter narrows the list, and the row says
-which one it matched: the officer or the address is marked, a state on its
+the address's own state), fold away behind **Add filters**, beside the title,
+which counts the ones set; they sit side by side, and stack on a narrow pane.
+They wait until the business name (not the officer's) has as many characters as
+the session asks for, which the hint above the filters names; until then the SDK
+asks nothing and the menu says how many more it needs. The menu stays open while
+you type in a filter, and the list narrows as you do, after a pick too: editing
+a filter searches the picked name again. A filter narrows the list, and the row
+says which one it matched: the officer or the address is marked, a state on its
 flag. Pick a row and the next step appears under the form.
 
 ![A filter by officer: the officer each row matched is marked](images/demo-matched.png)

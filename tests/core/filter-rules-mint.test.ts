@@ -104,6 +104,7 @@ describe("a session's filter rules", () => {
       "a stem that is not a positive integer",
       { ...RULES.businesses, min_stem: 0 },
     ],
+    ["a stem no query could reach", { ...RULES.businesses, min_stem: 257 }],
     ["a count it does not know", { ...RULES.businesses, count: "soundex" }],
     [
       "gated filters that are not a list of names",

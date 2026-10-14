@@ -346,13 +346,24 @@ function SessionMeters({ client }: { client: AutocompleteClient }) {
 }
 
 /**
- * How many characters of the business name the filters wait for: the
- * session's `filter_min_stem`, from the held grant.
+ * How many characters the filters of `route` wait for: that route's rule in
+ * the held grant, or its `filter_min_stem`, the strictest route's, where the
+ * session carries no rules.
  */
-function FilterStem({ client }: { client: AutocompleteClient }) {
+function FilterStem({
+  client,
+  route,
+}: {
+  client: AutocompleteClient;
+  route: Route;
+}) {
   const { snapshot } = useAutocompleteSession(client);
   const session = snapshot.session;
-  const stem = session.phase === "ready" ? session.grant.filterMinStem : null;
+  const stem =
+    session.phase === "ready"
+      ? (session.grant.filterRules?.[route]?.minStem ??
+        session.grant.filterMinStem)
+      : null;
   return (
     <>
       {stem === null ? "enough characters to narrow by" : `${stem} characters`}
@@ -1022,7 +1033,7 @@ export function App() {
                 {client === null ? (
                   "enough characters to narrow by"
                 ) : (
-                  <FilterStem client={client} />
+                  <FilterStem client={client} route={mode} />
                 )}
                 . Until then the SDK asks nothing and the menu says how many
                 more characters it needs, so the suggestions never change from

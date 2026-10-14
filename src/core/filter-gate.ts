@@ -1,4 +1,4 @@
-import { setFilters } from "./businesses";
+import { MAX_Q_CHARS, setFilters } from "./businesses";
 import { ROUTE_NAMES, type Route } from "./entities";
 
 // The autocomplete service refuses a filter while the text beside it is too
@@ -229,6 +229,7 @@ export function parseFilterRules(
       typeof minStem === "number" &&
       Number.isInteger(minStem) &&
       minStem > 0 &&
+      minStem <= MAX_Q_CHARS &&
       (e.count === "stem" || e.count === "person_name") &&
       gated !== null &&
       shortAllowedWith !== null

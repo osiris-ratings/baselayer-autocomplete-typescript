@@ -25,12 +25,16 @@ breaking change bumps the minor version.
     a session.
   - Businesses and addresses count the text as `stemCount` does, and people
     count the name as the people index spells it, `personNameCount`, so a name
-    with no ASCII spelling counts 0. People let a short name through beside a
+    with no ASCII spelling counts 0 and, with a filter set, never reaches the
+    stem (the service refuses it too). People let a short name through beside a
     business name, which the service answers when that name is narrow. A refusal
     for the filters' stem that still comes back reads as waiting, not as an
-    error, and spends nothing.
-  - `ShortStemPolicy` gains `wait`, now the default. `withhold`, `send` and
-    `throw` are as before, and `stemLength` counts as it did.
+    error. The service refuses it before admitting the request, so the client
+    counts none, bar the one people check it runs after.
+  - `ShortStemPolicy` gains `wait`, now the default, and the client's
+    `onShortStem` is readable (optional). `withhold`, `send` and `throw` are as
+    before, and `stemLength` counts as it did. Code that switches over every
+    `ShortStemPolicy` value needs a `wait` case.
   - `SearchResult` gains `filtersWaiting` and `charsNeeded`, the characters the
     query still lacks, and the hooks report the same two. A waiting search
     resolves with an empty `response` (every relation `not_requested`). With a
