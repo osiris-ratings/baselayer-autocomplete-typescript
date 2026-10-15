@@ -62,12 +62,35 @@ its root registration's state. The route's full set of filters is under
 [Filters](entities.md#filters); the autocomplete service answers any other
 parameter with a 422.
 
-The autocomplete service refuses filters until the name is long enough to be a
-name someone is typing (the session's `filterMinStem`, 5 characters by default).
-By default the client holds the filters back below that length and says so with
-`filtersWithheld: true`, so a field narrows from the fifth character without
-ever seeing a 422. `onShortStem: "send"` sends them anyway; `"throw"` rejects
-locally.
+The autocomplete service refuses filters until the text beside them is long
+enough to be what someone is typing (the session's stem, 5 characters by
+default). By default the client waits: a filtered query that is too short is not
+asked. The search answers at once with no suggestions and `filtersWaiting:
+true`, and `charsNeeded` counts the characters still missing, so a field shows
+nothing but a line asking to keep typing until its filters can engage. Its rows
+do not change from an unfiltered set to a filtered one, and the session is
+minted all the same.
+
+Which filters wait, how the text is counted and how long it must be are the
+service's own rules for each route, and the session carries them (`filter_rules`,
+read as `grant.filterRules`, for the routes the session may search), so a change
+of stem needs no release. A session that carries none, an older API's, gets
+today's rules with `filterMinStem`. Businesses and addresses count the text as
+`stemCount` does (folded, `&` read as `and`, runs of letters and numbers one
+space apart). People count the name as the people index spells it,
+`personNameCount`: ASCII letters and digits only, so a name with no ASCII
+spelling (Cyrillic, Greek, CJK, `ø`, `ß`) counts 0 and, with a filter set, never
+reaches the stem, which the service refuses too. People let a short name through
+beside a business name, which the service answers when that name is narrow; if
+it still refuses, for this or any other reason about the filters' stem, the
+client reads it as waiting too, never as an error.
+
+`onShortStem: "withhold"` asks without the filters instead, as 0.7.0 did, and
+says so with `filtersWithheld: true`; `"send"` sends them anyway; `"throw"`
+rejects locally. A query with no filter is not affected.
+`client.charsToFilters(route, query)` answers the same question at once from the
+session in hand, 0 while none is held; it is how the hooks empty their rows
+without waiting for a search.
 
 ### Other routes, and the session's scope
 
@@ -114,7 +137,7 @@ createAutocompleteClient({
     authBrakeMs: 60_000, // then stop minting this long
   },
   persistGrant: "memory", // or "sessionStorage"
-  onShortStem: "withhold",
+  onShortStem: "wait", // or "withhold", "send", "throw"
 });
 ```
 
@@ -231,6 +254,10 @@ Its state, besides `suggestions`, `isSearching` and `unavailable`:
   is null (a window backoff, an invalid query)
 - `indexTag`, `roundTripMs` and `requestId`: the shown answer's, or null
 - `filtersWithheld`: the filters were held back for a short stem
+- `filtersWaiting` and `charsNeeded`: the query was not asked, its filters
+  needing more text than it has, and by how many characters. Only a query long
+  enough to be asked (`minChars`) says so; a shorter one is empty and says
+  nothing
 - `expanded`: the relations the shown rows expanded, those the answer's
   `sources` mark `ok`, whatever was asked for; list only these under a row,
   since any other came back empty (`not_requested`) or was not looked at

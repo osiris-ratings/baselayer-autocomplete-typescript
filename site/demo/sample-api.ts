@@ -47,6 +47,8 @@ export interface SampleReply {
 export interface SampleOptions {
   /** The routes a session may search, each with every relation its rows carry. */
   routes: readonly string[];
+  /** The characters a filtered query needs: 5, as the autocomplete service grants by default. */
+  stem?: number;
 }
 
 const SESSION_SECONDS = 300;
@@ -99,7 +101,7 @@ function mint(request: SampleRequest, options: SampleOptions): SampleReply {
     iat: now,
     bud: 30,
     piv: 5,
-    stem: 3,
+    stem: options.stem ?? 5,
     ori: request.headers.origin ?? null,
     org: "sample",
     scp: routes,

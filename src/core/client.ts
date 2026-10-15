@@ -4,6 +4,7 @@ import {
   buildSuggestUrl,
   hasFilters,
   recoveryFor,
+  setFilters,
   stemLength,
   strippedQuery,
   type Query,
@@ -12,6 +13,15 @@ import {
   type ShortStemPolicy,
 } from "./businesses";
 import { ROUTE_NAMES, type Relation, type Route } from "./entities";
+import {
+  charsUntilFilters,
+  parseFilterRules,
+  personNameCount,
+  reachableStem,
+  ruleFor,
+  stemCount,
+  type FilterRule,
+} from "./filter-gate";
 import {
   AutocompleteError,
   abortError,
@@ -43,9 +53,11 @@ import {
 import {
   ContractViolation,
   ROUTE_UNSERVED_REASONS,
+  filterStemRefused,
   firstValidationMessage,
   parseErrorEnvelope,
   parseSuggestResponse,
+  unaskedResponse,
   type SuggestResponse,
 } from "./wire";
 
@@ -86,7 +98,11 @@ export interface AutocompleteClientConfig {
   storageKey?: string;
   session?: Partial<SessionPolicy>;
   request?: Partial<RequestPolicy>;
-  /** Filters on a query shorter than the grant's stem: dropped (default), sent, or refused locally. */
+  /**
+   * Filters on a query shorter than the grant's stem: the query waits, asked
+   * of no one (default), is asked without them, is sent with them anyway, or is
+   * refused locally.
+   */
   onShortStem?: ShortStemPolicy;
 }
 
@@ -99,8 +115,17 @@ export interface SearchResult<R extends Relation = "businesses"> {
   /** The round trip of the reply that succeeded, not the recovery before it. */
   roundTripMs: number;
   recovery: Recovery;
-  /** The query carried filters and the stem was too short for them. */
+  /** The query carried filters and the stem was too short for them: asked without. */
   filtersWithheld: boolean;
+  /**
+   * The query carried filters and its text was too short for them: not asked,
+   * or asked and refused by the service for that. `response` is then empty,
+   * not the autocomplete service's answer, and `indexTag` is null. Absent reads as false: a result built
+   * before this field existed has none.
+   */
+  filtersWaiting?: boolean;
+  /** Characters the query still lacks before its filters engage; 0 or absent unless `filtersWaiting`. */
+  charsNeeded?: number;
 }
 
 /** A search on `GET /autocomplete/businesses`. */
@@ -175,6 +200,18 @@ export interface AutocompleteClient {
     query: RouteQuery<R>,
     options?: { signal?: AbortSignal },
   ): Promise<SearchResult<R>>;
+  /**
+   * The characters a query still lacks before the client would ask it, when
+   * the grant in hand already says so: its filters need more text than it has
+   * and `onShortStem` is `wait`. Synchronous, and 0 when the query would be
+   * asked, when a filter is outside the scope (`search` refuses that), and
+   * while no grant is held, which only a mint can tell. Optional so that a
+   * client written before it existed, a test double say, is still a client.
+   */
+  charsToFilters?<R extends Relation>(
+    relation: R,
+    query: RouteQuery<R>,
+  ): number;
   /** The current grant, minting or refreshing when needed. */
   getSession(options?: { force?: boolean }): Promise<Grant>;
   /** Mint ahead of the first keystroke; failures are not reported. */
@@ -188,6 +225,12 @@ export interface AutocompleteClient {
     handler: ClientEvents[E],
   ): () => void;
   readonly baseUrl: string;
+  /**
+   * The policy for a filtered query too short for its filters, as the client
+   * was configured with it. Optional, so a client written before it existed is
+   * still a client; the hooks read it to know whether a query may wait.
+   */
+  readonly onShortStem?: ShortStemPolicy | undefined;
 }
 
 interface StoredGrant {
@@ -237,7 +280,14 @@ function readStoredGrant(key: string, now: number): Grant | null {
       store.removeItem(key);
       return null;
     }
-    return { ...stored.grant, scope };
+    // The rules are read again, not trusted: storage is the page's to change.
+    const { filterRules: storedRules, ...rest } = stored.grant;
+    const filterRules = parseFilterRules(storedRules);
+    return {
+      ...rest,
+      scope,
+      ...(filterRules !== undefined ? { filterRules } : {}),
+    };
   } catch {
     return null;
   }
@@ -273,6 +323,13 @@ interface Failure {
   reason: string | null;
   code: number | null;
   metadata: Record<string, unknown> | null;
+  /** The stem a 422 says the filters wait for; null when it says none. */
+  filterStem: number | null;
+}
+
+/** A stem a query could reach, or null: a longer one is not believed. */
+function boundedStem(stem: number | null): number | null {
+  return stem !== null && stem <= MAX_Q_CHARS ? stem : null;
 }
 
 async function readFailure(response: ResponseLike): Promise<Failure> {
@@ -287,6 +344,7 @@ async function readFailure(response: ResponseLike): Promise<Failure> {
       reason: null,
       code: null,
       metadata: null,
+      filterStem: null,
     };
   }
   const envelope = parseErrorEnvelope(body);
@@ -297,6 +355,7 @@ async function readFailure(response: ResponseLike): Promise<Failure> {
       reason: null,
       code: null,
       metadata: null,
+      filterStem: null,
     };
   }
   const reason = envelope.metadata?.reason;
@@ -308,6 +367,7 @@ async function readFailure(response: ResponseLike): Promise<Failure> {
     reason: typeof reason === "string" ? reason : null,
     code: envelope.code,
     metadata: envelope.metadata,
+    filterStem: boundedStem(filterStemRefused(envelope)),
   };
 }
 
@@ -413,7 +473,7 @@ export function createAutocompleteClient(
   };
   const fetchImpl: FetchLike =
     config.fetch ?? ((url, init) => globalThis.fetch(url, init));
-  const shortStem = config.onShortStem ?? "withhold";
+  const shortStem = config.onShortStem ?? "wait";
   const storageKey = config.storageKey ?? "bl.autocomplete.grant.v1";
   const persist = config.persistGrant === "sessionStorage";
   const elapsed = clock();
@@ -570,7 +630,6 @@ export function createAutocompleteClient(
         until: authBrakeUntil,
       });
     }
-    const filtered = hasFilters(relation, query.filters);
     let grant = await session.getSession();
     // What this call already tried, not merely that it tried something. The
     // brake counts one thing, a grant just re-minted and refused again, and a
@@ -587,14 +646,27 @@ export function createAutocompleteClient(
       if (refused !== null) {
         throw refused;
       }
-      const shortStem_ = filtered && stemLength(query.q) < grant.filterMinStem;
-      if (shortStem_ && shortStem === "throw") {
+      const missing = missingChars(relation, query, grant);
+      if (missing > 0 && shortStem === "throw") {
         throw new AutocompleteError({
           kind: "query_invalid",
           message: `Filters need a query of at least ${grant.filterMinStem} characters`,
         });
       }
-      filtersWithheld = shortStem_ && shortStem === "withhold";
+      if (missing > 0 && shortStem === "wait") {
+        return {
+          response: unaskedResponse(relation, query.q),
+          indexTag: null,
+          requestId: null,
+          serverTiming: null,
+          roundTripMs: 0,
+          recovery: attempted,
+          filtersWithheld: false,
+          filtersWaiting: true,
+          charsNeeded: missing,
+        };
+      }
+      filtersWithheld = missing > 0 && shortStem === "withhold";
       const url = buildSuggestUrl(baseUrl, relation, query, {
         withFilters: !filtersWithheld,
       });
@@ -695,11 +767,66 @@ export function createAutocompleteClient(
           roundTripMs,
           recovery: attempted,
           filtersWithheld,
+          filtersWaiting: false,
+          charsNeeded: 0,
         };
       }
       const failure = await readFailure(response);
       if (failure.reason === "session_pivots_exceeded") {
         pivotsExceededEvents += 1;
+      }
+      if (
+        shortStem === "wait" &&
+        response.status === 422 &&
+        failure.filterStem !== null &&
+        hasFilters(relation, query.filters)
+      ) {
+        // The service still refuses what the client let through (a business
+        // name too wide for a short name, a count that drifted, a stem since
+        // changed): not an outage, only the filters waiting. It refused the
+        // request before admitting it, so none was spent.
+        requestsSinceMint = Math.max(0, requestsSinceMint - 1);
+        requestsByRoute[relation] = Math.max(0, requestsByRoute[relation] - 1);
+        const counted = countOf(ruleOf(relation, grant), query.q);
+        if (refusedFor !== grant.sessionToken || refusedStems.size >= 50) {
+          refusedStems.clear();
+          refusedFor = grant.sessionToken;
+        }
+        // One number for the hint and the gate: the stem the service named as
+        // far as the count can reach it, and at least one more than the text
+        // already counted, which it refused.
+        const named = Math.max(
+          reachableStem(ruleOf(relation, grant).count, failure.filterStem),
+          counted + 1,
+        );
+        refusedStems.set(refusalKey(relation, query), named);
+        emitRequest(
+          requestEvent(
+            relation,
+            query,
+            response.status,
+            roundTripMs,
+            response,
+            attempted,
+            false,
+            grant,
+            null,
+          ),
+        );
+        return {
+          response: unaskedResponse(relation, query.q),
+          indexTag: null,
+          requestId: response.headers.get("X-Request-ID"),
+          serverTiming: response.headers.get("Server-Timing"),
+          roundTripMs,
+          recovery: attempted,
+          filtersWithheld: false,
+          filtersWaiting: true,
+          charsNeeded: Math.max(
+            1,
+            (refusedStems.get(refusalKey(relation, query)) ?? 0) - counted,
+          ),
+        };
       }
       const recovery = recoveryFor(response.status, failure.reason);
       if (attempted !== "none" || recovery === "none") {
@@ -763,6 +890,78 @@ export function createAutocompleteClient(
     }
   }
 
+  // What the service refused for the filters' stem when the rules let the
+  // query through (a short name beside a business name too wide for it), by
+  // route and filters, with the stem it named: until the text reaches that, or
+  // the filters change, or the session does, the query is not asked again.
+  const refusedStems = new Map<string, number>();
+  let refusedFor = "";
+
+  function refusalKey(relation: Relation, query: RouteQuery<Relation>): string {
+    return `${relation}|${JSON.stringify(
+      setFilters(relation, query.filters).map(({ param, value }) => [
+        param,
+        value,
+      ]),
+    )}`;
+  }
+
+  function countOf(rule: FilterRule, q: string): number {
+    return (rule.count === "stem" ? stemCount : personNameCount)(q);
+  }
+
+  /** The service's rule for `relation` filters under `grant`. */
+  function ruleOf(relation: Relation, grant: Grant): FilterRule {
+    return ruleFor(grant, relation);
+  }
+
+  /**
+   * Characters the filters of `query` need beyond what its text has. `wait`
+   * reads the service's rules; `withhold` and `throw` keep the one stem and
+   * count they always had.
+   */
+  function missingChars<R extends Relation>(
+    relation: R,
+    query: RouteQuery<R>,
+    grant: Grant,
+  ): number {
+    if (shortStem === "wait") {
+      const rule = ruleOf(relation, grant);
+      const lacking = charsUntilFilters(relation, query, rule);
+      const named =
+        refusedFor === grant.sessionToken
+          ? refusedStems.get(refusalKey(relation, query))
+          : undefined;
+      // The service's own word on the stem outranks a smaller deficit by the
+      // rule, so the count does not shrink and jump back up.
+      return named === undefined
+        ? lacking
+        : Math.max(
+            lacking,
+            reachableStem(rule.count, named) - countOf(rule, query.q),
+          );
+    }
+    return hasFilters(relation, query.filters)
+      ? Math.max(0, grant.filterMinStem - stemLength(query.q))
+      : 0;
+  }
+
+  function charsToFilters<R extends Relation>(
+    relation: R,
+    query: RouteQuery<R>,
+  ): number {
+    if (shortStem !== "wait") {
+      return 0;
+    }
+    const held = session.phase();
+    if (held.phase !== "ready") {
+      return 0;
+    }
+    return outOfScope(relation, query, held.grant.scope) === null
+      ? missingChars(relation, query, held.grant)
+      : 0;
+  }
+
   function headerRetryAfterMs(response: ResponseLike): number | null {
     const seconds = Number(response.headers.get("Retry-After"));
     return Number.isFinite(seconds) && seconds > 0 ? seconds * 1000 : null;
@@ -800,6 +999,8 @@ export function createAutocompleteClient(
     baseUrl,
     suggest: (query, options) => search("businesses", query, options),
     search,
+    onShortStem: shortStem,
+    charsToFilters,
     getSession: options => session.getSession(options),
     prewarm: () => {
       void session.getSession({ prewarm: true }).catch(() => undefined);
@@ -807,6 +1008,7 @@ export function createAutocompleteClient(
     reset: () => {
       consecutiveAuthFailures = 0;
       authBrakeUntil = 0;
+      refusedStems.clear();
       requestsSinceMint = 0;
       requestsByRoute = noRequests();
       pivotsExceededEvents = 0;

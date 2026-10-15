@@ -692,6 +692,7 @@ describe("BusinessAutocomplete", () => {
       baseUrl: BASE_URL,
       mint: grantingMint(),
       fetch,
+      onShortStem: "withhold",
     });
     const onPick = vi.fn<BusinessAutocompleteProps["onPick"]>();
     const user = userEvent.setup();
@@ -716,15 +717,15 @@ describe("BusinessAutocomplete", () => {
   });
 
   it("marks a matched state on the rows, and none where the filters were withheld", async () => {
-    vi.stubGlobal("fetch", autocompleteFetch());
+    const client = createAutocompleteClient({
+      baseUrl: BASE_URL,
+      mint: grantingMint(),
+      fetch: autocompleteFetch(),
+      onShortStem: "withhold",
+    });
     const user = userEvent.setup();
     render(
-      <Host
-        source={{ mint: grantingMint(), baseUrl: BASE_URL }}
-        mintOn="request"
-        filters={{ state: ["DE"] }}
-        minChars={1}
-      />,
+      <Host source={{ client }} filters={{ state: ["DE"] }} minChars={1} />,
     );
     const marked = () =>
       screen
@@ -737,6 +738,35 @@ describe("BusinessAutocomplete", () => {
 
     await user.type(input(), "nd");
     await waitFor(() => expect(marked()).toHaveLength(2));
+  });
+
+  it("shows no rows while the filters wait, and marks a matched state once they engage", async () => {
+    const fetch = autocompleteFetch();
+    vi.stubGlobal("fetch", fetch);
+    const user = userEvent.setup();
+    render(
+      <Host
+        source={{ mint: grantingMint(), baseUrl: BASE_URL }}
+        mintOn="request"
+        filters={{ state: ["DE"] }}
+        minChars={1}
+      />,
+    );
+
+    // The grant's filter stem is three characters: "ci" waits.
+    await user.type(input(), "ci");
+    await new Promise(resolve => setTimeout(resolve, 400));
+    expect(screen.queryAllByTestId("business-suggestion")).toHaveLength(0);
+    expect(fetch).not.toHaveBeenCalled();
+
+    await user.type(input(), "nd");
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByTestId("business-suggestion-state")
+          .filter(square => square.hasAttribute("data-matched")),
+      ).toHaveLength(2),
+    );
   });
 
   it("mints when the field takes focus under mintOn focus, and the first keystroke uses that grant", async () => {

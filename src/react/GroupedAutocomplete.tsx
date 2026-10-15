@@ -53,7 +53,11 @@ import {
   type GroupedSelection,
   type PickTargets,
 } from "./selection";
-import { resolveMessages, type AutocompleteMessages } from "./messages";
+import {
+  defaultFiltersNeedMore,
+  resolveMessages,
+  type AutocompleteMessages,
+} from "./messages";
 import {
   filtersKeyOf,
   useEntityAutocomplete,
@@ -357,6 +361,8 @@ function Connected<R extends GroupedRoute>({
       indexTag={state.indexTag}
       roundTripMs={state.roundTripMs}
       isSearching={state.isSearching}
+      filtersWaiting={state.filtersWaiting ?? false}
+      charsNeeded={state.charsNeeded ?? 0}
       error={state.error}
       appliedFilters={state.appliedFilters}
       selection={selection}
@@ -434,6 +440,9 @@ interface GroupedViewCommonProps<R extends GroupedRoute> {
   indexTag: string | null;
   roundTripMs: number | null;
   isSearching: boolean;
+  /** The query's filters wait for more text, `charsNeeded` characters of it. */
+  filtersWaiting?: boolean;
+  charsNeeded?: number;
   error: string | null;
   /**
    * The filters `suggestions` were fetched with (`appliedFilters` of
@@ -527,6 +536,8 @@ function GroupedView<R extends GroupedRoute>({
   indexTag,
   roundTripMs,
   isSearching,
+  filtersWaiting = false,
+  charsNeeded = 0,
   error,
   list,
   icons,
@@ -581,7 +592,9 @@ function GroupedView<R extends GroupedRoute>({
       list.lines.map(({ item, option }) => ({ option, label: item.label })),
     ),
   ]);
-  const hasFooter = isSearching || error !== null || roundTripMs !== null;
+  const waiting = filtersWaiting && charsNeeded > 0;
+  const hasFooter =
+    isSearching || waiting || error !== null || roundTripMs !== null;
   const combobox = useSuggestionCombobox({
     id,
     items,
@@ -639,6 +652,9 @@ function GroupedView<R extends GroupedRoute>({
   function countRowLabel(): string {
     if (isSearching && rows.length === 0) {
       return text.searching;
+    }
+    if (waiting) {
+      return (text.filtersNeedMore ?? defaultFiltersNeedMore)(charsNeeded);
     }
     if (truncated) {
       return rows.length === 0 ? text.truncatedNoRows : text.truncatedRows;

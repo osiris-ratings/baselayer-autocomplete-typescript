@@ -324,7 +324,7 @@ function SessionMeters({ client }: { client: AutocompleteClient }) {
               <span className="hint">
                 Officer, state and address filters wait until the name has{" "}
                 {facts.stem} characters (punctuation aside); until then the SDK
-                holds them back.
+                asks nothing and the menu asks them to keep typing.
               </span>
             </dd>
           </div>
@@ -346,13 +346,24 @@ function SessionMeters({ client }: { client: AutocompleteClient }) {
 }
 
 /**
- * How many characters of the business name the filters wait for: the
- * session's `filter_min_stem`, from the held grant.
+ * How many characters the filters of `route` wait for: that route's rule in
+ * the held grant, or its `filter_min_stem`, the strictest route's, where the
+ * session carries no rules.
  */
-function FilterStem({ client }: { client: AutocompleteClient }) {
+function FilterStem({
+  client,
+  route,
+}: {
+  client: AutocompleteClient;
+  route: Route;
+}) {
   const { snapshot } = useAutocompleteSession(client);
   const session = snapshot.session;
-  const stem = session.phase === "ready" ? session.grant.filterMinStem : null;
+  const stem =
+    session.phase === "ready"
+      ? (session.grant.filterRules?.[route]?.minStem ??
+        session.grant.filterMinStem)
+      : null;
   return (
     <>
       {stem === null ? "enough characters to narrow by" : `${stem} characters`}
@@ -1012,7 +1023,7 @@ export function App() {
               {...filterFocus}
             >
               <p className="hint" data-testid="demo-filters-hint">
-                Filters apply once the{" "}
+                Filters engage once the{" "}
                 {mode === "businesses"
                   ? "business name"
                   : mode === "people"
@@ -1022,11 +1033,13 @@ export function App() {
                 {client === null ? (
                   "enough characters to narrow by"
                 ) : (
-                  <FilterStem client={client} />
+                  <FilterStem client={client} route={mode} />
                 )}
-                . Until then the SDK holds them back, and says so in the log. A
-                filter narrows the list, and the row says which one it matched:
-                the officer or the address is marked, a state on its flag.
+                . Until then the SDK asks nothing and the menu asks the visitor
+                to keep typing, so the suggestions never change from unfiltered
+                ones to filtered ones. A filter narrows the list, and the row
+                says which one it matched: the officer or the address is marked,
+                a state on its flag.
               </p>
               {showPerson && (
                 <Field

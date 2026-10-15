@@ -24,7 +24,7 @@ import { parseSearch } from "../../site/demo/searches";
 
 const ALL = ["businesses", "people", "addresses"] as const;
 
-function mint(routes: readonly string[] = ALL, key = "any-key") {
+function mint(routes: readonly string[] = ALL, key = "any-key", stem?: number) {
   return answerSample(
     {
       method: "POST",
@@ -32,7 +32,7 @@ function mint(routes: readonly string[] = ALL, key = "any-key") {
       headers: { "x-api-key": key, origin: "http://localhost:3000" },
       body: null,
     },
-    { routes },
+    { routes, ...(stem !== undefined ? { stem } : {}) },
   )!;
 }
 
@@ -73,6 +73,16 @@ describe("the made-up API's mint", () => {
     );
     expect(claims?.org).toBe("sample");
     expect(claims?.ori).toBe("http://localhost:3000");
+  });
+
+  it("grants a filter stem of 5, as the service does by default, or the one it is told to", () => {
+    const grant = (reply: ReturnType<typeof mint>) => {
+      const outcome = parseMintResponse(201, null, reply.body);
+      return outcome.kind === "granted" ? outcome.grant.filterMinStem : null;
+    };
+
+    expect(grant(mint())).toBe(5);
+    expect(grant(mint(ALL, "any-key", 3))).toBe(3);
   });
 
   it("grants only the routes it is told to", () => {

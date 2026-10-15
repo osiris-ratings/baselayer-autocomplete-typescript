@@ -345,6 +345,30 @@ export interface SuggestResponse<R extends Route = "businesses"> {
 export type BusinessesResponse = SuggestResponse<"businesses">;
 
 /**
+ * The answer for a query nothing was asked for: no suggestions, and every
+ * relation `not_requested`. Not the autocomplete service's, so no count in it
+ * is a finding.
+ */
+export function unaskedResponse<R extends Route>(
+  route: R,
+  q: string,
+): SuggestResponse<R> {
+  return {
+    query: q,
+    found: 0,
+    found_capped: false,
+    truncated: false,
+    sources: Object.fromEntries(
+      ROUTES[route].includes.map(relation => [
+        relation,
+        { status: "not_requested" },
+      ]),
+    ) as SuggestResponse<R>["sources"],
+    suggestions: [],
+  };
+}
+
+/**
  * The catalog envelope the API and the autocomplete service answer refusals
  * with.
  */
@@ -796,6 +820,34 @@ export function validationErrors(envelope: ErrorEnvelope): ValidationItem[] {
     return [];
   }
   return errors.flatMap(entry => validationItem(entry) ?? []);
+}
+
+/**
+ * The stem a 422 says the filters wait for, or null when it says no such thing:
+ * `string_too_short` on `q`, with `ctx.with` naming the filters and
+ * `ctx.min_length` the length. A too short `q` on its own carries no `with`.
+ */
+export function filterStemRefused(envelope: ErrorEnvelope): number | null {
+  for (const item of validationErrors(envelope)) {
+    const ctx = item.ctx;
+    if (
+      item.type === "string_too_short" &&
+      item.loc[item.loc.length - 1] === "q" &&
+      typeof ctx === "object" &&
+      ctx !== null &&
+      (ctx as { with?: unknown }).with === "filters"
+    ) {
+      const length = (ctx as { min_length?: unknown }).min_length;
+      if (
+        typeof length === "number" &&
+        Number.isInteger(length) &&
+        length > 0
+      ) {
+        return length;
+      }
+    }
+  }
+  return null;
 }
 
 /** What the first parameter a 422 names says, or null. */

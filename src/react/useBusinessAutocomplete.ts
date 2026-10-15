@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { AutocompleteClient } from "@baselayer-sdk/autocomplete";
 import {
+  hasFilters,
   isAutocompleteError,
   type AutocompleteErrorKind,
 } from "@baselayer-sdk/autocomplete";
@@ -33,7 +34,7 @@ export interface UseEntityAutocompleteOptions<R extends Relation> {
   enabled: boolean;
   /** Else the one from `<AutocompleteClientProvider>`. */
   client?: AutocompleteClient;
-  /** Narrowing filters; held back while the text is shorter than the grant's stem. */
+  /** Narrowing filters; they wait while the text is shorter than the grant's stem. */
   filters?: FiltersByRelation[R];
   /** Rows to ask for; left out, `DEFAULT_LIMIT` or the session's most, whichever is fewer. */
   limit?: number;
@@ -69,7 +70,17 @@ export interface EntityAutocompleteState<R extends Relation> {
    */
   unavailable: boolean;
   errorKind: AutocompleteErrorKind | null;
+  /** The query was asked without its filters, which its text was too short for. */
   filtersWithheld: boolean;
+  /**
+   * The query was not asked, its filters needing more text than it has: no
+   * `suggestions`, until it reaches the session's filter stem. Only a query
+   * long enough to be asked says so, one of at least `minChars`, and only
+   * under the client's default `onShortStem`. Absent reads as false.
+   */
+  filtersWaiting?: boolean;
+  /** Characters the query still lacks before its filters engage; 0 or absent unless `filtersWaiting`. */
+  charsNeeded?: number;
   /**
    * The filters `suggestions` were fetched with: undefined when there were
    * none or the client withheld them (`filtersWithheld`). Rows stay on screen
@@ -102,6 +113,8 @@ export const EMPTY_AUTOCOMPLETE_STATE: BusinessAutocompleteState =
     unavailable: false,
     errorKind: null,
     filtersWithheld: false,
+    filtersWaiting: false,
+    charsNeeded: 0,
     appliedFilters: undefined,
     expanded: [],
     requestId: null,
@@ -120,6 +133,17 @@ function expandedIn<R extends Relation>(
   return (Object.keys(sources) as IncludeOf<R>[]).filter(
     relation => sources[relation].status === "ok",
   );
+}
+
+/** No rows, the query's filters waiting for `charsNeeded` more characters. */
+function waitingState<R extends Relation>(
+  charsNeeded: number,
+): EntityAutocompleteState<R> {
+  return {
+    ...emptyState<R>(),
+    filtersWaiting: true,
+    charsNeeded,
+  };
 }
 
 // One frozen empty state serves every route: its rows are an empty array.
@@ -214,24 +238,72 @@ export function useEntityAutocomplete<R extends Relation>({
       setState(emptyState<R>());
       return;
     }
+    // A held session that already says the filters need more text: nothing to
+    // wait for or to show, so the rows go at once, not after the pause and a
+    // search state.
+    const lacking = () =>
+      resolved.charsToFilters?.(relation, {
+        q: trimmedQuery,
+        ...(stableFilters !== undefined ? { filters: stableFilters } : {}),
+      }) ?? 0;
+    const missing = lacking();
+    if (missing > 0) {
+      setState(waitingState<R>(missing));
+      return;
+    }
+    const filtered = hasFilters(relation, stableFilters);
     const controller = new AbortController();
     let cooldownId: ReturnType<typeof setTimeout> | undefined;
     const timeoutId = setTimeout(async () => {
       // A new request retires the previous failure, and `unavailable` is reset
       // rather than carried forward, so an ended cooldown cannot keep the host
       // on its plain input.
-      setState(previous => ({
-        ...previous,
-        isSearching: true,
-        error: null,
-        errorKind: null,
-        unavailable: false,
-      }));
+      // The session may have arrived during the pause: ask again before
+      // anything shows.
+      const lackingAfterPause = lacking();
+      if (lackingAfterPause > 0) {
+        setState(waitingState<R>(lackingAfterPause));
+        return;
+      }
+      let searching = false;
+      const markSearching = () => {
+        if (searching) return;
+        searching = true;
+        setState(previous => ({
+          ...previous,
+          isSearching: true,
+          filtersWaiting: false,
+          charsNeeded: 0,
+          error: null,
+          errorKind: null,
+          unavailable: false,
+        }));
+      };
+      // A client that waits has the filters wait for the grant's stem, so with
+      // no grant in hand the mint comes first: a query that then waits never
+      // shows a search state. Any other policy, or a client that does not say,
+      // is searching from the start, as it always was.
+      if (
+        !filtered ||
+        resolved.onShortStem !== "wait" ||
+        resolved.getSnapshot().session.phase === "ready"
+      ) {
+        markSearching();
+      }
       try {
         // The session's scope bounds what is asked: the rows it allows, and
         // the relations it grants. A relation it does not grant is simply not
         // fetched, where the client would refuse the request.
         const { scope } = await resolved.getSession();
+        if (controller.signal.aborted) {
+          return;
+        }
+        const stillMissing = lacking();
+        if (stillMissing > 0) {
+          setState(waitingState<R>(stillMissing));
+          return;
+        }
+        markSearching();
         const granted: readonly Relation[] = scope.routes[relation] ?? [];
         const included = stableInclude?.filter(item => granted.includes(item));
         const result = await resolved.search(
@@ -255,13 +327,19 @@ export function useEntityAutocomplete<R extends Relation>({
           foundCapped: result.response.found_capped,
           truncated: result.response.truncated,
           indexTag: result.indexTag,
-          roundTripMs: result.roundTripMs,
+          roundTripMs:
+            result.filtersWaiting === true ? null : result.roundTripMs,
           isSearching: false,
           error: null,
           unavailable: false,
           errorKind: null,
           filtersWithheld: result.filtersWithheld,
-          appliedFilters: result.filtersWithheld ? undefined : stableFilters,
+          filtersWaiting: result.filtersWaiting ?? false,
+          charsNeeded: result.charsNeeded ?? 0,
+          appliedFilters:
+            result.filtersWithheld || result.filtersWaiting
+              ? undefined
+              : stableFilters,
           expanded: expandedIn(result.response.sources),
           requestId: result.requestId,
         });

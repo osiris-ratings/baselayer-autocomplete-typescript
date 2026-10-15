@@ -14,6 +14,14 @@ function counted(count: number, one: string, many: string): string {
 export interface AutocompleteMessages {
   searching: string;
   /**
+   * The line a menu shows while a query's filters wait for more text, called
+   * with the characters still missing. The default ignores the count and asks
+   * the person to keep typing, in words for someone who never chose the filters;
+   * an app that wants a number writes its own ("Type 2 more letters"). Optional
+   * so a full set of messages written before it still type-checks.
+   */
+  filtersNeedMore?: (count: number) => string;
+  /**
    * The autocomplete service ran out of time or budget and found nothing yet.
    */
   truncatedNoRows: string;
@@ -83,8 +91,14 @@ export interface AutocompleteMessages {
   httpFallback: (status: number) => string;
 }
 
+/** The default of `filtersNeedMore`, which a set of messages may leave out. */
+export function defaultFiltersNeedMore(): string {
+  return "Keep typing to see suggestions";
+}
+
 export const DEFAULT_MESSAGES: Readonly<AutocompleteMessages> = Object.freeze({
   searching: "Searching…",
+  filtersNeedMore: defaultFiltersNeedMore,
   truncatedNoRows: "Still searching — add a word to narrow it down",
   truncatedRows: "Showing partial results — add a word to narrow it down",
   match: "match",

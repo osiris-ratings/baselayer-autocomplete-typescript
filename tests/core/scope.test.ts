@@ -213,4 +213,68 @@ describe("a grant kept in sessionStorage", () => {
     expect(grant.sessionToken).toBe("stored-grant");
     expect(grant.scope).toEqual(DEFAULT_SESSION_SCOPE);
   });
+
+  describe("with filter rules", () => {
+    async function readBack(filterRules: unknown) {
+      vi.stubGlobal("location", { origin: "https://app.test" });
+      vi.stubGlobal("sessionStorage", {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => store.set(key, value),
+        removeItem: (key: string) => store.delete(key),
+      });
+      const now = Date.now();
+      store.set(
+        "bl.autocomplete.grant.v1",
+        JSON.stringify({
+          origin: "https://app.test",
+          grant: {
+            sessionToken: "stored-grant",
+            expiresIn: 180,
+            requestBudget: 10,
+            pivotAllowance: 5,
+            filterMinStem: 5,
+            filterRules,
+            mintedAt: now,
+            refreshAt: now + 144_000,
+            expiresAt: now + 180_000,
+          },
+        }),
+      );
+      const client = createAutocompleteClient({
+        baseUrl: "https://api.test",
+        mint: vi.fn<MintFunction>(),
+        fetch: vi.fn<FetchLike>(),
+        persistGrant: "sessionStorage",
+      });
+      return client.getSession();
+    }
+
+    it("keeps the rules a session was minted with", async () => {
+      const rules = {
+        businesses: {
+          minStem: 3,
+          count: "stem",
+          gated: ["state"],
+          shortAllowedWith: [],
+        },
+      };
+
+      expect((await readBack(rules)).filterRules).toEqual(rules);
+    });
+
+    it("reads them again rather than trusting storage: a rule it cannot read is dropped", async () => {
+      const grant = await readBack({
+        businesses: { minStem: "3", count: "stem", gated: 7 },
+        people: {
+          minStem: 4,
+          count: "person_name",
+          gated: "all",
+          shortAllowedWith: ["business.name"],
+        },
+      });
+
+      expect(grant.filterRules?.businesses).toBeUndefined();
+      expect(grant.filterRules?.people?.minStem).toBe(4);
+    });
+  });
 });

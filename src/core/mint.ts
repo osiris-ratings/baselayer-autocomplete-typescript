@@ -1,4 +1,5 @@
 import type { MintScope } from "./errors";
+import { parseFilterRules, type FilterRules } from "./filter-gate";
 import { parseSessionScope, type SessionScope } from "./scope";
 import { parseErrorEnvelope } from "./wire";
 
@@ -44,8 +45,16 @@ export interface MintedGrant {
    * session.
    */
   pivotAllowance: number;
-  /** Characters of `q` the narrowing filters wait for. */
+  /** Characters of `q` the narrowing filters wait for: the strictest route's. */
   filterMinStem: number;
+  /**
+   * What each route's filters need, as the API sends it, for the routes the
+   * session may search. Absent when the API sends none (an older one): the
+   * client then applies today's rules with `filterMinStem`.
+   */
+  filterRules?: Partial<FilterRules>;
+  /** The fewest characters of `q` the autocomplete service answers; advisory. */
+  minQueryChars?: number;
   /**
    * What the session may search, as the mint answered it. Absent when the API
    * answers none; the session then reads `DEFAULT_SESSION_SCOPE`.
@@ -116,6 +125,8 @@ function grantFrom(body: unknown): MintedGrant | null {
   const requestBudget = b.request_budget ?? b.requestBudget;
   const pivotAllowance = b.pivot_allowance ?? b.pivotAllowance;
   const filterMinStem = b.filter_min_stem ?? b.filterMinStem;
+  const filterRules = parseFilterRules(b.filter_rules ?? b.filterRules);
+  const minQueryChars = b.min_query_chars ?? b.minQueryChars;
   const answeredScope = b.scope;
   const scope =
     answeredScope === undefined || answeredScope === null
@@ -141,6 +152,8 @@ function grantFrom(body: unknown): MintedGrant | null {
     requestBudget,
     pivotAllowance,
     filterMinStem,
+    ...(filterRules !== undefined ? { filterRules } : {}),
+    ...(positiveInteger(minQueryChars) ? { minQueryChars } : {}),
     ...(scope !== undefined ? { scope } : {}),
   };
 }

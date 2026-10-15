@@ -6,6 +6,57 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+### Changed
+
+- **Behaviour change:** a filtered query whose text is too short for its
+  filters waits instead of being asked without them. The new default
+  `onShortStem: "wait"` sends no request and answers with no suggestions, so a
+  field shows nothing until its filters can engage, where it showed unfiltered
+  suggestions that changed at the fifth character. It holds on all three routes,
+  the session is still minted, and a query with no filter is unaffected. To keep
+  the 0.7.0 behaviour, create the client with `onShortStem: "withhold"` and pass
+  it to the component as `client`.
+  - `wait` follows the autocomplete service's own rules for each route: which
+    filters wait, how the text is counted and how long it must be. The session
+    carries them as `filter_rules` (`grant.filterRules`; `minQueryChars` is its
+    advisory `min_query_chars`), so a stem lowered in the service needs no
+    release. Against an API that sends none it applies today's rules with
+    `filterMinStem`. A rule the client cannot read is ignored and never refuses
+    a session.
+  - Businesses and addresses count the text as `stemCount` does, and people
+    count the name as the people index spells it, `personNameCount`, so a name
+    with no ASCII spelling counts 0 and, with a filter set, never reaches the
+    stem (the service refuses it too). People let a short name through beside a
+    business name, which the service answers when that name is narrow. A refusal
+    for the filters' stem that still comes back reads as waiting, not as an
+    error. The service refuses it before admitting the request, so the client
+    counts none, bar the one people check it runs after.
+  - `ShortStemPolicy` gains `wait`, now the default, and the client's
+    `onShortStem` is readable (optional). `withhold`, `send` and `throw` are as
+    before, and `stemLength` counts as it did. Code that switches over every
+    `ShortStemPolicy` value needs a `wait` case.
+  - `SearchResult` gains `filtersWaiting` and `charsNeeded`, the characters the
+    query still lacks, and the hooks report the same two. A waiting search
+    resolves with an empty `response` (every relation `not_requested`). With a
+    session in hand the hooks empty their rows at once, asking nothing and
+    showing no search state, which `client.charsToFilters(route, query)` tells
+    them. The components say so in the menu, one line asking the person to keep
+    typing ("Keep typing to see suggestions", words for someone who never chose
+    the filters), from the new `messages.filtersNeedMore`. An app overrides or
+    localizes it like every other message, and is passed the characters still
+    missing if it wants to say a number ("Type 2 more letters"). It shows only
+    while a filter is set and its text is too short.
+  - Nothing is removed or renamed, and the new fields and the client method are
+    optional. New exports: `stemCount`, `stemText`, `personNameCount`,
+    `personNameText`, `charsUntilFilters`, `charsUntilParams`,
+    `fallbackFilterRules`, `parseFilterRules`, `reachableStem`, `ruleFor` and the
+    types `FilterRule`, `FilterRules` and `FilterCount`. A test holds every 0.7.0
+    export of the three entry points, and another runs the service's own filter
+    rule cases and its count rows (`contracts/filter-rules.json` and
+    `contracts/filter-counts.json`, vendored with the commit they came from).
+  - The demo's session grants a stem of 5, as the autocomplete service does by
+    default, where it granted 3.
+
 ## [0.7.0] - 2026-10-12
 
 ### Changed

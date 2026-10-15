@@ -36,6 +36,21 @@ export {
   type ShortStemPolicy,
 } from "./core/businesses";
 export {
+  charsUntilFilters,
+  charsUntilParams,
+  fallbackFilterRules,
+  parseFilterRules,
+  personNameCount,
+  personNameText,
+  reachableStem,
+  ruleFor,
+  stemCount,
+  stemText,
+  type FilterCount,
+  type FilterRule,
+  type FilterRules,
+} from "./core/filter-gate";
+export {
   ENTITY_OF,
   ENTITY_TYPES,
   LEGAL_RELATIONS,
