@@ -6,6 +6,8 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-14
+
 ### Changed
 
 - **Behaviour change:** a filtered query whose text is too short for its
