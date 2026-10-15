@@ -1511,6 +1511,7 @@ function KindRowMap<P extends string, F extends string>({
           </thead>
           <tbody>
             {editor.kind.fields
+              .filter(field => !editor.unsent?.includes(field))
               .filter(field => shownFields.has(field))
               .map(field => (
                 <tr key={field} data-field={field}>

@@ -25,11 +25,13 @@ import {
 
 const person = editorOps(PERSON_EDITOR);
 const address = editorOps(ADDRESS_EDITOR);
-const personDefault = resolveLayout(PERSON_ROW);
-const addressDefault = resolveLayout(ADDRESS_ROW);
+// The demo starts from the SDK's layouts, less the roles the service never
+// sends: a person's on an address, and an address's under a person.
+const personDefault = { ...resolveLayout(PERSON_ROW), addressTrailing: null };
+const addressDefault = { ...resolveLayout(ADDRESS_ROW), personTrailing: null };
 
 describe("the People and Addresses tabs' rows", () => {
-  it("open on the SDK's default layouts, listing and picking businesses", () => {
+  it("open on the SDK's default layouts, less the roles never sent, listing and picking businesses", () => {
     for (const state of [DEFAULT_STYLE, INITIAL_STYLE]) {
       expect(state.rows.people.layout).toEqual(personDefault);
       expect(state.rows.addresses.layout).toEqual(addressDefault);
@@ -115,7 +117,7 @@ describe("the People and Addresses tabs' rows", () => {
       address
         .placeOptions(addressDefault, "personTrailing")
         .map(option => option.value),
-    ).toEqual([EMPTY_PLACE, "personRole"]);
+    ).toEqual([EMPTY_PLACE]);
   });
 
   it("say which field a pick would swap, in the row's own words", () => {
@@ -235,23 +237,26 @@ describe("the exported configuration follows the row map", () => {
   });
 
   it("writes a place of a line the row draws, and none of a line it does not", () => {
-    // The address line's role left out while the row does not list addresses.
+    // The person line's role left out while the row does not list people.
     const hidden: StyleState = {
       ...DEFAULT_STYLE,
       rows: {
         ...DEFAULT_STYLE.rows,
-        people: {
-          ...DEFAULT_STYLE.rows.people,
-          layout: { ...personDefault, addressTrailing: null },
+        businesses: {
+          ...DEFAULT_STYLE.rows.businesses,
+          layout: {
+            ...DEFAULT_STYLE.rows.businesses.layout,
+            personTrailing: null,
+          },
         },
       },
     };
-    expect(exportCode(hidden, "people").tsx).not.toContain("layout=");
+    expect(exportCode(hidden, "businesses").tsx).not.toContain("layout=");
 
-    const listed = withListed(hidden, "people", "addresses", true);
-    const { tsx } = exportCode(listed, "people");
-    expect(tsx).toContain("layout={{\n    addressTrailing: null,\n  }}");
-    expect(tsx).toContain('list={["businesses", "addresses"]}');
+    const listed = withListed(hidden, "businesses", "people", true);
+    const { tsx } = exportCode(listed, "businesses");
+    expect(tsx).toContain("layout={{\n    personTrailing: null,\n  }}");
+    expect(tsx).toContain('list={["people"]}');
   });
 
   it("writes the lines a business lists, with somewhere for a person to go", () => {

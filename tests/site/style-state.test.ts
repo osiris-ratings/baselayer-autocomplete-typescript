@@ -21,11 +21,15 @@ import {
   STRUCTURE_FLAGS,
   applyPreset,
   changedRowLayout,
+  componentProps,
   changedVars,
   exportCode,
   INITIAL_STYLE,
   placeOptions,
   canDrop,
+  editorOps,
+  ADDRESS_EDITOR,
+  PERSON_EDITOR,
   lineFields,
   moveField,
   unplacedFields,
@@ -644,5 +648,105 @@ describe("the Font fold", () => {
     const [html] = fontSnippets(DEFAULT_STYLE).map(snippet => snippet.code);
     expect(html).toContain("family=Your+Font:wght@500;600;700");
     expect(html).toContain('--bl-ac-font: "Your Font", system-ui, sans-serif;');
+  });
+});
+
+// A role exists only between a person and a business: a person listed at an
+// address, and an address listed under a person, carry none, so the editor
+// does not offer a field for it.
+describe("the roles the service never sends", () => {
+  const unsent = [
+    ["addresses", "personRole", ADDRESS_EDITOR, "personTrailing"],
+    ["people", "addressRole", PERSON_EDITOR, "addressTrailing"],
+  ] as const;
+
+  it.each(unsent)("%s: no line offers %s", (route, field, editor) => {
+    for (const relation of [
+      null,
+      "businesses",
+      "people",
+      "addresses",
+    ] as const) {
+      expect(lineFields(route, relation)).not.toContain(field);
+    }
+    expect(editor.kind.fields).toContain(field);
+  });
+
+  it("addresses: the places offer no personRole, and the tray holds none", () => {
+    const ops = editorOps(ADDRESS_EDITOR);
+    const layout = DEFAULT_STYLE.rows.addresses.layout;
+
+    for (const place of ADDRESS_EDITOR.kind.places) {
+      expect(ops.placeOptions(layout, place).map(o => o.value)).not.toContain(
+        "personRole",
+      );
+    }
+    expect(ops.unplacedFields(layout)).not.toContain("personRole");
+  });
+
+  it("people: the places offer no addressRole, and the tray holds none", () => {
+    const ops = editorOps(PERSON_EDITOR);
+    const layout = DEFAULT_STYLE.rows.people.layout;
+
+    for (const place of PERSON_EDITOR.kind.places) {
+      expect(ops.placeOptions(layout, place).map(o => o.value)).not.toContain(
+        "addressRole",
+      );
+    }
+    expect(ops.unplacedFields(layout)).not.toContain("addressRole");
+  });
+
+  it.each(unsent)(
+    "%s: the row starts with %s placed nowhere, and that is not a change from the defaults",
+    (route, field) => {
+      const layout = DEFAULT_STYLE.rows[route].layout as Record<
+        string,
+        unknown
+      >;
+
+      expect(Object.values(layout)).not.toContain(field);
+      expect(changedRowLayout(DEFAULT_STYLE, route)).toEqual([]);
+    },
+  );
+
+  it.each(unsent)("%s: no preset places %s", (route, field) => {
+    for (const preset of PRESETS) {
+      const state = applyPreset(DEFAULT_STYLE, preset);
+      expect(Object.values(state.rows[route].layout)).not.toContain(field);
+    }
+  });
+
+  it.each(unsent)(
+    "%s: a config that already places %s drops it, quietly: the props carry none and the export says nothing of it",
+    (route, field, _editor, place) => {
+      const saved: StyleState = {
+        ...DEFAULT_STYLE,
+        rows: {
+          ...DEFAULT_STYLE.rows,
+          [route]: {
+            ...DEFAULT_STYLE.rows[route],
+            layout: {
+              ...DEFAULT_STYLE.rows[route].layout,
+              [place]: field,
+            },
+          },
+        },
+      };
+
+      const props = componentProps(saved, route) as {
+        layout: Record<string, unknown>;
+      };
+
+      expect(Object.values(props.layout)).not.toContain(field);
+      expect(changedRowLayout(saved, route)).toEqual([]);
+      expect(exportCode(saved, route).tsx).not.toContain(field);
+    },
+  );
+
+  it("still offers the roles that are sent: a person's on a business, how a business holds an address", () => {
+    expect(lineFields("businesses", "people")).toEqual(["personRole"]);
+    expect(lineFields("businesses", "addresses")).toEqual(["addressRole"]);
+    expect(lineFields("people", "businesses")).toContain("role");
+    expect(lineFields("addresses", "businesses")).toContain("role");
   });
 });
