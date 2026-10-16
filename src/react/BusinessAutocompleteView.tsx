@@ -57,6 +57,7 @@ import {
   countsText,
   useRoleColumn,
   lookVariables,
+  correctedAsOf,
   marked,
   type ClassFor,
   type MarkClasses,
@@ -239,6 +240,7 @@ function DefaultRow({
     mark: cx("mark", "bl-ac-mark"),
     corrected: cx("corrected", "bl-ac-corrected"),
   };
+  const correctedAs = correctedAsOf(look.matchEmphasis);
   const address = addressLineOf(item);
   const people = peopleLineOf(item);
   const structure = structureLabel(item.structure, text.structures);
@@ -269,6 +271,7 @@ function DefaultRow({
       highlight ?? [],
       region,
       queryTokens(typed ?? ""),
+      correctedAs,
     );
     if (sent !== null) {
       return marked(label, sent, marks);
@@ -422,7 +425,7 @@ function DefaultRow({
         >
           {marked(
             item.label,
-            partsFor(item.label, parts, region, tokens),
+            partsFor(item.label, parts, region, tokens, correctedAs),
             marks,
           )}
         </span>
@@ -437,7 +440,7 @@ function DefaultRow({
           also{" "}
           {marked(
             item.matched_name,
-            partsFor(item.matched_name, parts, region, tokens),
+            partsFor(item.matched_name, parts, region, tokens, correctedAs),
             marks,
           )}
         </span>

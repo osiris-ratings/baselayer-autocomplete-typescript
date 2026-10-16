@@ -364,7 +364,9 @@ agents, addresses, states and the alias; see
 [What matched](styling.md#what-matched)),
 `structureLabel` (a structure's flag, `C-Corp` for `C_CORPORATION`),
 `formatFound`, `queryTokens` and `partsFor` (the highlight parts to draw for
-a name, whole-word or cut at the typed prefix), and for a person's or an
+a name, whole-word or cut at the typed prefix, with a letter the search
+corrected kept as a part of its own or drawn as a match,
+[styling](styling.md#letters-the-search-corrected)), and for a person's or an
 address's row `groupedLines`, `groupedOptions`, `businessPickFrom` and
 `pickableBusinesses`. To lay your rows out in the styled component's places,
 `drawnRowLayout(resolveRowLayout(layout))` is the field each place of a

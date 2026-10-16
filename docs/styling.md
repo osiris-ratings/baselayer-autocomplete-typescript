@@ -97,7 +97,6 @@ Set them on `.bl-ac` or any ancestor selector more specific than it:
 | `--bl-ac-underline`               | `#38a169`                          | the underline mark                                  |
 | `--bl-ac-marker`                  | `#c6f6d5`                          | the background mark                                 |
 | `--bl-ac-mark-fg`                 | unset: the letters' own color      | the letters on a background mark                    |
-| `--bl-ac-corrected`               | unset: the text's own color        | the dots under a letter the search corrected        |
 | `--bl-ac-ink-mark`                | unset: the title's color           | a matched word, under `ink`                         |
 | `--bl-ac-ink-base`                | `#4a5568`                          | the name's unmatched text, under `ink`              |
 | `--bl-ac-also-mark`               | `#2d3748`                          | the `also …` marks, under `weight` and `ink`        |
@@ -598,31 +597,48 @@ When the autocomplete service finds a name through a typo in what was typed, it
 splits the corrected word by letter: the letters that answer what was typed are
 matched, and the letters it changed (a letter substituted, the stored letter of
 one left out, both letters of a swap) come with `corrected: true`, never
-matched. Typed `starbicks`, a row's parts read `STARB` matched, `U` corrected,
-`CKS COFFEE` matched. The service sends the flag only on a word it corrected,
-so a row it did not correct reads as it always did.
+matched. Typed `harbur`, `harbr` or `harbu` for HARBOR, the parts read `HARB`
+matched, `O` corrected, `R` matched; typed `harbro`, `HARB` matched and `OR`
+corrected. A letter typed too many (`harbbor`) leaves nothing to point at, and
+the word is one plain match. The service sends the flag only on a word it
+corrected, so a row it did not correct reads as it always did.
 
-A corrected letter is drawn with a dotted underline, whichever way
-`look.matchEmphasis` draws a match, so it is told from one: it is the letter
-you did not type. It is a span of its own with the class `bl-ac-corrected`
-(the `corrected` slot of `classNames`) and `data-corrected="true"`, in the
-text's own color, or `--bl-ac-corrected`. The underline has the thickness and
-offset of the `underline` emphasis, so beside a solid one the two line up.
-With `unstyled` the span keeps its attribute and your class, and the styling is
-yours. `matchEmphasis: "plain"` draws no marks, so it draws none for a
-corrected letter either. A part is a match whatever else it says: a matched
-part that also carries `corrected` is drawn as a match.
+How a corrected letter is drawn follows `look.matchEmphasis`:
 
-```css
-.bl-ac-corrected {
-  text-decoration-color: tomato;
-}
-```
+| Emphasis     | A corrected letter                                                      |
+| ------------ | ----------------------------------------------------------------------- |
+| `underline`  | a dotted underline, in exactly the solid underline's color and line     |
+| `background` | the match's fill in diagonal stripes, as the Hidden lines drawer is     |
+| `weight`     | an ordinary match: nothing marks a fuzzy match, the word looks like any |
+| `ink`        | an ordinary match, as under `weight`                                    |
+| `plain`      | nothing, as for any match                                               |
+
+Under `underline` and `background` it is a span of its own with the class
+`bl-ac-corrected` (the `corrected` slot of `classNames`) and
+`data-corrected="true"`; the dots follow `--bl-ac-mark` as the solid underline
+does, and so do the stripes as the fill does. With `unstyled` the span keeps its
+attribute and your class, and the styling is yours. Under `weight` and `ink`
+there is no such span: the letter is part of the match, and a word
+`harbur` and the same word typed right are drawn alike.
+
+`matchEmphasisRegion` still says how much of a word is marked, and a corrected
+letter is counted among the letters typed:
+
+- **`token`, whole word:** the whole word the service marked, as it sent it,
+  corrected letters inside it.
+- **`substring`, typed characters:** the letters the typed text covers, the
+  corrected ones among them, and the untyped rest plain. A deletion covers the
+  letter that follows it: `harbr`, five letters typed, covers all six of HARBOR
+  with the O marked, where `harbu`, five typed for the first five letters of
+  HARBOR, covers HARBO and leaves the R plain. A swap covers both letters.
 
 On the data, `HighlightPart` is `{ text, matched, corrected? }`. `corrected`
 is `true` or absent, never `false`, and the parts still spell the name. A host
 that draws the parts itself reads it from `highlight`, and from `partsFor`'s
-result, which keeps a corrected letter apart from the plain text beside it.
+result: `partsFor(text, parts, region, tokens, correctedAs)` takes a fifth
+argument, `"mark"` (the default) to keep a corrected letter as a part of its
+own, apart from the plain text beside it, or `"match"` to draw it as an
+ordinary match.
 
 ### The structure's flag
 

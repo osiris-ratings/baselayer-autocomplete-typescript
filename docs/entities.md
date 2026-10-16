@@ -102,8 +102,8 @@ matched }` each, which concatenate to that name. When the search corrected a
 typo, the corrected word is split by letter and the letters it changed carry
 `corrected: true` (and `matched: false`): the key is there only then, so a
 row that was not corrected has the two keys it always had. The components draw
-a corrected letter with a dotted underline
-([styling](styling.md#letters-the-search-corrected)).
+a corrected letter as the match emphasis says: dotted, striped, or as an
+ordinary match ([styling](styling.md#letters-the-search-corrected)).
 
 `related` and `sources` carry one key per relation the route expands. Read
 `sources` before an empty `related` entry: an empty list under a source that

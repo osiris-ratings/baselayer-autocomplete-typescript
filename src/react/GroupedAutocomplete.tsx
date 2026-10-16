@@ -72,6 +72,7 @@ import {
   countsText,
   useRoleColumn,
   lookVariables,
+  correctedAsOf,
   marked,
   type MarkClasses,
   type SlotName,
@@ -627,6 +628,7 @@ function GroupedView<R extends GroupedRoute>({
     mark: cx("mark", "bl-ac-mark"),
     corrected: cx("corrected", "bl-ac-corrected"),
   };
+  const correctedAs = correctedAsOf(look.matchEmphasis);
   /**
    * What was typed into the filter that matched each kind of related item:
    * its parts are cut at it, as a row's are at what was typed in the field.
@@ -648,7 +650,13 @@ function GroupedView<R extends GroupedRoute>({
   const relatedParts = (text: string, item: RelatedItem) =>
     look.matchEmphasis === "plain"
       ? null
-      : partsFor(text, item.highlight ?? [], region, filterTokens[item.type]);
+      : partsFor(
+          text,
+          item.highlight ?? [],
+          region,
+          filterTokens[item.type],
+          correctedAs,
+        );
   const entity = route === "people" ? "person" : "address";
   const hasRows = combobox.isOpen && rows.length > 0;
   const hasCountRow = combobox.isOpen && hasFooter;
@@ -994,7 +1002,7 @@ function GroupedView<R extends GroupedRoute>({
                     >
                       {marked(
                         row.label,
-                        partsFor(row.label, parts, region, tokens),
+                        partsFor(row.label, parts, region, tokens, correctedAs),
                         marks,
                         `${entity}-suggestion-match`,
                       )}

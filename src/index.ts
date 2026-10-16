@@ -203,6 +203,7 @@ export {
   type AddressLine,
   type AddressOwner,
   type BusinessStates,
+  type CorrectedAs,
   type MatchedOn,
   type PeopleLine,
 } from "./core/suggestions";

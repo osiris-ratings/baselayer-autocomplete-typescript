@@ -539,6 +539,41 @@
   );
 }
 
+/* A corrected letter's dots and stripes fade as the underline and the fill
+   beside them do. */
+:is(.bl-ac-group-head, .bl-ac-group-line):not([data-enabled])
+  [data-emphasis="underline"]
+  .bl-ac-corrected,
+.bl-ac-group
+  > .bl-ac-row:not([data-enabled])
+  [data-emphasis="underline"]
+  .bl-ac-corrected {
+  text-decoration-color: color-mix(
+    in srgb,
+    var(--bl-ac-mark, var(--bl-ac-underline)) var(--bl-ac-disabled-mark, 67%),
+    var(--bl-ac-bg)
+  );
+}
+
+:is(.bl-ac-group-head, .bl-ac-group-line):not([data-enabled])
+  [data-emphasis="background"]
+  .bl-ac-corrected,
+.bl-ac-group
+  > .bl-ac-row:not([data-enabled])
+  [data-emphasis="background"]
+  .bl-ac-corrected {
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(
+        in srgb,
+        var(--bl-ac-mark, var(--bl-ac-marker)) var(--bl-ac-disabled-mark, 67%),
+        var(--bl-ac-bg)
+      )
+      0 2px,
+    transparent 2px 4px
+  );
+}
+
 :is(.bl-ac-group-head, .bl-ac-group-line):not([data-enabled])
   :is(.bl-ac-name, .bl-ac-line-name)[data-emphasis="ink"]
   > .bl-ac-mark,
@@ -743,15 +778,21 @@
 }
 
 /*
- * A letter the search corrected: the stored word's where the typed word had
- * another. Dotted, so it is told from a match whichever way the emphasis draws
- * one (an underline, a fill, an ink or a weight), and reads as the letter you
- * did not type. It takes the text's own color, or `--bl-ac-corrected`, and the
- * underline's thickness and offset, so beside a solid one the two line up.
+ * A letter the search corrected, the stored word's where the typed word had
+ * another, is in the word's mark but not the typed letters' own: under the
+ * underline emphasis its line is the same line, in the same color, dotted, so
+ * the word is underlined all the way along and the corrected letter is told
+ * from the typed ones. The background emphasis stripes it (below); weight and
+ * ink mark nothing for a fuzzy match, and the component draws the letter as an
+ * ordinary match there.
  */
-.bl-ac-corrected {
+.bl-ac-name[data-emphasis="underline"] .bl-ac-corrected,
+.bl-ac-line-name[data-emphasis="underline"] .bl-ac-corrected,
+.bl-ac-also[data-emphasis="underline"] .bl-ac-corrected,
+.bl-ac-address[data-emphasis="underline"] .bl-ac-corrected,
+.bl-ac-people[data-emphasis="underline"] .bl-ac-corrected {
   text-decoration: underline dotted;
-  text-decoration-color: var(--bl-ac-corrected, currentcolor);
+  text-decoration-color: var(--bl-ac-mark, var(--bl-ac-underline));
   text-decoration-thickness: 1.5px;
   text-underline-offset: 3px;
 }
@@ -807,6 +848,28 @@
   /* Unset, the letters keep their own color, as on the default marker. */
   color: var(--bl-ac-mark-fg);
   background: var(--bl-ac-mark, var(--bl-ac-marker));
+  border-radius: 0.25rem;
+}
+
+/*
+ * A corrected letter under the background emphasis: the match's own fill laid
+ * in diagonal stripes, as the demo's Hidden lines drawer lays its own (-45deg,
+ * half colored and half clear), a third as wide so that a letter shows more
+ * than one. The letters keep their own ink, which stays legible on the clear
+ * half where the match's ink (`--bl-ac-mark-fg`) would not.
+ */
+.bl-ac-name[data-emphasis="background"] .bl-ac-corrected,
+.bl-ac-line-name[data-emphasis="background"] .bl-ac-corrected,
+.bl-ac-also[data-emphasis="background"] .bl-ac-corrected,
+.bl-ac-address[data-emphasis="background"] .bl-ac-corrected,
+.bl-ac-people[data-emphasis="background"] .bl-ac-corrected {
+  margin: 0 -0.125rem;
+  padding: 0 0.125rem;
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--bl-ac-mark, var(--bl-ac-marker)) 0 2px,
+    transparent 2px 4px
+  );
   border-radius: 0.25rem;
 }
 

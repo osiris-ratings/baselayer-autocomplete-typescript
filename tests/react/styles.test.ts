@@ -36,28 +36,71 @@ function rule(selector: string): string {
 }
 
 describe("the letters the search corrected", () => {
-  it("are underlined dotted, in the text's color unless --bl-ac-corrected is set", () => {
-    const body = rule(".bl-ac-corrected");
-    expect(body).toContain("text-decoration: underline dotted;");
-    expect(body).toContain(
-      "text-decoration-color: var(--bl-ac-corrected, currentcolor);",
-    );
-  });
+  const FIELDS = [
+    ".bl-ac-name",
+    ".bl-ac-line-name",
+    ".bl-ac-also",
+    ".bl-ac-address",
+    ".bl-ac-people",
+  ];
 
-  it("keep the underline's thickness and offset, so beside a solid one the two line up", () => {
-    const solid = rule('.bl-ac-name[data-emphasis="underline"] .bl-ac-mark');
-    const dotted = rule(".bl-ac-corrected");
-    for (const property of [
-      "text-decoration-thickness: 1.5px;",
-      "text-underline-offset: 3px;",
+  it.each(FIELDS)(
+    "%s: under the underline emphasis, are the match's own line in its own color, dotted",
+    field => {
+      const solid = rule(`${field}[data-emphasis="underline"] .bl-ac-mark`);
+      const dotted = rule(
+        `${field}[data-emphasis="underline"] .bl-ac-corrected`,
+      );
+
+      // The match's line, so the same color, thickness and offset: beside a
+      // solid one the two line up...
+      for (const declaration of [
+        "text-decoration-color: var(--bl-ac-mark, var(--bl-ac-underline));",
+        "text-decoration-thickness: 1.5px;",
+        "text-underline-offset: 3px;",
+      ]) {
+        expect(solid).toContain(declaration);
+        expect(dotted).toContain(declaration);
+      }
+      // ...only dotted.
+      expect(solid).toContain("text-decoration: underline;");
+      expect(dotted).toContain("text-decoration: underline dotted;");
+    },
+  );
+
+  it.each(FIELDS)(
+    "%s: under the background emphasis, are the match's fill in diagonal stripes",
+    field => {
+      const body = rule(
+        `${field}[data-emphasis="background"] .bl-ac-corrected`,
+      );
+
+      expect(body).toContain("repeating-linear-gradient(");
+      expect(body).toContain("-45deg");
+      expect(body).toContain("var(--bl-ac-mark, var(--bl-ac-marker))");
+      // The letters keep their own ink, which the clear half of a stripe shows.
+      expect(body).not.toContain("--bl-ac-mark-fg");
+    },
+  );
+
+  it("fade with the fill and the underline beside them on a disabled line", () => {
+    for (const [emphasis, fade] of [
+      ["underline", "text-decoration-color: color-mix("],
+      ["background", "background: repeating-linear-gradient("],
     ]) {
-      expect(solid).toContain(property);
-      expect(dotted).toContain(property);
+      const body = rule(
+        `.bl-ac-group > .bl-ac-row:not([data-enabled]) [data-emphasis="${emphasis}"] .bl-ac-corrected`,
+      );
+      expect(body).toContain(fade);
+      expect(body).toContain("var(--bl-ac-disabled-mark, 67%)");
     }
   });
 
-  it("leave --bl-ac-corrected unset, so the text's own color carries", () => {
-    expect(rule(".bl-ac")).not.toContain("--bl-ac-corrected");
+  it("have no color of their own to set, and no rule under weight or ink, which draw them as matches", () => {
+    expect(css).not.toContain("--bl-ac-corrected");
+    expect(css).not.toMatch(
+      /\[data-emphasis="(weight|ink|plain)"\][^{}]*\.bl-ac-corrected/,
+    );
   });
 });
 

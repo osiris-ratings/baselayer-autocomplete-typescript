@@ -79,34 +79,145 @@ function personAtAddress(label: string): RelatedPerson {
   return { type: "person", label, matched: false, highlight: null };
 }
 
+const COMBINING = /\p{M}/gu;
+const LEGAL_SUFFIXES = new Set([
+  "inc",
+  "llc",
+  "lp",
+  "llp",
+  "ltd",
+  "corp",
+  "co",
+]);
+
+function fold(text: string): string {
+  return text.normalize("NFD").replace(COMBINING, "").toLowerCase();
+}
+
 /**
- * Where a typed `token` goes wrong against the start of `word` (both lower
- * case), or null: the made-up API's stand-in for the autocomplete service's
- * typo tolerance, one wrong letter in a token of five or more. A token that
- * starts the word is not wrong, and nor is a short one, where a letter would
- * be too much of the word.
+ * Which letters of `stored` a typed word had wrong, one flag per letter of
+ * `stored`: a letter substituted, the stored letter a typed word left out, both
+ * letters of a swap. Null where there is no letter of `stored` to point at (the
+ * words are equal, the typed word has a letter too many, or they are more than
+ * one edit apart). A port of the autocomplete service's `corrected_letters`,
+ * which the demo's made-up API answers with so that it cannot differ from it.
  */
-export function misspeltAt(word: string, token: string): number | null {
-  if (token.length < 5 || token.length > word.length) {
+export function correctedLetters(
+  typed: string,
+  stored: string,
+): boolean[] | null {
+  const t = Array.from(typed);
+  const s = Array.from(stored);
+  const same = (from: number, other: string[], at: number) =>
+    t.slice(from).join("") === other.slice(at).join("");
+  const first = Array.from(
+    { length: Math.min(t.length, s.length) },
+    (_, i) => i,
+  ).find(i => t[i] !== s[i]);
+  const flags = s.map(() => false);
+  if (t.length === s.length) {
+    if (first === undefined) {
+      return null;
+    }
+    if (
+      first + 1 < t.length &&
+      t[first] === s[first + 1] &&
+      t[first + 1] === s[first] &&
+      same(first + 2, s, first + 2)
+    ) {
+      flags[first] = true;
+      flags[first + 1] = true;
+    } else if (same(first + 1, s, first + 1)) {
+      flags[first] = true;
+    } else {
+      return null;
+    }
+    return flags;
+  }
+  if (t.length + 1 === s.length) {
+    const at = first ?? t.length;
+    if (!same(at, s, at + 1)) {
+      return null;
+    }
+    flags[at] = true;
+    return flags;
+  }
+  return null;
+}
+
+/**
+ * How the search reads a typed `token` as `word` (both folded): the stored
+ * letters it corrects, or an empty list for a letter typed too many, which
+ * leaves nothing to point at; null when it is no respelling. The first letter
+ * has to match, and a word of under four characters, with a digit or that is a
+ * legal suffix is not corrected, as in the service. A token that starts the
+ * word is not a typo.
+ */
+export function respelling(word: string, token: string): boolean[] | [] | null {
+  if (
+    token.length < 4 ||
+    word.length < 4 ||
+    /\d/.test(word) ||
+    LEGAL_SUFFIXES.has(word) ||
+    word.startsWith(token) ||
+    token[0] !== word[0]
+  ) {
     return null;
   }
-  let at: number | null = null;
-  for (let index = 0; index < token.length; index += 1) {
-    if (word[index] !== token[index]) {
-      if (at !== null) {
-        return null;
+  for (const length of [token.length, token.length + 1]) {
+    if (length <= word.length) {
+      const flags = correctedLetters(token, word.slice(0, length));
+      if (flags !== null) {
+        return flags;
       }
-      at = index;
     }
   }
-  return at;
+  // A letter too many: taking one out gives the word, or the start of it.
+  const letters = Array.from(token);
+  for (let at = 0; at < letters.length; at += 1) {
+    const without = letters.filter((_, index) => index !== at).join("");
+    if (word.startsWith(without) && without.length >= 3) {
+      return [];
+    }
+  }
+  return null;
+}
+
+/**
+ * The autocomplete service's tidy-up of a name's parts: adjacent parts of one
+ * kind become one, and whitespace between two matched parts is matched with
+ * them.
+ */
+function tidy(parts: HighlightPart[]): HighlightPart[] {
+  const out: HighlightPart[] = [];
+  parts.forEach((part, index) => {
+    const last = out[out.length - 1];
+    const bridges =
+      !part.matched &&
+      part.corrected !== true &&
+      /^\s+$/.test(part.text) &&
+      last?.matched === true &&
+      parts[index + 1]?.matched === true;
+    if (
+      last !== undefined &&
+      (bridges ||
+        (last.matched === part.matched &&
+          (last.corrected === true) === (part.corrected === true)))
+    ) {
+      last.text += part.text;
+    } else {
+      out.push({ ...part });
+    }
+  });
+  return out;
 }
 
 /**
  * A name split as the autocomplete service splits it: each word a typed token
- * starts is one highlighted part, whole, and the text between words is another.
- * A word one letter off a typed token is split by letter, the letter the
- * correction changed `corrected` and never matched.
+ * starts is marked whole, and so is a word a token respells with a letter too
+ * many; the text between words is not. A word a token respells otherwise is
+ * marked whole too, but split by letter, the letters the typed word had wrong
+ * `corrected` and never matched. One part per word and per run between words.
  */
 export function highlightFor(
   name: string,
@@ -116,24 +227,35 @@ export function highlightFor(
     .split(/([A-Za-z0-9]+)/)
     .filter(text => text !== "")
     .flatMap((text): HighlightPart[] => {
-      const word = text.toLowerCase();
+      const word = fold(text);
       if (tokens.some(token => word.startsWith(token))) {
         return [{ text, matched: true }];
       }
       for (const token of tokens) {
-        const at = misspeltAt(word, token);
-        if (at !== null) {
-          return [
-            ...(at > 0 ? [{ text: text.slice(0, at), matched: true }] : []),
-            { text: text.charAt(at), matched: false, corrected: true as const },
-            ...(at + 1 < text.length
-              ? [{ text: text.slice(at + 1), matched: true }]
-              : []),
-          ];
+        const flags = respelling(word, token);
+        if (flags === null) {
+          continue;
         }
+        return Array.from(text).map((letter, index): HighlightPart =>
+          flags[index] === true
+            ? { text: letter, matched: false, corrected: true }
+            : { text: letter, matched: true },
+        );
       }
       return [{ text, matched: false }];
     });
+}
+
+/**
+ * `highlightFor`, tidied as the autocomplete service tidies its own: what its
+ * answers carry, so a made-up answer and a real one spell the parts alike. The
+ * Styling preview's rows keep a part per word, to show the two regions apart.
+ */
+export function serviceHighlightFor(
+  name: string,
+  tokens: readonly string[],
+): HighlightPart[] {
+  return tidy(highlightFor(name, tokens));
 }
 
 function highlight(name: string): HighlightPart[] {

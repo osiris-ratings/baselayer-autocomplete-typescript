@@ -1,0 +1,180 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  parseBusinessesResponse,
+  partsFor,
+  queryTokens,
+  type HighlightPart,
+} from "@baselayer-sdk/autocomplete";
+
+import golden from "./fixtures/typo-highlights.json";
+import { CORRECTED_CASES, LABEL, c, m, p } from "./support/corrected-cases";
+
+// The parts the autocomplete service serializes for one name typed nine ways,
+// and what the components draw of them: the whole word the service marked
+// (`token`), or the letters typed (`substring`); and a corrected letter either
+// as its own mark (the underline and background emphases) or as an ordinary
+// match (weight and ink, which mark nothing for a fuzzy match). The expected
+// parts are worked out by hand from the letters.
+
+const REST = " CONCRETE PUMPING CO., INC.";
+
+const sent = (typed: string): HighlightPart[] =>
+  golden.cases.find(entry => entry.typed === typed)!
+    .highlight as HighlightPart[];
+
+const draw = (
+  typed: string,
+  region: "token" | "substring",
+  correctedAs?: "mark" | "match",
+) =>
+  partsFor(
+    LABEL,
+    sent(typed),
+    region,
+    queryTokens(typed),
+    ...(correctedAs !== undefined ? [correctedAs] : []),
+  );
+
+describe("the service's answers, as sent", () => {
+  it.each(golden.cases)("$typed ($kind) spells the name", entry => {
+    expect(entry.highlight.map(part => part.text).join("")).toBe(LABEL);
+    // A corrected part is never a matched one.
+    for (const part of entry.highlight) {
+      expect("corrected" in part && part.matched).toBe(false);
+    }
+  });
+
+  it.each(golden.cases)("$typed is read by the parser as it is", entry => {
+    const body = {
+      found: 1,
+      found_capped: false,
+      query: entry.typed,
+      sources: { addresses: { status: "ok" }, people: { status: "ok" } },
+      suggestions: [
+        {
+          type: "business",
+          token: "<sealed token>",
+          label: LABEL,
+          matched_name: null,
+          match: "strong",
+          domicile_state: "PA",
+          states: ["PA"],
+          structure: "C_CORPORATION",
+          highlight: entry.highlight,
+          related: {
+            people: { count: null, matched: null, truncated: false, items: [] },
+            addresses: {
+              count: null,
+              matched: null,
+              truncated: false,
+              items: [],
+            },
+          },
+        },
+      ],
+      truncated: false,
+    };
+
+    expect(parseBusinessesResponse(body).suggestions[0]?.highlight).toEqual(
+      entry.highlight,
+    );
+  });
+});
+
+describe("whole words (the token region)", () => {
+  it.each(CORRECTED_CASES)(
+    "$typed ($kind): a corrected letter is its own mark, inside the word's",
+    ({ typed, token }) => {
+      expect(draw(typed, "token")).toBe(sent(typed));
+      expect(draw(typed, "token", "mark")).toEqual(token.mark);
+    },
+  );
+
+  it.each(CORRECTED_CASES)(
+    "$typed ($kind): weight and ink draw the whole word as an ordinary match",
+    ({ typed, token }) => {
+      expect(draw(typed, "token", "match")).toEqual(token.match);
+    },
+  );
+});
+
+describe("typed characters (the substring region)", () => {
+  it.each(CORRECTED_CASES)(
+    "$typed ($kind): a corrected letter is its own mark",
+    ({ typed, substring }) => {
+      expect(draw(typed, "substring")).toEqual(substring.mark);
+      expect(draw(typed, "substring", "mark")).toEqual(substring.mark);
+    },
+  );
+
+  it.each(CORRECTED_CASES)(
+    "$typed ($kind): weight and ink cover the letters typed as an ordinary match",
+    ({ typed, substring }) => {
+      expect(draw(typed, "substring", "match")).toEqual(substring.match);
+    },
+  );
+
+  it("draws a corrected word as the same word typed right is drawn, under weight and ink", () => {
+    // `harbur` and `harbor` cover the same six letters, so the corrected one
+    // must not look any different from the exact one.
+    expect(draw("harbur", "substring", "match")).toEqual(
+      draw("harbor", "substring", "match"),
+    );
+    expect(draw("harbr", "substring", "match")).toEqual(
+      draw("harbor", "substring", "match"),
+    );
+  });
+});
+
+describe("a corrected word the typed text no longer matches", () => {
+  // The rows were answered for an earlier query; the autocomplete service's
+  // parts are still the truth about why the row is there, so the word is kept
+  // as sent, whole, as any word no typed token starts is.
+  it.each([
+    ["nothing typed", []],
+    ["something else typed", ["zebra"]],
+    ["the word typed as far as the correction", ["harb"]],
+  ])("keeps it as sent when %s", (_, tokens) => {
+    expect(partsFor(LABEL, sent("harbur"), "substring", tokens)).toEqual(
+      sent("harbur"),
+    );
+    expect(
+      partsFor(LABEL, sent("harbur"), "substring", tokens, "match"),
+    ).toEqual([m("HARBOR"), p(REST)]);
+  });
+});
+
+describe("typed letters that fold", () => {
+  it("aligns a stored letter with a mark to the typed one without", () => {
+    // MUÑOZ typed `munaz`: the O is the corrected one, the Ñ is typed as N.
+    const parts = [m("MUÑ"), c("O"), m("Z"), p(" FREIGHT")];
+
+    expect(partsFor("MUÑOZ FREIGHT", parts, "substring", ["munaz"])).toEqual(
+      parts,
+    );
+    expect(
+      partsFor("MUÑOZ FREIGHT", parts, "substring", ["munaz"], "match"),
+    ).toEqual([m("MUÑOZ"), p(" FREIGHT")]);
+  });
+});
+
+describe("a corrected letter at the start or the end of a word", () => {
+  it("covers a corrected last letter typed", () => {
+    // `starbuckz` for STARBUCKS: the S is the corrected one.
+    const parts = [m("STARBUCK"), c("S"), p(" COFFEE")];
+
+    expect(
+      partsFor("STARBUCKS COFFEE", parts, "substring", ["starbuckz"]),
+    ).toEqual(parts);
+  });
+
+  it("leaves a corrected letter after the typed ones out, when only a prefix is typed", () => {
+    const parts = [m("STARB"), c("U"), m("CKS"), p(" COFFEE")];
+
+    // `starbi`: six typed, the U corrected; CKS not yet typed is plain.
+    expect(
+      partsFor("STARBUCKS COFFEE", parts, "substring", ["starbi"]),
+    ).toEqual([m("STARB"), c("U"), p("CKS COFFEE")]);
+  });
+});

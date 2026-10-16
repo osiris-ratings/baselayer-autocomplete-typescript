@@ -16,6 +16,7 @@ import {
   ROUTES,
   orderedStates,
   type BusinessStates,
+  type CorrectedAs,
   type HighlightPart,
   type Look,
   type RelatedItem,
@@ -171,6 +172,15 @@ export function lookVariables(look: Look): CSSProperties {
     vars["--bl-ac-mark-fg"] = markText;
   }
   return vars as CSSProperties;
+}
+
+/**
+ * How an emphasis draws a letter the search corrected: weight and ink mark
+ * nothing for a fuzzy match, so it is drawn as an ordinary match; underline and
+ * background give it a mark of its own (dotted, striped).
+ */
+export function correctedAsOf(emphasis: Look["matchEmphasis"]): CorrectedAs {
+  return emphasis === "weight" || emphasis === "ink" ? "match" : "mark";
 }
 
 /** The classes a marked name's spans carry: a match mark's, and a corrected letter's. */

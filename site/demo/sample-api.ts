@@ -25,8 +25,8 @@ import {
   SAMPLE_ADDRESSES,
   SAMPLE_PEOPLE,
   SAMPLE_SUGGESTIONS,
-  highlightFor,
-  misspeltAt,
+  respelling,
+  serviceHighlightFor,
 } from "./sample";
 import { SAMPLE_SEARCH, SAMPLE_WATCHLISTS } from "./sample-search";
 import type { Address, Search } from "./searches";
@@ -131,7 +131,7 @@ function fits(text: string, tokens: readonly string[], typos = false): boolean {
   return tokens.every(token =>
     words.some(
       word =>
-        word.startsWith(token) || (typos && misspeltAt(word, token) !== null),
+        word.startsWith(token) || (typos && respelling(word, token) !== null),
     ),
   );
 }
@@ -376,7 +376,7 @@ function suggest(
     return {
       ...row,
       // Only a business has another name that matched.
-      highlight: highlightFor(
+      highlight: serviceHighlightFor(
         ("matched_name" in row ? row.matched_name : null) ?? row.label,
         tokens,
       ),
