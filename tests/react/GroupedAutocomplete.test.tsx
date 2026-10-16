@@ -1894,13 +1894,20 @@ describe("the selection line", () => {
     expect(selection()).toBeNull();
   });
 
-  /** A host that takes the picked name late, or never, and typing at once. */
+  /**
+   * A host that takes the picked name late, or never, and typing at once.
+   * "Late" is when the test says: the host holds the name in `later` and puts it
+   * in the field when `later.current()` is called, inside `act`. It is not on a
+   * timer, which under load can fire before the test has looked at the field.
+   */
   function LateHost({
     client,
     takesPick,
+    later = { current: null },
   }: {
     client: Client;
     takesPick: "later" | "never";
+    later?: { current: (() => void) | null };
   }) {
     const [value, setValue] = useState("");
     // Only the pick's name is the host's to take late, or to drop; a name
@@ -1917,7 +1924,7 @@ describe("the selection line", () => {
           if (next !== "Dana Whitfield" || picks > 0) {
             setValue(next);
           } else if (takesPick === "later") {
-            setTimeout(() => setValue(next), 20);
+            later.current = () => setValue(next);
           }
         }}
         onPick={() => setPicks(count => count + 1)}
@@ -1928,17 +1935,21 @@ describe("the selection line", () => {
   it("waits for a host that puts the picked name in the field a render later", async () => {
     const { client } = setup();
     const user = userEvent.setup();
-    render(<LateHost client={client} takesPick="later" />);
+    const later = { current: null as (() => void) | null };
+    render(<LateHost client={client} takesPick="later" later={later} />);
     await user.type(input(), "dana");
 
     await user.click(
       await screen.findByRole("option", { name: /Cobalt Tile Supply LLC/ }),
     );
     // Still what was typed: the pick is kept for the name to come, and the
-    // line waits for it too.
+    // line waits for it too. The host has the name and has not put it in yet.
+    expect(later.current).not.toBeNull();
     expect(input().value).toBe("dana");
     expect(selection()).toBeNull();
-    await aMoment();
+
+    // The name comes, a render later.
+    act(() => later.current!());
 
     expect(input().value).toBe("Dana Whitfield");
     expect(selection()).toHaveTextContent("Cobalt Tile Supply LLC");
