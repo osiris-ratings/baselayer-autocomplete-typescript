@@ -136,10 +136,9 @@ export function markTextColor(look: Look): string | null {
 const STRIPE_CONTRAST = 4.5;
 
 /**
- * What a lighter stripe still keeps against the letters where the match color
- * itself falls short of AA (white on a mid pink is 4:1): the floor WCAG sets for
- * large text and for what is not text, and the least that leaves it any room to
- * be lighter.
+ * What the more transparent stripe still keeps against the letters where the
+ * match color itself falls short of AA (white on a mid pink is 4:1 on the
+ * pill): the floor WCAG sets for large text and for what is not text.
  */
 const STRIPE_FLOOR = 3;
 
@@ -147,65 +146,76 @@ const STRIPE_FLOOR = 3;
 const DEFAULT_MARKER = "#c6f6d5";
 
 /**
- * How far the lighter stripe goes from the match color, as a share of the way
- * to white: enough to see two colors, little enough to keep the hue.
+ * The most transparent the second stripe goes: this share of the match color,
+ * the rest the menu's own ground showing through.
  */
-const STRIPE_SPREAD = 0.5;
+const STRIPE_OPACITY_LEAST = 0.35;
 
-/** How far a darker stripe goes, where the fill has no room to be lighter. */
-const STRIPE_SHADE = 0.15;
-
-/** The least two stripes differ by, as a contrast ratio, to be told apart. */
-const STRIPE_VISIBLE = 1.05;
+/**
+ * The least the two stripes differ by, as a contrast ratio, to be clearly two
+ * stripes: a floor that leaves the second closer to the first than this gives
+ * way to the next. White letters over a white menu are where it bites: AA there
+ * leaves the stripes at about 1.2:1, a faint hatch, where 3:1 gives 1.8:1.
+ */
+const STRIPE_VISIBLE = 1.4;
 
 /**
  * The two colors a corrected letter's stripes alternate between under the
  * background emphasis, with the letters in the color the solid match
  * background gives its text (`markTextColor`; the name's own on the default
  * marker). The first is the match color itself, so the stripes join the pill
- * they sit in; the second is a lighter tint of it, as light as the letters
- * still read on it: WCAG AA (4.5:1) where the match color has that room, else
- * 3:1. Where the fill has no room to be lighter (already at white) the second
- * is a little darker, as far as the letters still read.
+ * they sit in; the second is the same color more transparent, so the menu's
+ * ground shows through it, light or dark: as transparent as the letters still
+ * read on once it is over that ground, WCAG AA (4.5:1) where the match color has
+ * the room, else 3:1. It is written as `rgba()`.
  */
 export function stripeColors(look: Look): { solid: string; alt: string } {
   const white: Rgb = [255, 255, 255];
-  const black: Rgb = [0, 0, 0];
   const ground = drawnOn(look.backgroundColor, white);
   const first = rounded(
     drawnOn(look.matchEmphasisColor ?? DEFAULT_MARKER, ground),
   );
   const ink = drawnOn(markTextColor(look) ?? look.titleColor, first);
-  /** The furthest `from` moves toward `to`, up to `most`, keeping `floor`. */
-  const furthest = (from: Rgb, to: Rgb, most: number, floor: number) => {
-    const holds = (share: number) =>
-      contrast(ink, rounded(mix(from, to, share))) >= floor;
-    if (holds(most)) return most;
-    let [low, high] = [0, most];
+  // The second stripe as drawn: the match color at `opacity` over the ground.
+  const over = (opacity: number) => rounded(mix(ground, first, opacity));
+  const reads = (opacity: number, floor: number) =>
+    contrast(ink, over(opacity)) >= floor;
+  /** The most transparent opacity that keeps `floor`, or null. */
+  const mostTransparent = (floor: number) => {
+    if (reads(STRIPE_OPACITY_LEAST, floor)) {
+      return STRIPE_OPACITY_LEAST;
+    }
+    if (!reads(1, floor)) {
+      return null;
+    }
+    let [low, high] = [STRIPE_OPACITY_LEAST, 1];
     for (let step = 0; step < 24; step++) {
       const middle = (low + high) / 2;
-      if (holds(middle)) low = middle;
-      else high = middle;
+      if (reads(middle, floor)) high = middle;
+      else low = middle;
     }
-    return low;
+    // Judged as drawn: the hundredth it rounds up to must keep the floor.
+    return Math.min(1, Math.ceil(high * 100) / 100);
   };
-  const aa = contrast(ink, first) >= STRIPE_CONTRAST;
-  for (const floor of aa ? [STRIPE_CONTRAST, STRIPE_FLOOR] : [STRIPE_FLOOR]) {
-    const share = furthest(first, white, STRIPE_SPREAD, floor);
-    const lighter = rounded(mix(first, white, share));
-    if (contrast(first, lighter) >= STRIPE_VISIBLE) {
-      return { solid: hexOf(first), alt: hexOf(lighter) };
+  const floors =
+    contrast(ink, first) >= STRIPE_CONTRAST
+      ? [STRIPE_CONTRAST, STRIPE_FLOOR]
+      : [STRIPE_FLOOR];
+  let opacity: number | null = null;
+  for (const floor of floors) {
+    opacity = mostTransparent(floor);
+    if (opacity !== null && contrast(first, over(opacity)) >= STRIPE_VISIBLE) {
+      break;
     }
   }
-  const shade = furthest(
-    first,
-    black,
-    STRIPE_SHADE,
-    Math.min(STRIPE_CONTRAST, contrast(ink, first)),
-  );
+  // Where the letters read on neither, the better of the two ends.
+  opacity ??=
+    contrast(ink, over(STRIPE_OPACITY_LEAST)) >= contrast(ink, over(1))
+      ? STRIPE_OPACITY_LEAST
+      : 1;
   return {
     solid: hexOf(first),
-    alt: hexOf(rounded(mix(first, black, shade))),
+    alt: `rgba(${first.join(", ")}, ${opacity})`,
   };
 }
 

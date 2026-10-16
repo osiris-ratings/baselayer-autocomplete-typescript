@@ -77,14 +77,17 @@ describe("the letters the search corrected", () => {
 
       expect(body).toContain("repeating-linear-gradient(");
       expect(body).toContain("-45deg");
-      // Two colors the component sets from the match color, else the marker and
-      // a tint of it toward the menu's ground; never a clear stripe, which the
-      // letters' color would have to read on too.
+      // Two colors the component sets from the match color, else the marker
+      // and the marker at 40%, which lets the menu's ground through; the first
+      // is the pill's own, never clear.
       expect(body).toContain(
         "var(--bl-ac-stripe, var(--bl-ac-mark, var(--bl-ac-marker)))",
       );
       expect(body).toContain("--bl-ac-stripe-alt");
-      expect(body).not.toContain("transparent");
+      expect(body).toMatch(
+        /color-mix\(\s*in srgb,\s*var\(--bl-ac-mark, var\(--bl-ac-marker\)\) 40%,\s*transparent\s*\)/,
+      );
+      expect(body).not.toMatch(/\)\s*0 2px,\s*transparent/);
       // The reach and the corners of a mark, so that a run's two ends are
       // pill ends; where two spans touch the join rules below take both away.
       expect(body).toContain("margin: 0 -0.125rem;");

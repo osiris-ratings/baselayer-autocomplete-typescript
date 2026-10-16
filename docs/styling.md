@@ -607,26 +607,32 @@ corrected, so a row it did not correct reads as it always did.
 
 How a corrected letter is drawn follows `look.matchEmphasis`:
 
-| Emphasis     | A corrected letter                                                                                                       |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------ |
-| `underline`  | a dotted underline, in exactly the solid underline's color and line                                                      |
-| `background` | the match's fill in diagonal stripes of two colors, as the Hidden lines drawer is laid, in the solid fill's letter color |
-| `weight`     | an ordinary match: nothing marks a fuzzy match, the word looks like any                                                  |
-| `ink`        | an ordinary match, as under `weight`                                                                                     |
-| `plain`      | nothing, as for any match                                                                                                |
+| Emphasis     | A corrected letter                                                                                                                                        |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `underline`  | a dotted underline, in exactly the solid underline's color and line                                                                                       |
+| `background` | the match's fill in diagonal stripes, the color and the same color more transparent, as the Hidden lines drawer is laid, in the solid fill's letter color |
+| `weight`     | an ordinary match: nothing marks a fuzzy match, the word looks like any                                                                                   |
+| `ink`        | an ordinary match, as under `weight`                                                                                                                      |
+| `plain`      | nothing, as for any match                                                                                                                                 |
 
 Under `background` the letters take the color the solid fill gives its text, so
 the stripes have to read under it alike. The first stripe is the match color, so
-the stripes join the pill they sit in; the second is a lighter tint of it. With
-a `matchEmphasisColor` the component sets them (`--bl-ac-stripe` and
-`--bl-ac-stripe-alt`), the tint as light as the letters still read on: WCAG AA
-(4.5:1) where the match color has the room, as it does for a saturated purple
-or a dark olive green under white letters and for a light green under the
-name's ink, else 3:1, which is all a pill that falls short of AA itself (white
-on a mid pink) leaves. On the default marker the letters keep their ink, and
-the tint is the marker lightened by a third. A match mark and the corrected
-letters among it are one pill: where two touch, neither reaches past its
-letters nor rounds that corner (`data-join` on the spans says which sides
+the stripes join the pill they sit in; the second is the same color more
+transparent, so the menu's own ground shows through it, light or dark, and it
+works on a dark menu where a lighter tint would fight it. With a
+`matchEmphasisColor` the component sets them (`--bl-ac-stripe` and
+`--bl-ac-stripe-alt`, written as `rgba()`), the second as transparent as the
+letters still read on once it is over the ground, never past 35% of the color,
+and clearly a second stripe (1.4:1 or more from the first). That is WCAG AA
+(4.5:1) wherever the ground leaves room: dark letters on a light fill, and any
+fill over a dark menu, where the ground shows through darker and the letters
+lose nothing. White letters over a white menu are the limit: AA would leave the
+stripes at about 1.2:1, a faint hatch, so the stripe is as transparent as 3:1
+allows, which is also all a pill that falls short of AA itself (white on a mid
+pink) leaves. On the default marker the letters keep
+their ink, and the second stripe is the marker at 40%. A match mark and the
+corrected letters among it are one pill: where two touch, neither reaches past
+its letters nor rounds that corner (`data-join` on the spans says which sides
 touch), so the inside of the run is continuous and only its two ends are
 rounded.
 

@@ -40,19 +40,23 @@ const ROW: BusinessSuggestion = {
   },
 };
 
-/** A computed color, `rgb(...)` or `color(srgb ...)`, as its channels. */
-function rgbOf(color: string): [number, number, number] {
-  const srgb = /^color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)/.exec(color);
+type Rgb = [number, number, number];
+
+/** A computed color, `rgb()`, `rgba()` or `color(srgb ...)`, as channels and opacity. */
+function colorOf(color: string): { rgb: Rgb; opacity: number } {
+  const srgb =
+    /^color\(srgb ([\d.]+) ([\d.]+) ([\d.]+)(?: \/ ([\d.]+))?\)/.exec(color);
   if (srgb !== null) {
-    return [1, 2, 3].map(at => Math.round(Number(srgb[at]) * 255)) as [
-      number,
-      number,
-      number,
-    ];
+    return {
+      rgb: [1, 2, 3].map(at => Math.round(Number(srgb[at]) * 255)) as Rgb,
+      opacity: srgb[4] === undefined ? 1 : Number(srgb[4]),
+    };
   }
-  const [r, g, b] = color.match(/[\d.]+/g)!.map(Number);
-  return [r!, g!, b!];
+  const [r, g, b, a] = color.match(/[\d.]+/g)!.map(Number);
+  return { rgb: [r!, g!, b!], opacity: a ?? 1 };
 }
+
+const rgbOf = (color: string): Rgb => colorOf(color).rgb;
 
 /** `text` split at the commas outside any parentheses. */
 function topLevel(text: string): string[] {
@@ -70,33 +74,8 @@ function topLevel(text: string): string[] {
   return [...parts, text.slice(from).trim()];
 }
 
-/**
- * A color expression as its channels: a computed color, or a `color-mix` of
- * two in srgb, which a browser keeps unresolved inside a gradient.
- */
-function colorOf(expression: string): [number, number, number] {
-  const mix = /^color-mix\((.*)\)$/.exec(expression);
-  if (mix === null) {
-    return rgbOf(expression);
-  }
-  const [, first, second] = topLevel(mix[1]!);
-  const weighted = (stop: string, other?: number) => {
-    const share = /\s(\d+(?:\.\d+)?)%$/.exec(stop);
-    return {
-      color: colorOf(stop.replace(/\s+\d+(?:\.\d+)?%$/, "")),
-      share: share === null ? (other ?? 0.5) : Number(share[1]) / 100,
-    };
-  };
-  const a = weighted(first!);
-  const b = weighted(second!, 1 - a.share);
-  const total = a.share + b.share;
-  return [0, 1, 2].map(at =>
-    Math.round((a.color[at]! * a.share + b.color[at]! * b.share) / total),
-  ) as [number, number, number];
-}
-
-/** The colors a striped element's gradient alternates between. */
-function stripesOf(element: HTMLElement): [number, number, number][] {
+/** The colors a striped element's gradient alternates between, as computed. */
+function rawStripesOf(element: HTMLElement) {
   const image = getComputedStyle(element).backgroundImage;
   const inside = /^repeating-linear-gradient\((.*)\)$/.exec(image)![1]!;
   const stops = topLevel(inside)
@@ -104,11 +83,40 @@ function stripesOf(element: HTMLElement): [number, number, number][] {
     .map(stop => colorOf(stop.replace(/(\s+-?[\d.]+(?:px|%)){1,2}$/, "")));
   // A browser lists each stripe's color at both of its ends.
   return stops.filter(
-    (color, at) => at === 0 || color.join() !== stops[at - 1]!.join(),
+    (stop, at) =>
+      at === 0 ||
+      `${stop.rgb}/${stop.opacity}` !==
+        `${stops[at - 1]!.rgb}/${stops[at - 1]!.opacity}`,
   );
 }
 
-function luminance([r, g, b]: [number, number, number]): number {
+/** What is behind `element`: the first background that is not clear, else white. */
+function groundOf(element: HTMLElement): Rgb {
+  for (
+    let node: HTMLElement | null = element.parentElement;
+    node !== null;
+    node = node.parentElement
+  ) {
+    const { rgb, opacity } = colorOf(getComputedStyle(node).backgroundColor);
+    if (opacity > 0) {
+      return rgb;
+    }
+  }
+  return [255, 255, 255];
+}
+
+/** The stripes as drawn: each over what is behind the element. */
+function stripesOf(element: HTMLElement): Rgb[] {
+  const ground = groundOf(element);
+  return rawStripesOf(element).map(
+    ({ rgb, opacity }) =>
+      rgb.map((channel, at) =>
+        Math.round(ground[at]! + (channel - ground[at]!) * opacity),
+      ) as Rgb,
+  );
+}
+
+function luminance([r, g, b]: Rgb): number {
   const [lr, lg, lb] = [r, g, b].map(channel => {
     const c = channel / 255;
     return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
@@ -116,7 +124,7 @@ function luminance([r, g, b]: [number, number, number]): number {
   return 0.2126 * lr! + 0.7152 * lg! + 0.0722 * lb!;
 }
 
-function ratio(a: [number, number, number], b: [number, number, number]) {
+function ratio(a: Rgb, b: Rgb) {
   const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (hi! + 0.05) / (lo! + 0.05);
 }
@@ -279,12 +287,17 @@ describe("the letters the search corrected", () => {
     done();
   });
 
-  it("stripe in the match color and a tint of it on the default marker, the letters keeping their ink", () => {
+  it("stripe in the match color and the same color more transparent on the default marker, the letters keeping their ink", () => {
     const { corrected, matched, done } = draw("background");
-    const [first, second] = stripesOf(corrected!);
+    const [first, second] = rawStripesOf(corrected!);
 
-    expect(first).toEqual(rgbOf(getComputedStyle(matched!).backgroundColor));
-    expect(second).not.toEqual(first);
+    expect(first!.rgb).toEqual(
+      rgbOf(getComputedStyle(matched!).backgroundColor),
+    );
+    expect(first!.opacity).toBe(1);
+    // The same color at 40%: the menu's ground shows through.
+    expect(second!.rgb).toEqual(first!.rgb);
+    expect(second!.opacity).toBeCloseTo(0.4, 2);
     // The letters are the neighbouring letters' own: the solid mark's.
     expect(getComputedStyle(corrected!).color).toBe(
       getComputedStyle(matched!).color,
@@ -295,9 +308,9 @@ describe("the letters the search corrected", () => {
   describe("read on both stripes, in the letter color the solid match gives its text", () => {
     /**
      * The first stripe is the pill's own color, so the letters read on it as
-     * they do on the pill; the second is lighter, and keeps at least `floor`
-     * (AA, or 3:1 where the pill falls short of AA itself) wherever the pill
-     * reads at all.
+     * they do on the pill; the second is the same color more transparent, and
+     * keeps at least `floor` (3:1, or AA where asked) over the menu's ground
+     * wherever the pill reads at all.
      */
     function expectStripes(
       corrected: HTMLElement,
@@ -306,25 +319,26 @@ describe("the letters the search corrected", () => {
     ) {
       const letters = rgbOf(getComputedStyle(corrected).color);
       const [first, second] = stripesOf(corrected);
+      const [rawFirst, rawSecond] = rawStripesOf(corrected);
 
       expect(stripesOf(corrected), label).toHaveLength(2);
-      const own = ratio(letters, first!);
-      if (own >= 3) {
+      expect(rawFirst!.opacity, `${label}: the first is the pill's own`).toBe(
+        1,
+      );
+      expect(rawSecond!.rgb, `${label}: the same color`).toEqual(rawFirst!.rgb);
+      expect(rawSecond!.opacity, label).toBeLessThanOrEqual(1);
+      expect(rawSecond!.opacity, label).toBeGreaterThanOrEqual(0.35);
+      if (ratio(letters, first!) >= 3) {
         expect(
           ratio(letters, second!),
           `${label}: ${letters} on ${second}`,
         ).toBeGreaterThanOrEqual(floor ?? 3);
-        if (luminance(first!) < 0.9) {
-          expect(luminance(second!), `${label}: lighter`).toBeGreaterThan(
-            luminance(first!),
-          );
-        }
       }
     }
 
     // Klemen's three: white letters on a saturated purple and on a dark olive
-    // green, dark letters on a light green. Each pill has the room for a
-    // lighter stripe that is still AA.
+    // green, dark letters on a light green. Over a white menu white letters
+    // leave a stripe that can be seen only 3:1; dark ones keep AA.
     const COMBINATIONS = [
       [
         "a saturated purple pill, white letters",
@@ -350,7 +364,13 @@ describe("the letters the search corrected", () => {
       expect(stripesOf(corrected!)[0]).toEqual(
         rgbOf(getComputedStyle(matched!).backgroundColor),
       );
-      expectStripes(corrected!, color, 4.5);
+      // White letters over this white menu: the stripe is as transparent as
+      // 3:1 lets it be; dark ones keep AA at the most transparent.
+      expectStripes(
+        corrected!,
+        color,
+        letters === "rgb(255, 255, 255)" ? 3 : 4.5,
+      );
       done();
     });
 
