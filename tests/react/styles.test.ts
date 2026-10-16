@@ -69,7 +69,7 @@ describe("the letters the search corrected", () => {
   );
 
   it.each(FIELDS)(
-    "%s: under the background emphasis, are the match's fill in diagonal stripes",
+    "%s: under the background emphasis, are stripes of the match's fill, in the solid fill's letter color",
     field => {
       const body = rule(
         `${field}[data-emphasis="background"] .bl-ac-corrected`,
@@ -77,9 +77,19 @@ describe("the letters the search corrected", () => {
 
       expect(body).toContain("repeating-linear-gradient(");
       expect(body).toContain("-45deg");
-      expect(body).toContain("var(--bl-ac-mark, var(--bl-ac-marker))");
-      // The letters keep their own ink, which the clear half of a stripe shows.
-      expect(body).not.toContain("--bl-ac-mark-fg");
+      // Two colors the component sets from the match color, else the marker and
+      // a tint of it toward the menu's ground; never a clear stripe, which the
+      // letters' color would have to read on too.
+      expect(body).toContain(
+        "var(--bl-ac-stripe, var(--bl-ac-mark, var(--bl-ac-marker)))",
+      );
+      expect(body).toContain("--bl-ac-stripe-alt");
+      expect(body).not.toContain("transparent");
+      // The letters take the color the solid fill gives its text.
+      expect(body).toContain("color: var(--bl-ac-mark-fg);");
+      expect(
+        rule(`${field}[data-emphasis="background"] .bl-ac-mark`),
+      ).toContain("color: var(--bl-ac-mark-fg);");
     },
   );
 

@@ -25,7 +25,7 @@ import {
   type Route,
 } from "@baselayer-sdk/autocomplete";
 
-import { disabledInks, markTextColor } from "./disabled";
+import { disabledInks, markTextColor, stripeColors } from "./disabled";
 import type { AutocompleteMessages } from "./messages";
 
 /**
@@ -170,6 +170,14 @@ export function lookVariables(look: Look): CSSProperties {
   const markText = markTextColor(look);
   if (markText !== null) {
     vars["--bl-ac-mark-fg"] = markText;
+  }
+  if (look.matchEmphasis === "background" && look.matchEmphasisColor !== null) {
+    // A corrected letter's stripes, in two colors that the letters above read
+    // on alike. Without a color of the host's the stylesheet stripes the
+    // default marker against the menu's ground.
+    const stripes = stripeColors(look);
+    vars["--bl-ac-stripe"] = stripes.solid;
+    vars["--bl-ac-stripe-alt"] = stripes.alt;
   }
   return vars as CSSProperties;
 }
