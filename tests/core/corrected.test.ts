@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  ContractViolation,
   parseBusinessesResponse,
   parseSuggestResponse,
   partsFor,
@@ -56,12 +55,14 @@ describe("a highlight part the search corrected", () => {
     expect(partsOf(answer)[1]).toEqual({ text: "O", matched: false });
   });
 
-  it("refuses a flag that is not a boolean, as it refuses any part's wrong type", () => {
-    const answer = structuredClone(corrected) as {
-      suggestions: { highlight: Record<string, unknown>[] }[];
-    };
-    answer.suggestions[0]!.highlight[1]!.corrected = "yes";
-    expect(() => parseBusinessesResponse(answer)).toThrow(ContractViolation);
+  it("takes a flag that is not `true` for none, as it only changes an underline and must not take the answer down", () => {
+    for (const flag of ["yes", 1, null, {}, []]) {
+      const answer = structuredClone(corrected) as {
+        suggestions: { highlight: Record<string, unknown>[] }[];
+      };
+      answer.suggestions[0]!.highlight[1]!.corrected = flag;
+      expect(partsOf(answer)[1]).toEqual({ text: "O", matched: false });
+    }
   });
 
   it("is read on the people and addresses routes' highlights too, where the type is shared", () => {

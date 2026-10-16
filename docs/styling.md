@@ -609,8 +609,9 @@ you did not type. It is a span of its own with the class `bl-ac-corrected`
 text's own color, or `--bl-ac-corrected`. The underline has the thickness and
 offset of the `underline` emphasis, so beside a solid one the two line up.
 With `unstyled` the span keeps its attribute and your class, and the styling is
-yours. A part is a match whatever else it says: a matched part that also
-carries `corrected` is drawn as a match.
+yours. `matchEmphasis: "plain"` draws no marks, so it draws none for a
+corrected letter either. A part is a match whatever else it says: a matched
+part that also carries `corrected` is drawn as a match.
 
 ```css
 .bl-ac-corrected {

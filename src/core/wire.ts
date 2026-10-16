@@ -530,9 +530,10 @@ function highlightPart(value: Json, path: string): HighlightPart {
     text: string(o.text, `${path}.text`),
     matched: boolean(o.matched, `${path}.matched`),
   };
-  // Optional, and omitted when false: a part the search did not correct has
-  // the two keys it always had, so what reads it as before still does.
-  if (o.corrected !== undefined && boolean(o.corrected, `${path}.corrected`)) {
+  // Optional, omitted when false, and only a hint for an underline: a part the
+  // search did not correct has the two keys it always had, and a flag that is
+  // anything but `true` is no flag, so it never takes the whole answer down.
+  if (o.corrected === true) {
     part.corrected = true;
   }
   return part;

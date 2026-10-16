@@ -11,6 +11,9 @@ import {
   parseSuggestResponse as parseSuggest080,
   partsFor as partsFor080,
 } from "autocomplete-sdk-0-8-0";
+import { BusinessAutocompleteView as View080 } from "autocomplete-sdk-0-8-0/react";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import {
@@ -18,6 +21,9 @@ import {
   parseSuggestResponse,
   partsFor,
 } from "@baselayer-sdk/autocomplete";
+import { BusinessAutocompleteView } from "@baselayer-sdk/autocomplete/react";
+
+import { DEFAULT_LOOK } from "@baselayer-sdk/autocomplete";
 
 import { golden } from "./fixtures/golden";
 
@@ -122,4 +128,53 @@ describe("this build, against an API that has no corrected letter to send", () =
       }
     },
   );
+});
+
+describe("this build's view, against an API that has no corrected letter to send", () => {
+  /** The markup of a view on `body`'s rows, the ids downshift counts normalized. */
+  function markup(view: unknown, body: unknown, emphasis?: "background") {
+    const { suggestions } = parseBusinessesResponse(body);
+    const props = {
+      id: "b",
+      value: "halcyon",
+      onInputChange: () => {},
+      onSelect: () => {},
+      suggestions,
+      found: suggestions.length,
+      foundCapped: false,
+      truncated: false,
+      indexTag: null,
+      roundTripMs: null,
+      isSearching: false,
+      error: null,
+      open: true,
+      ...(emphasis !== undefined
+        ? { look: { ...DEFAULT_LOOK, matchEmphasis: emphasis } }
+        : {}),
+    };
+    return renderToStaticMarkup(
+      createElement(view as typeof BusinessAutocompleteView, props),
+    ).replace(/downshift-\d+-/g, "downshift-N-");
+  }
+
+  it.each([["businesses"], ["businesses_filtered"]] as const)(
+    "draws the %s rows as 0.8.0 does, markup for markup",
+    name => {
+      const body = golden(name);
+
+      const now = markup(BusinessAutocompleteView, body);
+      expect(now).toBe(markup(View080, body));
+      expect(now).toContain("business-suggestion");
+      expect(now).toContain("bl-ac-mark");
+      expect(now).not.toContain("corrected");
+    },
+  );
+
+  it("draws them as 0.8.0 does under the background emphasis too", () => {
+    const body = golden("businesses");
+
+    expect(markup(BusinessAutocompleteView, body, "background")).toBe(
+      markup(View080, body, "background"),
+    );
+  });
 });

@@ -778,6 +778,21 @@ describe("the letters the search corrected", () => {
     ]);
   });
 
+  it("draws none under the plain emphasis, which draws no marks at all", () => {
+    renderTypeahead({
+      suggestions: [typo],
+      found: 1,
+      look: { ...DEFAULT_LOOK, matchEmphasis: "plain" },
+    });
+
+    const [row] = screen.getAllByTestId("business-suggestion");
+    expect(correctedOf(row)).toEqual([]);
+    expect(marksOf(row)).toEqual([]);
+    expect(screen.getByTestId("business-suggestion-name")).toHaveTextContent(
+      "CINDER RACING STABLES, LLC",
+    );
+  });
+
   it("draws a matched part as matched even if it carries the flag, which the contract never sends", () => {
     const odd: BusinessSuggestion = {
       ...stable,
