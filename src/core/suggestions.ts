@@ -423,7 +423,8 @@ function cutMarked(text: string, tokens: string[]): HighlightPart[] {
  * (`merge_whitespace_between_matches`): adjacent parts of one kind become one,
  * and whitespace between two marked parts is marked with them, so two words
  * typed out in full are one span — the substring region grows into the
- * whole-word mark as the typing does.
+ * whole-word mark as the typing does. A corrected letter is a kind of its own:
+ * it joins another corrected letter, never the plain text beside it.
  */
 function mergeParts(parts: HighlightPart[]): HighlightPart[] {
   const pieces = parts.filter(part => part.text.length > 0);
@@ -432,10 +433,14 @@ function mergeParts(parts: HighlightPart[]): HighlightPart[] {
     const last = out[out.length - 1];
     const bridges =
       !part.matched &&
+      part.corrected !== true &&
       /^\s+$/.test(part.text) &&
       last?.matched === true &&
       pieces[index + 1]?.matched === true;
-    if (last !== undefined && (bridges || last.matched === part.matched)) {
+    const alike =
+      last?.matched === part.matched &&
+      (last?.corrected ?? false) === (part.corrected ?? false);
+    if (last !== undefined && (bridges || alike)) {
       last.text += part.text;
     } else {
       out.push({ ...part });

@@ -80,8 +80,33 @@ function personAtAddress(label: string): RelatedPerson {
 }
 
 /**
+ * Where a typed `token` goes wrong against the start of `word` (both lower
+ * case), or null: the made-up API's stand-in for the autocomplete service's
+ * typo tolerance, one wrong letter in a token of five or more. A token that
+ * starts the word is not wrong, and nor is a short one, where a letter would
+ * be too much of the word.
+ */
+export function misspeltAt(word: string, token: string): number | null {
+  if (token.length < 5 || token.length > word.length) {
+    return null;
+  }
+  let at: number | null = null;
+  for (let index = 0; index < token.length; index += 1) {
+    if (word[index] !== token[index]) {
+      if (at !== null) {
+        return null;
+      }
+      at = index;
+    }
+  }
+  return at;
+}
+
+/**
  * A name split as the autocomplete service splits it: each word a typed token
  * starts is one highlighted part, whole, and the text between words is another.
+ * A word one letter off a typed token is split by letter, the letter the
+ * correction changed `corrected` and never matched.
  */
 export function highlightFor(
   name: string,
@@ -90,10 +115,25 @@ export function highlightFor(
   return name
     .split(/([A-Za-z0-9]+)/)
     .filter(text => text !== "")
-    .map(text => ({
-      text,
-      matched: tokens.some(token => text.toLowerCase().startsWith(token)),
-    }));
+    .flatMap((text): HighlightPart[] => {
+      const word = text.toLowerCase();
+      if (tokens.some(token => word.startsWith(token))) {
+        return [{ text, matched: true }];
+      }
+      for (const token of tokens) {
+        const at = misspeltAt(word, token);
+        if (at !== null) {
+          return [
+            ...(at > 0 ? [{ text: text.slice(0, at), matched: true }] : []),
+            { text: text.charAt(at), matched: false, corrected: true as const },
+            ...(at + 1 < text.length
+              ? [{ text: text.slice(at + 1), matched: true }]
+              : []),
+          ];
+        }
+      }
+      return [{ text, matched: false }];
+    });
 }
 
 function highlight(name: string): HighlightPart[] {

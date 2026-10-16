@@ -22,6 +22,7 @@ import { golden, type GoldenName } from "./fixtures/golden";
 const ANSWERS = [
   ["businesses", "businesses"],
   ["businesses_filtered", "businesses"],
+  ["businesses_corrected", "businesses"],
   ["people", "people"],
   ["addresses", "addresses"],
 ] as const satisfies readonly (readonly [GoldenName, Route])[];

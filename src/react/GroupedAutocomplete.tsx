@@ -73,6 +73,7 @@ import {
   useRoleColumn,
   lookVariables,
   marked,
+  type MarkClasses,
   type SlotName,
 } from "./viewParts";
 
@@ -622,7 +623,10 @@ function GroupedView<R extends GroupedRoute>({
     ).map(state => state.trim().toUpperCase()),
   );
   const region = look.matchEmphasisRegion;
-  const markClass = cx("mark", "bl-ac-mark");
+  const marks: MarkClasses = {
+    mark: cx("mark", "bl-ac-mark"),
+    corrected: cx("corrected", "bl-ac-corrected"),
+  };
   /**
    * What was typed into the filter that matched each kind of related item:
    * its parts are cut at it, as a row's are at what was typed in the field.
@@ -720,7 +724,7 @@ function GroupedView<R extends GroupedRoute>({
             {marked(
               first.label,
               relatedParts(first.label, first),
-              markClass,
+              marks,
               "grouped-match",
             )}
             {more > 0 ? ` ${text.more(more)}` : ""}
@@ -882,7 +886,7 @@ function GroupedView<R extends GroupedRoute>({
                 {marked(
                   of.item.matched_name,
                   relatedParts(of.item.matched_name, of.item),
-                  markClass,
+                  marks,
                   "grouped-match",
                 )}
               </span>
@@ -991,7 +995,7 @@ function GroupedView<R extends GroupedRoute>({
                       {marked(
                         row.label,
                         partsFor(row.label, parts, region, tokens),
-                        markClass,
+                        marks,
                         `${entity}-suggestion-match`,
                       )}
                     </span>,
@@ -1011,12 +1015,7 @@ function GroupedView<R extends GroupedRoute>({
                               parts !== null ? look.matchEmphasis : undefined
                             }
                           >
-                            {marked(
-                              item.label,
-                              parts,
-                              markClass,
-                              "grouped-match",
-                            )}
+                            {marked(item.label, parts, marks, "grouped-match")}
                           </span>,
                           headId,
                         );

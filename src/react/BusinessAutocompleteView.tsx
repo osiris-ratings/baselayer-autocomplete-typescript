@@ -59,6 +59,7 @@ import {
   lookVariables,
   marked,
   type ClassFor,
+  type MarkClasses,
   type SlotName,
 } from "./viewParts";
 
@@ -234,7 +235,10 @@ function DefaultRow({
   const region = look.matchEmphasisRegion;
   // Plain draws none of the marks, which is no parts at all.
   const parts = look.matchEmphasis !== "plain" ? item.highlight : [];
-  const markClass = cx("mark", "bl-ac-mark");
+  const marks: MarkClasses = {
+    mark: cx("mark", "bl-ac-mark"),
+    corrected: cx("corrected", "bl-ac-corrected"),
+  };
   const address = addressLineOf(item);
   const people = peopleLineOf(item);
   const structure = structureLabel(item.structure, text.structures);
@@ -267,10 +271,10 @@ function DefaultRow({
       queryTokens(typed ?? ""),
     );
     if (sent !== null) {
-      return marked(label, sent, markClass);
+      return marked(label, sent, marks);
     }
     return matched
-      ? marked(label, [{ text: label, matched: true }], markClass)
+      ? marked(label, [{ text: label, matched: true }], marks)
       : label;
   };
   const addressSuffix =
@@ -419,7 +423,7 @@ function DefaultRow({
           {marked(
             item.label,
             partsFor(item.label, parts, region, tokens),
-            markClass,
+            marks,
           )}
         </span>
         {draw(badge)}
@@ -434,7 +438,7 @@ function DefaultRow({
           {marked(
             item.matched_name,
             partsFor(item.matched_name, parts, region, tokens),
-            markClass,
+            marks,
           )}
         </span>
       )}

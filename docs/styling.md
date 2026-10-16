@@ -97,6 +97,7 @@ Set them on `.bl-ac` or any ancestor selector more specific than it:
 | `--bl-ac-underline`               | `#38a169`                          | the underline mark                                  |
 | `--bl-ac-marker`                  | `#c6f6d5`                          | the background mark                                 |
 | `--bl-ac-mark-fg`                 | unset: the letters' own color      | the letters on a background mark                    |
+| `--bl-ac-corrected`               | unset: the text's own color        | the dots under a letter the search corrected        |
 | `--bl-ac-ink-mark`                | unset: the title's color           | a matched word, under `ink`                         |
 | `--bl-ac-ink-base`                | `#4a5568`                          | the name's unmatched text, under `ink`              |
 | `--bl-ac-also-mark`               | `#2d3748`                          | the `also …` marks, under `weight` and `ink`        |
@@ -153,7 +154,7 @@ input's width either way.
 
 Every element has a `bl-ac-*` class, and `classNames` adds yours per slot:
 `root`, `label`, `input`, `menu`, `list`, `row`, `titleLine`, `title`,
-`nameGroup`, `name`, `also`, `mark`, `structure`, `states`, `state`,
+`nameGroup`, `name`, `also`, `mark`, `corrected`, `structure`, `states`, `state`,
 `moreStates`, `subtitleLine`, `corner`, `address`, `people`, `footer`,
 `count`, `debug`, and on a person's or an address's row `group`,
 `groupHead`, `groupLine`, `lineName`, `counts`, `role`, `more`, and under
@@ -590,6 +591,37 @@ are not marked. `<PersonAutocomplete>` passes the filters its rows were
 fetched with; with `PersonAutocompleteView`, pass `appliedFilters` from
 `useEntityAutocomplete`. An address search's own `state` is the address's, and
 marks none of the businesses filed at it.
+
+### Letters the search corrected
+
+When the autocomplete service finds a name through a typo in what was typed, it
+splits the corrected word by letter: the letters that answer what was typed are
+matched, and the letters it changed (a letter substituted, the stored letter of
+one left out, both letters of a swap) come with `corrected: true`, never
+matched. Typed `starbicks`, a row's parts read `STARB` matched, `U` corrected,
+`CKS COFFEE` matched. The service sends the flag only on a word it corrected,
+so a row it did not correct reads as it always did.
+
+A corrected letter is drawn with a dotted underline, whichever way
+`look.matchEmphasis` draws a match, so it is told from one: it is the letter
+you did not type. It is a span of its own with the class `bl-ac-corrected`
+(the `corrected` slot of `classNames`) and `data-corrected="true"`, in the
+text's own color, or `--bl-ac-corrected`. The underline has the thickness and
+offset of the `underline` emphasis, so beside a solid one the two line up.
+With `unstyled` the span keeps its attribute and your class, and the styling is
+yours. A part is a match whatever else it says: a matched part that also
+carries `corrected` is drawn as a match.
+
+```css
+.bl-ac-corrected {
+  text-decoration-color: tomato;
+}
+```
+
+On the data, `HighlightPart` is `{ text, matched, corrected? }`. `corrected`
+is `true` or absent, never `false`, and the parts still spell the name. A host
+that draws the parts itself reads it from `highlight`, and from `partsFor`'s
+result, which keeps a corrected letter apart from the plain text beside it.
 
 ### The structure's flag
 

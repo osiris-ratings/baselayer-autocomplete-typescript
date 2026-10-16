@@ -8,6 +8,7 @@ import { join } from "node:path";
 export type GoldenName =
   | "businesses"
   | "businesses_filtered"
+  | "businesses_corrected"
   | "people"
   | "addresses"
   | "invalid_request";

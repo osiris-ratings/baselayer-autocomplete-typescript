@@ -1,0 +1,176 @@
+{
+  "found": 2,
+  "found_capped": false,
+  "query": "halcyin",
+  "sources": {
+    "addresses": {
+      "status": "ok"
+    },
+    "people": {
+      "status": "ok"
+    }
+  },
+  "suggestions": [
+    {
+      "domicile_state": "DE",
+      "highlight": [
+        {
+          "matched": true,
+          "text": "HALCY"
+        },
+        {
+          "corrected": true,
+          "matched": false,
+          "text": "O"
+        },
+        {
+          "matched": true,
+          "text": "N"
+        },
+        {
+          "matched": false,
+          "text": " FERRY WORKS LLC"
+        }
+      ],
+      "label": "HALCYON FERRY WORKS LLC",
+      "match": "strong",
+      "matched_name": null,
+      "related": {
+        "addresses": {
+          "count": 3,
+          "items": [
+            {
+              "highlight": null,
+              "label": "400 Lantern Ave, Wilmington, DE 19801",
+              "listed_as": "principal",
+              "matched": false,
+              "type": "address"
+            },
+            {
+              "highlight": null,
+              "label": "12 Pier Road, Port Calder, WA 98300",
+              "listed_as": "mailing",
+              "matched": false,
+              "type": "address"
+            },
+            {
+              "highlight": null,
+              "label": "7 Mill Race Way, Bracken, OR 97000",
+              "listed_as": "registered_office",
+              "matched": false,
+              "type": "address"
+            }
+          ],
+          "matched": null,
+          "truncated": false
+        },
+        "people": {
+          "count": 3,
+          "items": [
+            {
+              "highlight": null,
+              "label": "Marisol Quennell",
+              "matched": false,
+              "role": "officer",
+              "type": "person"
+            },
+            {
+              "highlight": null,
+              "label": "Pell Harbor Registered Agents Inc",
+              "matched": false,
+              "role": "agent",
+              "type": "person"
+            },
+            {
+              "highlight": null,
+              "label": "Tobias Wren-Alder",
+              "matched": false,
+              "role": "agent",
+              "type": "person"
+            }
+          ],
+          "matched": null,
+          "truncated": false
+        }
+      },
+      "states": ["DE", "WA"],
+      "structure": "LLC",
+      "token": "<sealed token>",
+      "type": "business"
+    },
+    {
+      "domicile_state": "WA",
+      "highlight": [
+        {
+          "matched": true,
+          "text": "HALCY"
+        },
+        {
+          "corrected": true,
+          "matched": false,
+          "text": "O"
+        },
+        {
+          "matched": true,
+          "text": "N"
+        },
+        {
+          "matched": false,
+          "text": " TIDE PARTNERS LP"
+        }
+      ],
+      "label": "HALCYON TIDE PARTNERS LP",
+      "match": "strong",
+      "matched_name": null,
+      "related": {
+        "addresses": {
+          "count": 2,
+          "items": [
+            {
+              "highlight": null,
+              "label": "12 Pier Road, Port Calder, WA 98300",
+              "listed_as": "principal",
+              "matched": false,
+              "type": "address"
+            },
+            {
+              "highlight": null,
+              "label": "400 Lantern Ave, Wilmington, DE 19801",
+              "listed_as": "registered_office",
+              "matched": false,
+              "type": "address"
+            }
+          ],
+          "matched": null,
+          "truncated": false
+        },
+        "people": {
+          "count": 2,
+          "items": [
+            {
+              "highlight": null,
+              "label": "Marisol Quennell",
+              "matched": false,
+              "role": "officer",
+              "type": "person"
+            },
+            {
+              "highlight": null,
+              "label": "Pell Harbor Registered Agents Inc",
+              "matched": false,
+              "role": "agent",
+              "type": "person"
+            }
+          ],
+          "matched": null,
+          "truncated": false
+        }
+      },
+      "states": ["WA"],
+      "structure": null,
+      "token": "<sealed token>",
+      "type": "business"
+    }
+  ],
+  "truncated": false
+}

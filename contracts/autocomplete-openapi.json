@@ -360,8 +360,14 @@
         "type": "object"
       },
       "HighlightPart": {
+        "description": "A run of a displayed name. The parts of a name concatenate back to it byte for byte.",
         "properties": {
+          "corrected": {
+            "description": "The letters of this part are the stored word's where the typed word had others: a\nletter substituted, the stored letter of a letter left out, both letters of a swap.\nPresent only on a word the search corrected, and then with `matched` false; omitted\neverywhere else, so a response that has no corrected word is as it always was.",
+            "type": "boolean"
+          },
           "matched": {
+            "description": "The letters of this part answer what was typed.",
             "type": "boolean"
           },
           "text": {

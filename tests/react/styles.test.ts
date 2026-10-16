@@ -35,6 +35,32 @@ function rule(selector: string): string {
   return bodies.map(({ body }) => body).join("\n");
 }
 
+describe("the letters the search corrected", () => {
+  it("are underlined dotted, in the text's color unless --bl-ac-corrected is set", () => {
+    const body = rule(".bl-ac-corrected");
+    expect(body).toContain("text-decoration: underline dotted;");
+    expect(body).toContain(
+      "text-decoration-color: var(--bl-ac-corrected, currentcolor);",
+    );
+  });
+
+  it("keep the underline's thickness and offset, so beside a solid one the two line up", () => {
+    const solid = rule('.bl-ac-name[data-emphasis="underline"] .bl-ac-mark');
+    const dotted = rule(".bl-ac-corrected");
+    for (const property of [
+      "text-decoration-thickness: 1.5px;",
+      "text-underline-offset: 3px;",
+    ]) {
+      expect(solid).toContain(property);
+      expect(dotted).toContain(property);
+    }
+  });
+
+  it("leave --bl-ac-corrected unset, so the text's own color carries", () => {
+    expect(rule(".bl-ac")).not.toContain("--bl-ac-corrected");
+  });
+});
+
 describe("ink emphasis", () => {
   it("inks a matched word in --bl-ac-ink-mark, else the title's color", () => {
     expect(rule('.bl-ac-name[data-emphasis="ink"] > .bl-ac-mark')).toContain(

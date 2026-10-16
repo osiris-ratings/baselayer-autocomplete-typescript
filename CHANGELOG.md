@@ -6,6 +6,29 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+### Added
+
+- A letter the search corrected is drawn with a dotted underline. When the
+  autocomplete service finds a name through a typo, it splits the corrected word
+  by letter, and `HighlightPart` gains an optional `corrected: true` on the
+  letters it changed (`matched: false`), omitted everywhere else, so a name it
+  did not correct has the two keys it always had. The components draw such a
+  letter as a span of its own with the class `bl-ac-corrected` (the new
+  `corrected` slot of `classNames`) and `data-corrected="true"`, dotted in the
+  text's own color or `--bl-ac-corrected`, whichever way the match emphasis
+  draws a match. `partsFor` keeps a corrected letter apart from the plain text
+  beside it.
+  - Backward compatible both ways. This build against an API that never sends
+    `corrected` reads and draws what 0.8.0 does, key for key (a test compares
+    the two on the golden answers). Released 0.4.0 to 0.8.0 read an answer with
+    corrected parts without an error and draw those letters as plain text, since
+    each is `matched: false` and none looks at the flag (tests run the published
+    0.6.0, 0.7.0 and 0.8.0 on one). Nothing is removed or renamed, and the type
+    field, the slot and the variable are optional.
+  - The demo's made-up API corrects one wrong letter in a typed word of five or
+    more (`harbur` finds `HARBOR …`), so the dotted underline can be seen
+    without the service.
+
 ## [0.8.0] - 2026-10-14
 
 ### Changed

@@ -743,6 +743,20 @@
 }
 
 /*
+ * A letter the search corrected: the stored word's where the typed word had
+ * another. Dotted, so it is told from a match whichever way the emphasis draws
+ * one (an underline, a fill, an ink or a weight), and reads as the letter you
+ * did not type. It takes the text's own color, or `--bl-ac-corrected`, and the
+ * underline's thickness and offset, so beside a solid one the two line up.
+ */
+.bl-ac-corrected {
+  text-decoration: underline dotted;
+  text-decoration-color: var(--bl-ac-corrected, currentcolor);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+/*
  * The background's fill reaches 0.125rem past the marked letters on both
  * sides. Every box that cuts a long field short makes that much room inside
  * its edges and gives it back in its margins, so nothing moves and a mark at

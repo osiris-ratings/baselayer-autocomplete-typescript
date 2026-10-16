@@ -1302,6 +1302,28 @@ describe("a related item's highlight", () => {
     expect(name).toHaveAttribute("data-emphasis", "underline");
   });
 
+  it("draws the letters the search corrected as spans of their own, beside the marks", () => {
+    // "ridgeoine" typed for "Ridgeline": the corrected word comes split by letter.
+    const { business } = drawAddresses(
+      withParts({
+        highlight: [
+          { text: "Ridge", matched: true },
+          { text: "l", matched: false, corrected: true },
+          { text: "ine", matched: true },
+          { text: " Freight LLC", matched: false },
+        ],
+      }),
+    );
+
+    const name = business[0]!.querySelector<HTMLElement>(".bl-ac-line-name")!;
+    expect(name).toHaveTextContent("Ridgeline Freight LLC");
+    expect(marks(name)).toEqual(["Ridge", "ine"]);
+    const letters = [...name.querySelectorAll(".bl-ac-corrected")];
+    expect(letters.map(letter => letter.textContent)).toEqual(["l"]);
+    expect(letters[0]).toHaveAttribute("data-corrected", "true");
+    expect(letters[0]).not.toHaveClass("bl-ac-mark");
+  });
+
   it("underlines the other name when the parts spell it, and leaves the label plain", () => {
     const { business } = drawAddresses(
       withParts({

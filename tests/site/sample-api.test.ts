@@ -616,6 +616,67 @@ describe("the made-up API's business search", () => {
   });
 });
 
+describe("the made-up API's typo tolerance", () => {
+  // A stand-in for the autocomplete service's own, enough to see the dotted
+  // underline in the demo: one wrong letter in a typed word of five or more.
+  type Part = { text: string; matched: boolean; corrected?: true };
+
+  function highlightsFor(path: string): Part[][] {
+    const reply = get(path);
+    expect(reply.status).toBe(200);
+    return (
+      reply.body as { suggestions: { highlight: Part[] }[] }
+    ).suggestions.map(row => row.highlight);
+  }
+
+  it("finds a name through a word typed with one wrong letter, and marks the letter it changed", () => {
+    const [first] = highlightsFor("/autocomplete/businesses?q=harbur");
+
+    // The made-up rows' parts are one per word and per run between words.
+    expect(first!.slice(0, 3)).toEqual([
+      { text: "HARB", matched: true },
+      { text: "O", matched: false, corrected: true },
+      { text: "R", matched: true },
+    ]);
+    expect(first!.slice(3).every(part => !part.matched)).toBe(true);
+    expect(first!.slice(3).some(part => "corrected" in part)).toBe(false);
+    expect(first!.map(part => part.text).join("")).toBe(
+      "HARBOR CONCRETE PUMPING CO., INC.",
+    );
+  });
+
+  it("answers what the contract describes, so the SDK reads it", () => {
+    const reply = get("/autocomplete/businesses?q=harbur");
+
+    const parsed = parseSuggestResponse("businesses", reply.body);
+    expect(
+      parsed.suggestions[0]?.highlight?.some(part => part.corrected === true),
+    ).toBe(true);
+  });
+
+  it("corrects nothing in a word typed right, and never carries the flag on an exact row", () => {
+    for (const parts of highlightsFor("/autocomplete/businesses?q=harbor")) {
+      for (const part of parts) {
+        expect(part).not.toHaveProperty("corrected");
+      }
+    }
+  });
+
+  it("corrects nothing below five letters, where a letter is too much of the word", () => {
+    expect(highlightsFor("/autocomplete/businesses?q=harb")).not.toEqual([]);
+    expect(highlightsFor("/autocomplete/businesses?q=harx")).toEqual([]);
+  });
+
+  it("never corrects a filter: a person name typed wrong finds no one", () => {
+    const reply = get(
+      "/autocomplete/businesses?q=harbor&person.name=priyo%20ramam",
+    );
+
+    expect(reply.status).toBe(200);
+    expect((reply.body as { suggestions: unknown[] }).suggestions).toEqual([]);
+  });
+});
+
 describe("what the made-up API does not answer", () => {
   it("leaves any other path to the dev server", () => {
     expect(

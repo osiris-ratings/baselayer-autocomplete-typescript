@@ -60,6 +60,7 @@ export type SlotName =
   | "name"
   | "also"
   | "mark"
+  | "corrected"
   | "structure"
   | "states"
   | "state"
@@ -172,15 +173,23 @@ export function lookVariables(look: Look): CSSProperties {
   return vars as CSSProperties;
 }
 
+/** The classes a marked name's spans carry: a match mark's, and a corrected letter's. */
+export interface MarkClasses {
+  mark: string | undefined;
+  corrected: string | undefined;
+}
+
 /**
  * `text` with the marks on it: the parts `partsFor` gives this line, the
- * matched ones as spans; the text as it is when the parts belong to the row's
- * other name, or there are none.
+ * matched ones as spans and the letters the search corrected as spans of their
+ * own (`data-corrected`, for the stylesheet's dotted underline and for a host to
+ * key on); the text as it is when the parts belong to the row's other name, or
+ * there are none. A matched part is a mark whatever else it says.
  */
 export function marked(
   text: string,
   parts: HighlightPart[] | null,
-  markClass: string | undefined,
+  classNames: MarkClasses,
   testId = "business-suggestion-match",
 ): ReactNode {
   if (parts === null) {
@@ -188,7 +197,11 @@ export function marked(
   }
   return parts.map((part, index) =>
     part.matched ? (
-      <span key={index} className={markClass} data-testid={testId}>
+      <span key={index} className={classNames.mark} data-testid={testId}>
+        {part.text}
+      </span>
+    ) : part.corrected === true ? (
+      <span key={index} className={classNames.corrected} data-corrected="true">
         {part.text}
       </span>
     ) : (
