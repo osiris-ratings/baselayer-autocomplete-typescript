@@ -499,58 +499,62 @@ function partsOfLetters(letters: Letter[]): HighlightPart[] {
 
 /**
  * How many letters of a corrected word the typed `token` covers, or null when
- * the token is no spelling of it: the typed word and the stored one are one
- * edit apart, and the letters the typed word had wrong are the corrected ones
- * (`at`, and the one after it for a swap). A letter substituted and a letter
- * left out are flagged alike, so the letters decide: after a letter left out
- * the typed letters are the stored ones a place further along, and the word is
- * covered through the letter that follows. Both readings fitting, the letter
- * is taken as left out, so that `harbr` covers all of HARBOR, the O marked.
+ * the token is no spelling of it. The corrected letters are where the typed
+ * word had letters wrong, and each is one of three things: a letter
+ * substituted (it stands for a typed letter), a letter left out (it stands for
+ * none) or one of a swap (two corrected letters stand for the two typed the
+ * other way round). The other letters are the typed ones. Aligning the two lets
+ * a deletion shift every letter after it, so `harbr` (five typed) covers all six
+ * letters of HARBOR, the O marked, where `harbu` covers the first five.
+ *
+ * Both readings of a lone corrected letter fitting, it is taken as left out,
+ * which covers more. Any number of corrected letters may be aligned, the
+ * service's one edit per word being no business of this: the word is covered
+ * through the furthest letter the typed text reaches, and the typed text must
+ * reach every corrected letter, or it is no spelling of the word (the field has
+ * moved on since the rows were answered).
  */
 function coveredBy(
   stored: string[],
-  at: number,
-  run: number,
+  corrected: boolean[],
   token: string[],
 ): number | null {
   const typed = token.length;
-  if (run === 2) {
-    // A swap: the two letters are typed the other way round.
-    if (typed < at + 2 || typed > stored.length) {
-      return null;
-    }
-    for (let index = 0; index < typed; index += 1) {
-      const expected =
-        index === at
-          ? stored[at + 1]
-          : index === at + 1
-            ? stored[at]
-            : stored[index];
-      if (token[index] !== expected) {
-        return null;
+  // reach[i][j]: the first `i` stored letters account for the first `j` typed.
+  const reach = Array.from({ length: stored.length + 1 }, () =>
+    new Array<boolean>(typed + 1).fill(false),
+  );
+  reach[0]![0] = true;
+  for (let i = 0; i < stored.length; i += 1) {
+    for (let j = 0; j <= typed; j += 1) {
+      if (!reach[i]![j]) {
+        continue;
+      }
+      if (!corrected[i]) {
+        if (j < typed && token[j] === stored[i]) {
+          reach[i + 1]![j + 1] = true;
+        }
+        continue;
+      }
+      if (j < typed) {
+        // Substituted, or left out while typed letters remain to be placed.
+        reach[i + 1]![j + 1] = true;
+        reach[i + 1]![j] = true;
+      }
+      if (
+        corrected[i + 1] &&
+        j + 1 < typed &&
+        token[j] === stored[i + 1] &&
+        token[j + 1] === stored[i]
+      ) {
+        reach[i + 2]![j + 2] = true;
       }
     }
-    return typed;
   }
-  if (at >= typed) {
-    return null;
-  }
-  if (typed + 1 <= stored.length) {
-    let left = true;
-    for (let index = 0; index < typed && left; index += 1) {
-      left = token[index] === stored[index < at ? index : index + 1];
-    }
-    if (left) {
-      return typed + 1;
-    }
-  }
-  if (typed <= stored.length) {
-    let substituted = true;
-    for (let index = 0; index < typed && substituted; index += 1) {
-      substituted = index === at || token[index] === stored[index];
-    }
-    if (substituted) {
-      return typed;
+  const last = corrected.lastIndexOf(true);
+  for (let covered = stored.length; covered > last; covered -= 1) {
+    if (reach[covered]![typed]) {
+      return covered;
     }
   }
   return null;
@@ -558,26 +562,18 @@ function coveredBy(
 
 /**
  * How many letters of a word with a corrected letter the typed text covers, or
- * null when no typed token spells it (the field has moved on since the rows
- * were answered, and the word keeps the marks the service gave it).
+ * null when no typed token spells it (the word keeps the marks the service
+ * gave it).
  */
 function correctedLength(word: Letter[], tokens: string[]): number | null {
   const stored = word.map(letter => foldChar(letter.character));
-  const flagged = word.flatMap((letter, index) =>
-    letter.corrected ? [index] : [],
-  );
-  const [at] = flagged;
-  if (
-    at === undefined ||
-    flagged.length > 2 ||
-    flagged.some((index, order) => index !== at + order) ||
-    stored.some(folded => Array.from(folded).length !== 1)
-  ) {
+  if (stored.some(folded => Array.from(folded).length !== 1)) {
     return null;
   }
+  const corrected = word.map(letter => letter.corrected);
   let best: number | null = null;
   for (const token of tokens) {
-    const covered = coveredBy(stored, at, flagged.length, Array.from(token));
+    const covered = coveredBy(stored, corrected, Array.from(token));
     if (covered !== null && (best === null || covered > best)) {
       best = covered;
     }

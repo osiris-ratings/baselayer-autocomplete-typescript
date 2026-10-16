@@ -127,6 +127,69 @@ describe("typed characters (the substring region)", () => {
   });
 });
 
+describe("two letters misspelled in one word", () => {
+  // The service corrects one edit per word today. If it ever corrects more it
+  // flags each stored letter the typed word had wrong, and the SDK needs no
+  // change to draw them: each flagged letter is a mark of its own, and the typed
+  // text is aligned to the letters through every one. The parts are as the
+  // service would send them, by its rules (the whole word matched, the letters
+  // changed split out), worked out by hand.
+  const SENT = [m("H"), c("A"), m("RB"), c("O"), m("R"), p(REST)];
+
+  it.each([
+    // Two substitutions: six typed for six letters.
+    ["hxrbur", "two substitutions", SENT, [m("HARBOR"), p(REST)]],
+    // Two letters left out: four typed cover all six letters, both marked.
+    ["hrbr", "two letters left out", SENT, [m("HARBOR"), p(REST)]],
+    // One left out, one substituted: five typed cover six letters.
+    [
+      "hrbur",
+      "a letter left out and one substituted",
+      SENT,
+      [m("HARBOR"), p(REST)],
+    ],
+  ])(
+    "%s (%s): the whole word, both letters marked",
+    (typed, _kind, mark, match) => {
+      expect(partsFor(LABEL, SENT, "substring", queryTokens(typed))).toEqual(
+        mark,
+      );
+      expect(
+        partsFor(LABEL, SENT, "substring", queryTokens(typed), "match"),
+      ).toEqual(match);
+    },
+  );
+
+  it("covers a prefix through the last letter typed wrong, and leaves the rest plain", () => {
+    // `hxrbu`: five typed, the A and the O wrong; the R is not typed yet.
+    expect(partsFor(LABEL, SENT, "substring", queryTokens("hxrbu"))).toEqual([
+      m("H"),
+      c("A"),
+      m("RB"),
+      c("O"),
+      p("R CONCRETE PUMPING CO., INC."),
+    ]);
+    expect(
+      partsFor(LABEL, SENT, "substring", queryTokens("hxrbu"), "match"),
+    ).toEqual([m("HARBO"), p("R CONCRETE PUMPING CO., INC.")]);
+  });
+
+  it("keeps the whole word as the service sent it under the whole-word region, both letters marked", () => {
+    expect(partsFor(LABEL, SENT, "token", queryTokens("hxrbur"))).toBe(SENT);
+    expect(
+      partsFor(LABEL, SENT, "token", queryTokens("hxrbur"), "match"),
+    ).toEqual([m("HARBOR"), p(REST)]);
+  });
+
+  it("keeps the marks the service gave a word the typed text does not reach all the way", () => {
+    // `hxrb`: four typed never get to the O, so they are no spelling of the word.
+    expect(partsFor(LABEL, SENT, "substring", queryTokens("hxrb"))).toEqual(
+      SENT,
+    );
+    expect(partsFor(LABEL, SENT, "substring", ["zebra"])).toEqual(SENT);
+  });
+});
+
 describe("a corrected word the typed text no longer matches", () => {
   // The rows were answered for an earlier query; the autocomplete service's
   // parts are still the truth about why the row is there, so the word is kept

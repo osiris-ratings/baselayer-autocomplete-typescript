@@ -15,9 +15,11 @@ breaking change bumps the minor version.
   did not correct has the two keys it always had. How the components draw such
   a letter follows the match emphasis: under `underline` a dotted underline in
   exactly the solid underline's color; under `background` the match's fill in
-  diagonal stripes of two colors, in the letter color the solid fill gives its
-  text, each stripe WCAG AA against it (the new `--bl-ac-stripe` and
-  `--bl-ac-stripe-alt`, set with a match color); under `weight` and `ink`
+  diagonal stripes, the match color and a lighter tint of it, in the letter color
+  the solid fill gives its text and as light as that color still reads on (the
+  new `--bl-ac-stripe` and `--bl-ac-stripe-alt`, set with a match color), and the
+  run of marks and corrected letters one continuous shape, rounded at its two
+  ends only (`data-join` on the spans); under `weight` and `ink`
   nothing marks a fuzzy match, and the letter is drawn as an ordinary match;
   under `plain`, nothing. Under
   `underline` and `background` it is a span of its own, `bl-ac-corrected` (the

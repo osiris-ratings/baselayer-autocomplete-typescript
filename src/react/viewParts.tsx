@@ -213,13 +213,38 @@ export function marked(
   if (parts === null) {
     return text;
   }
+  const isSpan = (part: HighlightPart | undefined) =>
+    part !== undefined && (part.matched || part.corrected === true);
+  // Where a mark and a corrected letter touch they are one run, which the
+  // stylesheet draws as one shape: `data-join` says on which sides a span
+  // touches another. Only a name with a corrected letter has any.
+  const corrected = parts.some(
+    part => !part.matched && part.corrected === true,
+  );
+  const joinOf = (index: number): string | undefined => {
+    const sides = [
+      isSpan(parts[index - 1]) ? "left" : null,
+      isSpan(parts[index + 1]) ? "right" : null,
+    ].filter(side => side !== null);
+    return corrected && sides.length > 0 ? sides.join(" ") : undefined;
+  };
   return parts.map((part, index) =>
     part.matched ? (
-      <span key={index} className={classNames.mark} data-testid={testId}>
+      <span
+        key={index}
+        className={classNames.mark}
+        data-testid={testId}
+        data-join={joinOf(index)}
+      >
         {part.text}
       </span>
     ) : part.corrected === true ? (
-      <span key={index} className={classNames.corrected} data-corrected="true">
+      <span
+        key={index}
+        className={classNames.corrected}
+        data-corrected="true"
+        data-join={joinOf(index)}
+      >
         {part.text}
       </span>
     ) : (

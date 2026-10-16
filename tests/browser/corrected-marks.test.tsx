@@ -218,26 +218,64 @@ describe("the letters the search corrected", () => {
     done();
   });
 
-  it("run clean between the marks either side: its own box, painted above their reach", () => {
-    const { corrected, matched, done } = draw("background");
-    const style = getComputedStyle(corrected!);
-    const box = corrected!.getBoundingClientRect();
-    const middle = box.top + box.height / 2;
+  it("are one continuous shape with the marks either side: they touch, the inner corners are square, only the ends are rounded", () => {
+    const { host, corrected, done } = draw("background");
+    const spans = [
+      ...host.querySelectorAll<HTMLElement>(
+        '[data-testid="business-suggestion-name"] > [data-join]',
+      ),
+    ];
+    const [before, letter, after] = spans;
 
-    // The mark beside it reaches 0.125rem past its letters; it does not.
-    expect(getComputedStyle(matched!).paddingRight).toBe("2px");
-    expect(style.paddingLeft).toBe("0px");
-    expect(style.paddingRight).toBe("0px");
-    expect(style.marginLeft).toBe("0px");
-    expect(style.marginRight).toBe("0px");
-    // Where the neighbours' fills reach under it, the stripes are on top, to
-    // its very edges.
-    for (const x of [box.left + 0.5, box.right - 0.5]) {
-      const hit = document.elementFromPoint(x, middle);
-      expect(hit === corrected || corrected!.contains(hit), `at ${x}`).toBe(
-        true,
-      );
+    // HALCY, O, N: three spans in a row.
+    expect(spans.map(span => span.textContent)).toEqual(["HALCY", "O", "N"]);
+    expect(letter).toBe(corrected);
+    const boxes = spans.map(span => span.getBoundingClientRect());
+    // They abut exactly: no reach into one another, no gap.
+    expect(boxes[0]!.right).toBeCloseTo(boxes[1]!.left, 1);
+    expect(boxes[1]!.right).toBeCloseTo(boxes[2]!.left, 1);
+    const style = (span: HTMLElement | undefined) => getComputedStyle(span!);
+    // Inside the run nothing reaches or rounds...
+    expect(style(before).paddingRight).toBe("0px");
+    expect(style(before).borderTopRightRadius).toBe("0px");
+    expect(style(before).borderBottomRightRadius).toBe("0px");
+    for (const side of ["Left", "Right"] as const) {
+      expect(style(letter)[`padding${side}`]).toBe("0px");
+      expect(
+        style(letter)[`borderTop${side}Radius` as "borderTopLeftRadius"],
+      ).toBe("0px");
+      expect(
+        style(letter)[`borderBottom${side}Radius` as "borderBottomLeftRadius"],
+      ).toBe("0px");
     }
+    expect(style(after).paddingLeft).toBe("0px");
+    expect(style(after).borderTopLeftRadius).toBe("0px");
+    // ...and the two ends of the run are the pill's: they reach, and they round.
+    expect(style(before).paddingLeft).toBe("2px");
+    expect(style(before).borderTopLeftRadius).toBe("4px");
+    expect(style(after).paddingRight).toBe("2px");
+    expect(style(after).borderTopRightRadius).toBe("4px");
+    done();
+  });
+
+  it("round the end of a run that a corrected letter ends, as a mark does", () => {
+    // `harbu`: the letter typed wrong is the last of the run, the R after it plain.
+    const row: BusinessSuggestion = {
+      ...ROW,
+      highlight: [
+        { text: "HALCY", matched: true },
+        { text: "O", matched: false, corrected: true },
+        { text: "N FERRY WORKS LLC", matched: false },
+      ],
+    };
+    const { corrected, done } = draw("background", row);
+    const style = getComputedStyle(corrected!);
+
+    expect(corrected!.getAttribute("data-join")).toBe("left");
+    expect(style.paddingLeft).toBe("0px");
+    expect(style.borderTopLeftRadius).toBe("0px");
+    expect(style.paddingRight).toBe("2px");
+    expect(style.borderTopRightRadius).toBe("4px");
     done();
   });
 
@@ -254,9 +292,39 @@ describe("the letters the search corrected", () => {
     done();
   });
 
-  describe("read on both stripes, in the letter color the solid match gives its text (WCAG AA)", () => {
+  describe("read on both stripes, in the letter color the solid match gives its text", () => {
+    /**
+     * The first stripe is the pill's own color, so the letters read on it as
+     * they do on the pill; the second is lighter, and keeps at least `floor`
+     * (AA, or 3:1 where the pill falls short of AA itself) wherever the pill
+     * reads at all.
+     */
+    function expectStripes(
+      corrected: HTMLElement,
+      label: string,
+      floor?: number,
+    ) {
+      const letters = rgbOf(getComputedStyle(corrected).color);
+      const [first, second] = stripesOf(corrected);
+
+      expect(stripesOf(corrected), label).toHaveLength(2);
+      const own = ratio(letters, first!);
+      if (own >= 3) {
+        expect(
+          ratio(letters, second!),
+          `${label}: ${letters} on ${second}`,
+        ).toBeGreaterThanOrEqual(floor ?? 3);
+        if (luminance(first!) < 0.9) {
+          expect(luminance(second!), `${label}: lighter`).toBeGreaterThan(
+            luminance(first!),
+          );
+        }
+      }
+    }
+
     // Klemen's three: white letters on a saturated purple and on a dark olive
-    // green, dark letters on a light green.
+    // green, dark letters on a light green. Each pill has the room for a
+    // lighter stripe that is still AA.
     const COMBINATIONS = [
       [
         "a saturated purple pill, white letters",
@@ -278,12 +346,11 @@ describe("the letters the search corrected", () => {
 
       expect(getComputedStyle(matched!).color).toBe(letters);
       expect(getComputedStyle(corrected!).color).toBe(letters);
-      expect(stripesOf(corrected!)).toHaveLength(2);
-      for (const stripe of stripesOf(corrected!)) {
-        expect(
-          ratio(rgbOf(getComputedStyle(corrected!).color), stripe),
-        ).toBeGreaterThanOrEqual(4.5);
-      }
+      // The first stripe is the pill's own color.
+      expect(stripesOf(corrected!)[0]).toEqual(
+        rgbOf(getComputedStyle(matched!).backgroundColor),
+      );
+      expectStripes(corrected!, color, 4.5);
       done();
     });
 
@@ -309,12 +376,7 @@ describe("the letters the search corrected", () => {
             : {}),
         });
 
-        for (const stripe of stripesOf(corrected!)) {
-          expect(
-            ratio(rgbOf(getComputedStyle(corrected!).color), stripe),
-            `${color}${dark ? " (dark)" : ""}`,
-          ).toBeGreaterThanOrEqual(4.5);
-        }
+        expectStripes(corrected!, `${color}${dark ? " (dark)" : ""}`);
         done();
       }
     });
@@ -329,11 +391,7 @@ describe("the letters the search corrected", () => {
         });
         const { corrected, done } = draw("background", ROW, look, preset.vars);
 
-        for (const stripe of stripesOf(corrected!)) {
-          expect(
-            ratio(rgbOf(getComputedStyle(corrected!).color), stripe),
-          ).toBeGreaterThanOrEqual(4.5);
-        }
+        expectStripes(corrected!, preset.name);
         done();
       },
     );

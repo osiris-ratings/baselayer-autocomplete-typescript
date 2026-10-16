@@ -778,6 +778,26 @@ describe("the letters the search corrected", () => {
     ]);
   });
 
+  it("says on which sides a mark and a corrected letter touch, only on a name that has a corrected letter", () => {
+    renderTypeahead({ suggestions: [typo], found: 1 });
+
+    const name = screen.getByTestId("business-suggestion-name");
+    const joins = [...name.querySelectorAll("[data-join]")].map(span => [
+      span.textContent,
+      span.getAttribute("data-join"),
+    ]);
+    // CIND, E, R touch in a row; the plain text after R breaks the run.
+    expect(joins).toEqual([
+      ["CIND", "right"],
+      ["E", "left right"],
+      ["R", "left"],
+    ]);
+
+    cleanup();
+    renderTypeahead({ suggestions: [stableMarked], found: 1 });
+    expect(document.querySelector("[data-join]")).toBeNull();
+  });
+
   it("draws none under the plain emphasis, which draws no marks at all", () => {
     renderTypeahead({
       suggestions: [typo],

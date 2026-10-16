@@ -85,11 +85,12 @@ describe("the letters the search corrected", () => {
       );
       expect(body).toContain("--bl-ac-stripe-alt");
       expect(body).not.toContain("transparent");
-      // Its box is its letter's and it paints above the marks either side,
-      // which reach under it: no overlap of fills, no asymmetric join.
-      expect(body).toContain("position: relative;");
-      expect(body).not.toContain("margin");
-      expect(body).not.toContain("padding");
+      // The reach and the corners of a mark, so that a run's two ends are
+      // pill ends; where two spans touch the join rules below take both away.
+      expect(body).toContain("margin: 0 -0.125rem;");
+      expect(body).toContain("padding: 0 0.125rem;");
+      expect(body).toContain("border-radius: 0.25rem;");
+      expect(body).not.toContain("position");
       // The letters take the color the solid fill gives its text.
       expect(body).toContain("color: var(--bl-ac-mark-fg);");
       expect(
@@ -97,6 +98,20 @@ describe("the letters the search corrected", () => {
       ).toContain("color: var(--bl-ac-mark-fg);");
     },
   );
+
+  it("make a run of marks and corrected letters one continuous shape: where two touch, no reach and no rounded corner", () => {
+    for (const side of ["left", "right"]) {
+      expect(css).toMatch(
+        new RegExp(
+          `\\[data-join~="${side}"\\]\\s*\\{\\s*margin-${side}: 0;\\s*padding-${side}: 0;\\s*border-top-${side}-radius: 0;\\s*border-bottom-${side}-radius: 0;`,
+        ),
+      );
+    }
+    // Under the background emphasis only, on the marks and the corrected ones.
+    expect(css).toMatch(
+      /\)\[data-emphasis="background"\]\s*:is\(\.bl-ac-mark, \.bl-ac-corrected\)\[data-join~="left"\]/,
+    );
+  });
 
   it("fade with the fill and the underline beside them on a disabled line", () => {
     for (const [emphasis, fade] of [

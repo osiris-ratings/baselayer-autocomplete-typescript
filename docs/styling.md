@@ -616,14 +616,19 @@ How a corrected letter is drawn follows `look.matchEmphasis`:
 | `plain`      | nothing, as for any match                                                                                                |
 
 Under `background` the letters take the color the solid fill gives its text, so
-the stripes have to read under it alike. With a `matchEmphasisColor` the
-component sets them (`--bl-ac-stripe` and `--bl-ac-stripe-alt`): the match
-color, or the nearest shade or tint of it that the letters read on, and a shade
-or tint of that on the side they read better on, each WCAG AA (4.5:1) against
-the letter color, which is white on a saturated purple or a dark olive green and
-the name's ink on a light green. On the default marker the letters keep their
-ink, and the stylesheet stripes the marker against a tint of it toward the
-menu's ground.
+the stripes have to read under it alike. The first stripe is the match color, so
+the stripes join the pill they sit in; the second is a lighter tint of it. With
+a `matchEmphasisColor` the component sets them (`--bl-ac-stripe` and
+`--bl-ac-stripe-alt`), the tint as light as the letters still read on: WCAG AA
+(4.5:1) where the match color has the room, as it does for a saturated purple
+or a dark olive green under white letters and for a light green under the
+name's ink, else 3:1, which is all a pill that falls short of AA itself (white
+on a mid pink) leaves. On the default marker the letters keep their ink, and
+the tint is the marker lightened by a third. A match mark and the corrected
+letters among it are one pill: where two touch, neither reaches past its
+letters nor rounds that corner (`data-join` on the spans says which sides
+touch), so the inside of the run is continuous and only its two ends are
+rounded.
 
 Under `underline` and `background` it is a span of its own with the class
 `bl-ac-corrected` (the `corrected` slot of `classNames`) and

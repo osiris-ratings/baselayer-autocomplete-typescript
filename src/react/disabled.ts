@@ -135,62 +135,78 @@ export function markTextColor(look: Look): string | null {
 /** The least contrast WCAG AA asks of the normal-size text a name is. */
 const STRIPE_CONTRAST = 4.5;
 
+/**
+ * What a lighter stripe still keeps against the letters where the match color
+ * itself falls short of AA (white on a mid pink is 4:1): the floor WCAG sets for
+ * large text and for what is not text, and the least that leaves it any room to
+ * be lighter.
+ */
+const STRIPE_FLOOR = 3;
+
 /** The match fill's default: the stylesheet's `--bl-ac-marker`. */
 const DEFAULT_MARKER = "#c6f6d5";
 
 /**
- * How far the second stripe goes from the first, as a share of the way to an
- * extreme: enough to see two colors, little enough to keep the hue.
+ * How far the lighter stripe goes from the match color, as a share of the way
+ * to white: enough to see two colors, little enough to keep the hue.
  */
-const STRIPE_SPREAD = 0.4;
+const STRIPE_SPREAD = 0.5;
+
+/** How far a darker stripe goes, where the fill has no room to be lighter. */
+const STRIPE_SHADE = 0.15;
+
+/** The least two stripes differ by, as a contrast ratio, to be told apart. */
+const STRIPE_VISIBLE = 1.05;
 
 /**
  * The two colors a corrected letter's stripes alternate between under the
  * background emphasis, with the letters in the color the solid match
  * background gives its text (`markTextColor`; the name's own on the default
- * marker). The first is the match color, where the letters read on it, and else
- * the nearest shade or tint that they do; the second is a shade or tint of it
- * on the side the letters read better on, so that one letter color reads on
- * both stripes (WCAG AA, 4.5:1), and where there is no room that way (a fill
- * already at the extreme) as far the other way as they still read.
+ * marker). The first is the match color itself, so the stripes join the pill
+ * they sit in; the second is a lighter tint of it, as light as the letters
+ * still read on it: WCAG AA (4.5:1) where the match color has that room, else
+ * 3:1. Where the fill has no room to be lighter (already at white) the second
+ * is a little darker, as far as the letters still read.
  */
 export function stripeColors(look: Look): { solid: string; alt: string } {
   const white: Rgb = [255, 255, 255];
   const black: Rgb = [0, 0, 0];
   const ground = drawnOn(look.backgroundColor, white);
-  const fill = drawnOn(look.matchEmphasisColor ?? DEFAULT_MARKER, ground);
-  const ink = drawnOn(markTextColor(look) ?? look.titleColor, fill);
-  const reads = (color: Rgb) =>
-    contrast(ink, rounded(color)) >= STRIPE_CONTRAST;
-  // The extreme the letters read better against, which a fill moves toward to
-  // read better, and the one they read worse.
-  const toward = contrast(ink, white) >= contrast(ink, black) ? white : black;
-  const away = toward === black ? white : black;
-
-  let first = fill;
-  if (!reads(fill)) {
-    let [low, high] = [0, 1];
+  const first = rounded(
+    drawnOn(look.matchEmphasisColor ?? DEFAULT_MARKER, ground),
+  );
+  const ink = drawnOn(markTextColor(look) ?? look.titleColor, first);
+  /** The furthest `from` moves toward `to`, up to `most`, keeping `floor`. */
+  const furthest = (from: Rgb, to: Rgb, most: number, floor: number) => {
+    const holds = (share: number) =>
+      contrast(ink, rounded(mix(from, to, share))) >= floor;
+    if (holds(most)) return most;
+    let [low, high] = [0, most];
     for (let step = 0; step < 24; step++) {
       const middle = (low + high) / 2;
-      if (reads(mix(fill, toward, middle))) high = middle;
-      else low = middle;
-    }
-    first = mix(fill, toward, high);
-  }
-  first = rounded(first);
-
-  let second = rounded(mix(first, toward, STRIPE_SPREAD));
-  if (contrast(first, second) < 1.15) {
-    // The fill is as far toward as it goes: the other way, as far as it reads.
-    let [low, high] = [0, STRIPE_SPREAD];
-    for (let step = 0; step < 24; step++) {
-      const middle = (low + high) / 2;
-      if (reads(mix(first, away, middle))) low = middle;
+      if (holds(middle)) low = middle;
       else high = middle;
     }
-    second = rounded(mix(first, away, low));
+    return low;
+  };
+  const aa = contrast(ink, first) >= STRIPE_CONTRAST;
+  for (const floor of aa ? [STRIPE_CONTRAST, STRIPE_FLOOR] : [STRIPE_FLOOR]) {
+    const share = furthest(first, white, STRIPE_SPREAD, floor);
+    const lighter = rounded(mix(first, white, share));
+    if (contrast(first, lighter) >= STRIPE_VISIBLE) {
+      return { solid: hexOf(first), alt: hexOf(lighter) };
+    }
   }
-  return { solid: hexOf(first), alt: hexOf(second) };
+  const shade = furthest(
+    first,
+    black,
+    STRIPE_SHADE,
+    Math.min(STRIPE_CONTRAST, contrast(ink, first)),
+  );
+  return {
+    solid: hexOf(first),
+    alt: hexOf(rounded(mix(first, black, shade))),
+  };
 }
 
 /**
