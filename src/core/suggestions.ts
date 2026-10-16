@@ -424,23 +424,36 @@ function cutMarked(text: string, tokens: string[]): HighlightPart[] {
  * and whitespace between two marked parts is marked with them, so two words
  * typed out in full are one span — the substring region grows into the
  * whole-word mark as the typing does. A corrected letter is a kind of its own:
- * it joins another corrected letter, never the plain text beside it.
+ * it joins another corrected letter, never the plain text beside it, and it is
+ * part of a mark, so whitespace between it and the next marked word is marked
+ * with that word.
  */
 function mergeParts(parts: HighlightPart[]): HighlightPart[] {
   const pieces = parts.filter(part => part.text.length > 0);
   const out: HighlightPart[] = [];
+  /** A part that is part of a mark: a match, or a letter corrected within one. */
+  const marks = (part: HighlightPart | undefined) =>
+    part !== undefined && (part.matched || part.corrected === true);
   pieces.forEach((part, index) => {
     const last = out[out.length - 1];
     const bridges =
       !part.matched &&
       part.corrected !== true &&
       /^\s+$/.test(part.text) &&
-      last?.matched === true &&
-      pieces[index + 1]?.matched === true;
+      marks(last) &&
+      marks(pieces[index + 1]);
     const alike =
       last?.matched === part.matched &&
       (last?.corrected ?? false) === (part.corrected ?? false);
-    if (last !== undefined && (bridges || alike)) {
+    if (last !== undefined && bridges) {
+      if (last.corrected === true) {
+        // The space between a corrected letter and the next word goes with the
+        // word, as the service keeps it, and not with the corrected letter.
+        out.push({ text: part.text, matched: true });
+      } else {
+        last.text += part.text;
+      }
+    } else if (last !== undefined && alike) {
       last.text += part.text;
     } else {
       out.push({ ...part });
@@ -662,12 +675,14 @@ export function partsFor(
   if (parts.some(part => !part.matched && part.corrected === true)) {
     if (region === "token") {
       return correctedAs === "match"
-        ? partsOfLetters(
-            lettersOf(parts).map(letter => ({
-              ...letter,
-              matched: letter.matched || letter.corrected,
-              corrected: false,
-            })),
+        ? mergeParts(
+            partsOfLetters(
+              lettersOf(parts).map(letter => ({
+                ...letter,
+                matched: letter.matched || letter.corrected,
+                corrected: false,
+              })),
+            ),
           )
         : parts;
     }

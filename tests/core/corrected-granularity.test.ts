@@ -127,6 +127,66 @@ describe("typed characters (the substring region)", () => {
   });
 });
 
+describe("a corrected letter at the end of a word, before the next word", () => {
+  // `harbro concrete`: the swap ends the first word, and the space and the
+  // second word follow. As the service sends it the space stays in the matched
+  // part after the corrected letters; a variant that sent it apart is read the
+  // same. Either way the two words are one run, as the same words typed right.
+  const TAIL = " PUMPING CO., INC.";
+  const sent = [m("HARB"), c("OR"), m(" CONCRETE"), p(TAIL)];
+  const apart = [m("HARB"), c("OR"), p(" "), m("CONCRETE"), p(TAIL)];
+  const tokens = queryTokens("harbro concrete");
+  const right = queryTokens("harbor concrete");
+  const exact = [m("HARBOR CONCRETE"), p(TAIL)];
+
+  it.each([
+    ["as the service sends it", sent],
+    ["with the space sent apart", apart],
+  ])(
+    "%s: typed characters bridge the space to the next word as a mark",
+    (_, parts) => {
+      expect(partsFor(LABEL, parts, "substring", tokens)).toEqual(sent);
+    },
+  );
+
+  it.each([
+    ["as the service sends it", sent],
+    ["with the space sent apart", apart],
+  ])(
+    "%s: weight and ink draw it as one match, as the same words typed right",
+    (_, parts) => {
+      for (const region of ["token", "substring"] as const) {
+        expect(partsFor(LABEL, parts, region, tokens, "match")).toEqual(exact);
+      }
+      expect(partsFor(LABEL, exact, "substring", right, "match")).toEqual(
+        exact,
+      );
+    },
+  );
+
+  it("keeps the parts as sent under the whole-word region, a mark of their own", () => {
+    expect(partsFor(LABEL, sent, "token", tokens)).toBe(sent);
+    expect(partsFor(LABEL, apart, "token", tokens)).toBe(apart);
+  });
+
+  it("does not bridge a space that a plain word follows", () => {
+    // `harbro conc` with the second word typed as far as CONC: the space is
+    // bridged to the matched part of it, and the rest of the word stays plain.
+    expect(
+      partsFor(LABEL, sent, "substring", queryTokens("harbro conc")),
+    ).toEqual([m("HARB"), c("OR"), m(" CONC"), p("RETE PUMPING CO., INC.")]);
+    // No second word typed: the space after the corrected letters is plain.
+    expect(
+      partsFor(
+        LABEL,
+        [m("HARB"), c("OR"), p(" CONCRETE" + TAIL)],
+        "substring",
+        queryTokens("harbro"),
+      ),
+    ).toEqual([m("HARB"), c("OR"), p(" CONCRETE" + TAIL)]);
+  });
+});
+
 describe("two letters misspelled in one word", () => {
   // The service corrects one edit per word today. If it ever corrects more it
   // flags each stored letter the typed word had wrong, and the SDK needs no
