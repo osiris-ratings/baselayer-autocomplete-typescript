@@ -218,6 +218,29 @@ describe("the letters the search corrected", () => {
     done();
   });
 
+  it("run clean between the marks either side: its own box, painted above their reach", () => {
+    const { corrected, matched, done } = draw("background");
+    const style = getComputedStyle(corrected!);
+    const box = corrected!.getBoundingClientRect();
+    const middle = box.top + box.height / 2;
+
+    // The mark beside it reaches 0.125rem past its letters; it does not.
+    expect(getComputedStyle(matched!).paddingRight).toBe("2px");
+    expect(style.paddingLeft).toBe("0px");
+    expect(style.paddingRight).toBe("0px");
+    expect(style.marginLeft).toBe("0px");
+    expect(style.marginRight).toBe("0px");
+    // Where the neighbours' fills reach under it, the stripes are on top, to
+    // its very edges.
+    for (const x of [box.left + 0.5, box.right - 0.5]) {
+      const hit = document.elementFromPoint(x, middle);
+      expect(hit === corrected || corrected!.contains(hit), `at ${x}`).toBe(
+        true,
+      );
+    }
+    done();
+  });
+
   it("stripe in the match color and a tint of it on the default marker, the letters keeping their ink", () => {
     const { corrected, matched, done } = draw("background");
     const [first, second] = stripesOf(corrected!);

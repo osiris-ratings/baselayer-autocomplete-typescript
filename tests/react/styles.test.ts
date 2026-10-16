@@ -85,6 +85,11 @@ describe("the letters the search corrected", () => {
       );
       expect(body).toContain("--bl-ac-stripe-alt");
       expect(body).not.toContain("transparent");
+      // Its box is its letter's and it paints above the marks either side,
+      // which reach under it: no overlap of fills, no asymmetric join.
+      expect(body).toContain("position: relative;");
+      expect(body).not.toContain("margin");
+      expect(body).not.toContain("padding");
       // The letters take the color the solid fill gives its text.
       expect(body).toContain("color: var(--bl-ac-mark-fg);");
       expect(

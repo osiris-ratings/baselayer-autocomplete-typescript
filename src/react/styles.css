@@ -887,8 +887,10 @@
 .bl-ac-also[data-emphasis="background"] .bl-ac-corrected,
 .bl-ac-address[data-emphasis="background"] .bl-ac-corrected,
 .bl-ac-people[data-emphasis="background"] .bl-ac-corrected {
-  margin: 0 -0.125rem;
-  padding: 0 0.125rem;
+  /* Its box is its letter's, with none of the fill's reach: the marks either
+     side reach 0.125rem under it, and it paints above them, so the stripes run
+     clean from edge to edge and the pill's inner corners are hidden under it. */
+  position: relative;
   color: var(--bl-ac-mark-fg);
   background: repeating-linear-gradient(
     -45deg,
