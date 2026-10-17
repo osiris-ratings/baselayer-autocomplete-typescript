@@ -13,9 +13,19 @@ import { DEMO_KEY_PATH } from "./demo/prefill";
 // with `__DEMO_PREFILL__` a literal `false` unless this server is serving and
 // has a key, so a build holds neither the code that asks nor the path it asks
 // at; and when it is serving, the key is not in any module or in the HTML: the
-// page asks this server for it, once, and only a page on this server's own
-// origin is answered. Nothing here logs the key, and a problem with where it
-// comes from is a warning that names the variable and never its content.
+// page asks this server for it, once, and only a browser page of this
+// machine's own is answered. Nothing here logs the key, and a problem with
+// where it comes from is a warning that names the variable and never its
+// content.
+//
+// What "a browser page of this machine's own" is, in code: the request's peer
+// is the loopback; its Host is the machine's own name for itself; its
+// Sec-Fetch-Site, which a browser sets and a page's script cannot, is
+// `same-origin`; its Origin, if it has one, is this server's; and nothing in it
+// says a proxy or a tunnel forwarded it. A client that is not a browser can
+// write any header it likes, so the headers alone prove nothing about one; the
+// peer address is what keeps a machine on the network out, and a server that
+// listens beyond this machine (`--host`) prefills nothing at all.
 
 export interface DemoKeyEnv {
   DEMO_API_KEY?: string | undefined;
@@ -70,19 +80,53 @@ function isLocalHost(host: string | undefined): boolean {
   return name === "localhost" || name === "127.0.0.1" || name === "[::1]";
 }
 
+const LOOPBACK_V4 = /^127(\.\d{1,3}){3}$/;
+
+/** Whether the other end of the connection is this machine itself. */
+function isLoopbackPeer(address: string | undefined): boolean {
+  if (address === undefined) return false;
+  const bare = address.replace(/^::ffff:/i, "");
+  return bare === "::1" || LOOPBACK_V4.test(bare);
+}
+
+/** What a proxy or a tunnel adds to a request it passes on. */
+const FORWARDING_HEADERS = [
+  "forwarded",
+  "x-forwarded-for",
+  "x-forwarded-host",
+  "x-forwarded-proto",
+  "x-forwarded-port",
+  "x-real-ip",
+];
+
 /**
- * Whether `request` comes from a page on this server's own origin: the host is
- * the machine's own, an `Origin` if it has one is the server's, and a
- * `Sec-Fetch-Site` if it has one says same-origin. Anything else is not
- * answered, and not told apart from a path that does not exist.
+ * Whether the server listens on this machine only. Vite's own default
+ * (`undefined`, or `false`) is `localhost`; `true` is every address, and any
+ * other name or address that is not the loopback is a way in from outside.
+ */
+export function listensOnThisMachineOnly(
+  host: string | boolean | undefined,
+): boolean {
+  if (host === undefined || host === false) return true;
+  if (host === true) return false;
+  const name = host.replace(/^\[(.*)\]$/, "$1");
+  return name === "localhost" || name === "::1" || LOOPBACK_V4.test(name);
+}
+
+/**
+ * Whether `request` comes from a browser page of this machine's own origin.
+ * See the top of the file for what that takes. Anything else is not answered,
+ * and not told apart from a path that does not exist.
  */
 export function isOwnPage(request: IncomingMessage): boolean {
-  const { host, origin } = request.headers;
-  const site = request.headers["sec-fetch-site"];
+  const { headers } = request;
+  const { host, origin } = headers;
   return (
+    isLoopbackPeer(request.socket.remoteAddress) &&
+    !FORWARDING_HEADERS.some(name => headers[name] !== undefined) &&
     isLocalHost(host) &&
     (origin === undefined || origin === `http://${host}`) &&
-    (site === undefined || site === "same-origin")
+    headers["sec-fetch-site"] === "same-origin"
   );
 }
 
@@ -105,9 +149,11 @@ function answer(response: ServerResponse, status: number, body?: string): void {
 export function demoKeyPrefill(env: DemoKeyEnv = process.env): Plugin {
   return {
     name: "demo-key-prefill",
-    config(_, { command }) {
+    config(userConfig, { command }) {
       const prefill =
-        command === "serve" && readDemoKey(env, () => {}) !== null;
+        command === "serve" &&
+        listensOnThisMachineOnly(userConfig.server?.host) &&
+        readDemoKey(env, () => {}) !== null;
       return { define: { __DEMO_PREFILL__: JSON.stringify(prefill) } };
     },
     configureServer(server) {
@@ -115,6 +161,12 @@ export function demoKeyPrefill(env: DemoKeyEnv = process.env): Plugin {
         server.config.logger.warn(`demo: ${message}`),
       );
       if (key === null) return;
+      if (!listensOnThisMachineOnly(server.config.server.host)) {
+        server.config.logger.warn(
+          "demo: the dev server listens beyond this machine (--host): no key is prefilled.",
+        );
+        return;
+      }
       server.config.logger.info(
         "demo: an API key will be prefilled and applied on load.",
       );

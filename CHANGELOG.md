@@ -50,9 +50,11 @@ breaking change bumps the minor version.
   - The demo's dev server can prefill an API key (dev only, demo site only):
     `DEMO_API_KEY_FILE=<path>`, a file only its owner can read, or
     `DEMO_API_KEY`, fills the key field and applies it once on load. The key is
-    given only to a page on the dev server's own origin, is never logged, and
-    is in no build: a build leaves out the code that asks for it, whatever its
-    environment holds.
+    given only to a browser page of the machine's own (a loopback peer, the
+    page's own same-origin fetch, nothing forwarded), never when the server
+    listens beyond the machine (`--host`), is never logged, and is in no build:
+    a build leaves out the code that asks for it, whatever its environment
+    holds.
 
 ## [0.8.0] - 2026-10-14
 

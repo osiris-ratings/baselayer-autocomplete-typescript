@@ -104,13 +104,24 @@ applies it once, as if it had been typed and Apply pressed; a key the API
 refuses stays in the field with the reason. The file is the way to give it: a
 regular file only its owner can read (`chmod 600`), which is read again on
 each page load, so the key never sits in your shell history and a rotated one
-needs no restart. `DEMO_API_KEY=…` does the same from the environment. The dev
-server hands the key only to a page on its own origin, opened as `localhost`,
-`127.0.0.1` or `[::1]`: a LAN or tailnet host name gets no prefill. It is a dev
-server feature and nothing of it reaches a build. The key is in no module, no
-page and no log, and a build has neither it nor the code that asks for it,
-whatever its environment holds (a test builds with a key set and scans every
-file).
+needs no restart. `DEMO_API_KEY=…` does the same from the environment.
+
+The dev server answers only a browser page of this machine's own. A request
+must come over the loopback, name `localhost`, `127.0.0.1` or `[::1]` as its
+host, carry `Sec-Fetch-Site: same-origin` (a browser sets it on the page's own
+fetch, `curl` does not), have no `Origin` but the server's own, and not have
+been forwarded by a proxy or a tunnel. Any other request is answered as a path
+that is not there. A client that is not a browser can write any header it
+likes, so the peer address is what keeps a machine on the network out, and a
+dev server that listens beyond this machine (`--host`, or a `server.host` that
+is not the loopback) prefills nothing and says so. Do not reach the demo through
+`--host` or a tunnel while a key is loaded: a LAN or tailnet host name gets no
+prefill.
+
+The prefill is a dev server feature and nothing of it reaches a build. The key
+is in no module, no page and no log, and a build has neither it nor the code
+that asks for it, whatever its environment holds (a test builds with a key set
+and scans every file).
 
 **Production (api.baselayer.com)** makes the calls from the browser, as the
 published page does, which the API admits only from the published page's

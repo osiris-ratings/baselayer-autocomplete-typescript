@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -136,6 +137,31 @@ describe("the dev server's key, prefilled in the demo", () => {
       KEY,
     );
     expect(screen.queryByText(/key accepted/i)).toBeNull();
+  });
+
+  it("keeps the key out of the network log: the ask is not a request the log records, and no row holds the key", async () => {
+    devServer(() => json(200, { key: KEY }));
+    const user = userEvent.setup();
+
+    render(<App />);
+    await screen.findByText(/key accepted/i);
+    await user.click(screen.getByTestId("demo-debug-open"));
+    await user.click(screen.getByTestId("demo-debug-tab-network"));
+    const log = await screen.findByTestId("demo-network");
+    // Every row opened, its headers and bodies on show. The log redacts the
+    // API key header and the token fields, not a `key` in a body.
+    for (const row of log.querySelectorAll<HTMLElement>("button.net-row")) {
+      await user.click(row);
+    }
+
+    // The control: the log is on screen and holds the one request the page
+    // made on its own account, the mint that tested the key.
+    expect(log.textContent).toMatch(/\b1 requests · 1 mint\b/);
+    expect(log.textContent).toContain("/autocomplete/sessions");
+    expect(log.textContent).not.toContain("__demo");
+    expect(log.textContent).not.toContain(KEY);
+    // Nor anywhere else on the page: the key sits in its field only.
+    expect(document.body.textContent).not.toContain(KEY);
   });
 
   it("does not take the key as focus: nothing on the page is pulled to the Connect toggle on load", async () => {

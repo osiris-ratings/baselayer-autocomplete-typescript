@@ -7,7 +7,11 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { createServer as createHttpServer, request } from "node:http";
+import {
+  createServer as createHttpServer,
+  request,
+  type IncomingMessage,
+} from "node:http";
 import { connect, type AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -24,6 +28,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DEMO_KEY_PATH } from "../../site/demo/prefill";
 import {
   demoKeyPrefill,
+  isOwnPage,
   readDemoKey,
   type DemoKeyEnv,
 } from "../../site/demo-key";
@@ -163,9 +168,15 @@ describe("the constant that tells the page whether to ask", () => {
   const defined = async (
     command: "serve" | "build",
     env: DemoKeyEnv,
+    host?: string | boolean,
   ): Promise<unknown> => {
     const config = await resolveConfig(
-      { configFile: false, logLevel: "silent", plugins: [demoKeyPrefill(env)] },
+      {
+        configFile: false,
+        logLevel: "silent",
+        plugins: [demoKeyPrefill(env)],
+        ...(host !== undefined ? { server: { host } } : {}),
+      },
       command,
     );
     return config.define?.["__DEMO_PREFILL__"];
@@ -185,11 +196,97 @@ describe("the constant that tells the page whether to ask", () => {
     );
   });
 
+  it("is true when the dev server listens on this machine only, however it says so", async () => {
+    for (const host of [
+      "localhost",
+      "127.0.0.1",
+      "127.0.0.2",
+      "::1",
+      "[::1]",
+    ]) {
+      expect(await defined("serve", { DEMO_API_KEY: CANARY }, host), host).toBe(
+        "true",
+      );
+    }
+  });
+
+  it("is false when the dev server listens beyond this machine (--host), where a client can write any header it likes", async () => {
+    for (const host of [
+      true,
+      "0.0.0.0",
+      "::",
+      "192.168.1.20",
+      "laptop.local",
+    ]) {
+      expect(
+        await defined("serve", { DEMO_API_KEY: CANARY }, host),
+        String(host),
+      ).toBe("false");
+    }
+  });
+
   it("is false when serving with no key it can use", async () => {
     expect(await defined("serve", {})).toBe("false");
     expect(
       await defined("serve", { DEMO_API_KEY_FILE: keyFile(CANARY, 0o644) }),
     ).toBe("false");
+  });
+});
+
+describe("whether a request is from a page on the dev server's own origin", () => {
+  /** What node hands a middleware: the headers, and the socket's peer. */
+  const from = (
+    remoteAddress: string | undefined,
+    headers: Record<string, string> = {},
+  ) =>
+    ({
+      headers: {
+        host: "localhost:3001",
+        "sec-fetch-site": "same-origin",
+        ...headers,
+      },
+      socket: { remoteAddress },
+    }) as unknown as IncomingMessage;
+
+  it.each(["127.0.0.1", "127.0.0.9", "::1", "::ffff:127.0.0.1"])(
+    "answers a browser on this machine (peer %s)",
+    peer => {
+      expect(isOwnPage(from(peer))).toBe(true);
+    },
+  );
+
+  it.each([
+    ["a LAN address", "192.168.1.20"],
+    ["a tailnet address", "100.101.102.103"],
+    ["a public address", "203.0.113.9"],
+    ["an IPv6 address that is not the loopback", "fd7a:115c:a1e0::1"],
+    ["a mapped LAN address", "::ffff:192.168.1.20"],
+    ["a peer that cannot be told", undefined],
+  ])(
+    "does not answer %s, however well the request is dressed as the page's own",
+    (_, peer) => {
+      // The headers are the page's own: every one of them a client can write.
+      expect(
+        isOwnPage(
+          from(peer, {
+            origin: "http://localhost:3001",
+            referer: "http://localhost:3001/demo/",
+          }),
+        ),
+      ).toBe(false);
+    },
+  );
+
+  it("needs Sec-Fetch-Site, and needs it to say same-origin", () => {
+    const bare = from("127.0.0.1");
+    delete (bare.headers as Record<string, unknown>)["sec-fetch-site"];
+
+    expect(isOwnPage(bare)).toBe(false);
+    for (const site of ["same-site", "cross-site", "none", ""]) {
+      expect(isOwnPage(from("127.0.0.1", { "sec-fetch-site": site }))).toBe(
+        false,
+      );
+    }
   });
 });
 
@@ -200,7 +297,7 @@ describe("the dev server's answer", () => {
   });
 
   /** A dev server with only the plugin, listening on a free port, and what it logged. */
-  async function serve(env: DemoKeyEnv) {
+  async function serve(env: DemoKeyEnv, host?: string | boolean) {
     const logged: string[] = [];
     const logger = createLogger("info");
     for (const level of ["info", "warn", "warnOnce", "error"] as const) {
@@ -212,7 +309,12 @@ describe("the dev server's answer", () => {
       appType: "custom",
       customLogger: logger,
       plugins: [demoKeyPrefill(env)],
-      server: { middlewareMode: true, hmr: false, watch: null },
+      server: {
+        middlewareMode: true,
+        hmr: false,
+        watch: null,
+        ...(host !== undefined ? { host } : {}),
+      },
       optimizeDeps: { noDiscovery: true },
     });
     const http = createHttpServer(server.middlewares);
@@ -225,19 +327,33 @@ describe("the dev server's answer", () => {
     return {
       logged,
       port,
+      /**
+       * A request as a browser's fetch of the page's own origin sends it: the
+       * host the page is at and `Sec-Fetch-Site: same-origin`. `headers` change
+       * or, as `null`, take away any of that.
+       */
       get: (
-        headers: Record<string, string> = {},
+        headers: Record<string, string | null> = {},
         path = DEMO_KEY_PATH,
         method = "GET",
       ) =>
         new Promise<Reply>((resolve, reject) => {
+          const sent: Record<string, string | null> = {
+            host: `127.0.0.1:${port}`,
+            "sec-fetch-site": "same-origin",
+            ...headers,
+          };
           const call = request(
             {
               host: "127.0.0.1",
               port,
               path,
               method,
-              headers: { host: `127.0.0.1:${port}`, ...headers },
+              headers: Object.fromEntries(
+                Object.entries(sent).filter(
+                  (entry): entry is [string, string] => entry[1] !== null,
+                ),
+              ),
             },
             response => {
               const chunks: Buffer[] = [];
@@ -272,11 +388,75 @@ describe("the dev server's answer", () => {
     expect(reply.headers["content-type"]).toBe("application/json");
   });
 
-  it("answers a request that carries no Origin or Sec-Fetch-Site, as a same-origin GET does", async () => {
+  it("answers a browser's fetch of the page's own origin as the browsers send it, with an Origin or, as a same-origin GET usually has, without", async () => {
     const dev = await serve({ DEMO_API_KEY: CANARY });
+    const host = `localhost:${dev.port}`;
+    // Chrome, Firefox and Safari: the three Sec-Fetch headers, the page as the
+    // referrer, and no cookie, credentials being the page's own origin's.
+    const browser = {
+      host,
+      accept: "*/*",
+      referer: `http://${host}/demo/`,
+      "sec-fetch-site": "same-origin",
+      "sec-fetch-mode": "cors",
+      "sec-fetch-dest": "empty",
+    };
 
-    expect(JSON.parse((await dev.get()).body)).toEqual({ key: CANARY });
+    for (const extra of [{}, { origin: `http://${host}` }]) {
+      const reply = await dev.get({ ...browser, ...extra });
+
+      expect(reply.status).toBe(200);
+      expect(JSON.parse(reply.body)).toEqual({ key: CANARY });
+    }
   });
+
+  it("does not answer a request that carries no Sec-Fetch-Site: a client that is not a browser, or one that writes the host to look like one, is not the page", async () => {
+    const dev = await serve({ DEMO_API_KEY: CANARY });
+    // The request ReviewerBot ran: the machine's own name as the host, no
+    // Origin, no Sec-Fetch-Site, as `curl -H 'Host: localhost:3000'` sends it.
+    const headers = { host: `localhost:${dev.port}`, "sec-fetch-site": null };
+    const missing = await dev.get(headers, "/__demo/not-there");
+
+    const reply = await dev.get(headers);
+
+    expect(reply.status).toBe(missing.status);
+    expect(withoutPath(reply, DEMO_KEY_PATH)).toBe(
+      withoutPath(missing, "/__demo/not-there"),
+    );
+    expect(reply.body).not.toContain(CANARY);
+  });
+
+  it.each([
+    ["X-Forwarded-For", { "x-forwarded-for": "203.0.113.9" }],
+    ["X-Forwarded-Host", { "x-forwarded-host": "demo.example.test" }],
+    ["X-Forwarded-Proto", { "x-forwarded-proto": "https" }],
+    ["Forwarded", { forwarded: "for=203.0.113.9;proto=https" }],
+  ])(
+    "does not answer a request a proxy or a tunnel forwarded (%s), which came from somewhere else with this machine's name for a host",
+    async (_, headers) => {
+      const dev = await serve({ DEMO_API_KEY: CANARY });
+      const missing = await dev.get(headers, "/__demo/not-there");
+
+      const reply = await dev.get(headers);
+
+      expect(reply.status).toBe(missing.status);
+      expect(reply.body).not.toContain(CANARY);
+    },
+  );
+
+  it.each([true, "0.0.0.0", "::", "192.168.1.20"])(
+    "gives no key when the dev server listens beyond this machine (host %s), and says why without a word of the key",
+    async host => {
+      const dev = await serve({ DEMO_API_KEY: CANARY }, host);
+
+      const reply = await dev.get({ host: `localhost:${dev.port}` });
+
+      expect(reply.status).toBe(404);
+      expect(reply.body).not.toContain(CANARY);
+      expect(dev.logged.join("\n")).toMatch(/listens beyond this machine/);
+      expect(dev.logged.join("\n")).not.toContain(CANARY);
+    },
+  );
 
   it.each(["localhost", "[::1]", "127.0.0.1"])(
     "answers the machine's own name for itself: %s",
