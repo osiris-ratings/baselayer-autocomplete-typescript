@@ -185,24 +185,32 @@ export function respelling(word: string, token: string): boolean[] | [] | null {
 
 /**
  * The autocomplete service's tidy-up of a name's parts: adjacent parts of one
- * kind become one, and whitespace between two matched parts is matched with
- * them.
+ * kind become one, and whitespace between two marked parts is marked with them.
+ * A corrected letter is part of a mark, and the space after it stays with the
+ * next marked word, as the service keeps it, inside that word's matched part.
  */
 function tidy(parts: HighlightPart[]): HighlightPart[] {
   const out: HighlightPart[] = [];
+  const marks = (part: HighlightPart | undefined) =>
+    part !== undefined && (part.matched || part.corrected === true);
   parts.forEach((part, index) => {
     const last = out[out.length - 1];
     const bridges =
       !part.matched &&
       part.corrected !== true &&
       /^\s+$/.test(part.text) &&
-      last?.matched === true &&
-      parts[index + 1]?.matched === true;
-    if (
+      marks(last) &&
+      marks(parts[index + 1]);
+    if (last !== undefined && bridges) {
+      if (last.corrected === true) {
+        out.push({ text: part.text, matched: true });
+      } else {
+        last.text += part.text;
+      }
+    } else if (
       last !== undefined &&
-      (bridges ||
-        (last.matched === part.matched &&
-          (last.corrected === true) === (part.corrected === true)))
+      last.matched === part.matched &&
+      (last.corrected === true) === (part.corrected === true)
     ) {
       last.text += part.text;
     } else {

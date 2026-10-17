@@ -728,6 +728,40 @@ describe("the made-up API's typo kinds, against the service's own answers", () =
   });
 });
 
+describe("the made-up API's corrected letter at the end of a word, before the next", () => {
+  // `harbro concrete`: the swap ends the first word. The service keeps the space
+  // after a corrected letter in the matched part of the next word (its
+  // `mark_corrected` splits the letters out of a matched part that already holds
+  // the space), so the mark runs on across it as it does for the same words
+  // typed right.
+  const { label } = typoGolden;
+  const tail = " PUMPING CO., INC.";
+
+  it("marks the space with the next word, not with the corrected letters", () => {
+    expect(serviceHighlightFor(label, queryTokens("harbro concrete"))).toEqual([
+      { text: "HARB", matched: true },
+      { text: "OR", matched: false, corrected: true },
+      { text: " CONCRETE", matched: true },
+      { text: tail, matched: false },
+    ]);
+  });
+
+  it("is one run of marks, as the words typed right are", () => {
+    expect(serviceHighlightFor(label, queryTokens("harbor concrete"))).toEqual([
+      { text: "HARBOR CONCRETE", matched: true },
+      { text: tail, matched: false },
+    ]);
+  });
+
+  it("leaves the space plain when no second word is typed", () => {
+    expect(serviceHighlightFor(label, queryTokens("harbro"))).toEqual([
+      { text: "HARB", matched: true },
+      { text: "OR", matched: false, corrected: true },
+      { text: " CONCRETE PUMPING CO., INC.", matched: false },
+    ]);
+  });
+});
+
 describe("the letters a typed word had wrong, as the service flags them", () => {
   const at =
     (...indexes: number[]) =>
