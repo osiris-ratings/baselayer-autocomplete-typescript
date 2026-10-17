@@ -520,12 +520,15 @@ function partsOfLetters(letters: Letter[]): HighlightPart[] {
  * a deletion shift every letter after it, so `harbr` (five typed) covers all six
  * letters of HARBOR, the O marked, where `harbu` covers the first five.
  *
- * Both readings of a lone corrected letter fitting, it is taken as left out,
- * which covers more. Any number of corrected letters may be aligned, the
- * service's one edit per word being no business of this: the word is covered
- * through the furthest letter the typed text reaches, and the typed text must
- * reach every corrected letter, or it is no spelling of the word (the field has
- * moved on since the rows were answered).
+ * Several readings may fit: the fewest edits wins, a swap being one edit where
+ * a substitution and a deletion are two (two corrected letters side by side are
+ * a swap, as the service flags them), and of equal readings the one that covers
+ * more, so a lone corrected letter that fits as left out covers the letter
+ * after it. Any number of corrected letters may be aligned, the service's one
+ * edit per word being no business of this: the word is covered through the
+ * furthest letter the typed text reaches, and the typed text must reach every
+ * corrected letter, or it is no spelling of the word (the field has moved on
+ * since the rows were answered).
  */
 function coveredBy(
   stored: string[],
@@ -533,26 +536,33 @@ function coveredBy(
   token: string[],
 ): number | null {
   const typed = token.length;
-  // reach[i][j]: the first `i` stored letters account for the first `j` typed.
-  const reach = Array.from({ length: stored.length + 1 }, () =>
-    new Array<boolean>(typed + 1).fill(false),
+  // edits[i][j]: the fewest edits by which the first `i` stored letters account
+  // for the first `j` typed; Infinity where they cannot.
+  const edits = Array.from({ length: stored.length + 1 }, () =>
+    new Array<number>(typed + 1).fill(Infinity),
   );
-  reach[0]![0] = true;
+  edits[0]![0] = 0;
+  const reach = (i: number, j: number, cost: number) => {
+    if (cost < edits[i]![j]!) {
+      edits[i]![j] = cost;
+    }
+  };
   for (let i = 0; i < stored.length; i += 1) {
     for (let j = 0; j <= typed; j += 1) {
-      if (!reach[i]![j]) {
+      const cost = edits[i]![j]!;
+      if (cost === Infinity) {
         continue;
       }
       if (!corrected[i]) {
         if (j < typed && token[j] === stored[i]) {
-          reach[i + 1]![j + 1] = true;
+          reach(i + 1, j + 1, cost);
         }
         continue;
       }
       if (j < typed) {
         // Substituted, or left out while typed letters remain to be placed.
-        reach[i + 1]![j + 1] = true;
-        reach[i + 1]![j] = true;
+        reach(i + 1, j + 1, cost + 1);
+        reach(i + 1, j, cost + 1);
       }
       if (
         corrected[i + 1] &&
@@ -560,17 +570,19 @@ function coveredBy(
         token[j] === stored[i + 1] &&
         token[j + 1] === stored[i]
       ) {
-        reach[i + 2]![j + 2] = true;
+        reach(i + 2, j + 2, cost + 1);
       }
     }
   }
   const last = corrected.lastIndexOf(true);
-  for (let covered = stored.length; covered > last; covered -= 1) {
-    if (reach[covered]![typed]) {
-      return covered;
+  let best: number | null = null;
+  for (let covered = last + 1; covered <= stored.length; covered += 1) {
+    const cost = edits[covered]![typed]!;
+    if (cost !== Infinity && (best === null || cost <= edits[best]![typed]!)) {
+      best = covered;
     }
   }
-  return null;
+  return best;
 }
 
 /**

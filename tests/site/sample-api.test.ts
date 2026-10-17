@@ -685,7 +685,7 @@ describe("the made-up API's typo tolerance", () => {
 });
 
 describe("the made-up API's typo kinds, against the service's own answers", () => {
-  // The service's `highlight` for HARBOR CONCRETE PUMPING CO., INC. typed nine
+  // The service's `highlight` for HARBOR CONCRETE PUMPING CO., INC. typed twelve
   // ways (tests/core/fixtures/typo-highlights.json, from the real path of
   // osiris-app #6764). The demo's API answers with a port of the service's
   // letter-flagging, and is held to every one of them, so the two cannot

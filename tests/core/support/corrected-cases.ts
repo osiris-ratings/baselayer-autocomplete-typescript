@@ -2,7 +2,7 @@ import type { HighlightPart } from "@baselayer-sdk/autocomplete";
 
 import golden from "../fixtures/typo-highlights.json";
 
-// The nine typed texts of the service's answers (`fixtures/typo-highlights.json`)
+// The twelve typed texts of the service's answers (`fixtures/typo-highlights.json`)
 // and what the components draw of each, worked out by hand from the letters of
 // HARBOR CONCRETE PUMPING CO., INC.: the whole word the service marked (the
 // `token` region) or the letters typed (`substring`), and a corrected letter as
@@ -124,5 +124,31 @@ export const CORRECTED_CASES: CorrectedCase[] = [
     [m("HARBOR"), p(REST)],
     [m("HARBOR"), p(REST)],
     [m("HARBOR"), p(REST)],
+  ),
+  // The swap ends the first word and an exact word follows: the space stays in
+  // the next word's matched part, so the run goes on across it.
+  entry(
+    "harbro concrete",
+    "a swap that ends the first word, then an exact word",
+    [m("HARBOR CONCRETE"), p(TAIL)],
+    [m("HARB"), c("OR"), m(" CONCRETE"), p(TAIL)],
+    [m("HARBOR CONCRETE"), p(TAIL)],
+  ),
+  entry(
+    "harbor concrete",
+    "two words typed right",
+    [m("HARBOR CONCRETE"), p(TAIL)],
+    [m("HARBOR CONCRETE"), p(TAIL)],
+    [m("HARBOR CONCRETE"), p(TAIL)],
+  ),
+  // The swap ends the last typed word: the corrected letters are the stored ones
+  // (ET), the rest of the word is matched again (E), and seven typed cover the
+  // first seven letters of CONCRETE, so the last E is not yet typed.
+  entry(
+    "harbor concrte",
+    "a swap that ends the last typed word, the rest of the word matched again",
+    [m("HARBOR CONCRETE"), p(TAIL)],
+    [m("HARBOR CONCR"), c("ET"), p("E PUMPING CO., INC.")],
+    [m("HARBOR CONCRET"), p("E PUMPING CO., INC.")],
   ),
 ];

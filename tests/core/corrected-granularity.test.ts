@@ -10,7 +10,7 @@ import {
 import golden from "./fixtures/typo-highlights.json";
 import { CORRECTED_CASES, LABEL, c, m, p } from "./support/corrected-cases";
 
-// The parts the autocomplete service serializes for one name typed nine ways,
+// The parts the autocomplete service serializes for one name typed twelve ways,
 // and what the components draw of them: the whole word the service marked
 // (`token`), or the letters typed (`substring`); and a corrected letter either
 // as its own mark (the underline and background emphases) or as an ordinary
