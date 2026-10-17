@@ -9,6 +9,7 @@ import {
   parseErrorEnvelope,
   parseMintResponse,
   parseSuggestResponse,
+  queryTokens,
   validationErrors,
 } from "@baselayer-sdk/autocomplete";
 
@@ -20,6 +21,12 @@ import {
   sampleToken,
 } from "../../site/demo/sample";
 import { answerSample } from "../../site/demo/sample-api";
+import {
+  correctedLetters,
+  respelling,
+  serviceHighlightFor,
+} from "../../site/demo/sample";
+import typoGolden from "../core/fixtures/typo-highlights.json";
 import { parseSearch } from "../../site/demo/searches";
 
 const ALL = ["businesses", "people", "addresses"] as const;
@@ -613,6 +620,196 @@ describe("the made-up API's business search", () => {
 
     expect(reply.status).toBe(422);
     expect(reply.body).toMatchObject({ code: 3040 });
+  });
+});
+
+describe("the made-up API's typo tolerance", () => {
+  // A stand-in for the autocomplete service's own, enough to see the dotted
+  // underline in the demo: one wrong letter in a typed word of five or more.
+  type Part = { text: string; matched: boolean; corrected?: true };
+
+  function highlightsFor(path: string): Part[][] {
+    const reply = get(path);
+    expect(reply.status).toBe(200);
+    return (
+      reply.body as { suggestions: { highlight: Part[] }[] }
+    ).suggestions.map(row => row.highlight);
+  }
+
+  it("finds a name through a word typed with one wrong letter, and marks the letter it changed", () => {
+    const [first] = highlightsFor("/autocomplete/businesses?q=harbur");
+
+    // The made-up rows' parts are one per word and per run between words.
+    expect(first!.slice(0, 3)).toEqual([
+      { text: "HARB", matched: true },
+      { text: "O", matched: false, corrected: true },
+      { text: "R", matched: true },
+    ]);
+    expect(first!.slice(3).every(part => !part.matched)).toBe(true);
+    expect(first!.slice(3).some(part => "corrected" in part)).toBe(false);
+    expect(first!.map(part => part.text).join("")).toBe(
+      "HARBOR CONCRETE PUMPING CO., INC.",
+    );
+  });
+
+  it("answers what the contract describes, so the SDK reads it", () => {
+    const reply = get("/autocomplete/businesses?q=harbur");
+
+    const parsed = parseSuggestResponse("businesses", reply.body);
+    expect(
+      parsed.suggestions[0]?.highlight?.some(part => part.corrected === true),
+    ).toBe(true);
+  });
+
+  it("corrects nothing in a word typed right, and never carries the flag on an exact row", () => {
+    for (const parts of highlightsFor("/autocomplete/businesses?q=harbor")) {
+      for (const part of parts) {
+        expect(part).not.toHaveProperty("corrected");
+      }
+    }
+  });
+
+  it("corrects nothing below four letters, where a letter is too much of the word", () => {
+    expect(highlightsFor("/autocomplete/businesses?q=harb")).not.toEqual([]);
+    expect(highlightsFor("/autocomplete/businesses?q=hax")).toEqual([]);
+  });
+
+  it("never corrects a filter: a person name typed wrong finds no one", () => {
+    const reply = get(
+      "/autocomplete/businesses?q=harbor&person.name=priyo%20ramam",
+    );
+
+    expect(reply.status).toBe(200);
+    expect((reply.body as { suggestions: unknown[] }).suggestions).toEqual([]);
+  });
+});
+
+describe("the made-up API's typo kinds, against the service's own answers", () => {
+  // The service's `highlight` for HARBOR CONCRETE PUMPING CO., INC. typed twelve
+  // ways (tests/core/fixtures/typo-highlights.json, from the real path of
+  // osiris-app #6764). The demo's API answers with a port of the service's
+  // letter-flagging, and is held to every one of them, so the two cannot
+  // disagree on this name.
+  const { label, cases } = typoGolden;
+
+  it.each(cases)("$typed ($kind): the parts are the service's", entry => {
+    expect(serviceHighlightFor(label, queryTokens(entry.typed))).toEqual(
+      entry.highlight,
+    );
+  });
+
+  it.each(cases)(
+    "$typed ($kind): the route answers the row with the service's parts",
+    entry => {
+      const reply = get(
+        `/autocomplete/businesses?q=${encodeURIComponent(entry.typed)}`,
+      );
+
+      expect(reply.status).toBe(200);
+      const rows = (
+        reply.body as { suggestions: { label: string; highlight: unknown }[] }
+      ).suggestions;
+      expect(rows.find(row => row.label === label)?.highlight).toEqual(
+        entry.highlight,
+      );
+    },
+  );
+
+  it("reads every typed text through the contract's parser", () => {
+    for (const { typed } of cases) {
+      const reply = get(
+        `/autocomplete/businesses?q=${encodeURIComponent(typed)}`,
+      );
+
+      expect(() =>
+        parseSuggestResponse("businesses", reply.body),
+      ).not.toThrow();
+    }
+  });
+});
+
+describe("the made-up API's corrected letter at the end of a word, before the next", () => {
+  // `harbro concrete`: the swap ends the first word. The service keeps the space
+  // after a corrected letter in the matched part of the next word (its
+  // `mark_corrected` splits the letters out of a matched part that already holds
+  // the space), so the mark runs on across it as it does for the same words
+  // typed right.
+  const { label } = typoGolden;
+  const tail = " PUMPING CO., INC.";
+
+  it("marks the space with the next word, not with the corrected letters", () => {
+    expect(serviceHighlightFor(label, queryTokens("harbro concrete"))).toEqual([
+      { text: "HARB", matched: true },
+      { text: "OR", matched: false, corrected: true },
+      { text: " CONCRETE", matched: true },
+      { text: tail, matched: false },
+    ]);
+  });
+
+  it("is one run of marks, as the words typed right are", () => {
+    expect(serviceHighlightFor(label, queryTokens("harbor concrete"))).toEqual([
+      { text: "HARBOR CONCRETE", matched: true },
+      { text: tail, matched: false },
+    ]);
+  });
+
+  it("leaves the space plain when no second word is typed", () => {
+    expect(serviceHighlightFor(label, queryTokens("harbro"))).toEqual([
+      { text: "HARB", matched: true },
+      { text: "OR", matched: false, corrected: true },
+      { text: " CONCRETE PUMPING CO., INC.", matched: false },
+    ]);
+  });
+});
+
+describe("the letters a typed word had wrong, as the service flags them", () => {
+  const at =
+    (...indexes: number[]) =>
+    (length: number) =>
+      Array.from({ length }, (_, index) => indexes.includes(index));
+
+  it("flags a substituted letter, a letter left out and both of a swap", () => {
+    expect(correctedLetters("harbur", "harbor")).toEqual(at(4)(6));
+    expect(correctedLetters("harbr", "harbor")).toEqual(at(4)(6));
+    expect(correctedLetters("harbro", "harbor")).toEqual(at(4, 5)(6));
+    // A letter left out at the very end.
+    expect(correctedLetters("harbo", "harbor")).toEqual(at(5)(6));
+  });
+
+  it("points at nothing for equal words, a letter too many or two edits", () => {
+    expect(correctedLetters("harbor", "harbor")).toBeNull();
+    expect(correctedLetters("harbbor", "harbor")).toBeNull();
+    expect(correctedLetters("hurbur", "harbor")).toBeNull();
+    expect(correctedLetters("hrabor", "harbor")).toEqual(at(1, 2)(6));
+    expect(correctedLetters("hxrbxr", "harbor")).toBeNull();
+  });
+
+  it("reads a typed word as a respelling only as the service does", () => {
+    /** The stored letters it points at; null when it is no respelling. */
+    const flagged = (word: string, token: string) => {
+      const flags = respelling(word, token);
+      return flags === null
+        ? null
+        : flags.flatMap((flag, index) => (flag ? [index] : []));
+    };
+
+    // A substitution, a deletion and a swap point at letters; an extra letter at none.
+    expect(flagged("harbor", "harbur")).toEqual([4]);
+    expect(flagged("harbor", "harbr")).toEqual([4]);
+    expect(flagged("harbor", "harbro")).toEqual([4, 5]);
+    expect(flagged("harbor", "harbbor")).toEqual([]);
+    // A prefix whose last typed letter is wrong points at it, the rest of the
+    // word being marked whole, not flagged.
+    expect(flagged("harbor", "harbu")).toEqual([4]);
+    // Not a respelling: a token that starts the word, a wrong first letter, a
+    // short token, a short word, a word with a digit, a legal suffix.
+    expect(flagged("harbor", "harb")).toBeNull();
+    expect(flagged("harbor", "marbor")).toBeNull();
+    expect(flagged("harbor", "har")).toBeNull();
+    expect(flagged("bay", "baz")).toBeNull();
+    expect(flagged("route66", "route65")).toBeNull();
+    expect(flagged("inc", "inx")).toBeNull();
+    expect(flagged("harbor", "zebra")).toBeNull();
   });
 });
 

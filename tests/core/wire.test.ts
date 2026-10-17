@@ -743,6 +743,7 @@ describe("a key the contract requires", () => {
   const routeOf = {
     businesses: "businesses",
     businesses_filtered: "businesses",
+    businesses_corrected: "businesses",
     people: "people",
     addresses: "addresses",
     invalid_request: "businesses",

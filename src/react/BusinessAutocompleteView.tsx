@@ -57,8 +57,10 @@ import {
   countsText,
   useRoleColumn,
   lookVariables,
+  correctedAsOf,
   marked,
   type ClassFor,
+  type MarkClasses,
   type SlotName,
 } from "./viewParts";
 
@@ -234,7 +236,11 @@ function DefaultRow({
   const region = look.matchEmphasisRegion;
   // Plain draws none of the marks, which is no parts at all.
   const parts = look.matchEmphasis !== "plain" ? item.highlight : [];
-  const markClass = cx("mark", "bl-ac-mark");
+  const marks: MarkClasses = {
+    mark: cx("mark", "bl-ac-mark"),
+    corrected: cx("corrected", "bl-ac-corrected"),
+  };
+  const correctedAs = correctedAsOf(look.matchEmphasis);
   const address = addressLineOf(item);
   const people = peopleLineOf(item);
   const structure = structureLabel(item.structure, text.structures);
@@ -265,12 +271,13 @@ function DefaultRow({
       highlight ?? [],
       region,
       queryTokens(typed ?? ""),
+      correctedAs,
     );
     if (sent !== null) {
-      return marked(label, sent, markClass);
+      return marked(label, sent, marks);
     }
     return matched
-      ? marked(label, [{ text: label, matched: true }], markClass)
+      ? marked(label, [{ text: label, matched: true }], marks)
       : label;
   };
   const addressSuffix =
@@ -418,8 +425,8 @@ function DefaultRow({
         >
           {marked(
             item.label,
-            partsFor(item.label, parts, region, tokens),
-            markClass,
+            partsFor(item.label, parts, region, tokens, correctedAs),
+            marks,
           )}
         </span>
         {draw(badge)}
@@ -433,8 +440,8 @@ function DefaultRow({
           also{" "}
           {marked(
             item.matched_name,
-            partsFor(item.matched_name, parts, region, tokens),
-            markClass,
+            partsFor(item.matched_name, parts, region, tokens, correctedAs),
+            marks,
           )}
         </span>
       )}

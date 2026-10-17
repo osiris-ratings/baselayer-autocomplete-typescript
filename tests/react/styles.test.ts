@@ -35,6 +35,108 @@ function rule(selector: string): string {
   return bodies.map(({ body }) => body).join("\n");
 }
 
+describe("the letters the search corrected", () => {
+  const FIELDS = [
+    ".bl-ac-name",
+    ".bl-ac-line-name",
+    ".bl-ac-also",
+    ".bl-ac-address",
+    ".bl-ac-people",
+  ];
+
+  it.each(FIELDS)(
+    "%s: under the underline emphasis, are the match's own line in its own color, dotted",
+    field => {
+      const solid = rule(`${field}[data-emphasis="underline"] .bl-ac-mark`);
+      const dotted = rule(
+        `${field}[data-emphasis="underline"] .bl-ac-corrected`,
+      );
+
+      // The match's line, so the same color, thickness and offset: beside a
+      // solid one the two line up...
+      for (const declaration of [
+        "text-decoration-color: var(--bl-ac-mark, var(--bl-ac-underline));",
+        "text-decoration-thickness: 1.5px;",
+        "text-underline-offset: 3px;",
+      ]) {
+        expect(solid).toContain(declaration);
+        expect(dotted).toContain(declaration);
+      }
+      // ...only dotted.
+      expect(solid).toContain("text-decoration: underline;");
+      expect(dotted).toContain("text-decoration: underline dotted;");
+    },
+  );
+
+  it.each(FIELDS)(
+    "%s: under the background emphasis, are stripes of the match's fill, in the solid fill's letter color",
+    field => {
+      const body = rule(
+        `${field}[data-emphasis="background"] .bl-ac-corrected`,
+      );
+
+      expect(body).toContain("repeating-linear-gradient(");
+      expect(body).toContain("-45deg");
+      // Two colors the component sets from the match color, else the marker
+      // and the marker at 40%, which lets the menu's ground through; the first
+      // is the pill's own, never clear.
+      expect(body).toContain(
+        "var(--bl-ac-stripe, var(--bl-ac-mark, var(--bl-ac-marker)))",
+      );
+      expect(body).toContain("--bl-ac-stripe-alt");
+      expect(body).toMatch(
+        /color-mix\(\s*in srgb,\s*var\(--bl-ac-mark, var\(--bl-ac-marker\)\) 40%,\s*transparent\s*\)/,
+      );
+      expect(body).not.toMatch(/\)\s*0 2px,\s*transparent/);
+      // The reach and the corners of a mark, so that a run's two ends are
+      // pill ends; where two spans touch the join rules below take both away.
+      expect(body).toContain("margin: 0 -0.125rem;");
+      expect(body).toContain("padding: 0 0.125rem;");
+      expect(body).toContain("border-radius: 0.25rem;");
+      expect(body).not.toContain("position");
+      // The letters take the color the solid fill gives its text.
+      expect(body).toContain("color: var(--bl-ac-mark-fg);");
+      expect(
+        rule(`${field}[data-emphasis="background"] .bl-ac-mark`),
+      ).toContain("color: var(--bl-ac-mark-fg);");
+    },
+  );
+
+  it("make a run of marks and corrected letters one continuous shape: where two touch, no reach and no rounded corner", () => {
+    for (const side of ["left", "right"]) {
+      expect(css).toMatch(
+        new RegExp(
+          `\\[data-join~="${side}"\\]\\s*\\{\\s*margin-${side}: 0;\\s*padding-${side}: 0;\\s*border-top-${side}-radius: 0;\\s*border-bottom-${side}-radius: 0;`,
+        ),
+      );
+    }
+    // Under the background emphasis only, on the marks and the corrected ones.
+    expect(css).toMatch(
+      /\)\[data-emphasis="background"\]\s*:is\(\.bl-ac-mark, \.bl-ac-corrected\)\[data-join~="left"\]/,
+    );
+  });
+
+  it("fade with the fill and the underline beside them on a disabled line", () => {
+    for (const [emphasis, fade] of [
+      ["underline", "text-decoration-color: color-mix("],
+      ["background", "background: repeating-linear-gradient("],
+    ]) {
+      const body = rule(
+        `.bl-ac-group > .bl-ac-row:not([data-enabled]) [data-emphasis="${emphasis}"] .bl-ac-corrected`,
+      );
+      expect(body).toContain(fade);
+      expect(body).toContain("var(--bl-ac-disabled-mark, 67%)");
+    }
+  });
+
+  it("have no color of their own to set, and no rule under weight or ink, which draw them as matches", () => {
+    expect(css).not.toContain("--bl-ac-corrected");
+    expect(css).not.toMatch(
+      /\[data-emphasis="(weight|ink|plain)"\][^{}]*\.bl-ac-corrected/,
+    );
+  });
+});
+
 describe("ink emphasis", () => {
   it("inks a matched word in --bl-ac-ink-mark, else the title's color", () => {
     expect(rule('.bl-ac-name[data-emphasis="ink"] > .bl-ac-mark')).toContain(

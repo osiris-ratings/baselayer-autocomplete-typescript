@@ -25,7 +25,8 @@ import {
   SAMPLE_ADDRESSES,
   SAMPLE_PEOPLE,
   SAMPLE_SUGGESTIONS,
-  highlightFor,
+  respelling,
+  serviceHighlightFor,
 } from "./sample";
 import { SAMPLE_SEARCH, SAMPLE_WATCHLISTS } from "./sample-search";
 import type { Address, Search } from "./searches";
@@ -120,10 +121,19 @@ function mint(request: SampleRequest, options: SampleOptions): SampleReply {
   };
 }
 
-/** Whether every typed token starts a word of `text`. */
-function fits(text: string, tokens: readonly string[]): boolean {
+/**
+ * Whether every typed token starts a word of `text`; with `typos`, also one a
+ * word is a letter off, as the autocomplete service finds a name through a typo
+ * in the query. A filter is never corrected.
+ */
+function fits(text: string, tokens: readonly string[], typos = false): boolean {
   const words = text.toLowerCase().split(/[^a-z0-9]+/);
-  return tokens.every(token => words.some(word => word.startsWith(token)));
+  return tokens.every(token =>
+    words.some(
+      word =>
+        word.startsWith(token) || (typos && respelling(word, token) !== null),
+    ),
+  );
 }
 
 function list(value: string | null): string[] {
@@ -208,7 +218,7 @@ function rowsFor(
       const person = params.get("person.name")?.toLowerCase() ?? "";
       const address = params.get("address.text") ?? "";
       return SAMPLE_SUGGESTIONS.filter(row =>
-        fits(`${row.label} ${row.matched_name ?? ""}`, tokens),
+        fits(`${row.label} ${row.matched_name ?? ""}`, tokens, true),
       ).flatMap(row => {
         if (states.length > 0 && !row.states.some(s => states.includes(s))) {
           return [];
@@ -246,7 +256,7 @@ function rowsFor(
         place.length > 0 &&
         item.role !== "agent" &&
         ownOffices(item).some(label => fits(label, place));
-      return SAMPLE_PEOPLE.filter(row => fits(row.label, tokens)).flatMap(
+      return SAMPLE_PEOPLE.filter(row => fits(row.label, tokens, true)).flatMap(
         row => {
           if (!ofBusiness && place.length === 0) return [row];
           const { businesses, addresses } = row.related;
@@ -286,7 +296,7 @@ function rowsFor(
       const firm = queryTokens(params.get("business.name") ?? "");
       return SAMPLE_ADDRESSES.filter(
         row =>
-          fits(row.label, tokens) &&
+          fits(row.label, tokens, true) &&
           (states.length === 0 ||
             (row.components.state !== null &&
               states.includes(row.components.state))),
@@ -366,7 +376,7 @@ function suggest(
     return {
       ...row,
       // Only a business has another name that matched.
-      highlight: highlightFor(
+      highlight: serviceHighlightFor(
         ("matched_name" in row ? row.matched_name : null) ?? row.label,
         tokens,
       ),

@@ -72,7 +72,9 @@ import {
   countsText,
   useRoleColumn,
   lookVariables,
+  correctedAsOf,
   marked,
+  type MarkClasses,
   type SlotName,
 } from "./viewParts";
 
@@ -622,7 +624,11 @@ function GroupedView<R extends GroupedRoute>({
     ).map(state => state.trim().toUpperCase()),
   );
   const region = look.matchEmphasisRegion;
-  const markClass = cx("mark", "bl-ac-mark");
+  const marks: MarkClasses = {
+    mark: cx("mark", "bl-ac-mark"),
+    corrected: cx("corrected", "bl-ac-corrected"),
+  };
+  const correctedAs = correctedAsOf(look.matchEmphasis);
   /**
    * What was typed into the filter that matched each kind of related item:
    * its parts are cut at it, as a row's are at what was typed in the field.
@@ -644,7 +650,13 @@ function GroupedView<R extends GroupedRoute>({
   const relatedParts = (text: string, item: RelatedItem) =>
     look.matchEmphasis === "plain"
       ? null
-      : partsFor(text, item.highlight ?? [], region, filterTokens[item.type]);
+      : partsFor(
+          text,
+          item.highlight ?? [],
+          region,
+          filterTokens[item.type],
+          correctedAs,
+        );
   const entity = route === "people" ? "person" : "address";
   const hasRows = combobox.isOpen && rows.length > 0;
   const hasCountRow = combobox.isOpen && hasFooter;
@@ -720,7 +732,7 @@ function GroupedView<R extends GroupedRoute>({
             {marked(
               first.label,
               relatedParts(first.label, first),
-              markClass,
+              marks,
               "grouped-match",
             )}
             {more > 0 ? ` ${text.more(more)}` : ""}
@@ -882,7 +894,7 @@ function GroupedView<R extends GroupedRoute>({
                 {marked(
                   of.item.matched_name,
                   relatedParts(of.item.matched_name, of.item),
-                  markClass,
+                  marks,
                   "grouped-match",
                 )}
               </span>
@@ -990,8 +1002,8 @@ function GroupedView<R extends GroupedRoute>({
                     >
                       {marked(
                         row.label,
-                        partsFor(row.label, parts, region, tokens),
-                        markClass,
+                        partsFor(row.label, parts, region, tokens, correctedAs),
+                        marks,
                         `${entity}-suggestion-match`,
                       )}
                     </span>,
@@ -1011,12 +1023,7 @@ function GroupedView<R extends GroupedRoute>({
                               parts !== null ? look.matchEmphasis : undefined
                             }
                           >
-                            {marked(
-                              item.label,
-                              parts,
-                              markClass,
-                              "grouped-match",
-                            )}
+                            {marked(item.label, parts, marks, "grouped-match")}
                           </span>,
                           headId,
                         );

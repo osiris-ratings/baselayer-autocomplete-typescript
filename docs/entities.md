@@ -97,6 +97,14 @@ Each type adds its own fields:
 | `person`   | `states`: the states of the businesses they hold a role on; a person has no jurisdiction of its own         |
 | `address`  | `components`: `line1`, `line2`, `city`, `state`, `postal_code`, each null where the filing did not carry it |
 
+A row's `highlight` is the parts of the name the query reached, `{ text,
+matched }` each, which concatenate to that name. When the search corrected a
+typo, the corrected word is split by letter and the letters it changed carry
+`corrected: true` (and `matched: false`): the key is there only then, so a
+row that was not corrected has the two keys it always had. The components draw
+a corrected letter as the match emphasis says: dotted, striped, or as an
+ordinary match ([styling](styling.md#letters-the-search-corrected)).
+
 `related` and `sources` carry one key per relation the route expands. Read
 `sources` before an empty `related` entry: an empty list under a source that
 is not `ok` means "not looked", never "none". `count` is every one there is,

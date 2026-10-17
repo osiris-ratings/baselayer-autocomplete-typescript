@@ -16,6 +16,7 @@ import {
   ROUTES,
   orderedStates,
   type BusinessStates,
+  type CorrectedAs,
   type HighlightPart,
   type Look,
   type RelatedItem,
@@ -24,7 +25,7 @@ import {
   type Route,
 } from "@baselayer-sdk/autocomplete";
 
-import { disabledInks, markTextColor } from "./disabled";
+import { disabledInks, markTextColor, stripeColors } from "./disabled";
 import type { AutocompleteMessages } from "./messages";
 
 /**
@@ -60,6 +61,7 @@ export type SlotName =
   | "name"
   | "also"
   | "mark"
+  | "corrected"
   | "structure"
   | "states"
   | "state"
@@ -169,26 +171,80 @@ export function lookVariables(look: Look): CSSProperties {
   if (markText !== null) {
     vars["--bl-ac-mark-fg"] = markText;
   }
+  if (look.matchEmphasis === "background" && look.matchEmphasisColor !== null) {
+    // A corrected letter's stripes, in two colors that the letters above read
+    // on alike. Without a color of the host's the stylesheet stripes the
+    // default marker against the menu's ground.
+    const stripes = stripeColors(look);
+    vars["--bl-ac-stripe"] = stripes.solid;
+    vars["--bl-ac-stripe-alt"] = stripes.alt;
+  }
   return vars as CSSProperties;
 }
 
 /**
+ * How an emphasis draws a letter the search corrected: weight and ink mark
+ * nothing for a fuzzy match, so it is drawn as an ordinary match; underline and
+ * background give it a mark of its own (dotted, striped).
+ */
+export function correctedAsOf(emphasis: Look["matchEmphasis"]): CorrectedAs {
+  return emphasis === "weight" || emphasis === "ink" ? "match" : "mark";
+}
+
+/** The classes a marked name's spans carry: a match mark's, and a corrected letter's. */
+export interface MarkClasses {
+  mark: string | undefined;
+  corrected: string | undefined;
+}
+
+/**
  * `text` with the marks on it: the parts `partsFor` gives this line, the
- * matched ones as spans; the text as it is when the parts belong to the row's
- * other name, or there are none.
+ * matched ones as spans and the letters the search corrected as spans of their
+ * own (`data-corrected`, for the stylesheet's dotted underline and for a host to
+ * key on); the text as it is when the parts belong to the row's other name, or
+ * there are none. A matched part is a mark whatever else it says.
  */
 export function marked(
   text: string,
   parts: HighlightPart[] | null,
-  markClass: string | undefined,
+  classNames: MarkClasses,
   testId = "business-suggestion-match",
 ): ReactNode {
   if (parts === null) {
     return text;
   }
+  const isSpan = (part: HighlightPart | undefined) =>
+    part !== undefined && (part.matched || part.corrected === true);
+  // Where a mark and a corrected letter touch they are one run, which the
+  // stylesheet draws as one shape: `data-join` says on which sides a span
+  // touches another. Only a name with a corrected letter has any.
+  const corrected = parts.some(
+    part => !part.matched && part.corrected === true,
+  );
+  const joinOf = (index: number): string | undefined => {
+    const sides = [
+      isSpan(parts[index - 1]) ? "left" : null,
+      isSpan(parts[index + 1]) ? "right" : null,
+    ].filter(side => side !== null);
+    return corrected && sides.length > 0 ? sides.join(" ") : undefined;
+  };
   return parts.map((part, index) =>
     part.matched ? (
-      <span key={index} className={markClass} data-testid={testId}>
+      <span
+        key={index}
+        className={classNames.mark}
+        data-testid={testId}
+        data-join={joinOf(index)}
+      >
+        {part.text}
+      </span>
+    ) : part.corrected === true ? (
+      <span
+        key={index}
+        className={classNames.corrected}
+        data-corrected="true"
+        data-join={joinOf(index)}
+      >
         {part.text}
       </span>
     ) : (

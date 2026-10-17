@@ -696,6 +696,139 @@ function marksOf(row: HTMLElement | undefined): (string | null)[] {
   ).map(node => node.textContent);
 }
 
+describe("the letters the search corrected", () => {
+  // "cinder" typed as "cindor": the autocomplete service splits the corrected
+  // word by letter, the letters that answer what was typed matched, the one it
+  // changed `corrected`.
+  const typo: BusinessSuggestion = {
+    ...stable,
+    highlight: [
+      { text: "CIND", matched: true },
+      { text: "E", matched: false, corrected: true },
+      { text: "R", matched: true },
+      { text: " RACING STABLES, LLC", matched: false },
+    ],
+  };
+
+  function correctedOf(row: HTMLElement | undefined): (string | null)[] {
+    return Array.from(row?.querySelectorAll("[data-corrected]") ?? []).map(
+      node => node.textContent,
+    );
+  }
+
+  it("draws a corrected letter as a span of its own, beside the matched marks and not one of them", () => {
+    renderTypeahead({ suggestions: [typo], found: 1 });
+
+    const [row] = screen.getAllByTestId("business-suggestion");
+    expect(screen.getByTestId("business-suggestion-name")).toHaveTextContent(
+      "CINDER RACING STABLES, LLC",
+    );
+    expect(marksOf(row)).toEqual(["CIND", "R"]);
+    expect(correctedOf(row)).toEqual(["E"]);
+    const [letter] = row!.querySelectorAll("[data-corrected]");
+    expect(letter).toHaveClass("bl-ac-corrected");
+    expect(letter).not.toHaveClass("bl-ac-mark");
+    expect(letter).toHaveAttribute("data-corrected", "true");
+    expect(letter).not.toHaveAttribute("data-testid");
+  });
+
+  it("draws it the same under the token region", () => {
+    renderTypeahead({
+      suggestions: [typo],
+      found: 1,
+      look: { ...DEFAULT_LOOK, matchEmphasisRegion: "token" },
+    });
+
+    const [row] = screen.getAllByTestId("business-suggestion");
+    expect(marksOf(row)).toEqual(["CIND", "R"]);
+    expect(correctedOf(row)).toEqual(["E"]);
+  });
+
+  it("gives a host its own class for them, beside the stylesheet's", () => {
+    renderTypeahead({
+      suggestions: [typo],
+      found: 1,
+      classNames: { corrected: "host-corrected" },
+    });
+
+    const [letter] = document.querySelectorAll("[data-corrected]");
+    expect(letter).toHaveClass("bl-ac-corrected", "host-corrected");
+  });
+
+  it("leaves the styling to the host when unstyled, with the attribute to key on", () => {
+    renderTypeahead({
+      suggestions: [typo],
+      found: 1,
+      unstyled: true,
+      classNames: { corrected: "host-corrected" },
+    });
+
+    const [letter] = document.querySelectorAll("[data-corrected]");
+    expect(letter?.getAttribute("class")).toBe("host-corrected");
+    expect(letter).toHaveAttribute("data-corrected", "true");
+  });
+
+  it("draws a row the search did not correct as it always was: no corrected span, no class", () => {
+    renderTypeahead({ suggestions: [stableMarked], found: 1 });
+
+    expect(document.querySelectorAll("[data-corrected]")).toHaveLength(0);
+    expect(document.querySelector(".bl-ac-corrected")).toBeNull();
+    expect(marksOf(screen.getAllByTestId("business-suggestion")[0])).toEqual([
+      "CIND",
+    ]);
+  });
+
+  it("says on which sides a mark and a corrected letter touch, only on a name that has a corrected letter", () => {
+    renderTypeahead({ suggestions: [typo], found: 1 });
+
+    const name = screen.getByTestId("business-suggestion-name");
+    const joins = [...name.querySelectorAll("[data-join]")].map(span => [
+      span.textContent,
+      span.getAttribute("data-join"),
+    ]);
+    // CIND, E, R touch in a row; the plain text after R breaks the run.
+    expect(joins).toEqual([
+      ["CIND", "right"],
+      ["E", "left right"],
+      ["R", "left"],
+    ]);
+
+    cleanup();
+    renderTypeahead({ suggestions: [stableMarked], found: 1 });
+    expect(document.querySelector("[data-join]")).toBeNull();
+  });
+
+  it("draws none under the plain emphasis, which draws no marks at all", () => {
+    renderTypeahead({
+      suggestions: [typo],
+      found: 1,
+      look: { ...DEFAULT_LOOK, matchEmphasis: "plain" },
+    });
+
+    const [row] = screen.getAllByTestId("business-suggestion");
+    expect(correctedOf(row)).toEqual([]);
+    expect(marksOf(row)).toEqual([]);
+    expect(screen.getByTestId("business-suggestion-name")).toHaveTextContent(
+      "CINDER RACING STABLES, LLC",
+    );
+  });
+
+  it("draws a matched part as matched even if it carries the flag, which the contract never sends", () => {
+    const odd: BusinessSuggestion = {
+      ...stable,
+      highlight: [
+        { text: "CINDER", matched: true, corrected: true },
+        { text: " RACING STABLES, LLC", matched: false },
+      ],
+    };
+    renderTypeahead({ suggestions: [odd], found: 1 });
+
+    const [row] = screen.getAllByTestId("business-suggestion");
+    expect(correctedOf(row)).toEqual([]);
+    expect(marksOf(row)).toEqual(["CIND"]);
+  });
+});
+
 describe("the match marks", () => {
   it("marks the typed characters of the words the tokens start, and keeps the name whole, underlined by default", () => {
     const { root } = renderTypeahead({ suggestions: [stableMarked], found: 1 });

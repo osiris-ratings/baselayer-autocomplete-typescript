@@ -423,25 +423,235 @@ function cutMarked(text: string, tokens: string[]): HighlightPart[] {
  * (`merge_whitespace_between_matches`): adjacent parts of one kind become one,
  * and whitespace between two marked parts is marked with them, so two words
  * typed out in full are one span — the substring region grows into the
- * whole-word mark as the typing does.
+ * whole-word mark as the typing does. A corrected letter is a kind of its own:
+ * it joins another corrected letter, never the plain text beside it, and it is
+ * part of a mark, so whitespace between it and the next marked word is marked
+ * with that word.
  */
 function mergeParts(parts: HighlightPart[]): HighlightPart[] {
   const pieces = parts.filter(part => part.text.length > 0);
   const out: HighlightPart[] = [];
+  /** A part that is part of a mark: a match, or a letter corrected within one. */
+  const marks = (part: HighlightPart | undefined) =>
+    part !== undefined && (part.matched || part.corrected === true);
   pieces.forEach((part, index) => {
     const last = out[out.length - 1];
     const bridges =
       !part.matched &&
+      part.corrected !== true &&
       /^\s+$/.test(part.text) &&
-      last?.matched === true &&
-      pieces[index + 1]?.matched === true;
-    if (last !== undefined && (bridges || last.matched === part.matched)) {
+      marks(last) &&
+      marks(pieces[index + 1]);
+    const alike =
+      last?.matched === part.matched &&
+      (last?.corrected ?? false) === (part.corrected ?? false);
+    if (last !== undefined && bridges) {
+      if (last.corrected === true) {
+        // The space between a corrected letter and the next word goes with the
+        // word, as the service keeps it, and not with the corrected letter.
+        out.push({ text: part.text, matched: true });
+      } else {
+        last.text += part.text;
+      }
+    } else if (last !== undefined && alike) {
       last.text += part.text;
     } else {
       out.push({ ...part });
     }
   });
   return out;
+}
+
+/**
+ * How a letter the search corrected is drawn: `mark`, as a mark of its own
+ * (the underline and background emphases draw it dotted and striped), or
+ * `match`, as an ordinary match (weight and ink mark nothing for a fuzzy match,
+ * so the word looks like any other match).
+ */
+export type CorrectedAs = "mark" | "match";
+
+/** One letter of a name, with what its part said of it. */
+interface Letter {
+  character: string;
+  matched: boolean;
+  corrected: boolean;
+}
+
+function lettersOf(parts: HighlightPart[]): Letter[] {
+  return parts.flatMap(part =>
+    Array.from(part.text).map(character => ({
+      character,
+      matched: part.matched,
+      // A part is a match whatever else it says.
+      corrected: !part.matched && part.corrected === true,
+    })),
+  );
+}
+
+/** Adjacent letters of one kind as parts. */
+function partsOfLetters(letters: Letter[]): HighlightPart[] {
+  const out: HighlightPart[] = [];
+  for (const { character, matched, corrected } of letters) {
+    const last = out[out.length - 1];
+    if (
+      last !== undefined &&
+      last.matched === matched &&
+      (last.corrected === true) === corrected
+    ) {
+      last.text += character;
+    } else {
+      out.push({
+        text: character,
+        matched,
+        ...(corrected ? { corrected: true as const } : {}),
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * How many letters of a corrected word the typed `token` covers, or null when
+ * the token is no spelling of it. The corrected letters are where the typed
+ * word had letters wrong, and each is one of three things: a letter
+ * substituted (it stands for a typed letter), a letter left out (it stands for
+ * none) or one of a swap (two corrected letters stand for the two typed the
+ * other way round). The other letters are the typed ones. Aligning the two lets
+ * a deletion shift every letter after it, so `harbr` (five typed) covers all six
+ * letters of HARBOR, the O marked, where `harbu` covers the first five.
+ *
+ * Several readings may fit: the fewest edits wins, a swap being one edit where
+ * a substitution and a deletion are two (two corrected letters side by side are
+ * a swap, as the service flags them), and of equal readings the one that covers
+ * more, so a lone corrected letter that fits as left out covers the letter
+ * after it. Any number of corrected letters may be aligned, the service's one
+ * edit per word being no business of this: the word is covered through the
+ * furthest letter the typed text reaches, and the typed text must reach every
+ * corrected letter, or it is no spelling of the word (the field has moved on
+ * since the rows were answered).
+ */
+function coveredBy(
+  stored: string[],
+  corrected: boolean[],
+  token: string[],
+): number | null {
+  const typed = token.length;
+  // edits[i][j]: the fewest edits by which the first `i` stored letters account
+  // for the first `j` typed; Infinity where they cannot.
+  const edits = Array.from({ length: stored.length + 1 }, () =>
+    new Array<number>(typed + 1).fill(Infinity),
+  );
+  edits[0]![0] = 0;
+  const reach = (i: number, j: number, cost: number) => {
+    if (cost < edits[i]![j]!) {
+      edits[i]![j] = cost;
+    }
+  };
+  for (let i = 0; i < stored.length; i += 1) {
+    for (let j = 0; j <= typed; j += 1) {
+      const cost = edits[i]![j]!;
+      if (cost === Infinity) {
+        continue;
+      }
+      if (!corrected[i]) {
+        if (j < typed && token[j] === stored[i]) {
+          reach(i + 1, j + 1, cost);
+        }
+        continue;
+      }
+      if (j < typed) {
+        // Substituted, or left out while typed letters remain to be placed.
+        reach(i + 1, j + 1, cost + 1);
+        reach(i + 1, j, cost + 1);
+      }
+      if (
+        corrected[i + 1] &&
+        j + 1 < typed &&
+        token[j] === stored[i + 1] &&
+        token[j + 1] === stored[i]
+      ) {
+        reach(i + 2, j + 2, cost + 1);
+      }
+    }
+  }
+  const last = corrected.lastIndexOf(true);
+  let best: number | null = null;
+  for (let covered = last + 1; covered <= stored.length; covered += 1) {
+    const cost = edits[covered]![typed]!;
+    if (cost !== Infinity && (best === null || cost <= edits[best]![typed]!)) {
+      best = covered;
+    }
+  }
+  return best;
+}
+
+/**
+ * How many letters of a word with a corrected letter the typed text covers, or
+ * null when no typed token spells it (the word keeps the marks the service
+ * gave it).
+ */
+function correctedLength(word: Letter[], tokens: string[]): number | null {
+  const stored = word.map(letter => foldChar(letter.character));
+  if (stored.some(folded => Array.from(folded).length !== 1)) {
+    return null;
+  }
+  const corrected = word.map(letter => letter.corrected);
+  let best: number | null = null;
+  for (const token of tokens) {
+    const covered = coveredBy(stored, corrected, Array.from(token));
+    if (covered !== null && (best === null || covered > best)) {
+      best = covered;
+    }
+  }
+  return best;
+}
+
+/**
+ * The typed-characters region's parts for a name with a corrected letter. Each
+ * word is cut where the typed text ends, as `cutMarked` cuts a marked one; a
+ * corrected word is cut where the typed text, aligned to its letters, ends, so
+ * that a letter left out is covered and the letters after it typed are too.
+ */
+function correctedSubstring(
+  text: string,
+  parts: HighlightPart[],
+  tokens: string[],
+  correctedAs: CorrectedAs,
+): HighlightPart[] {
+  const letters = lettersOf(parts);
+  const unmark = (letter: Letter) => {
+    letter.matched = false;
+    letter.corrected = false;
+  };
+  let at = 0;
+  for (const piece of text.match(WORD_OR_GAP) ?? [text]) {
+    const size = Array.from(piece).length;
+    const word = letters.slice(at, at + size);
+    at += size;
+    if (!WORD.test(piece)) {
+      // Whitespace a marked part bridged is marked again by `mergeParts`.
+      word.forEach(unmark);
+    } else if (word.some(letter => letter.corrected)) {
+      const covered = correctedLength(word, tokens);
+      if (covered !== null) {
+        word.slice(covered).forEach(unmark);
+      }
+    } else if (word.every(letter => letter.matched)) {
+      const typed = typedPrefixLength(piece, tokens);
+      if (typed > 0 && typed < word.length) {
+        word.slice(typed).forEach(unmark);
+      }
+    }
+  }
+  if (correctedAs === "match") {
+    for (const letter of letters) {
+      if (letter.corrected) {
+        letter.corrected = false;
+        letter.matched = true;
+      }
+    }
+  }
+  return mergeParts(partsOfLetters(letters));
 }
 
 /**
@@ -455,15 +665,40 @@ function mergeParts(parts: HighlightPart[]): HighlightPart[] {
  * under `substring` each marked word is cut at the typed characters
  * (`cutMarked`), and the result is tidied the way the autocomplete service
  * tidies its own (`mergeParts`).
+ *
+ * A letter the search corrected arrives as a part of its own (`corrected`).
+ * Under `substring` a word with one is cut where the typed text, aligned to its
+ * letters, ends: a letter left out is covered and marked, and the untyped rest
+ * of the word stays plain. `correctedAs` says how it is drawn: as a mark of its
+ * own (`mark`, the default), or, for an emphasis that marks nothing for a fuzzy
+ * match, as an ordinary match (`match`). A name with no corrected letter is
+ * drawn as it always was.
  */
 export function partsFor(
   text: string,
   parts: HighlightPart[],
   region: MatchRegion,
   tokens: string[],
+  correctedAs: CorrectedAs = "mark",
 ): HighlightPart[] | null {
   if (parts.length === 0 || parts.map(part => part.text).join("") !== text) {
     return null;
+  }
+  if (parts.some(part => !part.matched && part.corrected === true)) {
+    if (region === "token") {
+      return correctedAs === "match"
+        ? mergeParts(
+            partsOfLetters(
+              lettersOf(parts).map(letter => ({
+                ...letter,
+                matched: letter.matched || letter.corrected,
+                corrected: false,
+              })),
+            ),
+          )
+        : parts;
+    }
+    return correctedSubstring(text, parts, tokens, correctedAs);
   }
   if (region === "token") {
     return parts;

@@ -539,6 +539,60 @@
   );
 }
 
+/* A corrected letter's dots and stripes fade as the underline and the fill
+   beside them do. */
+:is(.bl-ac-group-head, .bl-ac-group-line):not([data-enabled])
+  [data-emphasis="underline"]
+  .bl-ac-corrected,
+.bl-ac-group
+  > .bl-ac-row:not([data-enabled])
+  [data-emphasis="underline"]
+  .bl-ac-corrected {
+  text-decoration-color: color-mix(
+    in srgb,
+    var(--bl-ac-mark, var(--bl-ac-underline)) var(--bl-ac-disabled-mark, 67%),
+    var(--bl-ac-bg)
+  );
+}
+
+:is(.bl-ac-group-head, .bl-ac-group-line):not([data-enabled])
+  [data-emphasis="background"]
+  .bl-ac-corrected,
+.bl-ac-group
+  > .bl-ac-row:not([data-enabled])
+  [data-emphasis="background"]
+  .bl-ac-corrected {
+  color: color-mix(
+    in srgb,
+    var(--bl-ac-mark-fg) var(--bl-ac-disabled-mark, 67%),
+    var(--bl-ac-bg)
+  );
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(
+        in srgb,
+        var(--bl-ac-stripe, var(--bl-ac-mark, var(--bl-ac-marker)))
+          var(--bl-ac-disabled-mark, 67%),
+        var(--bl-ac-bg)
+      )
+      0 2px,
+    color-mix(
+        in srgb,
+        var(
+            --bl-ac-stripe-alt,
+            color-mix(
+              in srgb,
+              var(--bl-ac-mark, var(--bl-ac-marker)) 40%,
+              transparent
+            )
+          )
+          var(--bl-ac-disabled-mark, 67%),
+        var(--bl-ac-bg)
+      )
+      2px 4px
+  );
+}
+
 :is(.bl-ac-group-head, .bl-ac-group-line):not([data-enabled])
   :is(.bl-ac-name, .bl-ac-line-name)[data-emphasis="ink"]
   > .bl-ac-mark,
@@ -743,6 +797,26 @@
 }
 
 /*
+ * A letter the search corrected, the stored word's where the typed word had
+ * another, is in the word's mark but not the typed letters' own: under the
+ * underline emphasis its line is the same line, in the same color, dotted, so
+ * the word is underlined all the way along and the corrected letter is told
+ * from the typed ones. The background emphasis stripes it (below); weight and
+ * ink mark nothing for a fuzzy match, and the component draws the letter as an
+ * ordinary match there.
+ */
+.bl-ac-name[data-emphasis="underline"] .bl-ac-corrected,
+.bl-ac-line-name[data-emphasis="underline"] .bl-ac-corrected,
+.bl-ac-also[data-emphasis="underline"] .bl-ac-corrected,
+.bl-ac-address[data-emphasis="underline"] .bl-ac-corrected,
+.bl-ac-people[data-emphasis="underline"] .bl-ac-corrected {
+  text-decoration: underline dotted;
+  text-decoration-color: var(--bl-ac-mark, var(--bl-ac-underline));
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+/*
  * The background's fill reaches 0.125rem past the marked letters on both
  * sides. Every box that cuts a long field short makes that much room inside
  * its edges and gives it back in its margins, so nothing moves and a mark at
@@ -794,6 +868,77 @@
   color: var(--bl-ac-mark-fg);
   background: var(--bl-ac-mark, var(--bl-ac-marker));
   border-radius: 0.25rem;
+}
+
+/*
+ * A corrected letter under the background emphasis: the match's fill laid in
+ * diagonal stripes, as the demo's Hidden lines drawer lays its own (-45deg,
+ * half and half), a third as wide so that a letter shows more than one. The
+ * letters take the color the solid fill gives its text (`--bl-ac-mark-fg`), so
+ * the two stripes must read under it alike: the first is the match color, so
+ * the stripes join the pill, the second the same color more transparent, so
+ * the menu's ground shows through it, light or dark. With a match color of the
+ * host's the component sets them (`--bl-ac-stripe` and `--bl-ac-stripe-alt`),
+ * the second as transparent as the letters still read on once it is over the
+ * ground (AA where the pill has the room, else 3:1); on the default marker the
+ * letters keep their own ink, and the second is the marker at 40%.
+ */
+.bl-ac-name[data-emphasis="background"] .bl-ac-corrected,
+.bl-ac-line-name[data-emphasis="background"] .bl-ac-corrected,
+.bl-ac-also[data-emphasis="background"] .bl-ac-corrected,
+.bl-ac-address[data-emphasis="background"] .bl-ac-corrected,
+.bl-ac-people[data-emphasis="background"] .bl-ac-corrected {
+  margin: 0 -0.125rem;
+  padding: 0 0.125rem;
+  color: var(--bl-ac-mark-fg);
+  background: repeating-linear-gradient(
+    -45deg,
+    var(--bl-ac-stripe, var(--bl-ac-mark, var(--bl-ac-marker))) 0 2px,
+    var(
+        --bl-ac-stripe-alt,
+        color-mix(
+          in srgb,
+          var(--bl-ac-mark, var(--bl-ac-marker)) 40%,
+          transparent
+        )
+      )
+      2px 4px
+  );
+  border-radius: 0.25rem;
+}
+
+/*
+ * A match mark and the corrected letters among it are one pill: where two of
+ * them touch (`data-join` names the sides), neither reaches past its letters nor
+ * rounds that corner, so the inside of the run is continuous and only its two
+ * ends are rounded.
+ */
+:is(
+    .bl-ac-name,
+    .bl-ac-line-name,
+    .bl-ac-also,
+    .bl-ac-address,
+    .bl-ac-people
+  )[data-emphasis="background"]
+  :is(.bl-ac-mark, .bl-ac-corrected)[data-join~="left"] {
+  margin-left: 0;
+  padding-left: 0;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+:is(
+    .bl-ac-name,
+    .bl-ac-line-name,
+    .bl-ac-also,
+    .bl-ac-address,
+    .bl-ac-people
+  )[data-emphasis="background"]
+  :is(.bl-ac-mark, .bl-ac-corrected)[data-join~="right"] {
+  margin-right: 0;
+  padding-right: 0;
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
 }
 
 .bl-ac-name[data-emphasis="weight"] {

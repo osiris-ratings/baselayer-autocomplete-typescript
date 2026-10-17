@@ -1,0 +1,251 @@
+{
+  "about": "The `highlight` the autocomplete service serializes for one business, typed several ways, from the real path of osiris-app PR 6764 (head 3a200a25b): GET /autocomplete/businesses?q=<typed> over a fixture holding a business of exactly this name, then `mark_corrected`. The last three were run through the HTTP route on a build of the branch (typo tolerance on, an index of one business of this name). Supplied by the service's own session; the SDK's demo and tests copy these rather than guess. A part's `corrected: true` always comes with `matched: false`, and is omitted otherwise. A word that is only a prefix of the stored word is marked whole, and the letters past the typed ones are `matched: true`.",
+  "label": "HARBOR CONCRETE PUMPING CO., INC.",
+  "cases": [
+    {
+      "typed": "harbur",
+      "kind": "substitution",
+      "highlight": [
+        {
+          "text": "HARB",
+          "matched": true
+        },
+        {
+          "text": "O",
+          "matched": false,
+          "corrected": true
+        },
+        {
+          "text": "R",
+          "matched": true
+        },
+        {
+          "text": " CONCRETE PUMPING CO., INC.",
+          "matched": false
+        }
+      ]
+    },
+    {
+      "typed": "harbr",
+      "kind": "deletion",
+      "highlight": [
+        {
+          "text": "HARB",
+          "matched": true
+        },
+        {
+          "text": "O",
+          "matched": false,
+          "corrected": true
+        },
+        {
+          "text": "R",
+          "matched": true
+        },
+        {
+          "text": " CONCRETE PUMPING CO., INC.",
+          "matched": false
+        }
+      ]
+    },
+    {
+      "typed": "harbro",
+      "kind": "swap",
+      "highlight": [
+        {
+          "text": "HARB",
+          "matched": true
+        },
+        {
+          "text": "OR",
+          "matched": false,
+          "corrected": true
+        },
+        {
+          "text": " CONCRETE PUMPING CO., INC.",
+          "matched": false
+        }
+      ]
+    },
+    {
+      "typed": "harbbor",
+      "kind": "an extra letter",
+      "highlight": [
+        {
+          "text": "HARBOR",
+          "matched": true
+        },
+        {
+          "text": " CONCRETE PUMPING CO., INC.",
+          "matched": false
+        }
+      ]
+    },
+    {
+      "typed": "harb",
+      "kind": "a prefix still being typed",
+      "highlight": [
+        {
+          "text": "HARBOR",
+          "matched": true
+        },
+        {
+          "text": " CONCRETE PUMPING CO., INC.",
+          "matched": false
+        }
+      ]
+    },
+    {
+      "typed": "harbur concrate",
+      "kind": "two words, a substitution in each",
+      "highlight": [
+        {
+          "text": "HARB",
+          "matched": true
+        },
+        {
+          "text": "O",
+          "matched": false,
+          "corrected": true
+        },
+        {
+          "text": "R CONCR",
+          "matched": true
+        },
+        {
+          "text": "E",
+          "matched": false,
+          "corrected": true
+        },
+        {
+          "text": "TE",
+          "matched": true
+        },
+        {
+          "text": " PUMPING CO., INC.",
+          "matched": false
+        }
+      ]
+    },
+    {
+      "typed": "harbu",
+      "kind": "a prefix whose last typed letter is wrong",
+      "highlight": [
+        {
+          "text": "HARB",
+          "matched": true
+        },
+        {
+          "text": "O",
+          "matched": false,
+          "corrected": true
+        },
+        {
+          "text": "R",
+          "matched": true
+        },
+        {
+          "text": " CONCRETE PUMPING CO., INC.",
+          "matched": false
+        }
+      ]
+    },
+    {
+      "typed": "harbr conc",
+      "kind": "a deletion, then a prefix",
+      "highlight": [
+        {
+          "text": "HARB",
+          "matched": true
+        },
+        {
+          "text": "O",
+          "matched": false,
+          "corrected": true
+        },
+        {
+          "text": "R CONCRETE",
+          "matched": true
+        },
+        {
+          "text": " PUMPING CO., INC.",
+          "matched": false
+        }
+      ]
+    },
+    {
+      "typed": "harbor",
+      "kind": "typed right",
+      "highlight": [
+        {
+          "text": "HARBOR",
+          "matched": true
+        },
+        {
+          "text": " CONCRETE PUMPING CO., INC.",
+          "matched": false
+        }
+      ]
+    },
+    {
+      "typed": "harbro concrete",
+      "kind": "a swap that ends the first word, then an exact word",
+      "highlight": [
+        {
+          "text": "HARB",
+          "matched": true
+        },
+        {
+          "text": "OR",
+          "matched": false,
+          "corrected": true
+        },
+        {
+          "text": " CONCRETE",
+          "matched": true
+        },
+        {
+          "text": " PUMPING CO., INC.",
+          "matched": false
+        }
+      ]
+    },
+    {
+      "typed": "harbor concrete",
+      "kind": "two words typed right",
+      "highlight": [
+        {
+          "text": "HARBOR CONCRETE",
+          "matched": true
+        },
+        {
+          "text": " PUMPING CO., INC.",
+          "matched": false
+        }
+      ]
+    },
+    {
+      "typed": "harbor concrte",
+      "kind": "a swap that ends the last typed word, the rest of the word matched again",
+      "highlight": [
+        {
+          "text": "HARBOR CONCR",
+          "matched": true
+        },
+        {
+          "text": "ET",
+          "matched": false,
+          "corrected": true
+        },
+        {
+          "text": "E",
+          "matched": true
+        },
+        {
+          "text": " PUMPING CO., INC.",
+          "matched": false
+        }
+      ]
+    }
+  ]
+}

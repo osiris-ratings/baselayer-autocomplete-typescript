@@ -6,6 +6,56 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+### Added
+
+- A letter the search corrected is drawn as a fuzzy match. When the
+  autocomplete service finds a name through a typo, it splits the corrected word
+  by letter, and `HighlightPart` gains an optional `corrected: true` on the
+  letters it changed (`matched: false`), omitted everywhere else, so a name it
+  did not correct has the two keys it always had. How the components draw such
+  a letter follows the match emphasis: under `underline` a dotted underline in
+  exactly the solid underline's color; under `background` the match's fill in
+  diagonal stripes, the match color and the same color more transparent, in the
+  letter color the solid fill gives its text and as transparent as that color
+  still reads on over the menu's ground, light or dark (the new
+  `--bl-ac-stripe` and `--bl-ac-stripe-alt`, set with a match color), and the
+  run of marks and corrected letters one continuous shape, rounded at its two
+  ends only (`data-join` on the spans); under `weight` and `ink`
+  nothing marks a fuzzy match, and the letter is drawn as an ordinary match;
+  under `plain`, nothing. Under
+  `underline` and `background` it is a span of its own, `bl-ac-corrected` (the
+  new `corrected` slot of `classNames`) with `data-corrected="true"`.
+  - `matchEmphasisRegion` works across it: `token` marks the whole word as the
+    service sent it, corrected letters inside; `substring` covers the letters
+    the typed text covers, the corrected ones among them, and leaves the untyped
+    rest plain. A letter left out is covered, so `harbr` covers all six letters
+    of HARBOR with the O marked, where `harbu` covers HARBO and leaves the R. A
+    swap covers both letters.
+  - `partsFor` takes an optional fifth argument, `correctedAs` (the new type
+    `CorrectedAs`): `"mark"`, the default, keeps a corrected letter as a part of
+    its own, apart from the plain text beside it, and `"match"` draws it as an
+    ordinary match. With no corrected letter it is what it was.
+  - Backward compatible both ways. This build against an API that never sends
+    `corrected` reads and draws what 0.8.0 does, key for key (tests compare the
+    parsed answers, the parts and the markup of the published 0.8.0 view with
+    this build's on the golden answers). Released 0.4.0 to 0.8.0 read an answer
+    with corrected parts without an error and draw those letters as plain text,
+    since each is `matched: false` and none looks at the flag (tests run the
+    published 0.6.0, 0.7.0 and 0.8.0 on one). Nothing is removed or renamed, and
+    the type field, the slot and the argument are optional.
+  - The demo's made-up API answers every kind of typo the service corrects
+    (`harbur`, `harbr`, `harbro`, `harbbor`, `harb`, `harbu`), with a port of the
+    service's own letter-flagging held to the parts it serializes for each, so
+    the underline and the stripes can be seen without the service.
+  - The demo's dev server can prefill an API key (dev only, demo site only):
+    `DEMO_API_KEY_FILE=<path>`, a file only its owner can read, or
+    `DEMO_API_KEY`, fills the key field and applies it once on load. The key is
+    given only to a browser page of the machine's own (a loopback peer, the
+    page's own same-origin fetch, nothing forwarded), never when the server
+    listens beyond the machine (`--host`), is never logged, and is in no build:
+    a build leaves out the code that asks for it, whatever its environment
+    holds.
+
 ## [0.8.0] - 2026-10-14
 
 ### Changed

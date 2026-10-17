@@ -103,10 +103,19 @@ export type RouteUnservedReason = (typeof ROUTE_UNSERVED_REASONS)[number];
  * One part of a name as the autocomplete service split it: a word a typed token
  * starts, or the text between such words. The parts concatenate to the name
  * they mark.
+ *
+ * When the search corrected a typo, the corrected word comes split by letter:
+ * the letters that answer what was typed are `matched`, and the letters the
+ * correction changed (a letter substituted, the stored letter of one left out,
+ * both letters of a swap) are `corrected`, never `matched`. `corrected` is
+ * present only then, so a name the search did not correct has parts of the two
+ * keys it always had.
  */
 export interface HighlightPart {
   text: string;
   matched: boolean;
+  /** These letters are the stored word's where the typed word had others. Omitted, never `false`. */
+  corrected?: true;
 }
 
 /**
@@ -517,10 +526,17 @@ function refuseFormerRole(o: Record<string, unknown>, path: string): void {
 
 function highlightPart(value: Json, path: string): HighlightPart {
   const o = object(value, path);
-  return {
+  const part: HighlightPart = {
     text: string(o.text, `${path}.text`),
     matched: boolean(o.matched, `${path}.matched`),
   };
+  // Optional, omitted when false, and only a hint for an underline: a part the
+  // search did not correct has the two keys it always had, and a flag that is
+  // anything but `true` is no flag, so it never takes the whole answer down.
+  if (o.corrected === true) {
+    part.corrected = true;
+  }
+  return part;
 }
 
 const highlightParts = (v: Json, p: string) => array(v, p, highlightPart);

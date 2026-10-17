@@ -44,6 +44,7 @@ import { Collapsible, FOLD_MS, Field, Select } from "./controls";
 import { keyMint, readClaims } from "./credentials";
 import { useExit } from "./exit";
 import { useFocusWithin } from "./focus";
+import { readPrefilledKey } from "./prefill";
 import { NO_FILL_ATTRIBUTES } from "../../src/react/inputAttributes";
 import { PickedBusiness } from "./PickedBusiness";
 import { pickFromRow, pickThrough, type PickToSearch } from "./search-view";
@@ -656,8 +657,8 @@ export function App() {
     applied.secret === draft.trim() &&
     applied.baseUrl === baseUrl;
 
-  const apply = async () => {
-    const secret = draft.trim();
+  /** Tests `secret` against the API, and has the demo use it if it mints a session. */
+  const applyKey = async (secret: string, { focus = true } = {}) => {
     setCheck("testing");
     setAnnounced("");
     const result = await testKey(baseUrl, secret, network.fetch);
@@ -679,11 +680,34 @@ export function App() {
     setCheck(null);
     setAnnounced(result.message);
     setConnectOpen(false);
-    connectToggle.current?.focus();
+    if (focus) connectToggle.current?.focus();
     // The result joins the section once it has folded: arriving with the
     // fold, it would make the section grow just as it starts to shrink.
     window.setTimeout(() => setCheck(result), FOLD_MS);
   };
+  const apply = () => applyKey(draft.trim());
+
+  // DEV ONLY (site/demo-key.ts): a dev server started with DEMO_API_KEY_FILE or
+  // DEMO_API_KEY hands the page its key once, which fills the field and is
+  // applied as if it had been typed and Apply pressed. `__DEMO_PREFILL__` is a
+  // literal `false` in every build, so none of this is in a published page.
+  // Asked of the page's own `fetch`, not the network log's, which would record
+  // the key. The ref holds the one ask, whatever the effect is run again for.
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (
+      typeof __DEMO_PREFILL__ !== "undefined" &&
+      __DEMO_PREFILL__ &&
+      !prefilled.current
+    ) {
+      prefilled.current = true;
+      void readPrefilledKey().then(key => {
+        if (key === null) return;
+        setDraft(key);
+        void applyKey(key, { focus: false });
+      });
+    }
+  });
 
   // One field per filter, read by each search that takes it: a person's name
   // by the business and address searches, an address by the business and
