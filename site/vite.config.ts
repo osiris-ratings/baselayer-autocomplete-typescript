@@ -7,6 +7,7 @@ import type { IncomingMessage } from "node:http";
 import { defineConfig, type Plugin, type ProxyOptions } from "vite";
 
 import { apiReference } from "./api/spec/plugin";
+import { demoKeyPrefill } from "./demo-key";
 
 const src = (path: string) =>
   fileURLToPath(new URL(`../src/${path}`, import.meta.url));
@@ -202,6 +203,9 @@ export default defineConfig({
     linkPreview(),
     apiReference(fileURLToPath(new URL("..", import.meta.url))),
     sampleApi(),
+    // Dev only: `DEMO_API_KEY_FILE` or `DEMO_API_KEY` prefills the demo's key.
+    // Defines `__DEMO_PREFILL__`, false in every build.
+    demoKeyPrefill(),
   ],
   resolve: {
     alias: [

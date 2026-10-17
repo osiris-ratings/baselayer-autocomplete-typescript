@@ -47,6 +47,12 @@ breaking change bumps the minor version.
     (`harbur`, `harbr`, `harbro`, `harbbor`, `harb`, `harbu`), with a port of the
     service's own letter-flagging held to the parts it serializes for each, so
     the underline and the stripes can be seen without the service.
+  - The demo's dev server can prefill an API key (dev only, demo site only):
+    `DEMO_API_KEY_FILE=<path>`, a file only its owner can read, or
+    `DEMO_API_KEY`, fills the key field and applies it once on load. The key is
+    given only to a page on the dev server's own origin, is never logged, and
+    is in no build: a build leaves out the code that asks for it, whatever its
+    environment holds.
 
 ## [0.8.0] - 2026-10-14
 

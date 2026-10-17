@@ -98,6 +98,20 @@ pick runs a made-up search of that business, with the person or address it
 was found through on it, as the API records them. Nothing of it reaches a
 build.
 
+`DEMO_API_KEY_FILE=<path> pnpm demo` starts the dev server with an API key to
+prefill. On load the page asks the dev server for it, fills the key field and
+applies it once, as if it had been typed and Apply pressed; a key the API
+refuses stays in the field with the reason. The file is the way to give it: a
+regular file only its owner can read (`chmod 600`), which is read again on
+each page load, so the key never sits in your shell history and a rotated one
+needs no restart. `DEMO_API_KEY=…` does the same from the environment. The dev
+server hands the key only to a page on its own origin, opened as `localhost`,
+`127.0.0.1` or `[::1]`: a LAN or tailnet host name gets no prefill. It is a dev
+server feature and nothing of it reaches a build. The key is in no module, no
+page and no log, and a build has neither it nor the code that asks for it,
+whatever its environment holds (a test builds with a key set and scans every
+file).
+
 **Production (api.baselayer.com)** makes the calls from the browser, as the
 published page does, which the API admits only from the published page's
 origin. For another environment, pick **Custom URL** and give its API host.
