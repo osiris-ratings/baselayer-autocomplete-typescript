@@ -6,6 +6,8 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-17
+
 ### Added
 
 - A letter the search corrected is drawn as a fuzzy match. When the
