@@ -41,8 +41,9 @@ import { useNow } from "./clock";
 import { testKey, withFirstGrant, type CheckResult } from "./connect";
 import { connectionStatus, formatRemaining } from "./connection";
 import { Collapsible, FOLD_MS, Field, Select } from "./controls";
-import { keyMint, readClaims } from "./credentials";
+import { keyMint, readClaims, type SessionSettings } from "./credentials";
 import { useExit } from "./exit";
+import { useFoldPanel } from "./fold";
 import { useFocusWithin } from "./focus";
 import { readPrefilledKey } from "./prefill";
 import { NO_FILL_ATTRIBUTES } from "../../src/react/inputAttributes";
@@ -77,6 +78,12 @@ const PRODUCTION = "https://api.baselayer.com";
  * published page is static, so it has no server to forward through.
  */
 const DEV_SERVER_PATH = import.meta.env.DEV ? "/_baselayer" : null;
+/**
+ * The key step's Session fold, which sets what the page asks of the sessions it
+ * mints. The dev server's page only: `scope.match_profile` is not in the API's
+ * published contract, so the published page offers no way to set it.
+ */
+const SESSION_SETTINGS = import.meta.env.DEV;
 type Environment = "dev-server" | "production" | "custom";
 /** What the right of the page shows, if anything: one or the other. */
 type Panel = "debug" | "styling";
@@ -130,6 +137,8 @@ interface Applied {
   secret: string;
   baseUrl: string;
   environment: Environment;
+  /** What it asked of the session, so a change of it takes another Apply. */
+  matchProfile: string;
   firstGrant?: Extract<CheckResult, { ok: true }>["grant"];
 }
 
@@ -140,7 +149,9 @@ function useClient(applied: Applied | null, network: NetworkLog) {
     }
     const mint = withFirstGrant(
       applied.firstGrant,
-      keyMint(applied.baseUrl, applied.secret, network.fetch),
+      keyMint(applied.baseUrl, applied.secret, network.fetch, {
+        matchProfile: applied.matchProfile,
+      }),
     );
     return createAutocompleteClient({
       baseUrl: applied.baseUrl,
@@ -418,28 +429,19 @@ const MASKS_TEXT =
   typeof CSS.supports === "function" &&
   CSS.supports("-webkit-text-security", "disc");
 
-/** The filters panel folded: nothing of it left, margin and padding too. */
-const FOLDED = {
-  height: "0px",
-  marginBottom: "0px",
-  paddingBlock: "0px",
-  opacity: 0,
-  overflow: "hidden",
+/**
+ * What the Session fold's dropdown offers for the match profile: none, the
+ * three the API names, and text typed in for one it does not list.
+ */
+const PROFILES = ["", "standard", "reduced", "minimal", "custom"] as const;
+type ProfileChoice = (typeof PROFILES)[number];
+const PROFILE_LABELS: Record<ProfileChoice, string> = {
+  "": "Not set",
+  standard: "standard",
+  reduced: "reduced",
+  minimal: "minimal",
+  custom: "Custom…",
 };
-
-const FOLD_ANIMATION = {
-  duration: 280,
-  easing: "cubic-bezier(0.2, 0.7, 0.2, 1)",
-};
-
-/** Whether the filters panel can be animated: not under a reduced-motion setting. */
-function canAnimate(): boolean {
-  return (
-    typeof Element !== "undefined" &&
-    typeof Element.prototype.animate === "function" &&
-    !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
-  );
-}
 
 interface Picked {
   /** The business step 03 searches for. */
@@ -476,6 +478,16 @@ export function App() {
   const [connectOpen, setConnectOpen] = useState(true);
   const connectToggle = useRef<HTMLButtonElement>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // The key step's Session fold: closed until opened, and with nothing set a
+  // mint sends no body. Empty means not set; custom text counts only while
+  // custom is the choice.
+  const [sessionOpen, setSessionOpen] = useState(false);
+  const [profileChoice, setProfileChoice] = useState<ProfileChoice>("");
+  const [profileCustom, setProfileCustom] = useState("");
+  const matchProfile = (
+    profileChoice === "custom" ? profileCustom : profileChoice
+  ).trim();
+  const settings: SessionSettings = { matchProfile };
   // Focus is in a filter field: the menu stays open as the filter is typed, so
   // the list narrowing is in view, rather than closing as the name loses focus.
   const [filtering, filterFocus] = useFocusWithin();
@@ -596,38 +608,10 @@ export function App() {
     // The field's own way to open: a click toggles a closed menu open.
     input?.click();
   }, [mode]);
-  // Opening the filters unfolds the panel downwards, and closing them folds it
-  // up: its height runs between nothing and what it is, the page below making
-  // room as it does. The panel stays on the page until it has folded, which is
-  // `filtersShown`. Not under a reduced-motion setting, nor where there is
-  // nothing to animate with: there it is shown and hidden at once.
-  const filtersPanel = useRef<HTMLDivElement>(null);
-  const [filtersShown, setFiltersShown] = useState(false);
-  if (filtersOpen && !filtersShown) setFiltersShown(true);
-  if (!filtersOpen && filtersShown && !canAnimate()) setFiltersShown(false);
-  useEffect(() => {
-    const panel = filtersPanel.current;
-    if (panel === null || !canAnimate() || (!filtersOpen && !filtersShown)) {
-      return;
-    }
-    const full = {
-      height: `${panel.getBoundingClientRect().height}px`,
-      overflow: "hidden",
-    };
-    if (filtersOpen) {
-      const unfold = panel.animate([FOLDED, full], FOLD_ANIMATION);
-      return () => unfold.cancel();
-    }
-    const fold = panel.animate([full, FOLDED], {
-      ...FOLD_ANIMATION,
-      fill: "forwards",
-    });
-    // Held at nothing until the panel is hidden: cancelling it here would
-    // show the panel whole for a frame. The cleanup cancels it, the render
-    // after this having hidden the panel by then.
-    fold.onfinish = () => setFiltersShown(false);
-    return () => fold.cancel();
-  }, [filtersOpen, filtersShown]);
+  const { panel: filtersPanel, shown: filtersShown } =
+    useFoldPanel(filtersOpen);
+  const { panel: sessionPanel, shown: sessionShown } =
+    useFoldPanel(sessionOpen);
   const picked = picks[mode];
   const setPicked = (pick: Picked | null) =>
     setPicks(all => ({ ...all, [mode]: pick }));
@@ -655,13 +639,14 @@ export function App() {
   const isApplied =
     applied !== null &&
     applied.secret === draft.trim() &&
-    applied.baseUrl === baseUrl;
+    applied.baseUrl === baseUrl &&
+    applied.matchProfile === matchProfile;
 
   /** Tests `secret` against the API, and has the demo use it if it mints a session. */
   const applyKey = async (secret: string, { focus = true } = {}) => {
     setCheck("testing");
     setAnnounced("");
-    const result = await testKey(baseUrl, secret, network.fetch);
+    const result = await testKey(baseUrl, secret, network.fetch, settings);
     if (!result.ok) {
       setCheck(result);
       return;
@@ -672,6 +657,7 @@ export function App() {
       secret,
       baseUrl,
       environment,
+      matchProfile,
       ...(result.grant !== undefined ? { firstGrant: result.grant } : {}),
     });
     // A pick's token belongs to the organization whose session received it:
@@ -1009,6 +995,65 @@ export function App() {
               >
                 {check.message}
               </p>
+            )}
+            {/* One closed row, and the filters' panel under it when opened. Only
+                on the dev server's page: see SESSION_SETTINGS. */}
+            {SESSION_SETTINGS && (
+              <div className="session-fold">
+                <button
+                  type="button"
+                  className="link-toggle"
+                  aria-expanded={sessionOpen}
+                  aria-controls="demo-session-settings"
+                  onClick={() => setSessionOpen(open => !open)}
+                  data-testid="demo-session-toggle"
+                >
+                  {matchProfile !== "" ? (
+                    <>
+                      Session ·{" "}
+                      {/* As typed: the API reads a profile's case. */}
+                      <span className="link-toggle-value">{matchProfile}</span>
+                    </>
+                  ) : (
+                    "+ Session settings"
+                  )}
+                  <span
+                    className="fold-chevron"
+                    data-open={sessionOpen ? "true" : "false"}
+                    aria-hidden="true"
+                  />
+                </button>
+                <div
+                  id="demo-session-settings"
+                  ref={sessionPanel}
+                  className="filters-panel"
+                  hidden={!sessionShown}
+                >
+                  <p className="hint">
+                    Asked of every session this page mints, Apply&apos;s test
+                    included, in the mint&apos;s <code>scope</code>. Left unset,
+                    the mint carries no body.
+                  </p>
+                  <Field label="Match profile" optional>
+                    <Select<ProfileChoice>
+                      value={profileChoice}
+                      options={PROFILES}
+                      labels={PROFILE_LABELS}
+                      onChange={setProfileChoice}
+                    />
+                  </Field>
+                  {profileChoice === "custom" && (
+                    <Field label="Custom profile" hint="Sent as typed.">
+                      <input
+                        value={profileCustom}
+                        onChange={e => setProfileCustom(e.target.value)}
+                        {...NO_FILL_ATTRIBUTES}
+                        maxLength={64}
+                      />
+                    </Field>
+                  )}
+                </div>
+              </div>
             )}
           </Collapsible>
           <p className="visually-hidden" role="status">

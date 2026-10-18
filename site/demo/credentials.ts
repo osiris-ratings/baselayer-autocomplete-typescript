@@ -4,6 +4,25 @@ import {
 } from "@baselayer-sdk/autocomplete";
 
 /**
+ * What the page asks of each session it mints. A field left empty is not set,
+ * and a mint that sets nothing sends no body at all.
+ */
+export interface SessionSettings {
+  /** `scope.match_profile`: any name the API knows, typed or picked. */
+  matchProfile: string;
+}
+
+export const NO_SESSION_SETTINGS: SessionSettings = { matchProfile: "" };
+
+/** The mint's JSON body for `settings`, or null when none is set. */
+export function mintBody({ matchProfile }: SessionSettings): string | null {
+  const profile = matchProfile.trim();
+  return profile === ""
+    ? null
+    : JSON.stringify({ scope: { match_profile: profile } });
+}
+
+/**
  * The page mints for itself, the way a customer's backend would. Only for
  * trying the SDK: in a real integration the key stays on the server (see
  * docs/mint-endpoint.md). The browser sets `Origin` itself, so the session is
@@ -13,13 +32,22 @@ export function keyMint(
   baseUrl: string,
   apiKey: string,
   fetchImpl: (input: string, init?: RequestInit) => Promise<Response> = fetch,
+  settings: SessionSettings = NO_SESSION_SETTINGS,
 ): MintFunction {
+  const requestBody = mintBody(settings);
   return async ({ signal }) => {
     let response: Response;
     try {
       response = await fetchImpl(`${baseUrl}/autocomplete/sessions`, {
         method: "POST",
-        headers: { Accept: "application/json", "X-API-Key": apiKey },
+        headers: {
+          Accept: "application/json",
+          "X-API-Key": apiKey,
+          ...(requestBody !== null
+            ? { "Content-Type": "application/json" }
+            : {}),
+        },
+        ...(requestBody !== null ? { body: requestBody } : {}),
         credentials: "omit",
         signal,
       });

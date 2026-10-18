@@ -66,6 +66,20 @@ it to the component as its first: the test costs nothing the component's own
 first mint (on the first keystroke, by default) would not have. On the
 published page this needs the API to accept the demo's origin.
 
+Run locally, a closed row under Apply, **Session settings**, unfolds, as the
+filters do, to what the page asks of each session it mints. Today that is the
+match profile: **Not set** (the default), `standard`, `reduced`, `minimal`, or
+**Custom…**, which takes text typed in for a profile the list does not name.
+Set, every mint the page makes (Apply's test, and each the component makes
+after it) carries `{"scope":{"match_profile":"<value>"}}` as a JSON body with
+`Content-Type: application/json`, and Debug › Network shows it under the mint's
+request body. Not set, a mint has no body and no `Content-Type`, as it always
+has. While a profile is set the row names it (`Session · minimal`), and a
+change takes another Apply, as another key does. The API decides what a profile
+means and refuses one it does not know, and Apply shows its answer. The row is
+on the dev server's page only: the field is not in the API's published
+contract, so the published page offers no way to set it.
+
 Every session is a real session on your organization's pool. The session's
 scope, which the mint answers, decides which searches the form offers.
 

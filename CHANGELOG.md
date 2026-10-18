@@ -6,6 +6,18 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+### Added
+
+- The demo's Connect step has a closed **Session settings** row under Apply, on
+  the page `pnpm demo` serves (the published page does not have it, and the
+  package and its types are untouched). It unfolds, as the filters do, to the
+  match profile the page asks of every session it mints, Apply's test included:
+  `standard`, `reduced` or `minimal` from a dropdown, or text typed in for a
+  profile the dropdown does not list. The mint then carries
+  `{"scope": {"match_profile": "<value>"}}` as its JSON body, which Debug ›
+  Network shows. With nothing set, the mint is the bodyless request it has
+  always been.
+
 ## [0.9.0] - 2026-10-17
 
 ### Added

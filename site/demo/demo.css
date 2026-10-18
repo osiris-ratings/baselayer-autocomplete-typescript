@@ -2595,6 +2595,12 @@ html[data-dragging] * {
   color: #7a271a;
 }
 
+/* The key step's Session fold: one `.link-toggle` row, as the filters have,
+   and the filters' panel under it when it is opened. */
+.session-fold {
+  margin-top: 6px;
+}
+
 /* ---- Business: the title, and filters off to its right ------------------- */
 
 .demo-card-head {
@@ -2623,6 +2629,11 @@ html[data-dragging] * {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
+}
+
+/* What a toggle names that the API reads as typed, in the case it is typed. */
+.link-toggle .link-toggle-value {
+  text-transform: none;
 }
 
 .link-toggle .fold-chevron {

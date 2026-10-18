@@ -10,7 +10,7 @@ import type {
   MintedGrant,
 } from "@baselayer-sdk/autocomplete";
 
-import { keyMint } from "./credentials";
+import { keyMint, type SessionSettings } from "./credentials";
 
 type FetchImpl = (input: string, init?: RequestInit) => Promise<Response>;
 
@@ -50,6 +50,7 @@ export async function testKey(
   baseUrl: string,
   apiKey: string,
   fetchImpl: FetchImpl,
+  settings?: SessionSettings,
 ): Promise<CheckResult> {
   let outcome: MintOutcome;
   try {
@@ -57,6 +58,7 @@ export async function testKey(
       baseUrl,
       apiKey,
       fetchImpl,
+      settings,
     )({
       reason: "cold",
       signal: new AbortController().signal,

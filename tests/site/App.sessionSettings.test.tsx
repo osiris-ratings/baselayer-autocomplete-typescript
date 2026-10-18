@@ -1,0 +1,450 @@
+/** @vitest-environment jsdom */
+
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it, vi } from "vitest";
+
+import { App } from "../../site/demo/App";
+import { fakeApi, nameField, useDemoPage } from "./support/demo-page";
+
+// The key step's "Session" fold: a closed row that, opened, sets what the demo
+// asks of every session it mints. Today that is the match profile, sent as
+// `scope.match_profile` in the mint's body.
+
+useDemoPage();
+
+const GRANT = {
+  session_token: "session-token",
+  expires_in: 300,
+  request_budget: 50,
+  pivot_allowance: 5,
+  filter_min_stem: 3,
+};
+
+function reply(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
+}
+
+/**
+ * The API behind the page, with every call kept. `grant` overrides the
+ * session it mints; `refuse` may answer a mint itself. A grant with ten seconds
+ * or fewer left is not worth handing over, so with `expires_in: 8` the page's
+ * own client has to mint for itself once it searches: a later mint.
+ */
+function stubApi({
+  grant = {},
+  refuse,
+}: {
+  grant?: Record<string, unknown>;
+  refuse?: (init: RequestInit | undefined) => Response | undefined;
+} = {}) {
+  const spy = vi.fn<typeof fetch>(async (input, init) => {
+    if (String(input).includes("/autocomplete/sessions")) {
+      return refuse?.(init) ?? reply(201, { ...GRANT, ...grant });
+    }
+    return fakeApi(input);
+  });
+  vi.stubGlobal("fetch", spy);
+  return spy;
+}
+
+type Api = ReturnType<typeof stubApi>;
+
+const mints = (api: Api) =>
+  api.mock.calls.filter(([input]) =>
+    String(input).includes("/autocomplete/sessions"),
+  );
+const bodyOf = (call: Api["mock"]["calls"][number]) => call[1]?.body;
+const contentTypeOf = (call: Api["mock"]["calls"][number]) =>
+  new Headers(call[1]?.headers).get("content-type");
+
+const toggle = () => screen.getByTestId("demo-session-toggle");
+const panel = () => document.getElementById("demo-session-settings")!;
+const profileSelect = () =>
+  screen.getByRole("combobox", { name: /match profile/i });
+
+/** The key typed in and applied, and the "Key accepted" shown. */
+async function connect(user: ReturnType<typeof userEvent.setup>) {
+  await user.type(screen.getByTestId("demo-key"), "a-key");
+  await user.click(screen.getByTestId("demo-apply"));
+  await screen.findByText(/key accepted/i);
+}
+
+describe("the Session fold, as the page opens", () => {
+  it("is one closed row, and the settings are out of reach", () => {
+    render(<App />);
+
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+    expect(toggle().getAttribute("aria-controls")).toBe(
+      "demo-session-settings",
+    );
+    expect(toggle().textContent).toBe("+ Session settings");
+    expect(panel().hidden).toBe(true);
+    // Hidden, so nothing in it takes focus or is read out.
+    expect(
+      screen.queryByRole("combobox", { name: /match profile/i }),
+    ).toBeNull();
+  });
+
+  it("sits in the key step, after the key and its Apply button", () => {
+    render(<App />);
+
+    const apply = screen.getByTestId("demo-apply");
+    const before = apply.compareDocumentPosition(toggle());
+
+    expect(
+      within(screen.getByTestId("demo-connect")).getByTestId(
+        "demo-session-toggle",
+      ),
+    ).toBe(toggle());
+    expect(before & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("opens and closes on its row", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(toggle());
+    expect(toggle().getAttribute("aria-expanded")).toBe("true");
+    expect(panel().hidden).toBe(false);
+    expect(profileSelect()).toBeTruthy();
+
+    await user.click(toggle());
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+    expect(panel().hidden).toBe(true);
+  });
+
+  it("offers standard, reduced and minimal, set to none", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(toggle());
+
+    const options = within(profileSelect()).getAllByRole("option");
+
+    expect(options.map(option => option.textContent)).toEqual([
+      "Not set",
+      "standard",
+      "reduced",
+      "minimal",
+      "Custom…",
+    ]);
+    expect((profileSelect() as HTMLSelectElement).value).toBe("");
+    // No text field until the page is told it will be typed in.
+    expect(
+      screen.queryByRole("textbox", { name: /custom profile/i }),
+    ).toBeNull();
+  });
+});
+
+describe("a mint with no profile set, whether or not the fold was ever opened", () => {
+  it("is the bodyless request it always was, Apply's and every later one", async () => {
+    const api = stubApi({ grant: { expires_in: 8 } });
+    const user = userEvent.setup();
+    render(<App />);
+
+    await connect(user);
+    await user.type(nameField(), "cin");
+    await waitFor(() => expect(mints(api)).toHaveLength(2));
+
+    for (const call of mints(api)) {
+      expect("body" in call[1]!).toBe(false);
+      expect(contentTypeOf(call)).toBeNull();
+    }
+  });
+
+  it("is that request after the fold was opened and closed without a choice", async () => {
+    const api = stubApi();
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(toggle());
+    await user.click(toggle());
+    await connect(user);
+
+    expect("body" in mints(api)[0]![1]!).toBe(false);
+    expect(contentTypeOf(mints(api)[0]!)).toBeNull();
+  });
+
+  it("is that request when custom was picked and nothing, or only spaces, typed", async () => {
+    const api = stubApi();
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(toggle());
+    await user.selectOptions(profileSelect(), "custom");
+    await user.type(
+      screen.getByRole("textbox", { name: /custom profile/i }),
+      "   ",
+    );
+    expect(toggle().textContent).toBe("+ Session settings");
+    await connect(user);
+
+    expect("body" in mints(api)[0]![1]!).toBe(false);
+  });
+});
+
+describe("a mint with a profile set", () => {
+  it.each(["standard", "reduced", "minimal"])(
+    "asks for %s from the dropdown, in Apply's own mint",
+    async profile => {
+      const api = stubApi();
+      const user = userEvent.setup();
+      render(<App />);
+
+      await user.click(toggle());
+      await user.selectOptions(profileSelect(), profile);
+      await connect(user);
+
+      expect(mints(api)).toHaveLength(1);
+      expect(bodyOf(mints(api)[0]!)).toBe(
+        JSON.stringify({ scope: { match_profile: profile } }),
+      );
+      expect(contentTypeOf(mints(api)[0]!)).toBe("application/json");
+    },
+  );
+
+  it("asks for a name typed in, as the one it knows", async () => {
+    const api = stubApi();
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(toggle());
+    await user.selectOptions(profileSelect(), "custom");
+    await user.type(
+      screen.getByRole("textbox", { name: /custom profile/i }),
+      "  max ",
+    );
+    await connect(user);
+
+    expect(bodyOf(mints(api)[0]!)).toBe('{"scope":{"match_profile":"max"}}');
+    expect(contentTypeOf(mints(api)[0]!)).toBe("application/json");
+  });
+
+  it("asks for it in every later mint too, the page's own client's", async () => {
+    const api = stubApi({ grant: { expires_in: 8 } });
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(toggle());
+    await user.selectOptions(profileSelect(), "reduced");
+    await connect(user);
+    await user.type(nameField(), "cin");
+    await waitFor(() => expect(mints(api)).toHaveLength(2));
+
+    for (const call of mints(api)) {
+      expect(bodyOf(call)).toBe('{"scope":{"match_profile":"reduced"}}');
+      expect(contentTypeOf(call)).toBe("application/json");
+    }
+  });
+
+  it("still sends the key as the key, and only the key's header", async () => {
+    const api = stubApi();
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(toggle());
+    await user.selectOptions(profileSelect(), "minimal");
+    await connect(user);
+
+    const headers = new Headers(mints(api)[0]![1]!.headers);
+    expect(headers.get("x-api-key")).toBe("a-key");
+    expect(mints(api)[0]![1]!.method).toBe("POST");
+    expect(mints(api)[0]![1]!.credentials).toBe("omit");
+  });
+
+  it("goes with the custom text only while custom is the choice", async () => {
+    const api = stubApi();
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(toggle());
+    await user.selectOptions(profileSelect(), "custom");
+    await user.type(
+      screen.getByRole("textbox", { name: /custom profile/i }),
+      "max",
+    );
+    await user.selectOptions(profileSelect(), "standard");
+    await connect(user);
+
+    expect(bodyOf(mints(api)[0]!)).toBe(
+      '{"scope":{"match_profile":"standard"}}',
+    );
+  });
+
+  it("keeps what was typed when the choice goes to custom again", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(toggle());
+    await user.selectOptions(profileSelect(), "custom");
+    await user.type(
+      screen.getByRole("textbox", { name: /custom profile/i }),
+      "max",
+    );
+    await user.selectOptions(profileSelect(), "standard");
+    await user.selectOptions(profileSelect(), "custom");
+
+    expect(
+      (
+        screen.getByRole("textbox", {
+          name: /custom profile/i,
+        }) as HTMLInputElement
+      ).value,
+    ).toBe("max");
+  });
+
+  it("shows the API's refusal in the words Apply uses, and leaves the key unapplied", async () => {
+    stubApi({
+      refuse: init =>
+        init?.body === undefined
+          ? undefined
+          : reply(422, {
+              code: 422,
+              message: "Extra inputs are not permitted",
+              metadata: null,
+            }),
+    });
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(toggle());
+    await user.selectOptions(profileSelect(), "custom");
+    await user.type(
+      screen.getByRole("textbox", { name: /custom profile/i }),
+      "nope",
+    );
+    await user.type(screen.getByTestId("demo-key"), "a-key");
+    await user.click(screen.getByTestId("demo-apply"));
+
+    await screen.findByText(/HTTP 422.*Extra inputs are not permitted/);
+    expect(screen.getByTestId("demo-apply").textContent).toBe("Apply API key");
+    expect(screen.queryByText(/key accepted/i)).toBeNull();
+  });
+});
+
+describe("the closed row, once something is set", () => {
+  it("names the value on its one line, as the filters name their count", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(toggle());
+    await user.selectOptions(profileSelect(), "minimal");
+    await user.click(toggle());
+
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+    expect(toggle().textContent).toBe("Session · minimal");
+  });
+
+  it("names a typed value trimmed, and goes back to its first words when it is cleared", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(toggle());
+    await user.selectOptions(profileSelect(), "custom");
+    const text = screen.getByRole("textbox", { name: /custom profile/i });
+    await user.type(text, " max ");
+    expect(toggle().textContent).toBe("Session · max");
+
+    await user.clear(text);
+    expect(toggle().textContent).toBe("+ Session settings");
+  });
+
+  it("goes back to its first words when the choice goes back to none", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(toggle());
+    await user.selectOptions(profileSelect(), "reduced");
+    await user.selectOptions(profileSelect(), "");
+
+    expect(toggle().textContent).toBe("+ Session settings");
+  });
+});
+
+describe("changing the profile after the key was applied", () => {
+  it("takes another Apply, which mints once more with the new profile", async () => {
+    const api = stubApi();
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(toggle());
+    await user.selectOptions(profileSelect(), "standard");
+    await connect(user);
+    expect(screen.getByTestId("demo-apply").textContent).toBe("Applied");
+
+    // The key step folded on Apply; open it again.
+    await user.click(
+      within(screen.getByTestId("demo-connect")).getAllByRole("button")[0]!,
+    );
+    await user.selectOptions(profileSelect(), "reduced");
+
+    expect(screen.getByTestId("demo-apply").textContent).toBe("Apply API key");
+    await user.click(screen.getByTestId("demo-apply"));
+    await waitFor(() => expect(mints(api)).toHaveLength(2));
+
+    expect(bodyOf(mints(api)[0]!)).toBe(
+      '{"scope":{"match_profile":"standard"}}',
+    );
+    expect(bodyOf(mints(api)[1]!)).toBe(
+      '{"scope":{"match_profile":"reduced"}}',
+    );
+  });
+
+  it("is applied again when the profile is put back, and not before", async () => {
+    stubApi();
+    const user = userEvent.setup();
+    render(<App />);
+
+    await user.click(toggle());
+    await user.selectOptions(profileSelect(), "standard");
+    await connect(user);
+    await user.click(
+      within(screen.getByTestId("demo-connect")).getAllByRole("button")[0]!,
+    );
+    await user.selectOptions(profileSelect(), "reduced");
+    expect(screen.getByTestId("demo-apply").textContent).toBe("Apply API key");
+
+    await user.selectOptions(profileSelect(), "standard");
+
+    expect(screen.getByTestId("demo-apply").textContent).toBe("Applied");
+  });
+});
+
+describe("the Network panel", () => {
+  async function minted(profile: string | null) {
+    const api = stubApi();
+    const user = userEvent.setup();
+    render(<App />);
+    if (profile !== null) {
+      await user.click(toggle());
+      await user.selectOptions(profileSelect(), profile);
+    }
+    await connect(user);
+    await user.click(screen.getByTestId("demo-debug-open"));
+    await user.click(screen.getByTestId("demo-debug-tab-network"));
+    const log = await screen.findByTestId("demo-network");
+    for (const row of log.querySelectorAll<HTMLElement>("button.net-row")) {
+      await user.click(row);
+    }
+    return { api, log };
+  }
+
+  it("shows the mint's body, so what the page asked for is on screen", async () => {
+    const { log } = await minted("minimal");
+
+    expect(log.textContent).toContain("Request body");
+    expect(log.textContent).toContain("match_profile");
+    expect(log.textContent).toContain("minimal");
+  });
+
+  it("shows no request body for the mint of a page that set nothing", async () => {
+    const { log } = await minted(null);
+
+    expect(log.textContent).toMatch(/\b1 requests · 1 mint\b/);
+    expect(log.textContent).not.toContain("Request body");
+    expect(log.textContent).not.toContain("match_profile");
+  });
+});
