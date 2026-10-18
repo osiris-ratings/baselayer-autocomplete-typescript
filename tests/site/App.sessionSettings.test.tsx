@@ -1,7 +1,13 @@
 /** @vitest-environment jsdom */
 
 import { LEGAL_RELATIONS } from "@baselayer-sdk/autocomplete";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -128,6 +134,14 @@ describe("the Session fold, as the page opens", () => {
     // Beside the step's own toggle, not inside it: a button holds no buttons.
     expect(fold.contains(toggle())).toBe(false);
     expect(toggle().parentElement?.closest("button")).toBeNull();
+    // The step's own chevron and summary are at the row's end, after it.
+    const chevron = [...heading.querySelectorAll(".fold-chevron")].find(
+      each => !toggle().contains(each),
+    )!;
+    expect(
+      toggle().compareDocumentPosition(chevron) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     // The title comes before the step's fields, so the row does too.
     expect(
       toggle().compareDocumentPosition(screen.getByTestId("demo-key")) &
@@ -370,6 +384,23 @@ describe("the panel: a plain click shows the public scope, a shift-click the mat
     noProfileField();
   });
 
+  it("does not bring the profile back on a plain click at the folded step, after it was revealed and the panel closed", async () => {
+    stubApi();
+    const user = userEvent.setup();
+    render(<App />);
+    await shiftClick(user, toggle());
+    await user.click(toggle());
+    expect(panel().hidden).toBe(true);
+    await connect(user);
+    expect(step().getAttribute("data-open")).toBe("false");
+
+    await user.click(toggle());
+
+    expect(step().getAttribute("data-open")).toBe("true");
+    expect(panel().hidden).toBe(false);
+    noProfileField();
+  });
+
   it("is a shift-click that closes, when the profile is already revealed", async () => {
     const user = userEvent.setup();
     render(<App />);
@@ -472,6 +503,11 @@ describe("a mint with a scope set", () => {
     await user.clear(rowsField());
     await user.type(rowsField(), "0");
     expect((rowsField() as HTMLInputElement).value).toBe("1");
+
+    fireEvent.change(rowsField(), { target: { value: "-3" } });
+    expect((rowsField() as HTMLInputElement).value).toBe("1");
+    fireEvent.change(rowsField(), { target: { value: "2.7" } });
+    expect((rowsField() as HTMLInputElement).value).toBe("2");
 
     await user.clear(rowsField());
     expect((rowsField() as HTMLInputElement).value).toBe("");
