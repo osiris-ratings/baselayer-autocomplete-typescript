@@ -920,9 +920,10 @@ export function App() {
             onToggle={setConnectOpen}
             toggleRef={connectToggle}
             testId="demo-connect"
-            actions={
-              // One closed row on the title, as step 2's filters are on
-              // theirs. Only on the dev server's page: see SESSION_SETTINGS.
+            afterTitle={
+              // One closed toggle on the title, as step 2's filters are on
+              // theirs, right after it. Only on the dev server's page: see
+              // SESSION_SETTINGS.
               SESSION_SETTINGS ? (
                 <button
                   type="button"
@@ -951,19 +952,23 @@ export function App() {
                   }}
                   data-testid="demo-session-toggle"
                 >
-                  {sessionParts.length > 0 ? (
-                    <>
-                      Session
-                      {sessionParts.map((part, at) => (
-                        <Fragment key={at}>
-                          {" · "}
-                          {part}
-                        </Fragment>
-                      ))}
-                    </>
-                  ) : (
-                    "+ Session settings"
-                  )}
+                  {/* One run of text, so it wraps as one: a flex item per word
+                      would shrink the profile to a letter a line. */}
+                  <span>
+                    {sessionParts.length > 0 ? (
+                      <>
+                        Session
+                        {sessionParts.map((part, at) => (
+                          <Fragment key={at}>
+                            {" · "}
+                            {part}
+                          </Fragment>
+                        ))}
+                      </>
+                    ) : (
+                      "+ Session settings"
+                    )}
+                  </span>
                   <span
                     className="fold-chevron"
                     data-open={sessionExpanded ? "true" : "false"}

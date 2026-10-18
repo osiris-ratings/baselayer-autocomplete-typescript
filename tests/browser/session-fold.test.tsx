@@ -96,6 +96,11 @@ const environmentSelect = () =>
     select => !panel().contains(select),
   )!;
 const step = () => byId("demo-connect");
+/** The step's own chevron, at the end of its title row: not the toggle's. */
+const stepChevron = () =>
+  [...step().querySelectorAll<HTMLElement>(".fold-heading .fold-chevron")].find(
+    chevron => !toggle().contains(chevron),
+  )!;
 /** Step 2's title row: the title and the filters' button. */
 const filtersHead = () =>
   filtersToggle().closest<HTMLElement>(".demo-card-head")!;
@@ -157,26 +162,51 @@ describe("the Session fold, closed", () => {
     );
   });
 
-  it("is on the title row, at its end, as step 2's filters row is on its title row", () => {
+  it("is on the title row, on the left right after the title, and the step's chevron stays at the row's end", () => {
     drawn();
     const title = step().querySelector<HTMLElement>(".fold-title")!;
+    const chevron = stepChevron();
 
-    // On the heading's row, after the title, within the heading.
+    // On the heading's row, right after the title: not the right.
     expect(rect(toggle()).left).toBeGreaterThan(rect(title).right);
+    expect(rect(toggle()).left - rect(title).right).toBeLessThanOrEqual(48);
     expect(rect(toggle()).top).toBeGreaterThanOrEqual(rect(heading()).top);
     expect(rect(toggle()).bottom).toBeLessThanOrEqual(rect(heading()).bottom);
-    // At the card's content edge, as the filters' row is at its card's.
-    expect(contentRight(step()) - rect(toggle()).right).toBeCloseTo(
-      contentRight(filtersHead().closest("section")!) -
-        rect(filtersToggle()).right,
-      0,
-    );
+    // The step's own chevron is at the end of the row, as every fold's is,
+    // past the toggle.
+    expect(rect(chevron).left).toBeGreaterThan(rect(toggle()).right);
+    expect(contentRight(step()) - rect(chevron).right).toBeLessThanOrEqual(8);
     // Sharing the title's baseline, as step 2's row does: the same alignment.
     expect(getComputedStyle(heading()).alignItems).toBe(
       getComputedStyle(filtersHead()).alignItems,
     );
     expect(rect(toggle()).top).toBeGreaterThanOrEqual(rect(title).top - 1);
     expect(rect(toggle()).bottom).toBeLessThanOrEqual(rect(title).bottom + 1);
+  });
+
+  it("leaves the whole title row the fold's button: its end and the free space fold the step, the toggle presses only itself", async () => {
+    drawn();
+    const fold = step().querySelector<HTMLElement>(".fold-toggle")!;
+    const at = (element: Element) => {
+      const { left, top, width, height } = rect(element);
+      return document.elementFromPoint(left + width / 2, top + height / 2);
+    };
+
+    // The chevron, drawn where the summary and chevron always were.
+    expect(at(stepChevron())?.closest("button")).toBe(fold);
+    // The free space between the toggle and the chevron.
+    const gap = {
+      x: (rect(toggle()).right + rect(stepChevron()).left) / 2,
+      y: rect(toggle()).top + rect(toggle()).height / 2,
+    };
+    expect(document.elementFromPoint(gap.x, gap.y)?.closest("button")).toBe(
+      fold,
+    );
+    // The toggle itself is its own button.
+    expect(at(toggle())?.closest("button")).toBe(toggle());
+    expect(step().getAttribute("data-open")).toBe("true");
+    (document.elementFromPoint(gap.x, gap.y) as HTMLElement).click();
+    await expect.poll(() => step().getAttribute("data-open")).toBe("false");
   });
 
   it("is drawn as step 2's filters row is", () => {
@@ -215,15 +245,13 @@ describe("the Session fold, closed", () => {
     expect(rect(toggle()).left).toBeGreaterThanOrEqual(rect(heading()).left);
     expect(rect(toggle()).right).toBeLessThanOrEqual(window.innerWidth);
     // Under the title, as step 2's row wraps under its: on nothing of the
-    // step's own title, its fold's chevron or its button.
-    const fold = step().querySelector<HTMLElement>(".fold-toggle")!;
-    expect(rect(toggle()).top).toBeGreaterThanOrEqual(rect(fold).bottom);
-    for (const part of [
-      step().querySelector(".fold-title")!,
-      step().querySelector(".fold-toggle .fold-chevron")!,
-    ]) {
-      expect(rect(toggle()).top).toBeGreaterThanOrEqual(rect(part).bottom);
-    }
+    // step's own title, and the step's chevron stays on the title's row.
+    const title = step().querySelector<HTMLElement>(".fold-title")!;
+    const chevron = stepChevron();
+    expect(rect(toggle()).top).toBeGreaterThanOrEqual(rect(title).bottom);
+    expect(rect(chevron).bottom).toBeLessThanOrEqual(rect(toggle()).top);
+    expect(rect(chevron).top).toBeGreaterThanOrEqual(rect(heading()).top);
+    expect(contentRight(step()) - rect(chevron).right).toBeLessThanOrEqual(8);
   });
 });
 
@@ -269,6 +297,22 @@ describe("the Session fold, with a scope and a profile set and the key applied",
     );
     expect(rect(toggle()).bottom).toBeLessThanOrEqual(rect(heading()).bottom);
     expect(rect(toggle()).right).toBeLessThanOrEqual(window.innerWidth);
+  });
+
+  it("wraps the toggle's words as one line of text on a phone, a short profile staying whole", async () => {
+    await page.viewport(375, 800);
+    await set({ profile: "max", routes: 3, rows: "20" });
+
+    const value = toggle().querySelector(".link-toggle-value")!;
+    const chevron = toggle().querySelector(".fold-chevron")!;
+
+    // "max" is one word on one line: not split, not on a line of its own with
+    // the chevron beside it.
+    expect(value.getClientRects()).toHaveLength(1);
+    expect(rect(value).width).toBeGreaterThan(20);
+    expect(rect(chevron).left).toBeGreaterThanOrEqual(rect(value).right);
+    // The words read from the left, as the filters' do.
+    expect(getComputedStyle(toggle()).textAlign).toBe("left");
   });
 
   it("keeps a phone from scrolling, whatever the profile's length and the routes named", async () => {

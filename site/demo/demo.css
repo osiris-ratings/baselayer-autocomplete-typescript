@@ -225,7 +225,8 @@
   transition: transform 150ms ease;
 }
 
-.fold[data-open="true"] > .fold-heading > .fold-toggle .fold-chevron {
+.fold[data-open="true"] > .fold-heading > .fold-toggle .fold-chevron,
+.fold[data-open="true"] > .fold-heading > .fold-aside .fold-chevron {
   margin-bottom: -2px;
   transform: rotate(-135deg);
 }
@@ -2610,20 +2611,60 @@ html[data-dragging] * {
   margin: 0;
 }
 
-/* A step's title row with a `.link-toggle` beside its fold (the key step's
-   Session row) is drawn as step 2's title row is: the title and the toggle on
-   one baseline, the toggle at the end, and under the title when they do not
-   fit. The fold's own button takes what the toggle leaves. */
+/* A step's title row with a `.link-toggle` after its title (the key step's
+   Session toggle) is drawn as step 2's title row is: the title and the toggle
+   on one baseline, the toggle right after the title, and under it when they do
+   not fit. The step's own summary and chevron stay at the row's end, as every
+   fold's do: they are beside the title's button, which is stretched over the
+   whole row, under the toggle, so they still press the fold. */
 .fold-heading:has(> .link-toggle) {
+  position: relative;
   flex-wrap: wrap;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 8px 12px;
+  gap: 8px 16px;
+  container-type: inline-size;
 }
 
 .fold-heading:has(> .link-toggle) > .fold-toggle {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   width: auto;
+}
+
+.fold-heading:has(> .link-toggle) > .fold-toggle::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  content: "";
+}
+
+.fold-heading:has(> .link-toggle) > .link-toggle {
+  position: relative;
+  z-index: 2;
+}
+
+/* Takes what the title and the toggle leave, and its summary gives way (it
+   ends in an ellipsis) before the row wraps. */
+.fold-heading:has(> .link-toggle) > .fold-aside {
+  display: flex;
+  flex: 1 1 0;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 12px;
+  min-width: 0;
+}
+
+/* A narrow row keeps the title and the chevron together and puts the toggle
+   under them, as step 2's wraps under its title. */
+@container (max-width: 560px) {
+  .fold-heading:has(> .link-toggle) > .fold-aside {
+    order: 2;
+  }
+
+  .fold-heading:has(> .link-toggle) > .link-toggle {
+    order: 3;
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
 }
 
 .link-toggle {
@@ -2637,6 +2678,7 @@ html[data-dragging] * {
   font-family: var(--mono);
   font-size: 12.5px;
   letter-spacing: 0.06em;
+  text-align: left;
   text-transform: uppercase;
   cursor: pointer;
 }
