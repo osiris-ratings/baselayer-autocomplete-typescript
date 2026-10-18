@@ -488,6 +488,8 @@ export function App() {
     profileChoice === "custom" ? profileCustom : profileChoice
   ).trim();
   const settings: SessionSettings = { matchProfile };
+  // The panel is in the key step: it is out of view while the step is folded.
+  const sessionExpanded = sessionOpen && connectOpen;
   // Focus is in a filter field: the menu stays open as the filter is typed, so
   // the list narrowing is in view, rather than closing as the name loses focus.
   const [filtering, filterFocus] = useFocusWithin();
@@ -881,7 +883,77 @@ export function App() {
             onToggle={setConnectOpen}
             toggleRef={connectToggle}
             testId="demo-connect"
+            actions={
+              // One closed row on the title, as step 2's filters are on
+              // theirs. Only on the dev server's page: see SESSION_SETTINGS.
+              SESSION_SETTINGS ? (
+                <button
+                  type="button"
+                  className="link-toggle"
+                  aria-expanded={sessionExpanded}
+                  aria-controls="demo-session-settings"
+                  onClick={() => {
+                    // The panel is in the step, so a folded step opens with it.
+                    if (connectOpen) setSessionOpen(open => !open);
+                    else {
+                      setConnectOpen(true);
+                      setSessionOpen(true);
+                    }
+                  }}
+                  data-testid="demo-session-toggle"
+                >
+                  {matchProfile !== "" ? (
+                    <>
+                      Session ·{" "}
+                      {/* As typed: the API reads a profile's case. */}
+                      <span className="link-toggle-value">{matchProfile}</span>
+                    </>
+                  ) : (
+                    "+ Session settings"
+                  )}
+                  <span
+                    className="fold-chevron"
+                    data-open={sessionExpanded ? "true" : "false"}
+                    aria-hidden="true"
+                  />
+                </button>
+              ) : undefined
+            }
           >
+            {/* The filters' panel, under the title row it unfolds from. Only on the
+                dev server's page: see SESSION_SETTINGS. */}
+            {SESSION_SETTINGS && (
+              <div
+                id="demo-session-settings"
+                ref={sessionPanel}
+                className="filters-panel"
+                hidden={!sessionShown}
+              >
+                <p className="hint">
+                  Asked of every session this page mints, Apply&apos;s test
+                  included, in the mint&apos;s <code>scope</code>. Left unset,
+                  the mint carries no body.
+                </p>
+                <Field label="Match profile" optional>
+                  <Select<ProfileChoice>
+                    value={profileChoice}
+                    options={PROFILES}
+                    labels={PROFILE_LABELS}
+                    onChange={setProfileChoice}
+                  />
+                </Field>
+                {profileChoice === "custom" && (
+                  <Field label="Custom profile" hint="Sent as typed.">
+                    <input
+                      value={profileCustom}
+                      onChange={e => setProfileCustom(e.target.value)}
+                      {...NO_FILL_ATTRIBUTES}
+                      maxLength={64}
+                    />
+                  </Field>
+                )}
+              </div>
+            )}
             <Field label="Environment">
               <Select<Environment>
                 value={environment}
@@ -995,65 +1067,6 @@ export function App() {
               >
                 {check.message}
               </p>
-            )}
-            {/* One closed row, and the filters' panel under it when opened. Only
-                on the dev server's page: see SESSION_SETTINGS. */}
-            {SESSION_SETTINGS && (
-              <div className="session-fold">
-                <button
-                  type="button"
-                  className="link-toggle"
-                  aria-expanded={sessionOpen}
-                  aria-controls="demo-session-settings"
-                  onClick={() => setSessionOpen(open => !open)}
-                  data-testid="demo-session-toggle"
-                >
-                  {matchProfile !== "" ? (
-                    <>
-                      Session ·{" "}
-                      {/* As typed: the API reads a profile's case. */}
-                      <span className="link-toggle-value">{matchProfile}</span>
-                    </>
-                  ) : (
-                    "+ Session settings"
-                  )}
-                  <span
-                    className="fold-chevron"
-                    data-open={sessionOpen ? "true" : "false"}
-                    aria-hidden="true"
-                  />
-                </button>
-                <div
-                  id="demo-session-settings"
-                  ref={sessionPanel}
-                  className="filters-panel"
-                  hidden={!sessionShown}
-                >
-                  <p className="hint">
-                    Asked of every session this page mints, Apply&apos;s test
-                    included, in the mint&apos;s <code>scope</code>. Left unset,
-                    the mint carries no body.
-                  </p>
-                  <Field label="Match profile" optional>
-                    <Select<ProfileChoice>
-                      value={profileChoice}
-                      options={PROFILES}
-                      labels={PROFILE_LABELS}
-                      onChange={setProfileChoice}
-                    />
-                  </Field>
-                  {profileChoice === "custom" && (
-                    <Field label="Custom profile" hint="Sent as typed.">
-                      <input
-                        value={profileCustom}
-                        onChange={e => setProfileCustom(e.target.value)}
-                        {...NO_FILL_ATTRIBUTES}
-                        maxLength={64}
-                      />
-                    </Field>
-                  )}
-                </div>
-              </div>
             )}
           </Collapsible>
           <p className="visually-hidden" role="status">

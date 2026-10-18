@@ -225,7 +225,7 @@
   transition: transform 150ms ease;
 }
 
-.fold[data-open="true"] > .fold-heading .fold-chevron {
+.fold[data-open="true"] > .fold-heading > .fold-toggle .fold-chevron {
   margin-bottom: -2px;
   transform: rotate(-135deg);
 }
@@ -2595,12 +2595,6 @@ html[data-dragging] * {
   color: #7a271a;
 }
 
-/* The key step's Session fold: one `.link-toggle` row, as the filters have,
-   and the filters' panel under it when it is opened. */
-.session-fold {
-  margin-top: 6px;
-}
-
 /* ---- Business: the title, and filters off to its right ------------------- */
 
 .demo-card-head {
@@ -2614,6 +2608,22 @@ html[data-dragging] * {
 
 .demo-card-head .demo-card-title {
   margin: 0;
+}
+
+/* A step's title row with a `.link-toggle` beside its fold (the key step's
+   Session row) is drawn as step 2's title row is: the title and the toggle on
+   one baseline, the toggle at the end, and under the title when they do not
+   fit. The fold's own button takes what the toggle leaves. */
+.fold-heading:has(> .link-toggle) {
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 12px;
+}
+
+.fold-heading:has(> .link-toggle) > .fold-toggle {
+  flex: 1 1 auto;
+  width: auto;
 }
 
 .link-toggle {
@@ -2634,6 +2644,7 @@ html[data-dragging] * {
 /* What a toggle names that the API reads as typed, in the case it is typed. */
 .link-toggle .link-toggle-value {
   text-transform: none;
+  overflow-wrap: anywhere;
 }
 
 .link-toggle .fold-chevron {

@@ -89,18 +89,58 @@ describe("the Session fold, as the page opens", () => {
     ).toBeNull();
   });
 
-  it("sits in the key step, after the key and its Apply button", () => {
+  it("sits in the key step's title row, beside its fold, as step 2's filters row sits in its title", () => {
+    render(<App />);
+
+    const heading = within(screen.getByTestId("demo-connect")).getByRole(
+      "heading",
+      { name: /connect/i },
+    );
+    const fold = within(heading).getByRole("button", { name: /connect/i });
+
+    expect(heading.contains(toggle())).toBe(true);
+    // Beside the step's own toggle, not inside it: a button holds no buttons.
+    expect(fold.contains(toggle())).toBe(false);
+    expect(toggle().parentElement?.closest("button")).toBeNull();
+    // The title comes before the step's fields, so the row does too.
+    expect(
+      toggle().compareDocumentPosition(screen.getByTestId("demo-key")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("leaves nothing under Apply: the row and its panel come before the key", () => {
     render(<App />);
 
     const apply = screen.getByTestId("demo-apply");
-    const before = apply.compareDocumentPosition(toggle());
 
     expect(
-      within(screen.getByTestId("demo-connect")).getByTestId(
-        "demo-session-toggle",
-      ),
-    ).toBe(toggle());
-    expect(before & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      apply.compareDocumentPosition(toggle()) &
+        Node.DOCUMENT_POSITION_PRECEDING,
+    ).toBeTruthy();
+    expect(
+      apply.compareDocumentPosition(panel()) & Node.DOCUMENT_POSITION_PRECEDING,
+    ).toBeTruthy();
+  });
+
+  it("holds the panel under the title row, before the step's own fields", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(toggle());
+
+    const environment = screen.getAllByRole("combobox", {
+      name: /environment/i,
+    })[0]!;
+
+    expect(
+      panel().compareDocumentPosition(environment) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      panel().compareDocumentPosition(screen.getByTestId("demo-key")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.getByTestId("demo-connect").contains(panel())).toBe(true);
   });
 
   it("opens and closes on its row", async () => {
@@ -136,6 +176,87 @@ describe("the Session fold, as the page opens", () => {
     expect(
       screen.queryByRole("textbox", { name: /custom profile/i }),
     ).toBeNull();
+  });
+});
+
+describe("the row on the title, once the key step has folded", () => {
+  const step = () => screen.getByTestId("demo-connect");
+
+  it("stays on the title and names the profile, as the filters' row names its count", async () => {
+    stubApi();
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(toggle());
+    await user.selectOptions(profileSelect(), "reduced");
+    await connect(user);
+
+    expect(step().getAttribute("data-open")).toBe("false");
+    expect(toggle().textContent).toBe("Session · reduced");
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("opens the step and its panel when it is pressed, the profile still chosen", async () => {
+    stubApi();
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(toggle());
+    await user.selectOptions(profileSelect(), "minimal");
+    await connect(user);
+    expect(step().getAttribute("data-open")).toBe("false");
+
+    await user.click(toggle());
+
+    expect(step().getAttribute("data-open")).toBe("true");
+    expect(toggle().getAttribute("aria-expanded")).toBe("true");
+    expect(panel().hidden).toBe(false);
+    expect((profileSelect() as HTMLSelectElement).value).toBe("minimal");
+  });
+
+  it("opens the step and its panel when nothing was ever set, too", async () => {
+    stubApi();
+    const user = userEvent.setup();
+    render(<App />);
+    await connect(user);
+    expect(step().getAttribute("data-open")).toBe("false");
+    expect(toggle().textContent).toBe("+ Session settings");
+
+    await user.click(toggle());
+
+    expect(step().getAttribute("data-open")).toBe("true");
+    expect(panel().hidden).toBe(false);
+    expect(profileSelect()).toBeTruthy();
+  });
+
+  it("reads as closed while the step it unfolds in is folded, and open again with it", async () => {
+    stubApi();
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(toggle());
+    await connect(user);
+    const chevron = () => toggle().querySelector(".fold-chevron")!;
+    expect(step().getAttribute("data-open")).toBe("false");
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+    expect(chevron().getAttribute("data-open")).toBe("false");
+
+    await user.click(within(step()).getByRole("button", { name: /connect/i }));
+
+    expect(step().getAttribute("data-open")).toBe("true");
+    expect(toggle().getAttribute("aria-expanded")).toBe("true");
+    expect(chevron().getAttribute("data-open")).toBe("true");
+    expect(panel().hidden).toBe(false);
+  });
+
+  it("closes the panel when it is pressed with the step open, and leaves the step open", async () => {
+    stubApi();
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(toggle());
+
+    await user.click(toggle());
+
+    expect(step().getAttribute("data-open")).toBe("true");
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+    expect(panel().hidden).toBe(true);
   });
 });
 
