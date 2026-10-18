@@ -209,6 +209,23 @@ describe("the Session fold, closed", () => {
     await expect.poll(() => step().getAttribute("data-open")).toBe("false");
   });
 
+  it("turns the step's own chevron up while it is open and down once folded, as every fold's does", async () => {
+    drawn();
+    const open = getComputedStyle(stepChevron()).transform;
+    const down = getComputedStyle(
+      filtersToggle().querySelector(".fold-chevron")!,
+    ).transform;
+
+    await userEvent.click(step().querySelector(".fold-toggle")!);
+
+    await expect.poll(() => step().getAttribute("data-open")).toBe("false");
+    // The chevron turns over a moment.
+    await expect
+      .poll(() => getComputedStyle(stepChevron()).transform)
+      .toBe(down);
+    expect(open).not.toBe(down);
+  });
+
   it("is drawn as step 2's filters row is", () => {
     drawn();
     const ours = getComputedStyle(toggle());
