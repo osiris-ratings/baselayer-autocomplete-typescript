@@ -48,6 +48,8 @@ const WORDS = [
   "demo-session-toggle",
   "Match profile",
   "Custom profile",
+  "Most rows",
+  "Asked of every session",
 ];
 
 describe("the Session fold, in the dev server's page and not the published one", () => {

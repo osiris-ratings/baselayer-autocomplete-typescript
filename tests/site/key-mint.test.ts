@@ -1,10 +1,22 @@
+import { LEGAL_RELATIONS } from "@baselayer-sdk/autocomplete";
 import { describe, expect, it, vi } from "vitest";
 
 import { testKey } from "../../site/demo/connect";
-import { keyMint, mintBody } from "../../site/demo/credentials";
+import {
+  keyMint,
+  mintBody,
+  NO_SESSION_SETTINGS,
+  type SessionSettings,
+} from "../../site/demo/credentials";
 
 // What the demo's own mint sends: the same bodyless request it has always
-// sent, until the page is asked to set something on the session.
+// sent, until the page is asked to set something on the session: a scope (the
+// routes it may query, the most rows a request may ask for) or a match profile.
+
+const settings = (set: Partial<SessionSettings>): SessionSettings => ({
+  ...NO_SESSION_SETTINGS,
+  ...set,
+});
 
 const GRANT = {
   session_token: "session-token",
@@ -50,9 +62,12 @@ describe("the mint with nothing set", () => {
     for (const matchProfile of ["", "   ", "\t\n"]) {
       const fetchImpl = api();
 
-      await keyMint("https://api.test", "k", fetchImpl, { matchProfile })(
-        context(),
-      );
+      await keyMint(
+        "https://api.test",
+        "k",
+        fetchImpl,
+        settings({ matchProfile }),
+      )(context());
 
       const [, init] = fetchImpl.mock.calls[0]!;
       expect("body" in init!).toBe(false);
@@ -68,9 +83,12 @@ describe("the mint with a match profile", () => {
   it("sends it as scope.match_profile, as JSON", async () => {
     const fetchImpl = api();
 
-    await keyMint("https://api.test", "the-key", fetchImpl, {
-      matchProfile: "max",
-    })(context());
+    await keyMint(
+      "https://api.test",
+      "the-key",
+      fetchImpl,
+      settings({ matchProfile: "max" }),
+    )(context());
 
     const [, init] = fetchImpl.mock.calls[0]!;
     expect(init!.body).toBe('{"scope":{"match_profile":"max"}}');
@@ -87,9 +105,12 @@ describe("the mint with a match profile", () => {
   it("sends the profile as typed, less the spaces around it", async () => {
     const fetchImpl = api();
 
-    await keyMint("https://api.test", "k", fetchImpl, {
-      matchProfile: "  Minimal ",
-    })(context());
+    await keyMint(
+      "https://api.test",
+      "k",
+      fetchImpl,
+      settings({ matchProfile: "  Minimal " }),
+    )(context());
 
     expect(fetchImpl.mock.calls[0]![1]!.body).toBe(
       '{"scope":{"match_profile":"Minimal"}}',
@@ -97,7 +118,9 @@ describe("the mint with a match profile", () => {
   });
 
   it("quotes what it was given, so a typed quote cannot reshape the body", () => {
-    const body = mintBody({ matchProfile: 'x"},"routes":{"people":[]}' });
+    const body = mintBody(
+      settings({ matchProfile: 'x"},"routes":{"people":[]}' }),
+    );
 
     expect(JSON.parse(body!)).toEqual({
       scope: { match_profile: 'x"},"routes":{"people":[]}' },
@@ -105,11 +128,118 @@ describe("the mint with a match profile", () => {
   });
 
   it("reads the answer as it always did", async () => {
-    const outcome = await keyMint("https://api.test", "k", api(), {
-      matchProfile: "max",
-    })(context());
+    const outcome = await keyMint(
+      "https://api.test",
+      "k",
+      api(),
+      settings({ matchProfile: "max" }),
+    )(context());
 
     expect(outcome.kind).toBe("granted");
+  });
+});
+
+describe("the mint with a scope", () => {
+  it("narrows to the routes ticked, each with every relation it carries", () => {
+    expect(JSON.parse(mintBody(settings({ routes: ["people"] }))!)).toEqual({
+      scope: { routes: { people: [...LEGAL_RELATIONS.people] } },
+    });
+    expect(
+      JSON.parse(mintBody(settings({ routes: ["businesses", "addresses"] }))!),
+    ).toEqual({
+      scope: {
+        routes: {
+          businesses: [...LEGAL_RELATIONS.businesses],
+          addresses: [...LEGAL_RELATIONS.addresses],
+        },
+      },
+    });
+  });
+
+  it("names the routes in the API's own order, whatever order they were ticked in", () => {
+    const body = mintBody(settings({ routes: ["addresses", "businesses"] }));
+
+    expect(Object.keys(JSON.parse(body!).scope.routes)).toEqual([
+      "businesses",
+      "addresses",
+    ]);
+  });
+
+  it("asks for the most rows a request may ask for as max_limit", () => {
+    expect(mintBody(settings({ maxLimit: 5 }))).toBe(
+      '{"scope":{"max_limit":5}}',
+    );
+    expect(mintBody(settings({ maxLimit: 20 }))).toBe(
+      '{"scope":{"max_limit":20}}',
+    );
+  });
+
+  it("sends only what is set, in one scope: routes, max_limit, match_profile", () => {
+    expect(
+      mintBody(
+        settings({
+          routes: ["people"],
+          maxLimit: 3,
+          matchProfile: "max",
+        }),
+      ),
+    ).toBe(
+      JSON.stringify({
+        scope: {
+          routes: { people: [...LEGAL_RELATIONS.people] },
+          max_limit: 3,
+          match_profile: "max",
+        },
+      }),
+    );
+    expect(mintBody(settings({ maxLimit: 3, matchProfile: "max" }))).toBe(
+      '{"scope":{"max_limit":3,"match_profile":"max"}}',
+    );
+    expect(
+      JSON.parse(mintBody(settings({ routes: ["people"], maxLimit: 3 }))!),
+    ).not.toHaveProperty("scope.match_profile");
+  });
+
+  it("is no body at all with no route ticked, no limit, and no profile", () => {
+    expect(mintBody(NO_SESSION_SETTINGS)).toBeNull();
+    expect(mintBody(settings({ routes: [], maxLimit: null }))).toBeNull();
+  });
+
+  it("goes in the request as JSON, with the one Content-Type", async () => {
+    const fetchImpl = api();
+
+    await keyMint(
+      "https://api.test",
+      "the-key",
+      fetchImpl,
+      settings({ routes: ["businesses"], maxLimit: 7 }),
+    )(context());
+
+    const [, init] = fetchImpl.mock.calls[0]!;
+    expect(JSON.parse(init!.body as string)).toEqual({
+      scope: {
+        routes: { businesses: [...LEGAL_RELATIONS.businesses] },
+        max_limit: 7,
+      },
+    });
+    expect(init!.headers).toEqual({
+      Accept: "application/json",
+      "X-API-Key": "the-key",
+      "Content-Type": "application/json",
+    });
+  });
+
+  it("is a bodyless request when only blank things are set", async () => {
+    const fetchImpl = api();
+
+    await keyMint(
+      "https://api.test",
+      "k",
+      fetchImpl,
+      settings({ routes: [], maxLimit: null, matchProfile: "  " }),
+    )(context());
+
+    expect("body" in fetchImpl.mock.calls[0]![1]!).toBe(false);
   });
 });
 
@@ -117,14 +247,35 @@ describe("testKey, Apply's own mint", () => {
   it("carries the profile, so the session it hands the demo is the one asked for", async () => {
     const fetchImpl = api();
 
-    const result = await testKey("https://api.test", "k", fetchImpl, {
-      matchProfile: "reduced",
-    });
+    const result = await testKey(
+      "https://api.test",
+      "k",
+      fetchImpl,
+      settings({ matchProfile: "reduced" }),
+    );
 
     expect(result.ok).toBe(true);
     expect(fetchImpl.mock.calls[0]![1]!.body).toBe(
       '{"scope":{"match_profile":"reduced"}}',
     );
+  });
+
+  it("carries a scope too", async () => {
+    const fetchImpl = api();
+
+    await testKey(
+      "https://api.test",
+      "k",
+      fetchImpl,
+      settings({ routes: ["addresses"], maxLimit: 4 }),
+    );
+
+    expect(JSON.parse(fetchImpl.mock.calls[0]![1]!.body as string)).toEqual({
+      scope: {
+        routes: { addresses: [...LEGAL_RELATIONS.addresses] },
+        max_limit: 4,
+      },
+    });
   });
 
   it("is bodyless with no profile", async () => {

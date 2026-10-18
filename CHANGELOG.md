@@ -11,12 +11,15 @@ breaking change bumps the minor version.
 - The demo's Connect step has a closed **Session settings** toggle on its title,
   as step 2's filters are on theirs, on the page `pnpm demo` serves (the
   published page does not have it, and the package and its types are untouched).
-  It unfolds, as the filters do, to the match profile the page asks of every
-  session it mints, Apply's test included: `standard`, `reduced` or `minimal`
-  from a dropdown, or text typed in for a profile the dropdown does not list.
-  The mint then carries `{"scope": {"match_profile": "<value>"}}` as its JSON
-  body, which Debug › Network shows. With nothing set, the mint is the bodyless
-  request it has always been.
+  It unfolds, as the filters do, to what the page asks of every session it
+  mints, Apply's test included: the routes the session may query (each with
+  every relation it carries) and the most rows a request may ask for, which are
+  `scope.routes` and `scope.max_limit`. A shift-click also reveals the match
+  profile, `scope.match_profile`, which the API's published contract does not
+  have: `standard`, `reduced` or `minimal` from a dropdown, or text typed in.
+  The mint carries only what is set, as `{"scope": {…}}` JSON, which Debug ›
+  Network shows. With nothing set, the mint is the bodyless request it has
+  always been.
 
 ## [0.9.0] - 2026-10-17
 

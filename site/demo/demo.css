@@ -2735,6 +2735,13 @@ html[data-dragging] * {
   grid-column: 1 / -1;
 }
 
+/* A row of toggles (the Session panel's routes) takes the panel's width, so it
+   stays on one row, and a taller control row never stretches the dropdown
+   beside it, which draws its chevron against its box. */
+.filters-panel > .field-row:has(> .toggle-row) {
+  grid-column: 1 / -1;
+}
+
 /* Each filter's label, input and hint in rows the filters beside it share:
    the labels stand on their row's foot, so the inputs start on one line
    whatever a label wraps to, and the hints on the next. */

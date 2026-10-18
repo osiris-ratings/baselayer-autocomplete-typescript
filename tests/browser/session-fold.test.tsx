@@ -71,6 +71,23 @@ const filtersToggle = () =>
     /Add filters/.test(button.textContent ?? ""),
   )!;
 const rect = (element: Element) => element.getBoundingClientRect();
+/** A click with Shift held, which reveals the match profile. */
+const shiftClick = (element: Element) =>
+  element.dispatchEvent(
+    new MouseEvent("click", {
+      bubbles: true,
+      cancelable: true,
+      shiftKey: true,
+    }),
+  );
+const profileSelect = () => panel().querySelector<HTMLSelectElement>("select");
+const customText = () =>
+  panel().querySelector<HTMLInputElement>("input:not([type])");
+const rowsInput = () =>
+  panel().querySelector<HTMLInputElement>('input[type="number"]')!;
+const routeBoxes = () => [
+  ...panel().querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
+];
 /** The key step's title row: its heading, with the fold's button and ours. */
 const heading = () => toggle().closest("h2")!;
 /** The step's Environment dropdown: its first, once the panel's is set apart. */
@@ -210,13 +227,22 @@ describe("the Session fold, closed", () => {
   });
 });
 
-describe("the Session fold, with a profile set and the key applied", () => {
-  async function set(profile: string) {
+describe("the Session fold, with a scope and a profile set and the key applied", () => {
+  async function set({
+    profile,
+    routes = 0,
+    rows = "",
+  }: {
+    profile: string;
+    routes?: number;
+    rows?: string;
+  }) {
     drawn();
-    await userEvent.click(toggle());
-    const select = panel().querySelector<HTMLSelectElement>("select")!;
-    await userEvent.selectOptions(select, "custom");
-    await userEvent.fill(panel().querySelector("input")!, profile);
+    flushSync(() => shiftClick(toggle()));
+    for (const box of routeBoxes().slice(0, routes)) await userEvent.click(box);
+    if (rows !== "") await userEvent.fill(rowsInput(), rows);
+    await userEvent.selectOptions(profileSelect()!, "custom");
+    await userEvent.fill(customText()!, profile);
     await userEvent.fill(byId("demo-key"), "a-key");
     await userEvent.click(byId("demo-apply"));
     await expect.poll(() => step().getAttribute("data-open")).toBe("false");
@@ -227,7 +253,7 @@ describe("the Session fold, with a profile set and the key applied", () => {
   }
 
   it("names the profile on the title row of the folded step, as step 2 names its count", async () => {
-    await set("max");
+    await set({ profile: "max" });
 
     expect(toggle().textContent).toBe("Session · max");
     expect(rect(toggle()).top).toBeGreaterThanOrEqual(rect(heading()).top);
@@ -235,9 +261,19 @@ describe("the Session fold, with a profile set and the key applied", () => {
     expect(rect(toggle()).right).toBeLessThanOrEqual(window.innerWidth);
   });
 
-  it("keeps a phone from scrolling, whatever the profile's length", async () => {
+  it("names what is set, all of it, on the one title row", async () => {
+    await set({ profile: "max", routes: 2, rows: "5" });
+
+    expect(toggle().textContent).toBe(
+      "Session · businesses, people · 5 rows · max",
+    );
+    expect(rect(toggle()).bottom).toBeLessThanOrEqual(rect(heading()).bottom);
+    expect(rect(toggle()).right).toBeLessThanOrEqual(window.innerWidth);
+  });
+
+  it("keeps a phone from scrolling, whatever the profile's length and the routes named", async () => {
     await page.viewport(375, 800);
-    await set("x".repeat(63));
+    await set({ profile: "x".repeat(63), routes: 3, rows: "20" });
 
     expect(
       document.documentElement.scrollWidth <=
@@ -248,9 +284,10 @@ describe("the Session fold, with a profile set and the key applied", () => {
 });
 
 describe("the Session fold, open", () => {
-  async function open() {
+  async function open({ reveal = false } = {}) {
     drawn();
-    await userEvent.click(toggle());
+    if (reveal) flushSync(() => shiftClick(toggle()));
+    else await userEvent.click(toggle());
     await userEvent.click(filtersToggle());
     // Both panels unfold over a quarter of a second.
     await expect
@@ -288,37 +325,92 @@ describe("the Session fold, open", () => {
     expect(rect(panel()).right).toBeLessThanOrEqual(rect(step()).right);
   });
 
-  it("holds the dropdown drawn as the page's others, and a text field once custom is chosen", async () => {
+  it("draws no match profile for a plain click, and the dropdown for a shift-click", async () => {
     await open();
-    const select = panel().querySelector<HTMLSelectElement>("select")!;
+    expect(profileSelect()).toBeNull();
+    expect(customText()).toBeNull();
+    expect(panel().textContent).not.toMatch(/profile/i);
+    done?.();
+    done = null;
+
+    await open({ reveal: true });
+
+    expect(profileSelect()).not.toBeNull();
+    expect(rect(profileSelect()!).height).toBeGreaterThan(0);
+  });
+
+  it("holds the routes and the most rows drawn as the page's others", async () => {
+    await open();
+    const environment = environmentSelect();
+    const boxes = routeBoxes();
+
+    expect(boxes).toHaveLength(3);
+    // One number field, as tall as the page's dropdown.
+    expect(rect(rowsInput()).height).toBe(rect(environment).height);
+    expect(getComputedStyle(rowsInput()).borderTopColor).toBe(
+      getComputedStyle(environment).borderTopColor,
+    );
+    // The routes' toggles read in a row inside the panel, none out of it.
+    for (const box of boxes) {
+      const label = box.closest("label")!;
+      expect(rect(label).left).toBeGreaterThanOrEqual(rect(panel()).left);
+      expect(rect(label).right).toBeLessThanOrEqual(rect(panel()).right);
+      expect(rect(label).height).toBeGreaterThanOrEqual(
+        rect(environment).height - 1,
+      );
+    }
+  });
+
+  it("keeps the routes on one row, and no dropdown beside them stretched by it", async () => {
+    await open({ reveal: true });
+
+    const tops = routeBoxes().map(box =>
+      Math.round(rect(box.closest("label")!).top),
+    );
+    expect(new Set(tops).size).toBe(1);
+    // A dropdown's chevron is drawn against its wrapper: a wrapper taller than
+    // the dropdown would draw it below the box.
+    const select = profileSelect()!;
+    expect(rect(select.parentElement!).height).toBe(rect(select).height);
+    expect(rect(rowsInput()).height).toBe(rect(select).height);
+  });
+
+  it("holds the dropdown drawn as the page's others, and a text field once custom is chosen", async () => {
+    await open({ reveal: true });
+    const select = profileSelect()!;
     const environment = environmentSelect();
 
     expect(rect(select).height).toBe(rect(environment).height);
     expect(getComputedStyle(select).borderTopColor).toBe(
       getComputedStyle(environment).borderTopColor,
     );
-    expect(panel().querySelector("input")).toBeNull();
+    expect(customText()).toBeNull();
 
     await userEvent.selectOptions(select, "custom");
-    const text = panel().querySelector<HTMLInputElement>("input")!;
+    const text = customText()!;
 
     expect(rect(text).height).toBe(rect(select).height);
     expect(rect(text).width).toBeGreaterThan(100);
   });
 
-  it("keeps to the width of the step on a phone", async () => {
+  it("keeps to the width of the step on a phone, every field showing", async () => {
     await page.viewport(375, 800);
-    await open();
-    await userEvent.selectOptions(
-      panel().querySelector<HTMLSelectElement>("select")!,
-      "custom",
-    );
+    await open({ reveal: true });
+    await userEvent.selectOptions(profileSelect()!, "custom");
 
     expect(
       document.documentElement.scrollWidth <=
         document.documentElement.clientWidth,
     ).toBe(true);
     expect(rect(panel()).right).toBeLessThanOrEqual(window.innerWidth);
+    for (const field of [rowsInput(), profileSelect()!, customText()!]) {
+      expect(rect(field).right).toBeLessThanOrEqual(rect(panel()).right);
+    }
+    for (const box of routeBoxes()) {
+      expect(rect(box.closest("label")!).right).toBeLessThanOrEqual(
+        rect(panel()).right,
+      );
+    }
   });
 
   it("folds up and goes when closed, as the filters do", async () => {

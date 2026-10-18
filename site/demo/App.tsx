@@ -25,6 +25,7 @@ import {
   useAutocompleteSession,
 } from "@baselayer-sdk/autocomplete/react";
 import {
+  Fragment,
   useCallback,
   useEffect,
   useId,
@@ -32,6 +33,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type ReactNode,
 } from "react";
 
 import { flushSync } from "react-dom";
@@ -40,8 +42,13 @@ import { Icon } from "../shared/icons";
 import { useNow } from "./clock";
 import { testKey, withFirstGrant, type CheckResult } from "./connect";
 import { connectionStatus, formatRemaining } from "./connection";
-import { Collapsible, FOLD_MS, Field, Select } from "./controls";
-import { keyMint, readClaims, type SessionSettings } from "./credentials";
+import { Collapsible, FOLD_MS, Field, Select, Toggle } from "./controls";
+import {
+  keyMint,
+  mintBody,
+  readClaims,
+  type SessionSettings,
+} from "./credentials";
 import { useExit } from "./exit";
 import { useFoldPanel } from "./fold";
 import { useFocusWithin } from "./focus";
@@ -138,7 +145,7 @@ interface Applied {
   baseUrl: string;
   environment: Environment;
   /** What it asked of the session, so a change of it takes another Apply. */
-  matchProfile: string;
+  session: SessionSettings;
   firstGrant?: Extract<CheckResult, { ok: true }>["grant"];
 }
 
@@ -149,9 +156,7 @@ function useClient(applied: Applied | null, network: NetworkLog) {
     }
     const mint = withFirstGrant(
       applied.firstGrant,
-      keyMint(applied.baseUrl, applied.secret, network.fetch, {
-        matchProfile: applied.matchProfile,
-      }),
+      keyMint(applied.baseUrl, applied.secret, network.fetch, applied.session),
     );
     return createAutocompleteClient({
       baseUrl: applied.baseUrl,
@@ -442,6 +447,12 @@ const PROFILE_LABELS: Record<ProfileChoice, string> = {
   minimal: "minimal",
   custom: "Custom…",
 };
+/** The routes' toggles in the Session fold, in the words of the API's names. */
+const ROUTE_TOGGLE_LABELS: Record<Route, string> = {
+  businesses: "Businesses",
+  people: "People",
+  addresses: "Addresses",
+};
 
 interface Picked {
   /** The business step 03 searches for. */
@@ -480,14 +491,40 @@ export function App() {
   const [filtersOpen, setFiltersOpen] = useState(false);
   // The key step's Session fold: closed until opened, and with nothing set a
   // mint sends no body. Empty means not set; custom text counts only while
-  // custom is the choice.
+  // custom is the choice. A plain click opens the public scope (routes, most
+  // rows); a shift-click also reveals the match profile, which stays revealed
+  // until the panel closes.
   const [sessionOpen, setSessionOpen] = useState(false);
+  const [profileShown, setProfileShown] = useState(false);
+  const [routeTicks, setRouteTicks] = useState<readonly Route[]>([]);
+  const [maxLimit, setMaxLimit] = useState<number | null>(null);
   const [profileChoice, setProfileChoice] = useState<ProfileChoice>("");
   const [profileCustom, setProfileCustom] = useState("");
   const matchProfile = (
     profileChoice === "custom" ? profileCustom : profileChoice
   ).trim();
-  const settings: SessionSettings = { matchProfile };
+  const settings: SessionSettings = {
+    routes: routeTicks,
+    maxLimit,
+    matchProfile,
+  };
+  // What the closed toggle names, in the order the mint sends it.
+  const sessionParts: ReactNode[] = [
+    ...(routeTicks.length > 0
+      ? [ROUTE_NAMES.filter(route => routeTicks.includes(route)).join(", ")]
+      : []),
+    ...(maxLimit !== null
+      ? [`${maxLimit} ${maxLimit === 1 ? "row" : "rows"}`]
+      : []),
+    ...(matchProfile !== ""
+      ? [
+          // As typed: the API reads a profile's case.
+          <span key="profile" className="link-toggle-value">
+            {matchProfile}
+          </span>,
+        ]
+      : []),
+  ];
   // The panel is in the key step: it is out of view while the step is folded.
   const sessionExpanded = sessionOpen && connectOpen;
   // Focus is in a filter field: the menu stays open as the filter is typed, so
@@ -642,7 +679,7 @@ export function App() {
     applied !== null &&
     applied.secret === draft.trim() &&
     applied.baseUrl === baseUrl &&
-    applied.matchProfile === matchProfile;
+    mintBody(applied.session) === mintBody(settings);
 
   /** Tests `secret` against the API, and has the demo use it if it mints a session. */
   const applyKey = async (secret: string, { focus = true } = {}) => {
@@ -659,7 +696,7 @@ export function App() {
       secret,
       baseUrl,
       environment,
-      matchProfile,
+      session: settings,
       ...(result.grant !== undefined ? { firstGrant: result.grant } : {}),
     });
     // A pick's token belongs to the organization whose session received it:
@@ -892,21 +929,37 @@ export function App() {
                   className="link-toggle"
                   aria-expanded={sessionExpanded}
                   aria-controls="demo-session-settings"
-                  onClick={() => {
-                    // The panel is in the step, so a folded step opens with it.
-                    if (connectOpen) setSessionOpen(open => !open);
-                    else {
+                  onClick={event => {
+                    const shift = event.shiftKey;
+                    if (!connectOpen) {
+                      // The panel is in the step, so a folded step opens with
+                      // it, as it was left: a panel that never closed keeps
+                      // its profile revealed.
                       setConnectOpen(true);
                       setSessionOpen(true);
+                      if (shift) setProfileShown(true);
+                    } else if (!sessionOpen) {
+                      setSessionOpen(true);
+                      setProfileShown(shift);
+                    } else if (shift && !profileShown) {
+                      // Shift on the open panel reveals it and leaves it open.
+                      setProfileShown(true);
+                    } else {
+                      setSessionOpen(false);
+                      setProfileShown(false);
                     }
                   }}
                   data-testid="demo-session-toggle"
                 >
-                  {matchProfile !== "" ? (
+                  {sessionParts.length > 0 ? (
                     <>
-                      Session ·{" "}
-                      {/* As typed: the API reads a profile's case. */}
-                      <span className="link-toggle-value">{matchProfile}</span>
+                      Session
+                      {sessionParts.map((part, at) => (
+                        <Fragment key={at}>
+                          {" · "}
+                          {part}
+                        </Fragment>
+                      ))}
                     </>
                   ) : (
                     "+ Session settings"
@@ -934,23 +987,76 @@ export function App() {
                   included, in the mint&apos;s <code>scope</code>. Left unset,
                   the mint carries no body.
                 </p>
-                <Field label="Match profile" optional>
-                  <Select<ProfileChoice>
-                    value={profileChoice}
-                    options={PROFILES}
-                    labels={PROFILE_LABELS}
-                    onChange={setProfileChoice}
+                <Field
+                  label="Routes"
+                  optional
+                  group
+                  hint="The routes a session may query. None: every route your key may reach."
+                >
+                  <div className="toggle-row">
+                    {ROUTE_NAMES.map(route => (
+                      <Toggle
+                        key={route}
+                        checked={routeTicks.includes(route)}
+                        onChange={ticked =>
+                          setRouteTicks(ticks =>
+                            ticked
+                              ? [...ticks, route]
+                              : ticks.filter(each => each !== route),
+                          )
+                        }
+                      >
+                        {ROUTE_TOGGLE_LABELS[route]}
+                      </Toggle>
+                    ))}
+                  </div>
+                </Field>
+                <Field
+                  label="Most rows"
+                  optional
+                  hint="A request may ask for at most this many, 1 to 20."
+                >
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={maxLimit ?? ""}
+                    onChange={event =>
+                      setMaxLimit(
+                        event.target.value === ""
+                          ? null
+                          : Math.min(
+                              20,
+                              Math.max(
+                                1,
+                                Math.trunc(Number(event.target.value)) || 1,
+                              ),
+                            ),
+                      )
+                    }
                   />
                 </Field>
-                {profileChoice === "custom" && (
-                  <Field label="Custom profile" hint="Sent as typed.">
-                    <input
-                      value={profileCustom}
-                      onChange={e => setProfileCustom(e.target.value)}
-                      {...NO_FILL_ATTRIBUTES}
-                      maxLength={64}
-                    />
-                  </Field>
+                {profileShown && (
+                  <>
+                    <Field label="Match profile" optional>
+                      <Select<ProfileChoice>
+                        value={profileChoice}
+                        options={PROFILES}
+                        labels={PROFILE_LABELS}
+                        onChange={setProfileChoice}
+                      />
+                    </Field>
+                    {profileChoice === "custom" && (
+                      <Field label="Custom profile" hint="Sent as typed.">
+                        <input
+                          value={profileCustom}
+                          onChange={e => setProfileCustom(e.target.value)}
+                          {...NO_FILL_ATTRIBUTES}
+                          maxLength={64}
+                        />
+                      </Field>
+                    )}
+                  </>
                 )}
               </div>
             )}

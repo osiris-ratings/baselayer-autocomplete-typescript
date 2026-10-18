@@ -1,25 +1,60 @@
 import {
+  LEGAL_RELATIONS,
   parseMintResponse,
+  ROUTE_NAMES,
   type MintFunction,
+  type Route,
 } from "@baselayer-sdk/autocomplete";
 
 /**
- * What the page asks of each session it mints. A field left empty is not set,
- * and a mint that sets nothing sends no body at all.
+ * What the page asks of each session it mints, all of it in the mint's
+ * `scope`. A field left empty is not set, and a mint that sets nothing sends no
+ * body at all.
  */
 export interface SessionSettings {
-  /** `scope.match_profile`: any name the API knows, typed or picked. */
+  /**
+   * `scope.routes`: the routes the session may query, each with every
+   * relation it carries. None: every route the key may reach.
+   */
+  routes: readonly Route[];
+  /** `scope.max_limit`, 1 to 20: the most rows a request may ask for. */
+  maxLimit: number | null;
+  /**
+   * `scope.match_profile`: any name the API knows, typed or picked. Not in the
+   * API's published contract.
+   */
   matchProfile: string;
 }
 
-export const NO_SESSION_SETTINGS: SessionSettings = { matchProfile: "" };
+export const NO_SESSION_SETTINGS: SessionSettings = {
+  routes: [],
+  maxLimit: null,
+  matchProfile: "",
+};
 
 /** The mint's JSON body for `settings`, or null when none is set. */
-export function mintBody({ matchProfile }: SessionSettings): string | null {
+export function mintBody({
+  routes,
+  maxLimit,
+  matchProfile,
+}: SessionSettings): string | null {
   const profile = matchProfile.trim();
-  return profile === ""
-    ? null
-    : JSON.stringify({ scope: { match_profile: profile } });
+  const scope = {
+    // The API's own order, whichever order they were ticked in.
+    ...(routes.length > 0
+      ? {
+          routes: Object.fromEntries(
+            ROUTE_NAMES.filter(route => routes.includes(route)).map(route => [
+              route,
+              [...LEGAL_RELATIONS[route]],
+            ]),
+          ),
+        }
+      : {}),
+    ...(maxLimit !== null ? { max_limit: maxLimit } : {}),
+    ...(profile !== "" ? { match_profile: profile } : {}),
+  };
+  return Object.keys(scope).length === 0 ? null : JSON.stringify({ scope });
 }
 
 /**
