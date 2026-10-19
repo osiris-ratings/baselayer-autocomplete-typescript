@@ -25,6 +25,7 @@ import {
   useAutocompleteSession,
 } from "@baselayer-sdk/autocomplete/react";
 import {
+  Fragment,
   useCallback,
   useEffect,
   useId,
@@ -32,6 +33,7 @@ import {
   useRef,
   useState,
   useSyncExternalStore,
+  type ReactNode,
 } from "react";
 
 import { flushSync } from "react-dom";
@@ -40,9 +42,15 @@ import { Icon } from "../shared/icons";
 import { useNow } from "./clock";
 import { testKey, withFirstGrant, type CheckResult } from "./connect";
 import { connectionStatus, formatRemaining } from "./connection";
-import { Collapsible, FOLD_MS, Field, Select } from "./controls";
-import { keyMint, readClaims } from "./credentials";
+import { Collapsible, FOLD_MS, Field, Select, Toggle } from "./controls";
+import {
+  keyMint,
+  mintBody,
+  readClaims,
+  type SessionSettings,
+} from "./credentials";
 import { useExit } from "./exit";
+import { useFoldPanel } from "./fold";
 import { useFocusWithin } from "./focus";
 import { readPrefilledKey } from "./prefill";
 import { NO_FILL_ATTRIBUTES } from "../../src/react/inputAttributes";
@@ -77,6 +85,12 @@ const PRODUCTION = "https://api.baselayer.com";
  * published page is static, so it has no server to forward through.
  */
 const DEV_SERVER_PATH = import.meta.env.DEV ? "/_baselayer" : null;
+/**
+ * The key step's Session fold, which sets what the page asks of the sessions it
+ * mints. The dev server's page only: the published page offers no way to set
+ * any of it.
+ */
+const SESSION_SETTINGS = import.meta.env.DEV;
 type Environment = "dev-server" | "production" | "custom";
 /** What the right of the page shows, if anything: one or the other. */
 type Panel = "debug" | "styling";
@@ -130,6 +144,8 @@ interface Applied {
   secret: string;
   baseUrl: string;
   environment: Environment;
+  /** What it asked of the session, so a change of it takes another Apply. */
+  session: SessionSettings;
   firstGrant?: Extract<CheckResult, { ok: true }>["grant"];
 }
 
@@ -140,7 +156,7 @@ function useClient(applied: Applied | null, network: NetworkLog) {
     }
     const mint = withFirstGrant(
       applied.firstGrant,
-      keyMint(applied.baseUrl, applied.secret, network.fetch),
+      keyMint(applied.baseUrl, applied.secret, network.fetch, applied.session),
     );
     return createAutocompleteClient({
       baseUrl: applied.baseUrl,
@@ -418,28 +434,25 @@ const MASKS_TEXT =
   typeof CSS.supports === "function" &&
   CSS.supports("-webkit-text-security", "disc");
 
-/** The filters panel folded: nothing of it left, margin and padding too. */
-const FOLDED = {
-  height: "0px",
-  marginBottom: "0px",
-  paddingBlock: "0px",
-  opacity: 0,
-  overflow: "hidden",
+/**
+ * What the Session fold's dropdown offers for the match profile: none, the
+ * three the API names, and text typed in for one it does not list.
+ */
+const PROFILES = ["", "standard", "reduced", "minimal", "custom"] as const;
+type ProfileChoice = (typeof PROFILES)[number];
+const PROFILE_LABELS: Record<ProfileChoice, string> = {
+  "": "Not set",
+  standard: "standard",
+  reduced: "reduced",
+  minimal: "minimal",
+  custom: "Custom…",
 };
-
-const FOLD_ANIMATION = {
-  duration: 280,
-  easing: "cubic-bezier(0.2, 0.7, 0.2, 1)",
+/** The routes' toggles in the Session fold, in the words of the API's names. */
+const ROUTE_TOGGLE_LABELS: Record<Route, string> = {
+  businesses: "Businesses",
+  people: "People",
+  addresses: "Addresses",
 };
-
-/** Whether the filters panel can be animated: not under a reduced-motion setting. */
-function canAnimate(): boolean {
-  return (
-    typeof Element !== "undefined" &&
-    typeof Element.prototype.animate === "function" &&
-    !window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
-  );
-}
 
 interface Picked {
   /** The business step 03 searches for. */
@@ -476,6 +489,52 @@ export function App() {
   const [connectOpen, setConnectOpen] = useState(true);
   const connectToggle = useRef<HTMLButtonElement>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // The key step's Session fold: closed until opened, and with nothing set a
+  // mint sends no body. Empty means not set; custom text counts only while
+  // custom is the choice. A plain click opens the public scope (routes, most
+  // rows); a shift-click also reveals the match profile, which stays revealed
+  // until the panel closes. The toggle is on the step's title only while the
+  // step is expanded, and folding the step closes the panel (see foldConnect).
+  const [sessionOpen, setSessionOpen] = useState(false);
+  const [profileShown, setProfileShown] = useState(false);
+  const [routeTicks, setRouteTicks] = useState<readonly Route[]>([]);
+  const [maxLimit, setMaxLimit] = useState<number | null>(null);
+  const [profileChoice, setProfileChoice] = useState<ProfileChoice>("");
+  const [profileCustom, setProfileCustom] = useState("");
+  const matchProfile = (
+    profileChoice === "custom" ? profileCustom : profileChoice
+  ).trim();
+  const settings: SessionSettings = {
+    routes: routeTicks,
+    maxLimit,
+    matchProfile,
+  };
+  // What the closed toggle names, in the order the mint sends it.
+  const sessionParts: ReactNode[] = [
+    ...(routeTicks.length > 0
+      ? [ROUTE_NAMES.filter(route => routeTicks.includes(route)).join(", ")]
+      : []),
+    ...(maxLimit !== null
+      ? [`${maxLimit} ${maxLimit === 1 ? "row" : "rows"}`]
+      : []),
+    ...(matchProfile !== ""
+      ? [
+          // As typed: the API reads a profile's case.
+          <span key="profile" className="link-toggle-value">
+            {matchProfile}
+          </span>,
+        ]
+      : []),
+  ];
+  // The step folded, by its own title, by Apply or by the Styling pane: the
+  // toggle goes from its title, and the panel goes closed with it. What was set
+  // stays set, and goes with every mint. Whether the match profile is revealed
+  // is decided when the panel opens, so its row folds away with the rest of
+  // the panel instead of going first.
+  const foldConnect = () => {
+    setConnectOpen(false);
+    setSessionOpen(false);
+  };
   // Focus is in a filter field: the menu stays open as the filter is typed, so
   // the list narrowing is in view, rather than closing as the name loses focus.
   const [filtering, filterFocus] = useFocusWithin();
@@ -486,7 +545,7 @@ export function App() {
   const setPanel = (next: Panel | null) => {
     setPanelState(next);
     if (next !== null) setIntroOpen(false);
-    if (next === "styling") setConnectOpen(false);
+    if (next === "styling") foldConnect();
   };
   // The side tab a pane grows out of, and folds back into.
   const [lastPanel, setLastPanel] = useState<Panel>("debug");
@@ -596,38 +655,10 @@ export function App() {
     // The field's own way to open: a click toggles a closed menu open.
     input?.click();
   }, [mode]);
-  // Opening the filters unfolds the panel downwards, and closing them folds it
-  // up: its height runs between nothing and what it is, the page below making
-  // room as it does. The panel stays on the page until it has folded, which is
-  // `filtersShown`. Not under a reduced-motion setting, nor where there is
-  // nothing to animate with: there it is shown and hidden at once.
-  const filtersPanel = useRef<HTMLDivElement>(null);
-  const [filtersShown, setFiltersShown] = useState(false);
-  if (filtersOpen && !filtersShown) setFiltersShown(true);
-  if (!filtersOpen && filtersShown && !canAnimate()) setFiltersShown(false);
-  useEffect(() => {
-    const panel = filtersPanel.current;
-    if (panel === null || !canAnimate() || (!filtersOpen && !filtersShown)) {
-      return;
-    }
-    const full = {
-      height: `${panel.getBoundingClientRect().height}px`,
-      overflow: "hidden",
-    };
-    if (filtersOpen) {
-      const unfold = panel.animate([FOLDED, full], FOLD_ANIMATION);
-      return () => unfold.cancel();
-    }
-    const fold = panel.animate([full, FOLDED], {
-      ...FOLD_ANIMATION,
-      fill: "forwards",
-    });
-    // Held at nothing until the panel is hidden: cancelling it here would
-    // show the panel whole for a frame. The cleanup cancels it, the render
-    // after this having hidden the panel by then.
-    fold.onfinish = () => setFiltersShown(false);
-    return () => fold.cancel();
-  }, [filtersOpen, filtersShown]);
+  const { panel: filtersPanel, shown: filtersShown } =
+    useFoldPanel(filtersOpen);
+  const { panel: sessionPanel, shown: sessionShown } =
+    useFoldPanel(sessionOpen);
   const picked = picks[mode];
   const setPicked = (pick: Picked | null) =>
     setPicks(all => ({ ...all, [mode]: pick }));
@@ -655,13 +686,14 @@ export function App() {
   const isApplied =
     applied !== null &&
     applied.secret === draft.trim() &&
-    applied.baseUrl === baseUrl;
+    applied.baseUrl === baseUrl &&
+    mintBody(applied.session) === mintBody(settings);
 
   /** Tests `secret` against the API, and has the demo use it if it mints a session. */
   const applyKey = async (secret: string, { focus = true } = {}) => {
     setCheck("testing");
     setAnnounced("");
-    const result = await testKey(baseUrl, secret, network.fetch);
+    const result = await testKey(baseUrl, secret, network.fetch, settings);
     if (!result.ok) {
       setCheck(result);
       return;
@@ -672,6 +704,7 @@ export function App() {
       secret,
       baseUrl,
       environment,
+      session: settings,
       ...(result.grant !== undefined ? { firstGrant: result.grant } : {}),
     });
     // A pick's token belongs to the organization whose session received it:
@@ -679,7 +712,7 @@ export function App() {
     setPicks(NO_PICKS);
     setCheck(null);
     setAnnounced(result.message);
-    setConnectOpen(false);
+    foldConnect();
     if (focus) connectToggle.current?.focus();
     // The result joins the section once it has folded: arriving with the
     // fold, it would make the section grow just as it starts to shrink.
@@ -892,10 +925,149 @@ export function App() {
             icon="token"
             summary={connectSummary}
             open={connectOpen}
-            onToggle={setConnectOpen}
+            onToggle={open => (open ? setConnectOpen(true) : foldConnect())}
             toggleRef={connectToggle}
             testId="demo-connect"
+            afterTitle={
+              // One closed toggle on the title, as step 2's filters are on
+              // theirs, right after it, while the step is expanded: a folded
+              // step is just its title, summary and chevron (null keeps the
+              // chevron the same element, so it still turns with the fold).
+              // Only on the dev server's page: see SESSION_SETTINGS.
+              SESSION_SETTINGS ? (
+                connectOpen ? (
+                  <button
+                    type="button"
+                    className="link-toggle"
+                    aria-expanded={sessionOpen}
+                    aria-controls="demo-session-settings"
+                    onClick={event => {
+                      if (!sessionOpen) {
+                        setSessionOpen(true);
+                        setProfileShown(event.shiftKey);
+                      } else if (event.shiftKey && !profileShown) {
+                        // Shift on the open panel reveals it and leaves it open.
+                        setProfileShown(true);
+                      } else {
+                        setSessionOpen(false);
+                      }
+                    }}
+                    data-testid="demo-session-toggle"
+                  >
+                    {/* One run of text, so it wraps as one: a flex item per
+                        word would shrink the profile to a letter a line. */}
+                    <span>
+                      {sessionParts.length > 0 ? (
+                        <>
+                          Session
+                          {sessionParts.map((part, at) => (
+                            <Fragment key={at}>
+                              {" · "}
+                              {part}
+                            </Fragment>
+                          ))}
+                        </>
+                      ) : (
+                        "+ Session settings"
+                      )}
+                    </span>
+                    <span
+                      className="fold-chevron"
+                      data-open={sessionOpen ? "true" : "false"}
+                      aria-hidden="true"
+                    />
+                  </button>
+                ) : null
+              ) : undefined
+            }
           >
+            {/* The filters' panel, under the title row it unfolds from. Only on the
+                dev server's page: see SESSION_SETTINGS. */}
+            {SESSION_SETTINGS && (
+              <div
+                id="demo-session-settings"
+                ref={sessionPanel}
+                className="filters-panel"
+                hidden={!sessionShown}
+              >
+                <p className="hint">
+                  Asked of every session this page mints, Apply&apos;s test
+                  included, in the mint&apos;s <code>scope</code>. Left unset,
+                  the mint carries no body.
+                </p>
+                <Field
+                  label="Routes"
+                  optional
+                  group
+                  hint="The routes a session may query. None: every route your key may reach."
+                >
+                  <div className="toggle-row">
+                    {ROUTE_NAMES.map(route => (
+                      <Toggle
+                        key={route}
+                        checked={routeTicks.includes(route)}
+                        onChange={ticked =>
+                          setRouteTicks(ticks =>
+                            ticked
+                              ? [...ticks, route]
+                              : ticks.filter(each => each !== route),
+                          )
+                        }
+                      >
+                        {ROUTE_TOGGLE_LABELS[route]}
+                      </Toggle>
+                    ))}
+                  </div>
+                </Field>
+                <Field
+                  label="Most rows"
+                  optional
+                  hint="A request may ask for at most this many, 1 to 20."
+                >
+                  <input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={maxLimit ?? ""}
+                    onChange={event =>
+                      setMaxLimit(
+                        event.target.value === ""
+                          ? null
+                          : Math.min(
+                              20,
+                              Math.max(
+                                1,
+                                Math.trunc(Number(event.target.value)) || 1,
+                              ),
+                            ),
+                      )
+                    }
+                  />
+                </Field>
+                {profileShown && (
+                  <>
+                    <Field label="Match profile" optional>
+                      <Select<ProfileChoice>
+                        value={profileChoice}
+                        options={PROFILES}
+                        labels={PROFILE_LABELS}
+                        onChange={setProfileChoice}
+                      />
+                    </Field>
+                    {profileChoice === "custom" && (
+                      <Field label="Custom profile" hint="Sent as typed.">
+                        <input
+                          value={profileCustom}
+                          onChange={e => setProfileCustom(e.target.value)}
+                          {...NO_FILL_ATTRIBUTES}
+                          maxLength={64}
+                        />
+                      </Field>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
             <Field label="Environment">
               <Select<Environment>
                 value={environment}

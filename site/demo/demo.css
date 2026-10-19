@@ -225,7 +225,8 @@
   transition: transform 150ms ease;
 }
 
-.fold[data-open="true"] > .fold-heading .fold-chevron {
+.fold[data-open="true"] > .fold-heading > .fold-toggle .fold-chevron,
+.fold[data-open="true"] > .fold-heading > .fold-chevron {
   margin-bottom: -2px;
   transform: rotate(-135deg);
 }
@@ -2610,6 +2611,61 @@ html[data-dragging] * {
   margin: 0;
 }
 
+/* A step's title row with a control after its title (the key step's Session
+   toggle) is drawn as step 2's title row is: the title and the toggle on one
+   baseline, the toggle right after the title, and under it when they do not
+   fit. Its summary and chevron are then the heading's own (a heading holds a
+   chevron of its own only in this layout), at the row's end where every fold
+   has them, beside the title's button: that is stretched over the whole row,
+   under the toggle, so they still press the fold. With no toggle in the row
+   (the step folded) it is the fold as every other is drawn. */
+.fold-heading:has(> .fold-chevron) {
+  position: relative;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 16px;
+  container-type: inline-size;
+}
+
+.fold-heading:has(> .fold-chevron) > .fold-toggle {
+  flex: 0 1 auto;
+  width: auto;
+}
+
+.fold-heading:has(> .fold-chevron) > .fold-toggle::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  content: "";
+}
+
+.fold-heading:has(> .fold-chevron) > .link-toggle {
+  position: relative;
+  z-index: 2;
+}
+
+/* The summary takes what the title and the toggle leave, and gives way (it
+   ends in an ellipsis) before the row wraps; the chevron is at the row's end
+   whether there is a summary or not. */
+.fold-heading:has(> .fold-chevron) > .fold-summary {
+  flex: 1 1 0;
+  justify-content: flex-end;
+}
+
+.fold-heading:has(> .fold-chevron) > .fold-chevron {
+  margin-left: auto;
+}
+
+/* A narrow row keeps the title and the chevron together and puts the toggle
+   under them, as step 2's wraps under its title. */
+@container (max-width: 560px) {
+  .fold-heading:has(> .fold-chevron) > .link-toggle {
+    order: 1;
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+}
+
 .link-toggle {
   display: inline-flex;
   align-items: center;
@@ -2621,8 +2677,15 @@ html[data-dragging] * {
   font-family: var(--mono);
   font-size: 12.5px;
   letter-spacing: 0.06em;
+  text-align: left;
   text-transform: uppercase;
   cursor: pointer;
+}
+
+/* What a toggle names that the API reads as typed, in the case it is typed. */
+.link-toggle .link-toggle-value {
+  text-transform: none;
+  overflow-wrap: anywhere;
 }
 
 .link-toggle .fold-chevron {
@@ -2710,6 +2773,13 @@ html[data-dragging] * {
 }
 
 .filters-panel > .hint {
+  grid-column: 1 / -1;
+}
+
+/* A row of toggles (the Session panel's routes) takes the panel's width, so it
+   stays on one row, and a taller control row never stretches the dropdown
+   beside it, which draws its chevron against its box. */
+.filters-panel > .field-row:has(> .toggle-row) {
   grid-column: 1 / -1;
 }
 

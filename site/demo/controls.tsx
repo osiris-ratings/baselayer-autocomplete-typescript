@@ -21,6 +21,7 @@ export function Collapsible({
   toggleRef,
   className,
   actions,
+  afterTitle,
   keepSummary = false,
 }: {
   title: string;
@@ -39,11 +40,34 @@ export function Collapsible({
   className?: string;
   /** Controls beside the toggle (a toggle cannot hold buttons of its own). */
   actions?: ReactNode;
+  /**
+   * A control right after the title, before the summary and the chevron at the
+   * row's end. The toggle is then the title alone, and its button is stretched
+   * over the whole row, under the control, so the summary and the chevron
+   * still press the fold as they always did. `null` is that layout with no
+   * control for now (the chevron stays the same element, so it keeps turning
+   * with the fold when the control comes and goes); `undefined` is the fold
+   * as every other is drawn, the summary and chevron inside the button.
+   */
+  afterTitle?: ReactNode;
   /** Show the summary open as well as folded. */
   keepSummary?: boolean;
 }) {
   const id = useId();
+  const summaryId = `${id}-summary`;
   const look = className ?? (nested ? "fold-nested" : "demo-card");
+  const summaryNode = summary !== undefined && (keepSummary || !open) && (
+    // An empty summary keeps its room, so a count arriving or leaving never
+    // changes the head's height.
+    <span
+      id={afterTitle !== undefined ? summaryId : undefined}
+      className="fold-summary"
+      aria-hidden={summary === "" || undefined}
+    >
+      {summary === "" ? "\u00a0" : summary}
+    </span>
+  );
+  const chevron = <span className="fold-chevron" aria-hidden="true" />;
   return (
     <section
       className={`fold ${look}`}
@@ -57,6 +81,13 @@ export function Collapsible({
           className="fold-toggle"
           aria-expanded={open}
           aria-controls={id}
+          // With a control after the title the summary is no longer inside the
+          // button, so the button's name would lose it: say it as a description.
+          aria-describedby={
+            afterTitle !== undefined && summaryNode !== false
+              ? summaryId
+              : undefined
+          }
           onClick={() => onToggle(!open)}
         >
           {num !== undefined && <span className="demo-num">{num}</span>}
@@ -64,18 +95,20 @@ export function Collapsible({
             {title}
             {icon !== undefined && <Icon name={icon} />}
           </span>
-          {summary !== undefined && (keepSummary || !open) && (
-            // An empty summary keeps its room, so a count arriving or
-            // leaving never changes the head's height.
-            <span
-              className="fold-summary"
-              aria-hidden={summary === "" || undefined}
-            >
-              {summary === "" ? "\u00a0" : summary}
-            </span>
+          {afterTitle === undefined && (
+            <>
+              {summaryNode}
+              {chevron}
+            </>
           )}
-          <span className="fold-chevron" aria-hidden="true" />
         </button>
+        {afterTitle}
+        {afterTitle !== undefined && (
+          <>
+            {summaryNode}
+            {chevron}
+          </>
+        )}
         {actions}
       </h2>
       {/* Folds by animating its height (a 1fr to 0fr grid row); inert while
