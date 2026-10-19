@@ -243,6 +243,48 @@ describe("the mint with a scope", () => {
   });
 });
 
+describe("the mint from the published page, which calls the API from another origin", () => {
+  // The browser sends a preflight before a request with a header it does not
+  // take for granted, and the API has to allow every one it names:
+  // api.baselayer.com allows any (its CORS_HEADERS is `*`). A header added to
+  // the mint is one more it asks for.
+  const preflighted = (init: RequestInit) =>
+    [...new Headers(init.headers).keys()]
+      .filter(
+        name =>
+          !["accept", "accept-language", "content-language"].includes(name),
+      )
+      .sort();
+
+  it("asks the API to allow the key's header and the JSON body's, and nothing else", async () => {
+    const fetchImpl = api();
+
+    await keyMint(
+      "https://api.baselayer.com",
+      "the-key",
+      fetchImpl,
+      settings({ routes: ["people"], maxLimit: 5 }),
+    )(context());
+
+    const [url, init] = fetchImpl.mock.calls[0]!;
+    expect(url).toBe("https://api.baselayer.com/autocomplete/sessions");
+    expect(init!.method).toBe("POST");
+    expect(init!.credentials).toBe("omit");
+    expect(preflighted(init!)).toEqual(["content-type", "x-api-key"]);
+    expect(new Headers(init!.headers).get("content-type")).toBe(
+      "application/json",
+    );
+  });
+
+  it("asks for the key's header only with nothing set, as it always did", async () => {
+    const fetchImpl = api();
+
+    await keyMint("https://api.baselayer.com", "the-key", fetchImpl)(context());
+
+    expect(preflighted(fetchImpl.mock.calls[0]![1]!)).toEqual(["x-api-key"]);
+  });
+});
+
 describe("testKey, Apply's own mint", () => {
   it("carries the profile, so the session it hands the demo is the one asked for", async () => {
     const fetchImpl = api();

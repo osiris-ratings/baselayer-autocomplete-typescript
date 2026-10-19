@@ -1,7 +1,13 @@
 // The demo's form controls. Every one is the same height and border as a text
 // input, selects included, so the panels read as one form.
 
-import { useId, useState, type ReactNode, type Ref } from "react";
+import {
+  useId,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+  type Ref,
+} from "react";
 
 import { Icon, type IconName } from "../shared/icons";
 
@@ -30,7 +36,8 @@ export function Collapsible({
   num?: string;
   summary?: ReactNode;
   open: boolean;
-  onToggle(open: boolean): void;
+  /** `event` is the click on the title, for a host that reads its modifiers. */
+  onToggle(open: boolean, event: MouseEvent<HTMLButtonElement>): void;
   children: ReactNode;
   nested?: boolean;
   testId?: string;
@@ -88,7 +95,7 @@ export function Collapsible({
               ? summaryId
               : undefined
           }
-          onClick={() => onToggle(!open)}
+          onClick={event => onToggle(!open, event)}
         >
           {num !== undefined && <span className="demo-num">{num}</span>}
           <span className="fold-title">

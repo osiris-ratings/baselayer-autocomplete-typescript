@@ -112,6 +112,81 @@ const contentRight = (card: Element) =>
   parseFloat(getComputedStyle(card).paddingRight) -
   parseFloat(getComputedStyle(card).borderRightWidth);
 
+/**
+ * The same fold as the key step's (number, title, icon, summary), drawn the
+ * way every fold is drawn without a control after its title, beside the key
+ * step in its own pane so it has the same width; measured, then taken away.
+ */
+function beside<T>(
+  measure: (reference: HTMLElement) => T,
+  summaryHtml?: string,
+  open = false,
+): T {
+  const host = document.createElement("div");
+  step().after(host);
+  const root = createRoot(host);
+  flushSync(() =>
+    root.render(
+      <Collapsible
+        num="01"
+        title="Connect"
+        icon="token"
+        summary="Not connected"
+        open={open}
+        onToggle={() => {}}
+      >
+        {null}
+      </Collapsible>,
+    ),
+  );
+  try {
+    const reference = host.querySelector<HTMLElement>(".fold")!;
+    // The summary the step shows, drawn here as it is there.
+    if (summaryHtml !== undefined) {
+      reference.querySelector(".fold-summary")!.innerHTML = summaryHtml;
+    }
+    return measure(reference);
+  } finally {
+    root.unmount();
+    host.remove();
+  }
+}
+
+/**
+ * Where each part of a fold's title row is, from the card's own corner. The
+ * summary is where its words are drawn: its box may take the free room.
+ */
+const parts = (card: HTMLElement) => {
+  const from = rect(card);
+  const relative = (box: DOMRect) => ({
+    left: box.left - from.left,
+    right: box.right - from.left,
+    top: box.top - from.top,
+    height: box.height,
+    width: box.width,
+  });
+  const at = (selector: string) =>
+    relative(rect(card.querySelector(selector)!));
+  const words = (selector: string) => {
+    const element = card.querySelector(selector);
+    if (element === null) return relative(new DOMRect(from.left, from.top));
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    return relative(range.getBoundingClientRect());
+  };
+  return {
+    card: { height: from.height, width: from.width },
+    heading: at(".fold-heading"),
+    num: at(".demo-num"),
+    title: at(".fold-title"),
+    summary: words(".fold-summary"),
+    // The fold's own, not the one on the row's toggle.
+    chevron: at(
+      ".fold-heading > .fold-chevron, .fold-heading > .fold-toggle .fold-chevron",
+    ),
+  };
+};
+
 describe("the Session fold, closed", () => {
   it("is not drawn: the panel takes no room and nothing in it can be reached", async () => {
     drawn();
@@ -312,81 +387,6 @@ describe("the Session fold, with the key step folded", () => {
       .poll(() => rect(step().querySelector(".fold-body")!).height)
       .toBe(0);
   }
-
-  /**
-   * The same fold as the key step's (number, title, icon, summary), drawn the
-   * way every fold is drawn without a control after its title, beside the key
-   * step in its own pane so it has the same width; measured, then taken away.
-   */
-  function beside<T>(
-    measure: (reference: HTMLElement) => T,
-    summaryHtml?: string,
-    open = false,
-  ): T {
-    const host = document.createElement("div");
-    step().after(host);
-    const root = createRoot(host);
-    flushSync(() =>
-      root.render(
-        <Collapsible
-          num="01"
-          title="Connect"
-          icon="token"
-          summary="Not connected"
-          open={open}
-          onToggle={() => {}}
-        >
-          {null}
-        </Collapsible>,
-      ),
-    );
-    try {
-      const reference = host.querySelector<HTMLElement>(".fold")!;
-      // The summary the step shows, drawn here as it is there.
-      if (summaryHtml !== undefined) {
-        reference.querySelector(".fold-summary")!.innerHTML = summaryHtml;
-      }
-      return measure(reference);
-    } finally {
-      root.unmount();
-      host.remove();
-    }
-  }
-
-  /**
-   * Where each part of a fold's title row is, from the card's own corner. The
-   * summary is where its words are drawn: its box may take the free room.
-   */
-  const parts = (card: HTMLElement) => {
-    const from = rect(card);
-    const relative = (box: DOMRect) => ({
-      left: box.left - from.left,
-      right: box.right - from.left,
-      top: box.top - from.top,
-      height: box.height,
-      width: box.width,
-    });
-    const at = (selector: string) =>
-      relative(rect(card.querySelector(selector)!));
-    const words = (selector: string) => {
-      const element = card.querySelector(selector);
-      if (element === null) return relative(new DOMRect(from.left, from.top));
-      const range = document.createRange();
-      range.selectNodeContents(element);
-      return relative(range.getBoundingClientRect());
-    };
-    return {
-      card: { height: from.height, width: from.width },
-      heading: at(".fold-heading"),
-      num: at(".demo-num"),
-      title: at(".fold-title"),
-      summary: words(".fold-summary"),
-      // The fold's own, not the one on the row's toggle.
-      chevron: at(
-        ".fold-heading > .fold-chevron, .fold-heading > .fold-toggle .fold-chevron",
-      ),
-    };
-  };
 
   it("shows no row: just the step's own title, summary and chevron", async () => {
     await folded();
@@ -758,5 +758,138 @@ describe("the Session fold, open", () => {
 
     await expect.poll(() => getComputedStyle(panel()).display).toBe("none");
     expect(rect(panel()).height).toBe(0);
+  });
+});
+
+describe("the Session settings on the published page", () => {
+  // The published build has `import.meta.env.DEV` off: a visitor sees the
+  // key step as every fold is drawn, and a shift-click on its title brings the
+  // toggle in.
+  beforeEach(() => {
+    vi.stubEnv("DEV", false);
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  const fold = () => step().querySelector<HTMLButtonElement>(".fold-toggle")!;
+  const reveal = (element: Element = fold()) =>
+    flushSync(() => shiftClick(element));
+  /** The edges the title row is checked by, against a plain fold's. */
+  const EDGES = ["left", "right", "top", "height"] as const;
+
+  it("is drawn before the reveal as every fold is, with no toggle: the open step and the folded one", async () => {
+    drawn();
+
+    expect(toggle()).toBeNull();
+    expect(panel()).toBeNull();
+    expect(step().querySelectorAll(".fold-heading > *")).toHaveLength(1);
+    for (const open of [true, false]) {
+      if (!open) {
+        await userEvent.click(fold());
+        await expect.poll(() => step().getAttribute("data-open")).toBe("false");
+        await expect
+          .poll(() => rect(step().querySelector(".fold-body")!).height)
+          .toBe(0);
+      }
+      const ours = parts(step());
+      const theirs = beside(parts, undefined, open);
+
+      for (const part of ["heading", "num", "title", "chevron"] as const) {
+        for (const edge of EDGES) {
+          expect(
+            Math.abs(ours[part][edge] - theirs[part][edge]),
+            `${open ? "open" : "folded"} ${part}.${edge}`,
+          ).toBeLessThanOrEqual(1);
+        }
+      }
+    }
+  });
+
+  it("brings the toggle in on the title row, right after the title, and moves nothing else", () => {
+    drawn();
+    const before = parts(step());
+    const keyTop = rect(byId("demo-key")).top;
+
+    reveal();
+
+    const after = parts(step());
+    expect(toggle()).not.toBeNull();
+    expect(rect(toggle()).left).toBeGreaterThanOrEqual(
+      rect(heading().querySelector(".fold-title")!).right,
+    );
+    expect(rect(toggle()).top).toBeGreaterThanOrEqual(rect(heading()).top);
+    expect(rect(toggle()).bottom).toBeLessThanOrEqual(
+      rect(heading()).bottom + 1,
+    );
+    for (const part of ["heading", "title", "chevron"] as const) {
+      for (const edge of EDGES) {
+        expect(
+          Math.abs(after[part][edge] - before[part][edge]),
+          `${part}.${edge}`,
+        ).toBeLessThanOrEqual(1);
+      }
+    }
+    expect(Math.abs(rect(byId("demo-key")).top - keyTop)).toBeLessThanOrEqual(
+      1,
+    );
+    expect(
+      Math.abs(after.card.height - before.card.height),
+    ).toBeLessThanOrEqual(1);
+  });
+
+  it("brings it in on a phone without moving the title or the chevron, and nothing scrolls", async () => {
+    await page.viewport(375, 800);
+    drawn();
+    const before = parts(step());
+
+    reveal();
+
+    const after = parts(step());
+    expect(toggle()).not.toBeNull();
+    for (const part of ["title", "chevron"] as const) {
+      for (const edge of EDGES) {
+        expect(
+          Math.abs(after[part][edge] - before[part][edge]),
+          `${part}.${edge}`,
+        ).toBeLessThanOrEqual(1);
+      }
+    }
+    expect(
+      document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ).toBe(true);
+  });
+
+  it("reveals from anywhere on a folded step's title row, and opens the step", async () => {
+    drawn();
+    await userEvent.click(fold());
+    await expect.poll(() => step().getAttribute("data-open")).toBe("false");
+    const at = (element: Element) => {
+      const { left, top, width, height } = rect(element);
+      return document.elementFromPoint(left + width / 2, top + height / 2)!;
+    };
+
+    reveal(at(stepChevron()));
+
+    expect(step().getAttribute("data-open")).toBe("true");
+    expect(toggle()).not.toBeNull();
+    expect(toggle().textContent).toBe("+ Session settings");
+  });
+
+  it("is the page's own toggle once revealed: it opens the filters' panel with the scope, under the title row", async () => {
+    drawn();
+    reveal();
+
+    await userEvent.click(toggle());
+    await expect.poll(() => rect(panel()).height > 0).toBe(true);
+
+    expect(panel().classList.contains("filters-panel")).toBe(true);
+    expect(profileSelect()).toBeNull();
+    expect(routeBoxes().length).toBeGreaterThan(0);
+    expect(rect(panel()).top).toBeGreaterThanOrEqual(
+      rect(heading()).bottom - 1,
+    );
+    expect(step().contains(panel())).toBe(true);
   });
 });

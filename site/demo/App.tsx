@@ -85,12 +85,6 @@ const PRODUCTION = "https://api.baselayer.com";
  * published page is static, so it has no server to forward through.
  */
 const DEV_SERVER_PATH = import.meta.env.DEV ? "/_baselayer" : null;
-/**
- * The key step's Session fold, which sets what the page asks of the sessions it
- * mints. The dev server's page only: the published page offers no way to set
- * any of it.
- */
-const SESSION_SETTINGS = import.meta.env.DEV;
 type Environment = "dev-server" | "production" | "custom";
 /** What the right of the page shows, if anything: one or the other. */
 type Panel = "debug" | "styling";
@@ -489,12 +483,18 @@ export function App() {
   const [connectOpen, setConnectOpen] = useState(true);
   const connectToggle = useRef<HTMLButtonElement>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  // The key step's Session fold: closed until opened, and with nothing set a
-  // mint sends no body. Empty means not set; custom text counts only while
-  // custom is the choice. A plain click opens the public scope (routes, most
-  // rows); a shift-click also reveals the match profile, which stays revealed
-  // until the panel closes. The toggle is on the step's title only while the
-  // step is expanded, and folding the step closes the panel (see foldConnect).
+  // The key step's Session fold, which sets what the page asks of the sessions
+  // it mints. The dev server's page has it from the start; the published page
+  // has none until a shift-click on the step's title reveals it, for as long as
+  // the page lives (see the step's onToggle).
+  const [sessionRevealed, setSessionRevealed] = useState(false);
+  const sessionOffered = import.meta.env.DEV || sessionRevealed;
+  // The fold is closed until opened, and with nothing set a mint sends no body.
+  // Empty means not set; custom text counts only while custom is the choice. A
+  // plain click opens the public scope (routes, most rows); a shift-click also
+  // reveals the match profile, which stays revealed until the panel closes. The
+  // toggle is on the step's title only while the step is expanded, and folding
+  // the step closes the panel (see foldConnect).
   const [sessionOpen, setSessionOpen] = useState(false);
   const [profileShown, setProfileShown] = useState(false);
   const [routeTicks, setRouteTicks] = useState<readonly Route[]>([]);
@@ -925,7 +925,19 @@ export function App() {
             icon="token"
             summary={connectSummary}
             open={connectOpen}
-            onToggle={open => (open ? setConnectOpen(true) : foldConnect())}
+            onToggle={(open, event) => {
+              if (!sessionOffered && event.shiftKey) {
+                // The published page's way to the Session settings: the toggle
+                // is on an expanded step only, so this opens the step too and
+                // never folds it. Once revealed, a shift-click is a plain click.
+                setSessionRevealed(true);
+                setConnectOpen(true);
+              } else if (open) {
+                setConnectOpen(true);
+              } else {
+                foldConnect();
+              }
+            }}
             toggleRef={connectToggle}
             testId="demo-connect"
             afterTitle={
@@ -933,8 +945,8 @@ export function App() {
               // theirs, right after it, while the step is expanded: a folded
               // step is just its title, summary and chevron (null keeps the
               // chevron the same element, so it still turns with the fold).
-              // Only on the dev server's page: see SESSION_SETTINGS.
-              SESSION_SETTINGS ? (
+              // Not on the published page until revealed: see sessionOffered.
+              sessionOffered ? (
                 connectOpen ? (
                   <button
                     type="button"
@@ -981,9 +993,9 @@ export function App() {
               ) : undefined
             }
           >
-            {/* The filters' panel, under the title row it unfolds from. Only on the
-                dev server's page: see SESSION_SETTINGS. */}
-            {SESSION_SETTINGS && (
+            {/* The filters' panel, under the title row it unfolds from. Not on the
+                published page until revealed: see sessionOffered. */}
+            {sessionOffered && (
               <div
                 id="demo-session-settings"
                 ref={sessionPanel}
