@@ -69,18 +69,18 @@ published page this needs the API to accept the demo's origin.
 A closed toggle after the Connect step's title, **Session settings**, unfolds
 under the title, as step 2's filters do, to what the page asks of each session
 it mints. Run locally it is there from the start. On the published page it is
-not there until a shift-click on the step's title brings it in, and it stays for
-as long as the page is open; a plain click on the title folds and opens the step
-as it always did. It is on the title while the step is expanded: folding the
-step takes it off the title and closes its panel, and what was set stays set. A
-plain click opens the public scope: the **Routes** the session may query (each
-ticked route comes with every relation it carries; none ticked is every route
-your key may reach) and the **Most rows** a request may ask for (1 to 20; empty
-is 20). A shift-click opens the same panel with an advanced `match_profile`
-field as well; once revealed it stays until the panel closes, and a value that
-is set still goes with every mint while it is out of sight. Set, every mint the
-page makes (Apply's test, and each the component makes after it) carries only
-what is set, as
+not there until a shift-click on the step's title (or Shift with Enter or Space
+on it) brings it in, and it stays for as long as the page is open; a plain click
+on the title folds and opens the step as it always did. It is on the title while
+the step is expanded: folding the step takes it off the title and closes its
+panel, and what was set stays set. A plain click opens the public scope: the
+**Routes** the session may query (each ticked route comes with every relation it
+carries; none ticked is every route your key may reach) and the **Most rows** a
+request may ask for (1 to 20; empty is 20). A shift-click opens the same panel
+with an advanced `match_profile` field as well; once revealed it stays until the
+panel closes, and a value that is set still goes with every mint while it is out
+of sight. Set, every mint the page makes (Apply's test, and each the component
+makes after it) carries only what is set, as
 `{"scope":{"routes":{…},"max_limit":5,"match_profile":"<value>"}}` JSON with
 `Content-Type: application/json`, and Debug › Network shows it under the mint's
 request body. Nothing set, a mint has no body and no `Content-Type`, as it

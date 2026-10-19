@@ -927,9 +927,11 @@ export function App() {
             open={connectOpen}
             onToggle={(open, event) => {
               if (!sessionOffered && event.shiftKey) {
-                // The published page's way to the Session settings: the toggle
-                // is on an expanded step only, so this opens the step too and
-                // never folds it. Once revealed, a shift-click is a plain click.
+                // The published page's way to the Session settings: a
+                // shift-click, or Shift with Enter or Space, which makes the
+                // same click. The toggle is on an expanded step only, so this
+                // opens the step too and never folds it. Once revealed, a
+                // shift-click is a plain click.
                 setSessionRevealed(true);
                 setConnectOpen(true);
               } else if (open) {

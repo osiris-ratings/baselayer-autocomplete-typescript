@@ -245,9 +245,8 @@ describe("the mint with a scope", () => {
 
 describe("the mint from the published page, which calls the API from another origin", () => {
   // The browser sends a preflight before a request with a header it does not
-  // take for granted, and the API has to allow every one it names:
-  // api.baselayer.com allows any (its CORS_HEADERS is `*`). A header added to
-  // the mint is one more it asks for.
+  // take for granted. The API's preflight allows Content-Type beside the key's
+  // header; a header added to the mint fails these, to be looked at.
   const preflighted = (init: RequestInit) =>
     [...new Headers(init.headers).keys()]
       .filter(

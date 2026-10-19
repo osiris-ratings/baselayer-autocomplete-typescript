@@ -877,6 +877,33 @@ describe("the Session settings on the published page", () => {
     expect(toggle().textContent).toBe("+ Session settings");
   });
 
+  it("reveals the toggle with Shift and Enter on the focused title, the click the browser makes from them, and Enter alone folds the step", async () => {
+    drawn();
+    fold().focus();
+
+    await userEvent.keyboard("{Enter}");
+    await expect.poll(() => step().getAttribute("data-open")).toBe("false");
+    expect(toggle()).toBeNull();
+    await userEvent.keyboard("{Enter}");
+    await expect.poll(() => step().getAttribute("data-open")).toBe("true");
+    expect(toggle()).toBeNull();
+
+    await userEvent.keyboard("{Shift>}{Enter}{/Shift}");
+    await expect.poll(() => toggle()).not.toBeNull();
+    expect(step().getAttribute("data-open")).toBe("true");
+    expect(document.activeElement).toBe(fold());
+  });
+
+  it("reveals it with Shift and Space on the focused title too", async () => {
+    drawn();
+    fold().focus();
+
+    await userEvent.keyboard("{Shift>}{ }{/Shift}");
+
+    await expect.poll(() => toggle()).not.toBeNull();
+    expect(step().getAttribute("data-open")).toBe("true");
+  });
+
   it("is the page's own toggle once revealed: it opens the filters' panel with the scope, under the title row", async () => {
     drawn();
     reveal();

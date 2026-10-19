@@ -338,8 +338,8 @@ describe("a mint from the published page, set through the revealed toggle", () =
     expect(JSON.parse(init!.body as string)).toEqual({
       scope: { routes: { people: ordered("people") }, max_limit: 5 },
     });
-    // api.baselayer.com answers a preflight for these (CORS_HEADERS is `*`); a
-    // header added to the mint is one more the browser asks it to allow.
+    // The API's preflight allows Content-Type beside the key's header; a
+    // header added to the mint fails this, to be looked at.
     expect(preflighted(init!.headers)).toEqual(["content-type", "x-api-key"]);
   });
 
