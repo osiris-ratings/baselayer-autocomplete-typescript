@@ -44,7 +44,10 @@ export function Collapsible({
    * A control right after the title, before the summary and the chevron at the
    * row's end. The toggle is then the title alone, and its button is stretched
    * over the whole row, under the control, so the summary and the chevron
-   * still press the fold as they always did.
+   * still press the fold as they always did. `null` is that layout with no
+   * control for now (the chevron stays the same element, so it keeps turning
+   * with the fold when the control comes and goes); `undefined` is the fold
+   * as every other is drawn, the summary and chevron inside the button.
    */
   afterTitle?: ReactNode;
   /** Show the summary open as well as folded. */
@@ -89,10 +92,10 @@ export function Collapsible({
         </button>
         {afterTitle}
         {afterTitle !== undefined && (
-          <span className="fold-aside">
+          <>
             {summaryNode}
             {chevron}
-          </span>
+          </>
         )}
         {actions}
       </h2>

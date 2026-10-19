@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { page, userEvent } from "vitest/browser";
 
 import { App } from "../../site/demo/App";
+import { Collapsible } from "../../site/demo/controls";
 import { answerSample } from "../../site/demo/sample-api";
 
 import "../../site/shared/brand.css";
@@ -12,7 +13,8 @@ import "../../site/demo/demo.css";
 
 // The key step's Session fold in a real layout engine: closed it is one row on
 // the step's title, as step 2's filters are on its title, and nothing else;
-// opened it is drawn as step 2's filters are.
+// opened it is drawn as step 2's filters are. It is there only while the step
+// is expanded: the folded step is drawn as it was before the row.
 
 // The demo against the made-up API `DEMO_API=sample` serves, every search on.
 function sampleFetch() {
@@ -89,7 +91,7 @@ const routeBoxes = () => [
   ...panel().querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
 ];
 /** The key step's title row: its heading, with the fold's button and ours. */
-const heading = () => toggle().closest("h2")!;
+const heading = () => step().querySelector("h2")!;
 /** The step's Environment dropdown: its first, once the panel's is set apart. */
 const environmentSelect = () =>
   [...step().querySelectorAll<HTMLSelectElement>("select")].find(
@@ -99,7 +101,7 @@ const step = () => byId("demo-connect");
 /** The step's own chevron, at the end of its title row: not the toggle's. */
 const stepChevron = () =>
   [...step().querySelectorAll<HTMLElement>(".fold-heading .fold-chevron")].find(
-    chevron => !toggle().contains(chevron),
+    chevron => chevron.closest(".link-toggle") === null,
   )!;
 /** Step 2's title row: the title and the filters' button. */
 const filtersHead = () =>
@@ -272,7 +274,243 @@ describe("the Session fold, closed", () => {
   });
 });
 
-describe("the Session fold, with a scope and a profile set and the key applied", () => {
+describe("the Session fold, with the key step folded", () => {
+  /** The step folded by its own title, or by Apply once a key is applied. */
+  async function folded({ applied = false } = {}) {
+    drawn();
+    if (applied) {
+      await userEvent.fill(byId("demo-key"), "a-key");
+      await userEvent.click(byId("demo-apply"));
+    } else {
+      await userEvent.click(step().querySelector(".fold-toggle")!);
+    }
+    await expect.poll(() => step().getAttribute("data-open")).toBe("false");
+    await expect
+      .poll(() => rect(step().querySelector(".fold-body")!).height)
+      .toBe(0);
+  }
+
+  /**
+   * The same fold as the key step's (number, title, icon, summary), drawn the
+   * way every fold is drawn without a control after its title, beside the key
+   * step in its own pane so it has the same width; measured, then taken away.
+   */
+  function beside<T>(
+    measure: (reference: HTMLElement) => T,
+    summaryHtml?: string,
+    open = false,
+  ): T {
+    const host = document.createElement("div");
+    step().after(host);
+    const root = createRoot(host);
+    flushSync(() =>
+      root.render(
+        <Collapsible
+          num="01"
+          title="Connect"
+          icon="token"
+          summary="Not connected"
+          open={open}
+          onToggle={() => {}}
+        >
+          {null}
+        </Collapsible>,
+      ),
+    );
+    try {
+      const reference = host.querySelector<HTMLElement>(".fold")!;
+      // The summary the step shows, drawn here as it is there.
+      if (summaryHtml !== undefined) {
+        reference.querySelector(".fold-summary")!.innerHTML = summaryHtml;
+      }
+      return measure(reference);
+    } finally {
+      root.unmount();
+      host.remove();
+    }
+  }
+
+  /**
+   * Where each part of a fold's title row is, from the card's own corner. The
+   * summary is where its words are drawn: its box may take the free room.
+   */
+  const parts = (card: HTMLElement) => {
+    const from = rect(card);
+    const relative = (box: DOMRect) => ({
+      left: box.left - from.left,
+      right: box.right - from.left,
+      top: box.top - from.top,
+      height: box.height,
+      width: box.width,
+    });
+    const at = (selector: string) =>
+      relative(rect(card.querySelector(selector)!));
+    const words = (selector: string) => {
+      const element = card.querySelector(selector);
+      if (element === null) return relative(new DOMRect(from.left, from.top));
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      return relative(range.getBoundingClientRect());
+    };
+    return {
+      card: { height: from.height, width: from.width },
+      heading: at(".fold-heading"),
+      num: at(".demo-num"),
+      title: at(".fold-title"),
+      summary: words(".fold-summary"),
+      // The fold's own, not the one on the row's toggle.
+      chevron: at(
+        ".fold-heading > .fold-chevron, .fold-heading > .fold-toggle .fold-chevron",
+      ),
+    };
+  };
+
+  it("shows no row: just the step's own title, summary and chevron", async () => {
+    await folded();
+
+    expect(byId("demo-session-toggle")).toBeNull();
+    expect(step().querySelectorAll(".fold-heading button")).toHaveLength(1);
+    expect(step().querySelector(".fold-summary")?.textContent).toMatch(
+      /not connected/i,
+    );
+  });
+
+  it("draws the title row as every fold's is without a row: the same parts in the same places", async () => {
+    await folded();
+
+    const ours = parts(step());
+    const theirs = beside(parts);
+
+    for (const part of [
+      "heading",
+      "num",
+      "title",
+      "summary",
+      "chevron",
+    ] as const) {
+      for (const edge of ["left", "right", "top", "height"] as const) {
+        expect(
+          Math.abs(ours[part][edge] - theirs[part][edge]),
+          `${part}.${edge}`,
+        ).toBeLessThanOrEqual(1);
+      }
+    }
+    expect(ours.card.height).toBeCloseTo(theirs.card.height, 0);
+  });
+
+  it("keeps the summary to the row and the chevron at its end on a phone, as every fold does", async () => {
+    await page.viewport(375, 800);
+    await folded();
+
+    const ours = parts(step());
+    const theirs = beside(parts);
+
+    expect(
+      document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ).toBe(true);
+    for (const part of ["heading", "title", "summary", "chevron"] as const) {
+      for (const edge of ["left", "right", "top", "height"] as const) {
+        expect(
+          Math.abs(ours[part][edge] - theirs[part][edge]),
+          `${part}.${edge}`,
+        ).toBeLessThanOrEqual(1);
+      }
+    }
+  });
+
+  it("draws a connected step's summary where every fold draws it, on a desktop and on a phone", async () => {
+    for (const width of [1280, 375]) {
+      await page.viewport(width, 800);
+      await folded({ applied: true });
+
+      const summary = step().querySelector(".fold-summary")!;
+      expect(summary.textContent).toMatch(/API key/);
+      const ours = parts(step());
+      const theirs = beside(parts, summary.innerHTML);
+
+      for (const part of ["heading", "title", "summary", "chevron"] as const) {
+        for (const edge of ["left", "right", "top", "height"] as const) {
+          expect(
+            Math.abs(ours[part][edge] - theirs[part][edge]),
+            `${width}px ${part}.${edge}`,
+          ).toBeLessThanOrEqual(1);
+        }
+      }
+      expect(
+        document.documentElement.scrollWidth <=
+          document.documentElement.clientWidth,
+      ).toBe(true);
+      done?.();
+      done = null;
+    }
+  });
+
+  it("keeps the open step's chevron where every open fold's is, the row beside the title or not", async () => {
+    drawn();
+
+    const ours = parts(step());
+    const theirs = beside(parts, undefined, true);
+
+    for (const edge of ["right", "top", "height"] as const) {
+      expect(
+        Math.abs(ours.chevron[edge] - theirs.chevron[edge]),
+        `chevron.${edge}`,
+      ).toBeLessThanOrEqual(1);
+    }
+  });
+
+  it("opens the step from anywhere on its title row, as it did", async () => {
+    await folded();
+    const fold = step().querySelector<HTMLElement>(".fold-toggle")!;
+    const at = (element: Element) => {
+      const { left, top, width, height } = rect(element);
+      return document.elementFromPoint(left + width / 2, top + height / 2);
+    };
+
+    expect(at(step().querySelector(".fold-summary")!)?.closest("button")).toBe(
+      fold,
+    );
+    expect(at(stepChevron())?.closest("button")).toBe(fold);
+    expect(at(step().querySelector(".fold-title")!)?.closest("button")).toBe(
+      fold,
+    );
+    (at(stepChevron()) as HTMLElement).click();
+    await expect.poll(() => step().getAttribute("data-open")).toBe("true");
+    expect(byId("demo-session-toggle")).not.toBeNull();
+  });
+
+  it("turns the same chevron over when the step folds and opens again, rather than drawing a new one", async () => {
+    drawn();
+    const chevron = stepChevron();
+
+    await userEvent.click(step().querySelector(".fold-toggle")!);
+    await expect.poll(() => step().getAttribute("data-open")).toBe("false");
+    expect(stepChevron()).toBe(chevron);
+    expect(byId("demo-session-toggle")).toBeNull();
+
+    await userEvent.click(step().querySelector(".fold-toggle")!);
+    await expect.poll(() => step().getAttribute("data-open")).toBe("true");
+    expect(stepChevron()).toBe(chevron);
+  });
+
+  it("opens closed, the panel folded away with the step and the toggle drawn on the title again", async () => {
+    drawn();
+    await userEvent.click(toggle());
+    await expect.poll(() => rect(panel()).height > 0).toBe(true);
+
+    await userEvent.click(step().querySelector(".fold-toggle")!);
+    await expect.poll(() => step().getAttribute("data-open")).toBe("false");
+    await userEvent.click(step().querySelector(".fold-toggle")!);
+    await expect.poll(() => step().getAttribute("data-open")).toBe("true");
+
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+    await expect.poll(() => rect(panel()).height).toBe(0);
+    expect(rect(toggle()).bottom).toBeLessThanOrEqual(rect(heading()).bottom);
+  });
+});
+
+describe("the Session fold, with a scope and a profile set, the key applied and the step opened again", () => {
   async function set({
     profile,
     routes = 0,
@@ -295,22 +533,26 @@ describe("the Session fold, with a scope and a profile set and the key applied",
     await expect
       .poll(() => rect(step().querySelector(".fold-body")!).height)
       .toBe(0);
+    // The row is not on the folded step: it comes back with the step.
+    expect(byId("demo-session-toggle")).toBeNull();
+    await userEvent.click(step().querySelector(".fold-toggle")!);
+    await expect.poll(() => step().getAttribute("data-open")).toBe("true");
   }
 
-  it("names the profile on the title row of the folded step, as step 2 names its count", async () => {
-    await set({ profile: "max" });
+  it("names the profile on the title row of the step opened again, as step 2 names its count", async () => {
+    await set({ profile: "tuned" });
 
-    expect(toggle().textContent).toBe("Session · max");
+    expect(toggle().textContent).toBe("Session · tuned");
     expect(rect(toggle()).top).toBeGreaterThanOrEqual(rect(heading()).top);
     expect(rect(toggle()).bottom).toBeLessThanOrEqual(rect(heading()).bottom);
     expect(rect(toggle()).right).toBeLessThanOrEqual(window.innerWidth);
   });
 
   it("names what is set, all of it, on the one title row", async () => {
-    await set({ profile: "max", routes: 2, rows: "5" });
+    await set({ profile: "tuned", routes: 2, rows: "5" });
 
     expect(toggle().textContent).toBe(
-      "Session · businesses, people · 5 rows · max",
+      "Session · businesses, people · 5 rows · tuned",
     );
     expect(rect(toggle()).bottom).toBeLessThanOrEqual(rect(heading()).bottom);
     expect(rect(toggle()).right).toBeLessThanOrEqual(window.innerWidth);
@@ -318,12 +560,12 @@ describe("the Session fold, with a scope and a profile set and the key applied",
 
   it("wraps the toggle's words as one line of text on a phone, a short profile staying whole", async () => {
     await page.viewport(375, 800);
-    await set({ profile: "max", routes: 3, rows: "20" });
+    await set({ profile: "tuned", routes: 3, rows: "20" });
 
     const value = toggle().querySelector(".link-toggle-value")!;
     const chevron = toggle().querySelector(".fold-chevron")!;
 
-    // "max" is one word on one line: not split, not on a line of its own with
+    // "tuned" is one word on one line: not split, not on a line of its own with
     // the chevron beside it.
     expect(value.getClientRects()).toHaveLength(1);
     expect(rect(value).width).toBeGreaterThan(20);

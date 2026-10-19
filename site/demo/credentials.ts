@@ -19,10 +19,7 @@ export interface SessionSettings {
   routes: readonly Route[];
   /** `scope.max_limit`, 1 to 20: the most rows a request may ask for. */
   maxLimit: number | null;
-  /**
-   * `scope.match_profile`: any name the API knows, typed or picked. Not in the
-   * API's published contract.
-   */
+  /** `scope.match_profile`: an advanced field, any name the API knows. */
   matchProfile: string;
 }
 

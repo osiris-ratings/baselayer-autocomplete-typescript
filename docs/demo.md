@@ -66,27 +66,26 @@ it to the component as its first: the test costs nothing the component's own
 first mint (on the first keystroke, by default) would not have. On the
 published page this needs the API to accept the demo's origin.
 
-Run locally, a closed toggle right after the Connect step's title, **Session
+Run locally, a closed toggle after the Connect step's title, **Session
 settings**, unfolds under the title, as step 2's filters do, to what the page
-asks of each session it mints. A plain click opens the public scope: the
-**Routes** the session may query (each ticked route comes with every relation
-it carries; none ticked is every route your key may reach) and the **Most
-rows** a request may ask for (1 to 20; empty is 20). A shift-click opens the
-same panel with the **Match profile** as well: **Not set** (the default),
-`standard`, `reduced`, `minimal`, or **Custom…**, which takes text typed in
-for a profile the list does not name. The profile is not in the API's
-published contract, so a plain click never shows it; once revealed it stays
-until the panel closes, and a profile that is set still goes with every mint
-while it is out of sight. Set, every mint the page makes (Apply's test, and
-each the component makes after it) carries only what is set, as
+asks of each session it mints. It is on the title while the step is expanded:
+folding the step takes it off the title and closes its panel, and what was set
+stays set. A plain click opens the public scope: the **Routes** the session may
+query (each ticked route comes with every relation it carries; none ticked is
+every route your key may reach) and the **Most rows** a request may ask for (1
+to 20; empty is 20). A shift-click opens the same panel with an advanced
+`match_profile` field as well; once revealed it stays until the panel closes,
+and a value that is set still goes with every mint while it is out of sight.
+Set, every mint the page makes (Apply's test, and each the component makes after
+it) carries only what is set, as
 `{"scope":{"routes":{…},"max_limit":5,"match_profile":"<value>"}}` JSON with
-`Content-Type: application/json`, and Debug › Network shows it under the
-mint's request body. Nothing set, a mint has no body and no `Content-Type`, as
-it always has. While anything is set the toggle names it (`Session ·
-businesses, people · 5 rows · minimal`), and a change takes another Apply, as
-another key does. The API decides what a scope or a profile means and refuses
-one it does not accept, and Apply shows its answer. The toggle is on the dev
-server's page only: the published page offers no way to set any of it.
+`Content-Type: application/json`, and Debug › Network shows it under the mint's
+request body. Nothing set, a mint has no body and no `Content-Type`, as it
+always has. While anything is set the toggle names it (`Session · businesses,
+people · 5 rows`), and a change takes another Apply, as another key does. The
+API decides what a scope means and refuses one it does not accept, and Apply
+shows its answer. The toggle is on the dev server's page only: the published
+page offers no way to set any of it.
 
 Every session is a real session on your organization's pool. The session's
 scope, which the mint answers, decides which searches the form offers.

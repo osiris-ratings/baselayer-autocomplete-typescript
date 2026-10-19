@@ -12,9 +12,9 @@ import { join } from "node:path";
 import { build, createServer, type ViteDevServer } from "vite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-// The key step's Session fold sets `scope.match_profile`, which is not in the
-// API's published contract. It is on the page `pnpm demo` serves, and not on
-// the page that is published: a build has no row, no panel and no label.
+// The key step's Session fold sets what the page asks of each session it mints.
+// It is on the page `pnpm demo` serves, and not on the page that is published:
+// a build has no row, no panel and no label.
 
 const SITE_CONFIG = join(__dirname, "../../site/vite.config.ts");
 

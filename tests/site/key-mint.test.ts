@@ -87,11 +87,11 @@ describe("the mint with a match profile", () => {
       "https://api.test",
       "the-key",
       fetchImpl,
-      settings({ matchProfile: "max" }),
+      settings({ matchProfile: "tuned" }),
     )(context());
 
     const [, init] = fetchImpl.mock.calls[0]!;
-    expect(init!.body).toBe('{"scope":{"match_profile":"max"}}');
+    expect(init!.body).toBe('{"scope":{"match_profile":"tuned"}}');
     expect(init!.headers).toEqual({
       Accept: "application/json",
       "X-API-Key": "the-key",
@@ -132,7 +132,7 @@ describe("the mint with a match profile", () => {
       "https://api.test",
       "k",
       api(),
-      settings({ matchProfile: "max" }),
+      settings({ matchProfile: "tuned" }),
     )(context());
 
     expect(outcome.kind).toBe("granted");
@@ -180,7 +180,7 @@ describe("the mint with a scope", () => {
         settings({
           routes: ["people"],
           maxLimit: 3,
-          matchProfile: "max",
+          matchProfile: "tuned",
         }),
       ),
     ).toBe(
@@ -188,12 +188,12 @@ describe("the mint with a scope", () => {
         scope: {
           routes: { people: [...LEGAL_RELATIONS.people] },
           max_limit: 3,
-          match_profile: "max",
+          match_profile: "tuned",
         },
       }),
     );
-    expect(mintBody(settings({ maxLimit: 3, matchProfile: "max" }))).toBe(
-      '{"scope":{"max_limit":3,"match_profile":"max"}}',
+    expect(mintBody(settings({ maxLimit: 3, matchProfile: "tuned" }))).toBe(
+      '{"scope":{"max_limit":3,"match_profile":"tuned"}}',
     );
     expect(
       JSON.parse(mintBody(settings({ routes: ["people"], maxLimit: 3 }))!),

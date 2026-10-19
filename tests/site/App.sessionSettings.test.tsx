@@ -17,9 +17,10 @@ import { fakeApi, nameField, useDemoPage } from "./support/demo-page";
 // The key step's "Session" fold: a closed toggle on the step's title that,
 // opened, sets what the demo asks of every session it mints. A plain click
 // opens the public scope (the routes the session may query, the most rows a
-// request may ask for); a shift-click opens it with the match profile too,
-// which is not in the API's published contract. All of it goes in the mint's
-// body as `scope`, only what is set, and nothing set is no body at all.
+// request may ask for); a shift-click opens it with the advanced match profile
+// field too. All of it goes in the mint's body as `scope`, only what is set,
+// and nothing set is no body at all. The toggle is on the title only while the
+// step is expanded; what was set goes with every mint whether it is or not.
 
 useDemoPage();
 
@@ -96,6 +97,13 @@ const panel = () => document.getElementById("demo-session-settings")!;
 const step = () => screen.getByTestId("demo-connect");
 const profileSelect = () =>
   screen.getByRole("combobox", { name: /match profile/i });
+const heading = () => within(step()).getByRole("heading", { name: /connect/i });
+/** The step's own fold: its title, and its summary and chevron once folded. */
+const stepFold = () =>
+  within(heading()).getByRole("button", { name: /connect/i });
+/** The step folded by its own title, or opened again by it. */
+const pressStepFold = (user: ReturnType<typeof userEvent.setup>) =>
+  user.click(stepFold());
 
 /** The key typed in and applied, and the "Key accepted" shown. */
 async function connect(user: ReturnType<typeof userEvent.setup>) {
@@ -219,83 +227,209 @@ describe("the Session fold, as the page opens", () => {
   });
 });
 
-describe("the row on the title, once the key step has folded", () => {
-  it("stays on the title and names the profile, as the filters' row names its count", async () => {
+describe("the row on the title, only while the key step is expanded", () => {
+  it("is there while the step is expanded, and goes with the step when it folds", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    expect(toggle()).toBeTruthy();
+
+    await pressStepFold(user);
+
+    expect(step().getAttribute("data-open")).toBe("false");
+    expect(screen.queryByTestId("demo-session-toggle")).toBeNull();
+    // Just the step's own title, summary and chevron, as it was drawn before.
+    expect(heading().querySelectorAll("button")).toHaveLength(1);
+    expect(heading().textContent).toMatch(/not connected/i);
+  });
+
+  it("is not on the title of a step that folded on Apply, and keeps the summary there", async () => {
+    stubApi();
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(toggle());
+    await user.click(routeBox(/people/i));
+    await connect(user);
+
+    expect(step().getAttribute("data-open")).toBe("false");
+    expect(screen.queryByTestId("demo-session-toggle")).toBeNull();
+    expect(heading().querySelectorAll("button")).toHaveLength(1);
+    // What the title says of the key is read with its heading, as before.
+    expect(heading().textContent).toMatch(/API key/);
+    // And nothing of the session is named there: only the key's own summary.
+    expect(heading().textContent).not.toMatch(/session|people/i);
+  });
+
+  it("goes when opening Styling folds the step, too", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(toggle());
+
+    await user.click(screen.getByTestId("demo-styling-open"));
+
+    expect(step().getAttribute("data-open")).toBe("false");
+    expect(screen.queryByTestId("demo-session-toggle")).toBeNull();
+  });
+
+  it("is back on the title, closed and naming what is set, when the step is opened again", async () => {
     stubApi();
     const user = userEvent.setup();
     render(<App />);
     await shiftClick(user, toggle());
+    await user.click(routeBox(/people/i));
+    await user.type(rowsField(), "4");
     await user.selectOptions(profileSelect(), "reduced");
     await connect(user);
+    expect(screen.queryByTestId("demo-session-toggle")).toBeNull();
 
-    expect(step().getAttribute("data-open")).toBe("false");
-    expect(toggle().textContent).toBe("Session · reduced");
+    await pressStepFold(user);
+
+    expect(step().getAttribute("data-open")).toBe("true");
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+    expect(toggle().textContent).toBe("Session · people · 4 rows · reduced");
+  });
+
+  it('is back reading "+ Session settings" when nothing was ever set', async () => {
+    stubApi();
+    const user = userEvent.setup();
+    render(<App />);
+    await connect(user);
+    expect(screen.queryByTestId("demo-session-toggle")).toBeNull();
+
+    await pressStepFold(user);
+
+    expect(toggle().textContent).toBe("+ Session settings");
     expect(toggle().getAttribute("aria-expanded")).toBe("false");
   });
 
-  it("opens the step and its panel when it is pressed, the profile still chosen", async () => {
+  it("closes the panel when the step folds, and opens closed with the step again", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(toggle());
+    await user.click(routeBox(/businesses/i));
+    expect(panel().hidden).toBe(false);
+
+    await pressStepFold(user);
+    await pressStepFold(user);
+
+    expect(step().getAttribute("data-open")).toBe("true");
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+    expect(
+      toggle().querySelector(".fold-chevron")!.getAttribute("data-open"),
+    ).toBe("false");
+    expect(panel().hidden).toBe(true);
+    // What was ticked is kept, and the next click shows it.
+    expect(toggle().textContent).toBe("Session · businesses");
+    await user.click(toggle());
+    expect((routeBox(/businesses/i) as HTMLInputElement).checked).toBe(true);
+  });
+
+  it("closes the panel when the step folds on Apply, too", async () => {
     stubApi();
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(toggle());
+    expect(panel().hidden).toBe(false);
+    await connect(user);
+
+    await pressStepFold(user);
+
+    expect(panel().hidden).toBe(true);
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("puts the match profile away again with the panel, and a plain click does not bring it back", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await shiftClick(user, toggle());
+    await user.selectOptions(profileSelect(), "standard");
+
+    await pressStepFold(user);
+    await pressStepFold(user);
+    await user.click(toggle());
+
+    expect(panel().hidden).toBe(false);
+    noProfileField();
+    // Still set, still named.
+    expect(toggle().textContent).toBe("Session · standard");
+  });
+
+  it("brings the match profile back for a shift-click on the step opened again", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await shiftClick(user, toggle());
+    await user.selectOptions(profileSelect(), "standard");
+    await pressStepFold(user);
+    await pressStepFold(user);
+
+    await shiftClick(user, toggle());
+
+    expect((profileSelect() as HTMLSelectElement).value).toBe("standard");
+  });
+
+  it("keeps the key applied when the step folds and opens again: nothing set changed", async () => {
+    const api = stubApi();
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(toggle());
+    await user.click(routeBox(/people/i));
+    await connect(user);
+
+    await pressStepFold(user);
+    await pressStepFold(user);
+
+    expect(screen.getByTestId("demo-apply").textContent).toBe("Applied");
+    expect(mints(api)).toHaveLength(1);
+  });
+});
+
+describe("a mint while the key step is folded", () => {
+  const ordered = (route: keyof typeof LEGAL_RELATIONS) => [
+    ...LEGAL_RELATIONS[route],
+  ];
+
+  it("still carries the scope and the profile that were set, though the toggle is out of the step", async () => {
+    const api = stubApi({ grant: { expires_in: 8 } });
+    const user = userEvent.setup();
+    render(<App />);
+    await shiftClick(user, toggle());
+    await user.click(routeBox(/people/i));
+    await user.type(rowsField(), "3");
+    await user.selectOptions(profileSelect(), "reduced");
+    await connect(user);
+    expect(step().getAttribute("data-open")).toBe("false");
+    expect(screen.queryByTestId("demo-session-toggle")).toBeNull();
+
+    await user.type(nameField(), "cin");
+    await waitFor(() => expect(mints(api)).toHaveLength(2));
+
+    const sent = {
+      scope: {
+        routes: { people: ordered("people") },
+        max_limit: 3,
+        match_profile: "reduced",
+      },
+    };
+    expect(JSON.parse(bodyOf(mints(api)[0]!) as string)).toEqual(sent);
+    expect(JSON.parse(bodyOf(mints(api)[1]!) as string)).toEqual(sent);
+    expect(step().getAttribute("data-open")).toBe("false");
+  });
+
+  it("carries a profile the plain panel never showed, after the step folded and opened again", async () => {
+    const api = stubApi();
     const user = userEvent.setup();
     render(<App />);
     await shiftClick(user, toggle());
     await user.selectOptions(profileSelect(), "minimal");
-    await connect(user);
-    expect(step().getAttribute("data-open")).toBe("false");
-
+    await pressStepFold(user);
+    await pressStepFold(user);
     await user.click(toggle());
-
-    expect(step().getAttribute("data-open")).toBe("true");
-    expect(toggle().getAttribute("aria-expanded")).toBe("true");
-    expect(panel().hidden).toBe(false);
-    expect((profileSelect() as HTMLSelectElement).value).toBe("minimal");
-  });
-
-  it("opens the step and its panel when nothing was ever set, too", async () => {
-    stubApi();
-    const user = userEvent.setup();
-    render(<App />);
-    await connect(user);
-    expect(step().getAttribute("data-open")).toBe("false");
-    expect(toggle().textContent).toBe("+ Session settings");
-
-    await user.click(toggle());
-
-    expect(step().getAttribute("data-open")).toBe("true");
-    expect(panel().hidden).toBe(false);
-    expect(routeBox(/businesses/i)).toBeTruthy();
     noProfileField();
-  });
 
-  it("reads as closed while the step it unfolds in is folded, and open again with it", async () => {
-    stubApi();
-    const user = userEvent.setup();
-    render(<App />);
-    await user.click(toggle());
     await connect(user);
-    const chevron = () => toggle().querySelector(".fold-chevron")!;
-    expect(step().getAttribute("data-open")).toBe("false");
-    expect(toggle().getAttribute("aria-expanded")).toBe("false");
-    expect(chevron().getAttribute("data-open")).toBe("false");
 
-    await user.click(within(step()).getByRole("button", { name: /connect/i }));
-
-    expect(step().getAttribute("data-open")).toBe("true");
-    expect(toggle().getAttribute("aria-expanded")).toBe("true");
-    expect(chevron().getAttribute("data-open")).toBe("true");
-    expect(panel().hidden).toBe(false);
-  });
-
-  it("closes the panel when it is pressed with the step open, and leaves the step open", async () => {
-    stubApi();
-    const user = userEvent.setup();
-    render(<App />);
-    await user.click(toggle());
-
-    await user.click(toggle());
-
-    expect(step().getAttribute("data-open")).toBe("true");
-    expect(toggle().getAttribute("aria-expanded")).toBe("false");
-    expect(panel().hidden).toBe(true);
+    expect(bodyOf(mints(api)[0]!)).toBe(
+      '{"scope":{"match_profile":"minimal"}}',
+    );
   });
 });
 
@@ -384,23 +518,6 @@ describe("the panel: a plain click shows the public scope, a shift-click the mat
     noProfileField();
   });
 
-  it("does not bring the profile back on a plain click at the folded step, after it was revealed and the panel closed", async () => {
-    stubApi();
-    const user = userEvent.setup();
-    render(<App />);
-    await shiftClick(user, toggle());
-    await user.click(toggle());
-    expect(panel().hidden).toBe(true);
-    await connect(user);
-    expect(step().getAttribute("data-open")).toBe("false");
-
-    await user.click(toggle());
-
-    expect(step().getAttribute("data-open")).toBe("true");
-    expect(panel().hidden).toBe(false);
-    noProfileField();
-  });
-
   it("is a shift-click that closes, when the profile is already revealed", async () => {
     const user = userEvent.setup();
     render(<App />);
@@ -411,19 +528,6 @@ describe("the panel: a plain click shows the public scope, a shift-click the mat
     expect(panel().hidden).toBe(true);
   });
 
-  it("opens the folded step with the profile revealed on a shift-click", async () => {
-    stubApi();
-    const user = userEvent.setup();
-    render(<App />);
-    await connect(user);
-    expect(step().getAttribute("data-open")).toBe("false");
-
-    await shiftClick(user, toggle());
-
-    expect(step().getAttribute("data-open")).toBe("true");
-    expect(profileSelect()).toBeTruthy();
-  });
-
   it("keeps a profile that was set while it is out of sight: the mint carries it and the toggle names it", async () => {
     const api = stubApi();
     const user = userEvent.setup();
@@ -432,16 +536,16 @@ describe("the panel: a plain click shows the public scope, a shift-click the mat
     await user.selectOptions(profileSelect(), "custom");
     await user.type(
       screen.getByRole("textbox", { name: /custom profile/i }),
-      "max",
+      "tuned",
     );
     await user.click(toggle());
 
     await user.click(toggle());
     noProfileField();
-    expect(toggle().textContent).toBe("Session · max");
+    expect(toggle().textContent).toBe("Session · tuned");
     await connect(user);
 
-    expect(bodyOf(mints(api)[0]!)).toBe('{"scope":{"match_profile":"max"}}');
+    expect(bodyOf(mints(api)[0]!)).toBe('{"scope":{"match_profile":"tuned"}}');
   });
 });
 
@@ -591,6 +695,8 @@ describe("a mint with a scope set", () => {
     await connect(user);
     expect(screen.getByTestId("demo-apply").textContent).toBe("Applied");
 
+    // The key step folded on Apply; open it again, and the panel.
+    await pressStepFold(user);
     await user.click(toggle());
     await user.click(routeBox(/addresses/i));
     expect(screen.getByTestId("demo-apply").textContent).toBe("Apply API key");
@@ -601,6 +707,9 @@ describe("a mint with a scope set", () => {
     expect(JSON.parse(bodyOf(mints(api)[1]!) as string)).toEqual({
       scope: { routes: { addresses: ordered("addresses") } },
     });
+    // Apply folded the step again, and the panel with it.
+    await pressStepFold(user);
+    await user.click(toggle());
     await user.click(routeBox(/addresses/i));
     expect(screen.getByTestId("demo-apply").textContent).toBe("Apply API key");
     await user.click(routeBox(/addresses/i));
@@ -741,11 +850,11 @@ describe("a mint with a profile set", () => {
     await user.selectOptions(profileSelect(), "custom");
     await user.type(
       screen.getByRole("textbox", { name: /custom profile/i }),
-      "  max ",
+      "  tuned ",
     );
     await connect(user);
 
-    expect(bodyOf(mints(api)[0]!)).toBe('{"scope":{"match_profile":"max"}}');
+    expect(bodyOf(mints(api)[0]!)).toBe('{"scope":{"match_profile":"tuned"}}');
     expect(contentTypeOf(mints(api)[0]!)).toBe("application/json");
   });
 
@@ -790,7 +899,7 @@ describe("a mint with a profile set", () => {
     await user.selectOptions(profileSelect(), "custom");
     await user.type(
       screen.getByRole("textbox", { name: /custom profile/i }),
-      "max",
+      "tuned",
     );
     await user.selectOptions(profileSelect(), "standard");
     await connect(user);
@@ -808,7 +917,7 @@ describe("a mint with a profile set", () => {
     await user.selectOptions(profileSelect(), "custom");
     await user.type(
       screen.getByRole("textbox", { name: /custom profile/i }),
-      "max",
+      "tuned",
     );
     await user.selectOptions(profileSelect(), "standard");
     await user.selectOptions(profileSelect(), "custom");
@@ -819,7 +928,7 @@ describe("a mint with a profile set", () => {
           name: /custom profile/i,
         }) as HTMLInputElement
       ).value,
-    ).toBe("max");
+    ).toBe("tuned");
   });
 
   it("shows the API's refusal in the words Apply uses, and leaves the key unapplied", async () => {
@@ -871,8 +980,8 @@ describe("the closed row, once something is set", () => {
     await shiftClick(user, toggle());
     await user.selectOptions(profileSelect(), "custom");
     const text = screen.getByRole("textbox", { name: /custom profile/i });
-    await user.type(text, " max ");
-    expect(toggle().textContent).toBe("Session · max");
+    await user.type(text, " tuned ");
+    expect(toggle().textContent).toBe("Session · tuned");
 
     await user.clear(text);
     expect(toggle().textContent).toBe("+ Session settings");
@@ -901,10 +1010,10 @@ describe("changing the profile after the key was applied", () => {
     await connect(user);
     expect(screen.getByTestId("demo-apply").textContent).toBe("Applied");
 
-    // The key step folded on Apply; open it again.
-    await user.click(
-      within(screen.getByTestId("demo-connect")).getAllByRole("button")[0]!,
-    );
+    // The key step folded on Apply, and the panel with it; open both again,
+    // the profile too.
+    await pressStepFold(user);
+    await shiftClick(user, toggle());
     await user.selectOptions(profileSelect(), "reduced");
 
     expect(screen.getByTestId("demo-apply").textContent).toBe("Apply API key");
@@ -927,9 +1036,8 @@ describe("changing the profile after the key was applied", () => {
     await shiftClick(user, toggle());
     await user.selectOptions(profileSelect(), "standard");
     await connect(user);
-    await user.click(
-      within(screen.getByTestId("demo-connect")).getAllByRole("button")[0]!,
-    );
+    await pressStepFold(user);
+    await shiftClick(user, toggle());
     await user.selectOptions(profileSelect(), "reduced");
     expect(screen.getByTestId("demo-apply").textContent).toBe("Apply API key");
 

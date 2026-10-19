@@ -87,8 +87,8 @@ const PRODUCTION = "https://api.baselayer.com";
 const DEV_SERVER_PATH = import.meta.env.DEV ? "/_baselayer" : null;
 /**
  * The key step's Session fold, which sets what the page asks of the sessions it
- * mints. The dev server's page only: `scope.match_profile` is not in the API's
- * published contract, so the published page offers no way to set it.
+ * mints. The dev server's page only: the published page offers no way to set
+ * any of it.
  */
 const SESSION_SETTINGS = import.meta.env.DEV;
 type Environment = "dev-server" | "production" | "custom";
@@ -493,7 +493,8 @@ export function App() {
   // mint sends no body. Empty means not set; custom text counts only while
   // custom is the choice. A plain click opens the public scope (routes, most
   // rows); a shift-click also reveals the match profile, which stays revealed
-  // until the panel closes.
+  // until the panel closes. The toggle is on the step's title only while the
+  // step is expanded, and folding the step closes the panel (see foldConnect).
   const [sessionOpen, setSessionOpen] = useState(false);
   const [profileShown, setProfileShown] = useState(false);
   const [routeTicks, setRouteTicks] = useState<readonly Route[]>([]);
@@ -525,8 +526,14 @@ export function App() {
         ]
       : []),
   ];
-  // The panel is in the key step: it is out of view while the step is folded.
-  const sessionExpanded = sessionOpen && connectOpen;
+  // The step folded, by its own title, by Apply or by the Styling pane: the
+  // toggle goes from its title, and the panel goes closed with it. What was set
+  // stays set, and goes with every mint.
+  const foldConnect = () => {
+    setConnectOpen(false);
+    setSessionOpen(false);
+    setProfileShown(false);
+  };
   // Focus is in a filter field: the menu stays open as the filter is typed, so
   // the list narrowing is in view, rather than closing as the name loses focus.
   const [filtering, filterFocus] = useFocusWithin();
@@ -537,7 +544,7 @@ export function App() {
   const setPanel = (next: Panel | null) => {
     setPanelState(next);
     if (next !== null) setIntroOpen(false);
-    if (next === "styling") setConnectOpen(false);
+    if (next === "styling") foldConnect();
   };
   // The side tab a pane grows out of, and folds back into.
   const [lastPanel, setLastPanel] = useState<Panel>("debug");
@@ -704,7 +711,7 @@ export function App() {
     setPicks(NO_PICKS);
     setCheck(null);
     setAnnounced(result.message);
-    setConnectOpen(false);
+    foldConnect();
     if (focus) connectToggle.current?.focus();
     // The result joins the section once it has folded: arriving with the
     // fold, it would make the section grow just as it starts to shrink.
@@ -917,64 +924,60 @@ export function App() {
             icon="token"
             summary={connectSummary}
             open={connectOpen}
-            onToggle={setConnectOpen}
+            onToggle={open => (open ? setConnectOpen(true) : foldConnect())}
             toggleRef={connectToggle}
             testId="demo-connect"
             afterTitle={
               // One closed toggle on the title, as step 2's filters are on
-              // theirs, right after it. Only on the dev server's page: see
-              // SESSION_SETTINGS.
+              // theirs, right after it, while the step is expanded: a folded
+              // step is just its title, summary and chevron (null keeps the
+              // chevron the same element, so it still turns with the fold).
+              // Only on the dev server's page: see SESSION_SETTINGS.
               SESSION_SETTINGS ? (
-                <button
-                  type="button"
-                  className="link-toggle"
-                  aria-expanded={sessionExpanded}
-                  aria-controls="demo-session-settings"
-                  onClick={event => {
-                    const shift = event.shiftKey;
-                    if (!connectOpen) {
-                      // The panel is in the step, so a folded step opens with
-                      // it, as it was left: a panel that never closed keeps
-                      // its profile revealed.
-                      setConnectOpen(true);
-                      setSessionOpen(true);
-                      if (shift) setProfileShown(true);
-                    } else if (!sessionOpen) {
-                      setSessionOpen(true);
-                      setProfileShown(shift);
-                    } else if (shift && !profileShown) {
-                      // Shift on the open panel reveals it and leaves it open.
-                      setProfileShown(true);
-                    } else {
-                      setSessionOpen(false);
-                      setProfileShown(false);
-                    }
-                  }}
-                  data-testid="demo-session-toggle"
-                >
-                  {/* One run of text, so it wraps as one: a flex item per word
-                      would shrink the profile to a letter a line. */}
-                  <span>
-                    {sessionParts.length > 0 ? (
-                      <>
-                        Session
-                        {sessionParts.map((part, at) => (
-                          <Fragment key={at}>
-                            {" · "}
-                            {part}
-                          </Fragment>
-                        ))}
-                      </>
-                    ) : (
-                      "+ Session settings"
-                    )}
-                  </span>
-                  <span
-                    className="fold-chevron"
-                    data-open={sessionExpanded ? "true" : "false"}
-                    aria-hidden="true"
-                  />
-                </button>
+                connectOpen ? (
+                  <button
+                    type="button"
+                    className="link-toggle"
+                    aria-expanded={sessionOpen}
+                    aria-controls="demo-session-settings"
+                    onClick={event => {
+                      if (!sessionOpen) {
+                        setSessionOpen(true);
+                        setProfileShown(event.shiftKey);
+                      } else if (event.shiftKey && !profileShown) {
+                        // Shift on the open panel reveals it and leaves it open.
+                        setProfileShown(true);
+                      } else {
+                        setSessionOpen(false);
+                        setProfileShown(false);
+                      }
+                    }}
+                    data-testid="demo-session-toggle"
+                  >
+                    {/* One run of text, so it wraps as one: a flex item per
+                        word would shrink the profile to a letter a line. */}
+                    <span>
+                      {sessionParts.length > 0 ? (
+                        <>
+                          Session
+                          {sessionParts.map((part, at) => (
+                            <Fragment key={at}>
+                              {" · "}
+                              {part}
+                            </Fragment>
+                          ))}
+                        </>
+                      ) : (
+                        "+ Session settings"
+                      )}
+                    </span>
+                    <span
+                      className="fold-chevron"
+                      data-open={sessionOpen ? "true" : "false"}
+                      aria-hidden="true"
+                    />
+                  </button>
+                ) : null
               ) : undefined
             }
           >
