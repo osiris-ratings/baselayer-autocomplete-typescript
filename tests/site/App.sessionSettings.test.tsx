@@ -195,13 +195,18 @@ describe("the Session fold, as the page opens", () => {
     const user = userEvent.setup();
     render(<App />);
 
+    const chevron = () => toggle().querySelector(".fold-chevron")!;
+    expect(chevron().getAttribute("data-open")).toBe("false");
+
     await shiftClick(user, toggle());
     expect(toggle().getAttribute("aria-expanded")).toBe("true");
+    expect(chevron().getAttribute("data-open")).toBe("true");
     expect(panel().hidden).toBe(false);
     expect(profileSelect()).toBeTruthy();
 
     await user.click(toggle());
     expect(toggle().getAttribute("aria-expanded")).toBe("false");
+    expect(chevron().getAttribute("data-open")).toBe("false");
     expect(panel().hidden).toBe(true);
   });
 
@@ -259,6 +264,36 @@ describe("the row on the title, only while the key step is expanded", () => {
     expect(heading().textContent).not.toMatch(/session|people/i);
   });
 
+  it("keeps the summary in what the fold's button says, as a description, while the step is folded", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    // Expanded, the step has no summary, so the fold has nothing to describe.
+    expect(stepFold().getAttribute("aria-describedby")).toBeNull();
+
+    await pressStepFold(user);
+
+    const described = stepFold().getAttribute("aria-describedby");
+    expect(described).not.toBeNull();
+    const summary = document.getElementById(described!)!;
+    expect(heading().contains(summary)).toBe(true);
+    expect(summary.textContent).toMatch(/not connected/i);
+    // The button's own name is still the title, as the toggle's is beside it.
+    expect(stepFold().textContent).not.toMatch(/not connected/i);
+  });
+
+  it("describes the fold's button with the key's summary once a key is applied", async () => {
+    stubApi();
+    const user = userEvent.setup();
+    render(<App />);
+    await connect(user);
+
+    const summary = document.getElementById(
+      stepFold().getAttribute("aria-describedby")!,
+    )!;
+
+    expect(summary.textContent).toMatch(/API key/);
+  });
+
   it("goes when opening Styling folds the step, too", async () => {
     const user = userEvent.setup();
     render(<App />);
@@ -268,6 +303,21 @@ describe("the row on the title, only while the key step is expanded", () => {
 
     expect(step().getAttribute("data-open")).toBe("false");
     expect(screen.queryByTestId("demo-session-toggle")).toBeNull();
+  });
+
+  it("closes the panel when Styling folds the step, and opens closed with the step again", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(toggle());
+    expect(panel().hidden).toBe(false);
+
+    await user.click(screen.getByTestId("demo-styling-open"));
+    expect(step().getAttribute("data-open")).toBe("false");
+    await pressStepFold(user);
+
+    expect(step().getAttribute("data-open")).toBe("true");
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+    expect(panel().hidden).toBe(true);
   });
 
   it("is back on the title, closed and naming what is set, when the step is opened again", async () => {

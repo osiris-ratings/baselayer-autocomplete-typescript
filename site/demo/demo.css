@@ -2659,12 +2659,8 @@ html[data-dragging] * {
 /* A narrow row keeps the title and the chevron together and puts the toggle
    under them, as step 2's wraps under its title. */
 @container (max-width: 560px) {
-  .fold-heading:has(> .fold-chevron) > :is(.fold-summary, .fold-chevron) {
-    order: 2;
-  }
-
   .fold-heading:has(> .fold-chevron) > .link-toggle {
-    order: 3;
+    order: 1;
     flex-basis: 100%;
     justify-content: flex-start;
   }

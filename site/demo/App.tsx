@@ -528,11 +528,12 @@ export function App() {
   ];
   // The step folded, by its own title, by Apply or by the Styling pane: the
   // toggle goes from its title, and the panel goes closed with it. What was set
-  // stays set, and goes with every mint.
+  // stays set, and goes with every mint. Whether the match profile is revealed
+  // is decided when the panel opens, so its row folds away with the rest of
+  // the panel instead of going first.
   const foldConnect = () => {
     setConnectOpen(false);
     setSessionOpen(false);
-    setProfileShown(false);
   };
   // Focus is in a filter field: the menu stays open as the filter is typed, so
   // the list narrowing is in view, rather than closing as the name loses focus.
@@ -949,7 +950,6 @@ export function App() {
                         setProfileShown(true);
                       } else {
                         setSessionOpen(false);
-                        setProfileShown(false);
                       }
                     }}
                     data-testid="demo-session-toggle"

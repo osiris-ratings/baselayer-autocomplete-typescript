@@ -274,6 +274,29 @@ describe("the Session fold, closed", () => {
   });
 });
 
+describe("the Session fold, on a narrow page that would still hold it beside the title", () => {
+  it("puts the row under the title and keeps the step's chevron on the title's row", async () => {
+    await page.viewport(560, 800);
+    drawn();
+    const title = step().querySelector<HTMLElement>(".fold-title")!;
+
+    // Room beside the title: the toggle's words and chevron would fit the rest
+    // of the row (the toggle's own box is the whole row once it wraps).
+    const own =
+      rect(toggle().querySelector("span")!).width +
+      rect(toggle().querySelector(".fold-chevron")!).width +
+      16;
+    expect(rect(title).right + 16 + own).toBeLessThan(
+      contentRight(step()) - rect(stepChevron()).width - 16,
+    );
+    expect(rect(toggle()).top).toBeGreaterThanOrEqual(rect(title).bottom);
+    expect(rect(stepChevron()).top).toBeLessThan(rect(title).bottom);
+    expect(
+      contentRight(step()) - rect(stepChevron()).right,
+    ).toBeLessThanOrEqual(8);
+  });
+});
+
 describe("the Session fold, with the key step folded", () => {
   /** The step folded by its own title, or by Apply once a key is applied. */
   async function folded({ applied = false } = {}) {
@@ -714,6 +737,18 @@ describe("the Session fold, open", () => {
         rect(panel()).right,
       );
     }
+  });
+
+  it("folds up with everything it showed, the match profile row going with the rest and not before", async () => {
+    await open({ reveal: true });
+    const before = rect(panel()).height;
+
+    // The same task as the click, before the first frame of the fold.
+    flushSync(() => toggle().click());
+
+    expect(profileSelect()).not.toBeNull();
+    expect(rect(panel()).height).toBeGreaterThanOrEqual(before - 2);
+    await expect.poll(() => getComputedStyle(panel()).display).toBe("none");
   });
 
   it("folds up and goes when closed, as the filters do", async () => {

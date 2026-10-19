@@ -54,11 +54,16 @@ export function Collapsible({
   keepSummary?: boolean;
 }) {
   const id = useId();
+  const summaryId = `${id}-summary`;
   const look = className ?? (nested ? "fold-nested" : "demo-card");
   const summaryNode = summary !== undefined && (keepSummary || !open) && (
     // An empty summary keeps its room, so a count arriving or leaving never
     // changes the head's height.
-    <span className="fold-summary" aria-hidden={summary === "" || undefined}>
+    <span
+      id={afterTitle !== undefined ? summaryId : undefined}
+      className="fold-summary"
+      aria-hidden={summary === "" || undefined}
+    >
       {summary === "" ? "\u00a0" : summary}
     </span>
   );
@@ -76,6 +81,13 @@ export function Collapsible({
           className="fold-toggle"
           aria-expanded={open}
           aria-controls={id}
+          // With a control after the title the summary is no longer inside the
+          // button, so the button's name would lose it: say it as a description.
+          aria-describedby={
+            afterTitle !== undefined && summaryNode !== false
+              ? summaryId
+              : undefined
+          }
           onClick={() => onToggle(!open)}
         >
           {num !== undefined && <span className="demo-num">{num}</span>}
