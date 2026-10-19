@@ -247,6 +247,19 @@ describe("the row on the title, only while the key step is expanded", () => {
     expect(heading().textContent).toMatch(/not connected/i);
   });
 
+  it("is a plain click on the title when it is held down, there being nothing to reveal: the step folds, and opens again", async () => {
+    const user = userEvent.setup();
+    render(<App />);
+
+    await shiftClick(user, stepFold());
+    expect(step().getAttribute("data-open")).toBe("false");
+    expect(screen.queryByTestId("demo-session-toggle")).toBeNull();
+
+    await shiftClick(user, stepFold());
+    expect(step().getAttribute("data-open")).toBe("true");
+    expect(toggle().getAttribute("aria-expanded")).toBe("false");
+  });
+
   it("is not on the title of a step that folded on Apply, and keeps the summary there", async () => {
     stubApi();
     const user = userEvent.setup();
