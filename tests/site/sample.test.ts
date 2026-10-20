@@ -17,7 +17,9 @@ import {
   SAMPLE_PEOPLE,
   SAMPLE_QUERY,
   SAMPLE_SUGGESTIONS,
+  samplePeople,
   sampleRows,
+  serviceHighlightFor,
 } from "../../site/demo/sample";
 
 const tokens = queryTokens(SAMPLE_QUERY);
@@ -298,5 +300,81 @@ describe("the sample businesses' officers and addresses", () => {
       "registered_office",
       "registered_office",
     ]);
+  });
+});
+
+describe("the typo the Styling preview shows", () => {
+  const all = ["people", "addresses"] as const;
+  const corrected = (parts: readonly { text: string; corrected?: true }[]) =>
+    parts.filter(part => part.corrected === true).map(part => part.text);
+
+  it("is one business among the rows the preview opens with, two letters of the word typed swapped", () => {
+    const shown = sampleRows({ limit: DEFAULT_LIMIT, include: [...all] });
+    const typoed = shown.filter(row => corrected(row.highlight).length > 0);
+
+    expect(typoed.map(row => row.label)).toEqual([
+      "HARBRO CONCRETE SUPPLY, INC.",
+    ]);
+    // "harbor" typed, HARBRO stored: the two letters swapped, side by side, are
+    // what the search corrected, one run of two.
+    expect(corrected(typoed[0]!.highlight)).toEqual(["RO"]);
+    expect(typoed[0]!.highlight.map(part => part.text).join("")).toBe(
+      typoed[0]!.label,
+    );
+  });
+
+  it("carries the highlight the service would send, parts tidied as its own", () => {
+    const row = sampleRows({ limit: 20, include: [...all] }).find(
+      each => corrected(each.highlight).length > 0,
+    )!;
+
+    expect(row.highlight).toEqual(serviceHighlightFor(row.label, tokens));
+    expect(row.highlight).toContainEqual({
+      text: "RO",
+      matched: false,
+      corrected: true,
+    });
+  });
+
+  it("is the business as it was but for its name: same count of rows, same fields", () => {
+    const rows = sampleRows({ limit: 20, include: [...all] });
+    const supply = SAMPLE_SUGGESTIONS.find(
+      row => row.label === "HARBOR CONCRETE SUPPLY, INC.",
+    )!;
+    const typoed = rows.find(row => row.label.startsWith("HARBRO"))!;
+
+    expect(rows).toHaveLength(SAMPLE_SUGGESTIONS.length);
+    expect(typoed.states).toEqual(supply.states);
+    expect(typoed.structure).toBe(supply.structure);
+    expect(typoed.domicile_state).toBe(supply.domicile_state);
+    expect(typoed.related).toEqual(supply.related);
+  });
+
+  it("is one person among those the preview opens with", () => {
+    const shown = samplePeople(DEFAULT_LIMIT);
+    const typoed = shown.filter(row => corrected(row.highlight).length > 0);
+
+    expect(shown).toHaveLength(DEFAULT_LIMIT);
+    expect(typoed.map(row => row.label)).toEqual(["Daan Okafor"]);
+    // "dana" typed, Daan stored: the two letters swapped, side by side.
+    expect(corrected(typoed[0]!.highlight)).toEqual(["an"]);
+    expect(typoed[0]!.highlight.map(part => part.text).join("")).toBe(
+      typoed[0]!.label,
+    );
+    expect(samplePeople(20)).toHaveLength(SAMPLE_PEOPLE.length);
+  });
+
+  it("leaves the lists the sample API and the home page's reel answer from as they were", () => {
+    // These carry no corrected letter: a typo shown on the home page, or a
+    // name the made-up API finds that the real one does not, would be a lie.
+    for (const row of [
+      ...SAMPLE_SUGGESTIONS,
+      ...SAMPLE_PEOPLE,
+      ...SAMPLE_ADDRESSES,
+    ]) {
+      expect(corrected(row.highlight ?? []), row.label).toEqual([]);
+    }
+    expect(SAMPLE_PEOPLE.map(row => row.label)).toContain("Dana Okafor");
+    expect(SAMPLE_PEOPLE.map(row => row.label)).not.toContain("Daan Okafor");
   });
 });

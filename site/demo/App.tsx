@@ -73,6 +73,7 @@ import {
   SAMPLE_PEOPLE,
   SAMPLE_PEOPLE_QUERY,
   SAMPLE_QUERY,
+  samplePeople,
   sampleRows,
 } from "./sample";
 import { SearchStep } from "./SearchStep";
@@ -1549,7 +1550,7 @@ export function App() {
                         renderInput={inputProps => (
                           <input {...inputProps} hidden tabIndex={-1} />
                         )}
-                        suggestions={SAMPLE_PEOPLE.slice(0, style.limit)}
+                        suggestions={samplePeople(style.limit)}
                         {...componentProps(style, "people")}
                         found={SAMPLE_PEOPLE.length}
                         foundCapped={false}

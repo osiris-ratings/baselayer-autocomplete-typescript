@@ -20,6 +20,33 @@ breaking change bumps the minor version.
   `{"scope": {…}}` JSON, which Debug › Network shows. With nothing set, the mint
   is the bodyless request it has always been.
 
+### Changed
+
+- The demo's Styling preview shows a typo the search found: among the made-up
+  businesses HARBRO CONCRETE SUPPLY, INC. for the "harbor" typed, and among the
+  people Daan Okafor for "dana", two letters swapped in each, so the two
+  corrected letters side by side take the dotted underline or the stripes, and
+  can be styled before anything is typed. The sample API and the home page's
+  reel answer as they did, with no typo.
+
+### Fixed
+
+- The letters on a background mark now read on a dark menu: they choose among
+  white, the title's color and the menu's own background, whichever reads best
+  by APCA, where a light fill such as `#ffb5af` kept white letters at 1.8:1
+  because white and the title are both light there.
+- A corrected letter's stripes under the `background` emphasis no longer vanish
+  on a mid-tone match color, and are the menu's own ground showing through. The
+  second stripe was the match color at no less than 35%, so over a white menu
+  white letters could not read on it, and for a color like `#ff6a00` or
+  `#929292` it was pushed back to the match color and the two stripes were one.
+  It is now nothing at all, the bare ground, where the letters read on the
+  ground (dark letters on a light fill, white ones on any fill over a dark
+  menu), and fainter, the match color over the ground, only as far as the
+  letters need where they do not: AA, else 3:1, else down to 2:1 so that a
+  mid-tone fill keeps stripes. The letters are the solid mark's, as on the pill,
+  and the second stripe is never a darker or another color.
+
 ## [0.9.0] - 2026-10-17
 
 ### Added

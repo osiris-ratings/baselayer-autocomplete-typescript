@@ -172,9 +172,10 @@ export function lookVariables(look: Look): CSSProperties {
     vars["--bl-ac-mark-fg"] = markText;
   }
   if (look.matchEmphasis === "background" && look.matchEmphasisColor !== null) {
-    // A corrected letter's stripes, in two colors that the letters above read
-    // on alike. Without a color of the host's the stylesheet stripes the
-    // default marker against the menu's ground.
+    // A corrected letter's stripes: the match color and the menu's ground
+    // showing through, as the letters (the solid mark's) allow. Without a color
+    // of the host's the stylesheet stripes the default marker against the
+    // bare ground.
     const stripes = stripeColors(look);
     vars["--bl-ac-stripe"] = stripes.solid;
     vars["--bl-ac-stripe-alt"] = stripes.alt;

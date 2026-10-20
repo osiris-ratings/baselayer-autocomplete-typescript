@@ -56,12 +56,14 @@ Colors are hex: `#rgb`, `#rrggbb` or `#rrggbbaa`. `plain` draws no marks,
 `weight` sets the matched words bolder than the rest of the name, `ink`
 darker, `underline` underlines them and `background` fills behind them. On a
 fill of your own (`matchEmphasisColor`), the letters on a background mark are
-white or the title's color, whichever reads better on it by APCA, the WCAG 3
-draft's perceptual contrast; `matchEmphasisTextColor` sets them yourself. On
-the default marker they keep their own color. The
-same treatment marks what a filter matched: an officer, an address or a
-related name, on the words the autocomplete service marked (whole, when it
-sends none), and a state's square (see [what matched](#what-matched)).
+white, the title's color or the menu's own background, whichever reads best on
+it by APCA, the WCAG 3 draft's perceptual contrast (the menu's own is what a
+light fill takes on a dark menu, where white and the title are both light);
+`matchEmphasisTextColor` sets them yourself. On the default marker they keep
+their own color. The same treatment marks what a filter matched: an officer,
+an address or a related name, on the words the autocomplete service marked
+(whole, when it sends none), and a state's square (see
+[what matched](#what-matched)).
 `matchEmphasisRegion` cuts a name's marked words at what was typed in the
 field, and a related name's at what was typed in the filter that matched it.
 `DEFAULT_LOOK` in the core holds these defaults, `resolveLook(look)` lays a
@@ -98,7 +100,7 @@ Set them on `.bl-ac` or any ancestor selector more specific than it:
 | `--bl-ac-marker`                  | `#c6f6d5`                          | the background mark                                   |
 | `--bl-ac-mark-fg`                 | unset: the letters' own color      | the letters on a background mark                      |
 | `--bl-ac-stripe`                  | set with a match color             | a corrected letter's first stripe, under `background` |
-| `--bl-ac-stripe-alt`              | set with a match color             | its second stripe                                     |
+| `--bl-ac-stripe-alt`              | set with a match color             | its second stripe: the menu's ground shows through    |
 | `--bl-ac-ink-mark`                | unset: the title's color           | a matched word, under `ink`                           |
 | `--bl-ac-ink-base`                | `#4a5568`                          | the name's unmatched text, under `ink`                |
 | `--bl-ac-also-mark`               | `#2d3748`                          | the `also …` marks, under `weight` and `ink`          |
@@ -607,34 +609,35 @@ corrected, so a row it did not correct reads as it always did.
 
 How a corrected letter is drawn follows `look.matchEmphasis`:
 
-| Emphasis     | A corrected letter                                                                                                                                        |
-| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `underline`  | a dotted underline, in exactly the solid underline's color and line                                                                                       |
-| `background` | the match's fill in diagonal stripes, the color and the same color more transparent, as the Hidden lines drawer is laid, in the solid fill's letter color |
-| `weight`     | an ordinary match: nothing marks a fuzzy match, the word looks like any                                                                                   |
-| `ink`        | an ordinary match, as under `weight`                                                                                                                      |
-| `plain`      | nothing, as for any match                                                                                                                                 |
+| Emphasis     | A corrected letter                                                                                                                                              |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `underline`  | a dotted underline, in exactly the solid underline's color and line                                                                                             |
+| `background` | the match's fill in diagonal stripes, the color and the menu's own ground showing through, as the Hidden lines drawer is laid, in the solid fill's letter color |
+| `weight`     | an ordinary match: nothing marks a fuzzy match, the word looks like any                                                                                         |
+| `ink`        | an ordinary match, as under `weight`                                                                                                                            |
+| `plain`      | nothing, as for any match                                                                                                                                       |
 
 Under `background` the letters take the color the solid fill gives its text, so
-the stripes have to read under it alike. The first stripe is the match color, so
-the stripes join the pill they sit in; the second is the same color more
-transparent, so the menu's own ground shows through it, light or dark, and it
-works on a dark menu where a lighter tint would fight it. With a
-`matchEmphasisColor` the component sets them (`--bl-ac-stripe` and
-`--bl-ac-stripe-alt`, written as `rgba()`), the second as transparent as the
-letters still read on once it is over the ground, never past 35% of the color,
-and clearly a second stripe (1.4:1 or more from the first). That is WCAG AA
-(4.5:1) wherever the ground leaves room: dark letters on a light fill, and any
-fill over a dark menu, where the ground shows through darker and the letters
-lose nothing. White letters over a white menu are the limit: AA would leave the
-stripes at about 1.2:1, a faint hatch, so the stripe is as transparent as 3:1
-allows, which is also all a pill that falls short of AA itself (white on a mid
-pink) leaves. On the default marker the letters keep
-their ink, and the second stripe is the marker at 40%. A match mark and the
-corrected letters among it are one pill: where two touch, neither reaches past
-its letters nor rounds that corner (`data-join` on the spans says which sides
-touch), so the inside of the run is continuous and only its two ends are
-rounded.
+the stripes have to let them read. The first stripe is the match color, so the
+stripes join the pill they sit in; the second is the same color made
+transparent, so the menu's own ground shows through it, light or dark, and it is
+never a darker or another color. Where the letters read on the bare ground, as
+dark letters on a light fill do over a white menu, and white ones on any fill
+over a dark menu, the second stripe is nothing at all: the bare ground, masked.
+Where they do not (white letters on a darker fill over a white menu), it is
+fainter, the match color over the ground, as transparent as the letters still
+read on: WCAG AA (4.5:1) where the match color has the room and stripes that can
+be told apart (1.4:1 from the first) come with it, else 3:1, else down to 2:1,
+which a mid-tone fill under white letters needs to keep stripes at all (white on
+`#ff6a00` is 2.9:1 on the pill itself). So a fill the letters switch from dark
+to white on goes from the bare ground to the fainter stripe at the switch, and
+does not lose its stripes there. With a `matchEmphasisColor` the component sets
+them (`--bl-ac-stripe` and `--bl-ac-stripe-alt`, written as `rgba()`); on the
+default marker the letters keep their ink, and the second stripe is the bare
+ground. A match mark and the corrected letters among it are one pill: where two
+touch, neither reaches past its letters nor rounds that corner (`data-join` on
+the spans says which sides touch), so the inside of the run is continuous and
+only its two ends are rounded.
 
 Under `underline` and `background` it is a span of its own with the class
 `bl-ac-corrected` (the `corrected` slot of `classNames`) and

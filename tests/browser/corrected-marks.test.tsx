@@ -81,13 +81,9 @@ function rawStripesOf(element: HTMLElement) {
   const stops = topLevel(inside)
     .slice(1)
     .map(stop => colorOf(stop.replace(/(\s+-?[\d.]+(?:px|%)){1,2}$/, "")));
-  // A browser lists each stripe's color at both of its ends.
-  return stops.filter(
-    (stop, at) =>
-      at === 0 ||
-      `${stop.rgb}/${stop.opacity}` !==
-        `${stops[at - 1]!.rgb}/${stops[at - 1]!.opacity}`,
-  );
+  // A browser lists each stripe's color at both of its ends: two stripes, four
+  // stops, even where the two are the same color.
+  return [stops[0]!, stops[2]!];
 }
 
 /** What is behind `element`: the first background that is not clear, else white. */
@@ -287,7 +283,7 @@ describe("the letters the search corrected", () => {
     done();
   });
 
-  it("stripe in the match color and the same color more transparent on the default marker, the letters keeping their ink", () => {
+  it("stripe in the match color and the menu's ground on the default marker, the letters keeping their ink", () => {
     const { corrected, matched, done } = draw("background");
     const [first, second] = rawStripesOf(corrected!);
 
@@ -295,9 +291,8 @@ describe("the letters the search corrected", () => {
       rgbOf(getComputedStyle(matched!).backgroundColor),
     );
     expect(first!.opacity).toBe(1);
-    // The same color at 40%: the menu's ground shows through.
-    expect(second!.rgb).toEqual(first!.rgb);
-    expect(second!.opacity).toBeCloseTo(0.4, 2);
+    // Nothing of the color: the menu's ground shows through whole.
+    expect(second!.opacity).toBe(0);
     // The letters are the neighbouring letters' own: the solid mark's.
     expect(getComputedStyle(corrected!).color).toBe(
       getComputedStyle(matched!).color,
@@ -305,40 +300,55 @@ describe("the letters the search corrected", () => {
     done();
   });
 
-  describe("read on both stripes, in the letter color the solid match gives its text", () => {
-    /**
-     * The first stripe is the pill's own color, so the letters read on it as
-     * they do on the pill; the second is the same color more transparent, and
-     * keeps at least `floor` (3:1, or AA where asked) over the menu's ground
-     * wherever the pill reads at all.
-     */
+  describe("are the pill's color and the menu's ground, in the letters the solid pill has", () => {
+    // Klemen: the letters stay as they are on the fully highlighted background,
+    // and the stripes are never another color than the pill's: the second is
+    // the bare background (masked) where the letters read on it, and fainter,
+    // the pill's color over it, only as far as the letters need.
     function expectStripes(
       corrected: HTMLElement,
+      matched: HTMLElement,
       label: string,
-      floor?: number,
     ) {
       const letters = rgbOf(getComputedStyle(corrected).color);
       const [first, second] = stripesOf(corrected);
       const [rawFirst, rawSecond] = rawStripesOf(corrected);
+      const ground = groundOf(corrected);
 
       expect(stripesOf(corrected), label).toHaveLength(2);
+      // The first is the pill's own color, whole.
       expect(rawFirst!.opacity, `${label}: the first is the pill's own`).toBe(
         1,
       );
-      expect(rawSecond!.rgb, `${label}: the same color`).toEqual(rawFirst!.rgb);
+      expect(rawFirst!.rgb, label).toEqual(
+        rgbOf(getComputedStyle(matched).backgroundColor),
+      );
+      // The letters are the solid pill's, never picked again for the stripes.
+      expect(getComputedStyle(corrected).color, `${label}: the letters`).toBe(
+        getComputedStyle(matched).color,
+      );
+      // Never another color: the pill's own, more or less of it over the ground.
+      expect(rawSecond!.opacity, label).toBeGreaterThanOrEqual(0);
       expect(rawSecond!.opacity, label).toBeLessThanOrEqual(1);
-      expect(rawSecond!.opacity, label).toBeGreaterThanOrEqual(0.35);
-      if (ratio(letters, first!) >= 3) {
+      if (rawSecond!.opacity > 0) {
+        expect(rawSecond!.rgb, `${label}: the same color`).toEqual(
+          rawFirst!.rgb,
+        );
+      }
+      // Bare where the letters read on the ground; else legible on the stripe.
+      if (ratio(letters, ground) >= 4.5) {
+        expect(rawSecond!.opacity, `${label}: bare`).toBe(0);
+        expect(second, label).toEqual(ground);
+      } else if (ratio(letters, first!) >= 2) {
         expect(
           ratio(letters, second!),
           `${label}: ${letters} on ${second}`,
-        ).toBeGreaterThanOrEqual(floor ?? 3);
+        ).toBeGreaterThanOrEqual(2);
       }
     }
 
-    // Klemen's three: white letters on a saturated purple and on a dark olive
-    // green, dark letters on a light green. Over a white menu white letters
-    // leave a stripe that can be seen only 3:1; dark ones keep AA.
+    // The three that were hard to read, and the colors a mid-tone pill had
+    // its stripes lost to: the same letters as the pill, whichever they are.
     const COMBINATIONS = [
       [
         "a saturated purple pill, white letters",
@@ -351,6 +361,15 @@ describe("the letters the search corrected", () => {
         "#556b2f",
         "rgb(255, 255, 255)",
       ],
+      [
+        "a mid-tone orange pill, white letters",
+        "#ff6a00",
+        "rgb(255, 255, 255)",
+      ],
+      ["a mid-tone grey pill, white letters", "#929292", "rgb(255, 255, 255)"],
+      ["a burnt orange pill, white letters", "#d95000", "rgb(255, 255, 255)"],
+      ["a pink pill, white letters", "#e63b7a", "rgb(255, 255, 255)"],
+      ["a light orange pill, dark letters", "#ff8647", "rgb(26, 32, 44)"],
     ] as const;
 
     it.each(COMBINATIONS)("%s", (_, color, letters) => {
@@ -359,18 +378,47 @@ describe("the letters the search corrected", () => {
       });
 
       expect(getComputedStyle(matched!).color).toBe(letters);
-      expect(getComputedStyle(corrected!).color).toBe(letters);
-      // The first stripe is the pill's own color.
-      expect(stripesOf(corrected!)[0]).toEqual(
-        rgbOf(getComputedStyle(matched!).backgroundColor),
-      );
-      // White letters over this white menu: the stripe is as transparent as
-      // 3:1 lets it be; dark ones keep AA at the most transparent.
-      expectStripes(
-        corrected!,
-        color,
-        letters === "rgb(255, 255, 255)" ? 3 : 4.5,
-      );
+      expectStripes(corrected!, matched!, color);
+      done();
+    });
+
+    // The stripes of a mid-tone pill were one, at the threshold where the
+    // letters go from dark to white: a lighter second stripe took the white
+    // letters under 3:1, so it was pushed back to the pill's own color. Drawn
+    // by the browser, they are two, the second the pill's color over the white
+    // menu and no more opaque than the letters need.
+    it.each(["#ff6a00", "#929292", "#d95000", "#e63b7a", "#7c3aed"])(
+      "the stripes of a %s pill, white letters, are seen: the second is not the pill's own color",
+      color => {
+        const { corrected, matched, done } = draw("background", ROW, {
+          matchEmphasisColor: color,
+        });
+        const [first, second] = stripesOf(corrected!);
+
+        expectStripes(corrected!, matched!, color);
+        expect(rawStripesOf(corrected!)[1]!.opacity, color).toBeLessThan(1);
+        expect(ratio(first!, second!), color).toBeGreaterThanOrEqual(1.2);
+        // Lighter than the pill, over a white menu: never darker.
+        expect(luminance(second!), color).toBeGreaterThan(luminance(first!));
+        done();
+      },
+    );
+
+    // On a dark menu white and the title are both light, so a light pill takes
+    // the menu's own dark for its letters, and the corrected letters keep them.
+    it("keeps the menu's dark for the letters on a light pill over a dark menu", () => {
+      const { corrected, matched, done } = draw("background", ROW, {
+        matchEmphasisColor: "#ffb5af",
+        backgroundColor: "#0f1424",
+        titleColor: "#f4f5f7",
+        subtitleColor: "#9aa0aa",
+      });
+      const pill = rgbOf(getComputedStyle(matched!).backgroundColor);
+      const letters = rgbOf(getComputedStyle(matched!).color);
+
+      expect(letters).toEqual([15, 20, 36]);
+      expect(ratio(letters, pill)).toBeGreaterThanOrEqual(4.5);
+      expectStripes(corrected!, matched!, "#ffb5af (dark)");
       done();
     });
 
@@ -385,7 +433,7 @@ describe("the letters the search corrected", () => {
       "#800000",
     ])("a custom %s, on a white menu and on a dark one", color => {
       for (const dark of [false, true]) {
-        const { corrected, done } = draw("background", ROW, {
+        const { corrected, matched, done } = draw("background", ROW, {
           matchEmphasisColor: color,
           ...(dark
             ? {
@@ -396,7 +444,7 @@ describe("the letters the search corrected", () => {
             : {}),
         });
 
-        expectStripes(corrected!, `${color}${dark ? " (dark)" : ""}`);
+        expectStripes(corrected!, matched!, `${color}${dark ? " (dark)" : ""}`);
         done();
       }
     });
@@ -409,9 +457,14 @@ describe("the letters the search corrected", () => {
           ...preset.highlight,
           matchEmphasis: "background",
         });
-        const { corrected, done } = draw("background", ROW, look, preset.vars);
+        const { corrected, matched, done } = draw(
+          "background",
+          ROW,
+          look,
+          preset.vars,
+        );
 
-        expectStripes(corrected!, preset.name);
+        expectStripes(corrected!, matched!, preset.name);
         done();
       },
     );
