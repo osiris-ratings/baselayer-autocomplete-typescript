@@ -69,7 +69,7 @@ describe("the letters the search corrected", () => {
   );
 
   it.each(FIELDS)(
-    "%s: under the background emphasis, are stripes of the match's fill, in the solid fill's letter color",
+    "%s: under the background emphasis, are stripes of the match's fill and the menu's ground, in the solid fill's letter color",
     field => {
       const body = rule(
         `${field}[data-emphasis="background"] .bl-ac-corrected`,
@@ -78,15 +78,12 @@ describe("the letters the search corrected", () => {
       expect(body).toContain("repeating-linear-gradient(");
       expect(body).toContain("-45deg");
       // Two colors the component sets from the match color, else the marker
-      // and the marker at 40%, which lets the menu's ground through; the first
-      // is the pill's own, never clear.
+      // and nothing at all, which lets the menu's ground through whole; the
+      // first is the pill's own, never clear.
       expect(body).toContain(
         "var(--bl-ac-stripe, var(--bl-ac-mark, var(--bl-ac-marker)))",
       );
-      expect(body).toContain("--bl-ac-stripe-alt");
-      expect(body).toMatch(
-        /color-mix\(\s*in srgb,\s*var\(--bl-ac-mark, var\(--bl-ac-marker\)\) 40%,\s*transparent\s*\)/,
-      );
+      expect(body).toContain("var(--bl-ac-stripe-alt, transparent)");
       expect(body).not.toMatch(/\)\s*0 2px,\s*transparent/);
       // The reach and the corners of a mark, so that a run's two ends are
       // pill ends; where two spans touch the join rules below take both away.
@@ -94,8 +91,9 @@ describe("the letters the search corrected", () => {
       expect(body).toContain("padding: 0 0.125rem;");
       expect(body).toContain("border-radius: 0.25rem;");
       expect(body).not.toContain("position");
-      // The letters take the color the solid fill gives its text.
+      // The letters are the solid fill's, as they are on the pill.
       expect(body).toContain("color: var(--bl-ac-mark-fg);");
+      expect(body).not.toContain("background-clip");
       expect(
         rule(`${field}[data-emphasis="background"] .bl-ac-mark`),
       ).toContain("color: var(--bl-ac-mark-fg);");

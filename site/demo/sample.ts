@@ -389,10 +389,35 @@ const NOT_REQUESTED: RelatedSet<never> = {
 };
 
 /**
+ * The typo the Styling preview shows among its businesses: the row that has
+ * "harbor" typed against HARBRO, two letters swapped, so the two letters the
+ * search corrected, side by side, can be styled (the dotted underline, the
+ * stripes) before anything is typed. Only the preview's row is spelled so: the
+ * sample API and the home page's reel answer from `SAMPLE_SUGGESTIONS`, which
+ * carry no typo.
+ */
+const PREVIEW_TYPO_BUSINESS = new Map([
+  ["HARBOR CONCRETE SUPPLY, INC.", "HARBRO CONCRETE SUPPLY, INC."],
+]);
+
+function misspelled(row: BusinessSuggestion): BusinessSuggestion {
+  const label = PREVIEW_TYPO_BUSINESS.get(row.label);
+  return label === undefined
+    ? row
+    : {
+        ...row,
+        label,
+        token: sampleToken(label),
+        highlight: serviceHighlightFor(label, TOKENS),
+      };
+}
+
+/**
  * The sample rows as the knobs would have them come back: no more than
  * `limit`, and a relation no placed field asks for (`include`, from
  * `includeForLayout`) not sent, as the autocomplete service leaves it out. The
- * other knobs act on typing, which the sample has none of.
+ * other knobs act on typing, which the sample has none of. One row is a typo
+ * the search found (`PREVIEW_TYPO_BUSINESS`).
  */
 export function sampleRows({
   limit,
@@ -405,13 +430,15 @@ export function sampleRows({
     relation: Include,
     set: RelatedSet<Item>,
   ) => (include.includes(relation) ? set : NOT_REQUESTED);
-  return SAMPLE_SUGGESTIONS.slice(0, limit).map(row => ({
-    ...row,
-    related: {
-      people: asked("people", row.related.people),
-      addresses: asked("addresses", row.related.addresses),
-    },
-  }));
+  return SAMPLE_SUGGESTIONS.slice(0, limit)
+    .map(misspelled)
+    .map(row => ({
+      ...row,
+      related: {
+        people: asked("people", row.related.people),
+        addresses: asked("addresses", row.related.addresses),
+      },
+    }));
 }
 
 /** What the preview's count row and diagnostics say. */
@@ -583,6 +610,34 @@ export const SAMPLE_PEOPLE: PersonSuggestion[] = [
     set([addressOfPerson("1200 Tallowmere Rd, Pittsburgh, PA 15212")]),
   ),
 ];
+
+/**
+ * The typo the Styling preview shows among its people: "dana" typed against
+ * Daan, two letters swapped, as `PREVIEW_TYPO_BUSINESS` does for the businesses.
+ */
+const PREVIEW_TYPO_PERSON = new Map([["Dana Okafor", "Daan Okafor"]]);
+
+/**
+ * The sample people as the preview draws them: no more than `limit`, one of
+ * them a typo the search found. `SAMPLE_PEOPLE` itself, which the sample API
+ * answers from, carries none.
+ */
+export function samplePeople(limit: number): PersonSuggestion[] {
+  return SAMPLE_PEOPLE.slice(0, limit).map(row => {
+    const label = PREVIEW_TYPO_PERSON.get(row.label);
+    return label === undefined
+      ? row
+      : {
+          ...row,
+          label,
+          token: `sample-person-${slug(label)}`,
+          highlight: serviceHighlightFor(
+            label,
+            queryTokens(SAMPLE_PEOPLE_QUERY),
+          ),
+        };
+  });
+}
 
 function addressRow(
   line1: string,

@@ -65,6 +65,34 @@ describe("a background mark's letters", () => {
     }
   });
 
+  describe("on a dark menu", () => {
+    // The title's color is light there, so white and the title are both light:
+    // a light fill needs the menu's own dark for letters, or they sit at 1.8:1.
+    const DARK = {
+      ...DEFAULT_LOOK,
+      backgroundColor: "#0f1424",
+      titleColor: "#f4f5f7",
+      subtitleColor: "#9aa0aa",
+    };
+    const onDark = (matchEmphasisColor: string) =>
+      markTextColor({ ...DARK, matchEmphasisColor });
+
+    it("are the menu's own dark on a light fill, where white and the title would not read", () => {
+      for (const fill of ["#ffb5af", "#fd971f", "#fff3a3", "#c6f6d5"]) {
+        const letters = onDark(fill)!;
+
+        expect(letters, fill).toBe("#0f1424");
+        expect(contrast(letters, fill), fill).toBeGreaterThanOrEqual(4.5);
+      }
+    });
+
+    it("stay white on a dark fill", () => {
+      for (const fill of ["#7c3aed", "#556b2f", "#e63b7a", "#384ce3"]) {
+        expect(onDark(fill), fill).toBe("#ffffff");
+      }
+    });
+  });
+
   it("read a translucent fill as it is drawn on the menu", () => {
     // Half the pink on white is a light pink: dark letters read better.
     expect(pick("#e63b7a80")).toBe(DEFAULT_LOOK.titleColor.toLowerCase());

@@ -277,10 +277,13 @@ lying over it. With nothing typed it shows made-up rows, as many as Rows asks
 for (five by default, eight at most), that carry every field of a row
 (highlighted words, a matched alternative name, the domicile square and the
 overflow, a spread of structures, one on a name with no suffix and one not
-known, an address, officers with a +N, a registered agent, the count), so every
-knob can be judged before a keystroke; type a name and the real rows take their
-place. On Person and Address the made-up rows are people and addresses, each
-with its businesses, as many as Rows asks for. The Components fold edits the
+known, an address, officers with a +N, a registered agent, the count, and one
+name the search found through a typo, HARBRO for "harbor", whose two swapped
+letters take the dotted underline or the stripes), so every knob can be judged
+before a keystroke; type a name and the real rows take their place. On Person
+and Address the made-up rows are people and addresses, each with its
+businesses, as many as Rows asks for; among the people one is a typo too (Daan
+for "dana"). The Components fold edits the
 row of the search the form is on, with a tab for each (Business, Person,
 Address) that moves the form with it. Its row map draws each line of that row,
 the head first, in two drawers. Shown holds the lines the row lists, in the
