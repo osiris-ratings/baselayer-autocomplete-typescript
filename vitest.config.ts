@@ -15,6 +15,10 @@ export const alias = [
   { find: /^@baselayer-sdk\/autocomplete$/, replacement: src("index.ts") },
 ];
 
+// The site build injects the SDK's version, which `site/shared/links.ts` reads
+// wherever a page imports it, so every project that renders the site defines it.
+export const siteDefine = { __SDK_VERSION__: JSON.stringify("0.0.0") };
+
 export default defineConfig({
   resolve: { alias },
   test: {
@@ -44,6 +48,7 @@ export default defineConfig({
       },
       {
         resolve: { alias },
+        define: siteDefine,
         test: {
           name: "site",
           include: ["tests/site/**/*.test.{ts,tsx}"],

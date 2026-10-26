@@ -8,6 +8,10 @@ breaking change bumps the minor version.
 
 ### Added
 
+- The demo page's introduction ends with a **Book a demo** button, under the
+  heading and the lede, that opens <https://baselayer.com/demo/> in a new tab,
+  so the key and the session the page holds stay. Demo site only: the package
+  and its types are untouched.
 - The demo's Connect step has a closed **Session settings** toggle after its
   title, as step 2's filters are on theirs, while the step is expanded. The page
   `pnpm demo` serves has it from the start; the published page has none until a
