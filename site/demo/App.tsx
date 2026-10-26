@@ -39,6 +39,7 @@ import {
 import { flushSync } from "react-dom";
 
 import { Icon } from "../shared/icons";
+import { links } from "../shared/links";
 import { useNow } from "./clock";
 import { testKey, withFirstGrant, type CheckResult } from "./connect";
 import { connectionStatus, formatRemaining } from "./connection";
@@ -897,6 +898,18 @@ export function App() {
                 makes it. Every session this page mints, and every search it
                 runs, is real and billable on your organization.
               </p>
+              {/* A new tab: leaving would drop the key and the session this
+                  page holds. */}
+              <div className="demo-intro-cta">
+                <a
+                  className="btn btn-primary"
+                  href={links.bookDemo}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                >
+                  Book a demo
+                </a>
+              </div>
             </div>
           </section>
         ) : (

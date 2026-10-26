@@ -14,6 +14,7 @@ export const links = {
   apiErrors: `${base}api/#errors`,
   demo: `${base}demo/`,
   baselayer: "https://baselayer.com/",
+  bookDemo: "https://baselayer.com/demo/",
   source: "https://github.com/osiris-ratings/baselayer-autocomplete-typescript",
 } as const;
 

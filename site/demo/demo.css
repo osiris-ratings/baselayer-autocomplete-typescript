@@ -73,6 +73,10 @@
   font-size: 17px;
 }
 
+.demo-intro-cta {
+  margin-top: 24px;
+}
+
 .demo-controls {
   display: grid;
   align-content: start;

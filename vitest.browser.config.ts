@@ -2,7 +2,7 @@ import { playwright } from "@vitest/browser-playwright";
 import { defineConfig } from "vitest/config";
 import type { BrowserCommand } from "vitest/node";
 
-import { alias } from "./vitest.config";
+import { alias, siteDefine } from "./vitest.config";
 
 /** Emulates a forced-colors display, or lifts it, for the page under test. */
 const forcedColors: BrowserCommand<[active: boolean]> = async (
@@ -28,6 +28,7 @@ const reducedMotion: BrowserCommand<[active: boolean]> = async (
 // that overflows its menu passes there. Run with `pnpm test:browser`.
 export default defineConfig({
   resolve: { alias },
+  define: siteDefine,
   // Pre-bundled up front: found mid-run, it reloads the page and loads a
   // second React beside the one already running.
   optimizeDeps: { include: ["react-dom/server"] },

@@ -27,8 +27,10 @@ side by side, each scrolling on its own: the introduction, the controls (**01
 Connect** and **02 Autocomplete**, and **03 Run a business search** once a
 business is picked), and Debug or Styling. The introduction folds to a
 **Live demo** tab with its **Hide**; opening Debug or Styling folds it too, to
-give that pane room, and the tab brings it back. On a narrow screen the panes
-stack and the page scrolls as any other does.
+give that pane room, and the tab brings it back. The introduction ends with
+**Book a demo**, which opens <https://baselayer.com/demo/> in a new tab, so the
+key and session the page holds stay. On a narrow screen the panes stack and the
+page scrolls as any other does.
 
 The panes move as they change, so it is plain where each went. Opening one,
 its tab turns a quarter about the square at its top, where its icon is, as it
