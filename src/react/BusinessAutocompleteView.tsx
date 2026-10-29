@@ -1,4 +1,10 @@
-import { useRef, type ReactElement, type ReactNode, type Ref } from "react";
+import {
+  useMemo,
+  useRef,
+  type ReactElement,
+  type ReactNode,
+  type Ref,
+} from "react";
 
 import {
   BUSINESS_ROW,
@@ -42,6 +48,7 @@ import type {
 } from "@baselayer-sdk/autocomplete";
 
 import { SegmentIcon, type IconSet } from "./icons";
+import { menuWidthAttributes, type MenuWidthProps } from "./menuWidth";
 import {
   defaultFiltersNeedMore,
   resolveMessages,
@@ -84,7 +91,7 @@ export interface RowRenderProps {
   defaultRow: ReactNode;
 }
 
-export interface BusinessAutocompleteViewProps {
+export interface BusinessAutocompleteViewProps extends MenuWidthProps {
   id: string;
   /** The input's value; the host owns it. */
   value: string;
@@ -146,11 +153,6 @@ export interface BusinessAutocompleteViewProps {
    * or an address filter matched, but not what a state filter did.
    */
   appliedFilters?: Filters | undefined;
-  /**
-   * The menu as wide as the input (the default), or, `false`, as wide as
-   * `--bl-ac-menu-width` from 48em up.
-   */
-  menuFollowsInputWidth?: boolean | undefined;
 
   /** How the rows are drawn; any knob left out keeps its default. */
   look?: LookInput | undefined;
@@ -507,7 +509,8 @@ export function BusinessAutocompleteView({
   open = false,
   layout: layoutInput,
   appliedFilters,
-  menuFollowsInputWidth = true,
+  menuWidth,
+  menuFollowsInputWidth,
   look: lookInput,
   messages: messageOverrides,
   label,
@@ -704,6 +707,10 @@ export function BusinessAutocompleteView({
   };
 
   const menu = useRef<HTMLDivElement>(null);
+  const width = useMemo(
+    () => menuWidthAttributes(menuWidth, menuFollowsInputWidth),
+    [menuWidth, menuFollowsInputWidth],
+  );
   const roleColumnStyle = useRoleColumn(
     menu,
     rowLines.flatMap(lines =>
@@ -750,7 +757,8 @@ export function BusinessAutocompleteView({
         className={cx("menu", "bl-ac-menu")}
         data-testid="autocomplete-menu"
         data-open={menuVisible ? "true" : "false"}
-        data-width={menuFollowsInputWidth ? undefined : "fixed"}
+        data-width={width.dataWidth}
+        style={width.style}
         hidden={!menuVisible}
         ref={menu}
       >

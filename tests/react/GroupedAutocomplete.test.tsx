@@ -39,6 +39,7 @@ import {
   PersonAutocompleteView,
   useEntityAutocomplete,
   type IconSet,
+  type MenuWidth,
 } from "../../src/react";
 
 // Made-up people, addresses and businesses.
@@ -305,6 +306,7 @@ function PersonHost({
   icons,
   iconSegments,
   filters,
+  menuWidth,
 }: {
   client: Client;
   onPick?: (pick: BusinessPick) => void;
@@ -316,6 +318,7 @@ function PersonHost({
   icons?: IconSet;
   iconSegments?: PersonIconSegment[];
   filters?: PeopleFilters;
+  menuWidth?: MenuWidth;
 }) {
   const [value, setValue] = useState("");
   return (
@@ -345,6 +348,7 @@ function PersonHost({
         {...(icons !== undefined ? { icons } : {})}
         {...(iconSegments !== undefined ? { iconSegments } : {})}
         {...(filters !== undefined ? { filters } : {})}
+        {...(menuWidth !== undefined ? { menuWidth } : {})}
       />
     </>
   );
@@ -357,6 +361,7 @@ function AddressHost({
   list,
   enabledLines,
   filters,
+  menuWidth,
 }: {
   client: Client;
   onPick?: (pick: BusinessPick) => void;
@@ -364,6 +369,7 @@ function AddressHost({
   list?: ("businesses" | "people")[];
   enabledLines?: EntityType[];
   filters?: AddressesFilters;
+  menuWidth?: MenuWidth;
 }) {
   const [value, setValue] = useState("");
   return (
@@ -379,6 +385,7 @@ function AddressHost({
       {...(list !== undefined ? { list } : {})}
       enabledLines={enabledLines ?? DEFAULT_ENABLED_LINES}
       {...(filters !== undefined ? { filters } : {})}
+      {...(menuWidth !== undefined ? { menuWidth } : {})}
     />
   );
 }
@@ -802,6 +809,34 @@ describe("PersonAutocomplete", () => {
     );
 
     expect([bare, businessesOnly]).toHaveLength(2);
+  });
+});
+
+describe("the width of the menu a connected person or address field draws", () => {
+  it("is the person field's: a width of its own, on the menu", async () => {
+    const { client } = setup();
+    await typeDana(client, { menuWidth: "calc(100% + 56px)" });
+
+    const menu = screen.getByTestId("autocomplete-menu");
+    expect(menu).toHaveAttribute("data-width", "fixed");
+    expect(menu.style.getPropertyValue("--bl-ac-menu-width")).toBe(
+      "calc(100% + 56px)",
+    );
+  });
+
+  it("is the address field's: a preset", async () => {
+    const { client } = setup();
+    const user = userEvent.setup();
+    render(<AddressHost client={client} menuWidth="wide" />);
+    await user.type(screen.getByRole("combobox"), "45 corvel");
+    await screen.findByRole("group", {
+      name: "45 Corvel Landing Ste 200, Erie, PA 16507",
+    });
+
+    expect(screen.getByTestId("autocomplete-menu")).toHaveAttribute(
+      "data-width",
+      "wide",
+    );
   });
 });
 

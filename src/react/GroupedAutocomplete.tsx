@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactElement,
@@ -48,6 +49,7 @@ import {
 import type { MintTiming } from "./BusinessAutocomplete";
 import { useAutocompleteClient, useResolvedClient } from "./context";
 import { SegmentIcon, type IconSet } from "./icons";
+import { menuWidthAttributes, type MenuWidthProps } from "./menuWidth";
 import {
   usePickedSelection,
   type GroupedSelection,
@@ -100,7 +102,7 @@ interface OptionItem {
   label: string;
 }
 
-interface GroupedCommonProps<R extends GroupedRoute> {
+interface GroupedCommonProps<R extends GroupedRoute> extends MenuWidthProps {
   id: string;
   /** The text typed: a person's name, or an address. */
   value: string;
@@ -158,11 +160,6 @@ interface GroupedCommonProps<R extends GroupedRoute> {
   unstyled?: boolean;
   /** Hold the menu open whatever focus does: a style preview. */
   open?: boolean;
-  /**
-   * The menu as wide as the input (the default), or, `false`, as wide as
-   * `--bl-ac-menu-width` from 48em up.
-   */
-  menuFollowsInputWidth?: boolean;
   /** The deployment cannot mint (503 code 481), or can again. */
   onUnavailable?: (state: { unavailable: boolean }) => void;
   /**
@@ -419,7 +416,9 @@ function Connected<R extends GroupedRoute>({
   );
 }
 
-interface GroupedViewCommonProps<R extends GroupedRoute> {
+interface GroupedViewCommonProps<
+  R extends GroupedRoute,
+> extends MenuWidthProps {
   id: string;
   /** The input's value; the host owns it. */
   value: string;
@@ -469,11 +468,6 @@ interface GroupedViewCommonProps<R extends GroupedRoute> {
   selection?: GroupedSelection | null | undefined;
   /** Hold the menu open whatever focus does: a style preview. */
   open?: boolean | undefined;
-  /**
-   * The menu as wide as the input (the default), or, `false`, as wide as
-   * `--bl-ac-menu-width` from 48em up.
-   */
-  menuFollowsInputWidth?: boolean | undefined;
   look?: LookInput | undefined;
   messages?: Partial<AutocompleteMessages> | undefined;
   label?: ReactNode;
@@ -549,7 +543,8 @@ function GroupedView<R extends GroupedRoute>({
   layout: layoutInput,
   selection = null,
   open = false,
-  menuFollowsInputWidth = true,
+  menuWidth,
+  menuFollowsInputWidth,
   look: lookInput,
   messages,
   label,
@@ -915,6 +910,10 @@ function GroupedView<R extends GroupedRoute>({
   }
 
   const menu = useRef<HTMLDivElement>(null);
+  const width = useMemo(
+    () => menuWidthAttributes(menuWidth, menuFollowsInputWidth),
+    [menuWidth, menuFollowsInputWidth],
+  );
   const roleColumnStyle = useRoleColumn(
     menu,
     drawn.flatMap(({ lines }) =>
@@ -949,7 +948,8 @@ function GroupedView<R extends GroupedRoute>({
         className={cx("menu", "bl-ac-menu")}
         data-testid="autocomplete-menu"
         data-open={combobox.menuVisible ? "true" : "false"}
-        data-width={menuFollowsInputWidth ? undefined : "fixed"}
+        data-width={width.dataWidth}
+        style={width.style}
         hidden={!combobox.menuVisible}
         ref={menu}
       >

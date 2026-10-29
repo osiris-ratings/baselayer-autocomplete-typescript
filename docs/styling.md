@@ -108,7 +108,7 @@ Set them on `.bl-ac` or any ancestor selector more specific than it:
 | `--bl-ac-pill-radius`             | `0.25rem`                          | the state and `+N` squares, and the flag              |
 | `--bl-ac-shadow`                  | `0 4px 8px rgba(16, 24, 40, 0.08)` | the menu                                              |
 | `--bl-ac-z`                       | `1000`                             | the menu's stacking                                   |
-| `--bl-ac-menu-width`              | `560px`                            | a menu that keeps its own width                       |
+| `--bl-ac-menu-width`              | `560px`                            | a menu that keeps its own width, `menuWidth`'s        |
 | `--bl-ac-list-max-height`         | `24rem`                            | the scrolling list                                    |
 | `--bl-ac-line-height`             | `1.5`                              | every line in the menu                                |
 | `--bl-ac-font`                    | unset: the page's font             | the component's font family                           |
@@ -149,9 +149,54 @@ border and `#3182ce` focus ring, and the footer's `#718096` text, which does
 not follow `--bl-ac-subtitle`. Restyle them on `.bl-ac-input` and
 `.bl-ac-footer`.
 
-The menu is as wide as the input. `menuFollowsInputWidth={false}` gives it a
-width of its own from 48em up, `--bl-ac-menu-width`; below that it is the
-input's width either way.
+### The menu's width
+
+The menu is as wide as the input. `menuWidth` gives it another width, from 48em
+up; below that it is the input's, whatever you ask for.
+
+| `menuWidth`              | The menu is                                       |
+| ------------------------ | ------------------------------------------------- |
+| `"input"`, the default   | the input's width                                 |
+| `"wide"`                 | the input's width and 3.5rem more, never narrower |
+| `"fixed"`                | `--bl-ac-menu-width`: 560px unless you set it     |
+| a number                 | that many pixels: `420`                           |
+| a string, any CSS length | that width: `"40rem"`, `"calc(100% + 56px)"`      |
+
+```tsx
+<BusinessAutocomplete menuWidth="wide" />
+<BusinessAutocomplete menuWidth={420} />
+// 100% is the input's width: it and 56px more, but not under 22rem or over 40rem
+<BusinessAutocomplete menuWidth="clamp(22rem, calc(100% + 56px), 40rem)" />
+```
+
+A percentage is of the input's width. The menu is never wider than the screen,
+whatever you ask for: it stops at `100vw - 2rem`. Bound it from either side with
+CSS's `clamp()`, `min()` and `max()`, as above. The menu opens at the input's
+left edge and grows to the right, and is not moved: leave it the room.
+
+A string is a width when it is a length or a percentage (`40rem`, `50%`),
+`max-content`, `min-content`, `fit-content`, or `calc()`, `min()`, `max()`,
+`clamp()`, `fit-content()`, `var()` or `env()` put together as CSS puts them: a
+number is not added to a length, and `+` and `-` take a space on each side. Any
+other string (`"wide-ish"`, `"calc(100% + 56)"`, `"inherit"`, `"auto"`) and a
+number that is not above zero are left out, as though `menuWidth` had not been
+given, and so is a string written with anything but what a length is: letters,
+digits, `.`, `%`, `+ - * /`, brackets, commas and spaces. A `;`, a quote, a
+`!`, a `\` or a comment never reaches the page. That is decided in the
+component, not asked of the browser, so a page rendered on a server and the page
+it becomes agree. A unit's name is not checked, and a `var()` is taken as it
+comes.
+
+`menuFollowsInputWidth` is the boolean form and works as it always has: `true`,
+the default, is `"input"`, and `false` is `"fixed"`. When both are given,
+`menuWidth` wins and `menuFollowsInputWidth` is not read; with `menuWidth` left
+out, it is read as before.
+
+A width of your own is `--bl-ac-menu-width`, set on that one menu, so a
+stylesheet can size the menus it picks out the same way: with
+`menuWidth="fixed"` (or `menuFollowsInputWidth={false}`), `--bl-ac-menu-width`
+takes any length, `calc(100% + 56px)` included. The `.bl-ac-menu` class and the
+rest are unchanged.
 
 ## 3. Class names and render props
 
@@ -207,8 +252,10 @@ least as specific as theirs, loaded after the stylesheet.
 ## 4. `unstyled`
 
 `unstyled` emits no `bl-ac-*` class at all. The `data-*` attributes stay
-(`data-open` on the menu, and `data-width="fixed"` with
-`menuFollowsInputWidth={false}`; `data-highlighted` on a row; `data-domicile`
+(`data-open` on the menu, and `data-width` on it when it is not the input's
+width: `fixed` with `menuFollowsInputWidth={false}` or a `menuWidth` of `"fixed"`,
+a number or a length (a length is `--bl-ac-menu-width`, set on the menu), and
+`wide` with `menuWidth="wide"`; `data-highlighted` on a row; `data-domicile`
 on the domicile's square; `data-emphasis` and `data-region` on the root and
 the name, `data-emphasis` on the alternative name, the address and the
 people, and `data-mark-color` on the root when `look.matchEmphasisColor` is
@@ -745,7 +792,7 @@ searching with no rows yet, `error`'s text in place of the count, or the
 autocomplete service did not finish looking takes the count's place. `onSelect`
 hands over the picked row and leaves the input to you. The view also takes the
 component's `label`, `renderLabel`, `renderInput`, `renderRow`, `classNames`,
-`unstyled`, `layout`, `menuFollowsInputWidth` and `messages`, and `inputName`,
+`unstyled`, `layout`, `menuWidth`, `menuFollowsInputWidth` and `messages`, and `inputName`,
 `inputRef`, `onInputFocus` and `onInputBlur` for its input.
 
 Give it the query your rows pretend was typed, as the demo gives its sample

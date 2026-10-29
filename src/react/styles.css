@@ -91,6 +91,11 @@
   .bl-ac-menu[data-width="fixed"] {
     width: var(--bl-ac-menu-width);
   }
+
+  /* The input's width and a little more: the percentage is the root's. */
+  .bl-ac-menu[data-width="wide"] {
+    width: calc(100% + 3.5rem);
+  }
 }
 
 .bl-ac-list {

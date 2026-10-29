@@ -8,6 +8,28 @@ breaking change bumps the minor version.
 
 ### Added
 
+- `menuWidth` sets how wide the suggestions menu is, on `BusinessAutocomplete`,
+  `PersonAutocomplete`, `AddressAutocomplete` and their views: `"input"` (the
+  input's width, as the menu has always been), `"wide"` (the input's width and
+  3.5rem more, never narrower), `"fixed"` (`--bl-ac-menu-width`, 560px), a number
+  of pixels, or a CSS length such as `"calc(100% + 56px)"`, where `100%` is the
+  input's width; `clamp()`, `min()` and `max()` bound it. Like
+  `--bl-ac-menu-width`, it holds from 48em up, and below that the menu is the
+  input's; and the menu is never wider than the screen, whatever is asked for
+  (`100vw - 2rem`). A string is taken when it is a length, a percentage,
+  `max-content`, `min-content`, `fit-content` or a `calc()`, `min()`, `max()`,
+  `clamp()`, `fit-content()`, `var()` or `env()` put together as CSS puts them
+  (`"calc(100% + 56)"` adds a number to a length, and is not); any other string,
+  one written with anything but the characters of a length, and a number that is
+  not above zero, are left out. That is decided in the component, not asked of
+  the browser, so a server-rendered page and the page it becomes agree.
+  `menuFollowsInputWidth` works as it did (`true` is `"input"`, `false` is
+  `"fixed"`), and `menuWidth` wins when both are given. Left out, nothing
+  changes: the default look, the class names and the markup are the same. The
+  types `MenuWidth` and `MenuWidthPreset` are exported from
+  `@baselayer-sdk/autocomplete/react`. A width of your own is
+  `--bl-ac-menu-width` set on that menu, and `data-width` is `fixed` on it, or
+  `wide`.
 - The demo page's introduction ends with a **Book a demo** button, under the
   heading and the lede, that opens <https://baselayer.com/demo/> in a new tab,
   so the key and the session the page holds stay. Demo site only: the package
@@ -26,6 +48,12 @@ breaking change bumps the minor version.
 
 ### Changed
 
+- The demo's Styling panel has a **Menu width** choice in Shape and size, in
+  place of the "As wide as the input" switch in Behavior: the input's width, the
+  input's and a little more, a fixed 560px, or a width of your own (pixels, or a
+  CSS length), which the preview's menu draws and the exported code names as
+  `menuWidth`. The field for the stylesheet's `--bl-ac-menu-width` is now
+  labelled "Fixed menu width".
 - The demo's Styling preview shows a typo the search found: among the made-up
   businesses HARBRO CONCRETE SUPPLY, INC. for the "harbor" typed, and among the
   people Daan Okafor for "dana", two letters swapped in each, so the two

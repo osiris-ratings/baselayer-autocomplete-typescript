@@ -37,6 +37,7 @@ import {
 } from "./BusinessAutocompleteView";
 import { useAutocompleteClient, useResolvedClient } from "./context";
 import type { IconSet } from "./icons";
+import type { MenuWidthProps } from "./menuWidth";
 import { usePickedSelection, type PickTargets } from "./selection";
 import type { AutocompleteMessages } from "./messages";
 import {
@@ -72,7 +73,7 @@ export interface Pick {
   matchedOn: MatchedOn[];
 }
 
-interface CommonProps {
+interface CommonProps extends MenuWidthProps {
   id: string;
   value: string;
   /**
@@ -145,11 +146,6 @@ interface CommonProps {
    * autocomplete service.
    */
   include?: Include[];
-  /**
-   * The menu as wide as the input (the default), or, `false`, as wide as
-   * `--bl-ac-menu-width` from 48em up.
-   */
-  menuFollowsInputWidth?: boolean;
   /** The deployment cannot mint (503 code 481), or can again. */
   onUnavailable?: (state: { unavailable: boolean }) => void;
 }
@@ -234,6 +230,7 @@ function Connected({
   icons,
   iconSegments,
   showSelection = true,
+  menuWidth,
   menuFollowsInputWidth,
   onUnavailable,
 }: CommonProps & PickTargets & { client: AutocompleteClient }) {
@@ -380,6 +377,7 @@ function Connected({
       unstyled={unstyled}
       open={open}
       layout={layout}
+      menuWidth={menuWidth}
       menuFollowsInputWidth={menuFollowsInputWidth}
     />
   );

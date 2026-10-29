@@ -49,6 +49,7 @@ export {
   type Pick,
 } from "./BusinessAutocomplete";
 export type { IconKey, IconSet } from "./icons";
+export type { MenuWidth, MenuWidthPreset } from "./menuWidth";
 export {
   DEFAULT_MESSAGES,
   resolveMessages,

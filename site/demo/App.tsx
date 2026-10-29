@@ -63,6 +63,7 @@ import {
   INITIAL_STYLE,
   changedLook,
   componentProps,
+  menuWidthOf,
   previewCss,
   type StyleState,
 } from "./style-state";
@@ -1356,6 +1357,7 @@ export function App() {
             <div
               className="demo-preview"
               data-held={styling ? "true" : "false"}
+              data-menu-width={style.menuWidth}
               // The title's words switch what the field searches for.
               {...(offered.length > 1
                 ? {
@@ -1421,7 +1423,7 @@ export function App() {
                         minChars={style.minChars}
                         debounceMs={style.debounceMs}
                         mintOn={style.mintOn}
-                        menuFollowsInputWidth={style.menuFollowsInputWidth}
+                        menuWidth={menuWidthOf(style)}
                         messages={messages}
                         unstyled={style.unstyled}
                         open={mode === "businesses" && (styling || filtering)}
@@ -1463,7 +1465,7 @@ export function App() {
                         minChars={style.minChars}
                         debounceMs={style.debounceMs}
                         mintOn={style.mintOn}
-                        menuFollowsInputWidth={style.menuFollowsInputWidth}
+                        menuWidth={menuWidthOf(style)}
                         messages={messages}
                         unstyled={style.unstyled}
                         open={mode === "people" && (styling || filtering)}
@@ -1495,7 +1497,7 @@ export function App() {
                         minChars={style.minChars}
                         debounceMs={style.debounceMs}
                         mintOn={style.mintOn}
-                        menuFollowsInputWidth={style.menuFollowsInputWidth}
+                        menuWidth={menuWidthOf(style)}
                         messages={messages}
                         unstyled={style.unstyled}
                         open={mode === "addresses" && (styling || filtering)}
@@ -1552,7 +1554,7 @@ export function App() {
                         {...(filters !== undefined
                           ? { appliedFilters: filters }
                           : {})}
-                        menuFollowsInputWidth={style.menuFollowsInputWidth}
+                        menuWidth={menuWidthOf(style)}
                       />
                     ) : mode === "people" ? (
                       <PersonAutocompleteView
@@ -1576,7 +1578,7 @@ export function App() {
                         look={{ ...changedLook(style) }}
                         messages={messages}
                         unstyled={style.unstyled}
-                        menuFollowsInputWidth={style.menuFollowsInputWidth}
+                        menuWidth={menuWidthOf(style)}
                       />
                     ) : (
                       <AddressAutocompleteView
@@ -1600,7 +1602,7 @@ export function App() {
                         look={{ ...changedLook(style) }}
                         messages={messages}
                         unstyled={style.unstyled}
-                        menuFollowsInputWidth={style.menuFollowsInputWidth}
+                        menuWidth={menuWidthOf(style)}
                       />
                     )}
                   </div>
