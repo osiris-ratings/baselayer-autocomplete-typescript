@@ -1947,6 +1947,19 @@ html[data-dragging] * {
   position: relative;
 }
 
+/* A menu wider than the field needs room to its right in the card, or the pane
+   clips it: the field gives up 4rem (the wide menu takes 3.5rem of it), and no
+   menu is wider than what the card holds. From 48em up, as the menu's width is. */
+@media (min-width: 48em) {
+  .demo-preview:not([data-menu-width="input"]) {
+    padding-right: 4rem;
+  }
+
+  .demo-preview:not([data-menu-width="input"]) .bl-ac-menu {
+    max-width: min(calc(100% + 4rem), calc(100vw - 2rem));
+  }
+}
+
 /* Clear of the menu's shadow. Two classes deep, to win over .demo .hint. */
 .demo .demo-sample-note {
   margin: 20px 0 0;

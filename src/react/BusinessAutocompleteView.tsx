@@ -42,6 +42,7 @@ import type {
 } from "@baselayer-sdk/autocomplete";
 
 import { SegmentIcon, type IconSet } from "./icons";
+import { menuWidthAttributes, type MenuWidth } from "./menuWidth";
 import {
   defaultFiltersNeedMore,
   resolveMessages,
@@ -147,8 +148,18 @@ export interface BusinessAutocompleteViewProps {
    */
   appliedFilters?: Filters | undefined;
   /**
-   * The menu as wide as the input (the default), or, `false`, as wide as
-   * `--bl-ac-menu-width` from 48em up.
+   * The menu's width: `"input"` (the default) is the input's, `"wide"` the
+   * input's and 3.5rem more, `"fixed"` is `--bl-ac-menu-width`; or a width of
+   * your own, a number of pixels or a CSS length such as `"calc(100% + 56px)"`,
+   * where `100%` is the input's. From 48em up, and never wider than the screen:
+   * below that the menu is the input's. When given, it wins over
+   * `menuFollowsInputWidth`.
+   */
+  menuWidth?: MenuWidth | undefined;
+  /**
+   * The boolean form of `menuWidth`: the menu as wide as the input (the
+   * default), or, `false`, as wide as `--bl-ac-menu-width` from 48em up. Read
+   * only when `menuWidth` is not given.
    */
   menuFollowsInputWidth?: boolean | undefined;
 
@@ -507,7 +518,8 @@ export function BusinessAutocompleteView({
   open = false,
   layout: layoutInput,
   appliedFilters,
-  menuFollowsInputWidth = true,
+  menuWidth,
+  menuFollowsInputWidth,
   look: lookInput,
   messages: messageOverrides,
   label,
@@ -704,6 +716,7 @@ export function BusinessAutocompleteView({
   };
 
   const menu = useRef<HTMLDivElement>(null);
+  const width = menuWidthAttributes(menuWidth, menuFollowsInputWidth);
   const roleColumnStyle = useRoleColumn(
     menu,
     rowLines.flatMap(lines =>
@@ -750,7 +763,8 @@ export function BusinessAutocompleteView({
         className={cx("menu", "bl-ac-menu")}
         data-testid="autocomplete-menu"
         data-open={menuVisible ? "true" : "false"}
-        data-width={menuFollowsInputWidth ? undefined : "fixed"}
+        data-width={width.dataWidth}
+        style={width.style}
         hidden={!menuVisible}
         ref={menu}
       >

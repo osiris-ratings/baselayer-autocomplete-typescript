@@ -47,6 +47,7 @@ import {
   DEFAULT_MESSAGES,
   MIN_QUERY_CHARS,
   type AutocompleteMessages,
+  type MenuWidth,
   type MintTiming,
 } from "@baselayer-sdk/autocomplete/react";
 
@@ -93,7 +94,11 @@ export const CSS_VARIABLES = {
     kind: "length",
     value: "0.25rem",
   },
-  "--bl-ac-menu-width": { label: "Menu width", kind: "length", value: "560px" },
+  "--bl-ac-menu-width": {
+    label: "Fixed menu width",
+    kind: "length",
+    value: "560px",
+  },
   "--bl-ac-list-max-height": {
     label: "List height",
     kind: "length",
@@ -292,6 +297,25 @@ export interface RowStates {
   addresses: RowState<"addresses", AddressRowLayout>;
 }
 
+/** The menu's widths the panel offers: the presets, and one of its own. */
+export const MENU_WIDTHS = ["input", "wide", "fixed", "custom"] as const;
+export type MenuWidthChoice = (typeof MENU_WIDTHS)[number];
+
+/**
+ * The `menuWidth` the preview and the exported code give the component: the
+ * preset, or what was typed for `custom` (a bare number is pixels), and none
+ * for the input's width, which is what leaving it out is.
+ */
+export function menuWidthOf(
+  state: Pick<StyleState, "menuWidth" | "menuWidthCustom">,
+): MenuWidth | undefined {
+  if (state.menuWidth === "input") return undefined;
+  if (state.menuWidth !== "custom") return state.menuWidth;
+  const typed = state.menuWidthCustom.trim();
+  if (typed === "") return undefined;
+  return /^\d+(\.\d+)?$/.test(typed) ? Number(typed) : typed;
+}
+
 export interface StyleState {
   look: Look;
   rows: RowStates;
@@ -301,8 +325,10 @@ export interface StyleState {
   debounceMs: number;
   /** When the session is minted: on focus, keystroke or request. */
   mintOn: MintTiming;
-  /** The menu as wide as the input, or as `--bl-ac-menu-width`. */
-  menuFollowsInputWidth: boolean;
+  /** The menu's width: a preset, or `custom`, the length in `menuWidthCustom`. */
+  menuWidth: MenuWidthChoice;
+  /** The width `custom` gives: a number of pixels, or a CSS length. */
+  menuWidthCustom: string;
   label: string;
   messages: Record<TextMessage, string>;
   /** Each structure's flag (`messages.structures`); "" draws none. */
@@ -371,7 +397,8 @@ export const DEFAULT_STYLE: StyleState = {
   minChars: MIN_QUERY_CHARS,
   debounceMs: DEBOUNCE_MS,
   mintOn: "keystroke",
-  menuFollowsInputWidth: true,
+  menuWidth: "input",
+  menuWidthCustom: "calc(100% + 56px)",
   label: DEFAULT_LABEL,
   messages: Object.fromEntries(
     TEXT_MESSAGES.map(key => [key, DEFAULT_MESSAGES[key]]),
@@ -1206,7 +1233,14 @@ export function exportCode(
     props.push(`debounceMs={${state.debounceMs}}`);
   if (state.mintOn !== DEFAULT_STYLE.mintOn)
     props.push(`mintOn=${JSON.stringify(state.mintOn)}`);
-  if (!state.menuFollowsInputWidth) props.push("menuFollowsInputWidth={false}");
+  const menuWidth = menuWidthOf(state);
+  if (menuWidth !== undefined) {
+    props.push(
+      typeof menuWidth === "number"
+        ? `menuWidth={${menuWidth}}`
+        : `menuWidth=${JSON.stringify(menuWidth)}`,
+    );
+  }
   if (state.label !== DEFAULT_LABEL)
     props.push(`label=${JSON.stringify(state.label)}`);
   const messages = changedMessages(state).map(

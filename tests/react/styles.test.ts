@@ -209,6 +209,25 @@ describe("the menu's width", () => {
       /\.bl-ac-menu\[data-width="fixed"\] \{\s*width: var\(--bl-ac-menu-width\);/,
     );
   });
+
+  it("is the input's and 3.5rem more from 48em up, on a wide menu, and never less", () => {
+    const wide = css.slice(css.indexOf("@media (min-width: 48em)"));
+
+    expect(wide).toMatch(
+      /\.bl-ac-menu\[data-width="wide"\] \{\s*width: calc\(100% \+ 3\.5rem\);/,
+    );
+    // Not a rule outside the media query: below 48em the menu is the input's.
+    expect(css.slice(0, css.indexOf("@media (min-width: 48em)"))).not.toContain(
+      'data-width="wide"',
+    );
+  });
+
+  it("is never wider than the screen allows, whatever the width asked for", () => {
+    expect(rule(".bl-ac-menu")).toContain("max-width: calc(100vw - 2rem);");
+    // The cap is the menu's own: no width rule sets another over it.
+    const [fromWide] = /@media \(min-width: 48em\) \{[\s\S]*?\n\}/.exec(css)!;
+    expect(fromWide).not.toMatch(/max-width/);
+  });
 });
 
 // What gives way when a line runs out of room is measured in a browser, in

@@ -350,10 +350,12 @@ weight emphasis's two; and the HTML or CSS that loads a font of your own in the
 weights picked), shape and size, behavior (rows, 1 to 20; the characters typed
 before it asks, 2 to 10 and 3 by default; the pause before asking; when the
 session is minted: on the first keystroke, as it is by default, on focus or
-with the first request; and whether the menu is as wide as the input, as it is
-by default), the text (the label, and every message that is a string: `more`
-and `httpFallback` are functions, so they keep their defaults; and each
-structure's flag, an empty one drawing none), and the markup switches
+with the first request; and the menu's width: as wide as the input, as it is by
+default, the input's and a little more, a fixed 560px, or a width of your own,
+a number of pixels or a CSS length, with `menuWidth` in the exported code),
+the text (the label, and every message that is a string: `more` and
+`httpFallback` are functions, so they keep their defaults; and each structure's
+flag, an empty one drawing none), and the markup switches
 (`classNames`, `unstyled`). Changes apply as you make them. A color changed
 from its preset's carries a reset inside its field, which puts back the value
 the last preset chosen gave it. **Your configuration** at the bottom is the

@@ -30,6 +30,7 @@ import {
   fontSnippets,
   DEFAULT_STYLE,
   INITIAL_STYLE,
+  MENU_WIDTHS,
   STRUCTURE_FLAGS,
   activePreset,
   presetChanges,
@@ -45,6 +46,7 @@ import {
   componentChanges,
   exportCode,
   type CssVariable,
+  type MenuWidthChoice,
   type StyleState,
   type TextMessage,
 } from "./style-state";
@@ -76,6 +78,13 @@ const MINT_TIMING_LABELS: Record<MintTiming, string> = {
   focus: "On focus (eager prewarm)",
   keystroke: "On first keystroke (prewarm, the default)",
   request: "On first request (lazy)",
+};
+
+const MENU_WIDTH_LABELS: Record<MenuWidthChoice, string> = {
+  input: "As wide as the input (the default)",
+  wide: "The input's width and a little more",
+  fixed: "A fixed width, 560px",
+  custom: "A width of your own",
 };
 
 const ROW_TAB_LABELS: Record<Route, string> = {
@@ -388,7 +397,8 @@ export function StylingPanel({
       <Fold title="Behavior">
         <p className="hint fold-note">
           Rows shows on the sample rows too; the characters, the pause and the
-          session act as you type.
+          session act as you type. The menu's width holds from 48em up: on a
+          narrower screen the menu is the input's.
         </p>
         <div className="field-grid">
           <Field label="Rows" hint="1 to 20">
@@ -442,14 +452,28 @@ export function StylingPanel({
               onChange={value => set("mintOn", value)}
             />
           </Field>
-          <Field label="Menu" group>
-            <Toggle
-              checked={state.menuFollowsInputWidth}
-              onChange={value => set("menuFollowsInputWidth", value)}
-            >
-              As wide as the input
-            </Toggle>
+          <Field label="Menu width" hint={<code>menuWidth</code>}>
+            <Select
+              value={state.menuWidth}
+              options={MENU_WIDTHS}
+              labels={MENU_WIDTH_LABELS}
+              onChange={value => set("menuWidth", value)}
+            />
           </Field>
+          {state.menuWidth === "custom" && (
+            <Field
+              label="Width"
+              hint="pixels, or a CSS length; 100% is the input's"
+            >
+              <input
+                type="text"
+                value={state.menuWidthCustom}
+                placeholder="calc(100% + 56px)"
+                spellCheck={false}
+                onChange={event => set("menuWidthCustom", event.target.value)}
+              />
+            </Field>
+          )}
         </div>
       </Fold>
 

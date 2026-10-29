@@ -178,7 +178,7 @@ The first `mint` or `mintUrl` is kept for the component's life; a new
   with `renderRow` name what they read: `include={["people"]}`.
 - `label`: the text of the default `<label>`; without it none is drawn.
 - `name`, `inputRef`, `onFocus` and `onBlur`: the input's, passed through.
-- `look`, `layout`, `menuFollowsInputWidth`, `open`, `classNames`,
+- `look`, `layout`, `menuWidth`, `menuFollowsInputWidth`, `open`, `classNames`,
   `renderLabel`, `renderInput`, `renderRow` and `unstyled`: see
   [Styling](docs/styling.md); `layout` is the field each place of a row
   shows ([A row's places and fields](docs/styling.md#5-a-rows-places-and-fields)).

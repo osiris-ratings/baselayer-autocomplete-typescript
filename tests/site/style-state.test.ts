@@ -24,6 +24,7 @@ import {
   componentProps,
   changedVars,
   exportCode,
+  menuWidthOf,
   INITIAL_STYLE,
   placeOptions,
   canDrop,
@@ -144,15 +145,55 @@ describe("the Styling panel's exported configuration", () => {
   });
 
   it("says nothing of the menu's width while it follows the input's", () => {
+    expect(exportCode(DEFAULT_STYLE).tsx).not.toContain("menuWidth");
     expect(exportCode(DEFAULT_STYLE).tsx).not.toContain(
       "menuFollowsInputWidth",
     );
+    expect(menuWidthOf(DEFAULT_STYLE)).toBeUndefined();
   });
 
-  it("gives the menu a width of its own when it is not to follow", () => {
-    expect(
-      exportCode({ ...DEFAULT_STYLE, menuFollowsInputWidth: false }).tsx,
-    ).toContain("menuFollowsInputWidth={false}");
+  it("names a preset when the menu is to have one", () => {
+    expect(exportCode({ ...DEFAULT_STYLE, menuWidth: "wide" }).tsx).toContain(
+      'menuWidth="wide"',
+    );
+    expect(exportCode({ ...DEFAULT_STYLE, menuWidth: "fixed" }).tsx).toContain(
+      'menuWidth="fixed"',
+    );
+  });
+
+  it("writes the width typed for a width of its own: a bare number is pixels, a length is a string", () => {
+    const own = (menuWidthCustom: string) => ({
+      ...DEFAULT_STYLE,
+      menuWidth: "custom" as const,
+      menuWidthCustom,
+    });
+
+    expect(exportCode(own("420")).tsx).toContain("menuWidth={420}");
+    expect(exportCode(own("372.5")).tsx).toContain("menuWidth={372.5}");
+    expect(exportCode(own(" calc(100% + 56px) ")).tsx).toContain(
+      'menuWidth="calc(100% + 56px)"',
+    );
+    expect(exportCode(own("40rem")).tsx).toContain('menuWidth="40rem"');
+    expect(menuWidthOf(own("420"))).toBe(420);
+    expect(menuWidthOf(own("40rem"))).toBe("40rem");
+  });
+
+  it("gives the component no width for a width of its own that was left empty", () => {
+    const state = {
+      ...DEFAULT_STYLE,
+      menuWidth: "custom" as const,
+      menuWidthCustom: "  ",
+    };
+
+    expect(menuWidthOf(state)).toBeUndefined();
+    expect(exportCode(state).tsx).not.toContain("menuWidth");
+  });
+
+  it("keeps what was typed for a width of its own while a preset is chosen", () => {
+    const state = { ...DEFAULT_STYLE, menuWidth: "wide" as const };
+
+    expect(menuWidthOf(state)).toBe("wide");
+    expect(exportCode(state).tsx).not.toContain("calc(100% + 56px)");
   });
 
   it("says nothing of when to mint while it mints on the first keystroke", () => {

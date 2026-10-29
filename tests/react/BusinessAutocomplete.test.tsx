@@ -18,6 +18,7 @@ import {
   BusinessAutocomplete,
   useAutocompleteSession,
   type BusinessAutocompleteProps,
+  type MenuWidth,
 } from "../../src/react";
 
 const BASE_URL = "https://api.example.test";
@@ -188,6 +189,57 @@ function aMoment() {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+});
+
+describe("the menu's width", () => {
+  async function menuOf(props: {
+    menuWidth?: MenuWidth;
+    menuFollowsInputWidth?: boolean;
+  }) {
+    vi.stubGlobal("fetch", autocompleteFetch());
+    const user = userEvent.setup();
+    render(
+      <Host
+        source={{ mint: grantingMint(), baseUrl: BASE_URL }}
+        mintOn="request"
+        {...props}
+      />,
+    );
+    await user.type(input(), "cinder");
+    await screen.findAllByTestId("business-suggestion");
+    return screen.getByTestId("autocomplete-menu");
+  }
+
+  it("is the input's, with nothing on the menu, until it is told otherwise", async () => {
+    const menu = await menuOf({});
+
+    expect(menu).not.toHaveAttribute("data-width");
+    expect(menu).not.toHaveAttribute("style");
+  });
+
+  it("keeps menuFollowsInputWidth={false} as a menu of its own", async () => {
+    const menu = await menuOf({ menuFollowsInputWidth: false });
+
+    expect(menu).toHaveAttribute("data-width", "fixed");
+  });
+
+  it("takes a preset to the menu, ahead of menuFollowsInputWidth", async () => {
+    const menu = await menuOf({
+      menuWidth: "wide",
+      menuFollowsInputWidth: false,
+    });
+
+    expect(menu).toHaveAttribute("data-width", "wide");
+  });
+
+  it("takes a width of its own to the menu, as --bl-ac-menu-width", async () => {
+    const menu = await menuOf({ menuWidth: "calc(100% + 56px)" });
+
+    expect(menu).toHaveAttribute("data-width", "fixed");
+    expect(menu.style.getPropertyValue("--bl-ac-menu-width")).toBe(
+      "calc(100% + 56px)",
+    );
+  });
 });
 
 describe("BusinessAutocomplete", () => {

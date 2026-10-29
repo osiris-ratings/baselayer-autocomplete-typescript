@@ -48,6 +48,7 @@ import {
 import type { MintTiming } from "./BusinessAutocomplete";
 import { useAutocompleteClient, useResolvedClient } from "./context";
 import { SegmentIcon, type IconSet } from "./icons";
+import { menuWidthAttributes, type MenuWidth } from "./menuWidth";
 import {
   usePickedSelection,
   type GroupedSelection,
@@ -159,8 +160,18 @@ interface GroupedCommonProps<R extends GroupedRoute> {
   /** Hold the menu open whatever focus does: a style preview. */
   open?: boolean;
   /**
-   * The menu as wide as the input (the default), or, `false`, as wide as
-   * `--bl-ac-menu-width` from 48em up.
+   * The menu's width: `"input"` (the default) is the input's, `"wide"` the
+   * input's and 3.5rem more, `"fixed"` is `--bl-ac-menu-width`; or a width of
+   * your own, a number of pixels or a CSS length such as `"calc(100% + 56px)"`,
+   * where `100%` is the input's. From 48em up, and never wider than the screen:
+   * below that the menu is the input's. When given, it wins over
+   * `menuFollowsInputWidth`.
+   */
+  menuWidth?: MenuWidth | undefined;
+  /**
+   * The boolean form of `menuWidth`: the menu as wide as the input (the
+   * default), or, `false`, as wide as `--bl-ac-menu-width` from 48em up. Read
+   * only when `menuWidth` is not given.
    */
   menuFollowsInputWidth?: boolean;
   /** The deployment cannot mint (503 code 481), or can again. */
@@ -470,8 +481,18 @@ interface GroupedViewCommonProps<R extends GroupedRoute> {
   /** Hold the menu open whatever focus does: a style preview. */
   open?: boolean | undefined;
   /**
-   * The menu as wide as the input (the default), or, `false`, as wide as
-   * `--bl-ac-menu-width` from 48em up.
+   * The menu's width: `"input"` (the default) is the input's, `"wide"` the
+   * input's and 3.5rem more, `"fixed"` is `--bl-ac-menu-width`; or a width of
+   * your own, a number of pixels or a CSS length such as `"calc(100% + 56px)"`,
+   * where `100%` is the input's. From 48em up, and never wider than the screen:
+   * below that the menu is the input's. When given, it wins over
+   * `menuFollowsInputWidth`.
+   */
+  menuWidth?: MenuWidth | undefined;
+  /**
+   * The boolean form of `menuWidth`: the menu as wide as the input (the
+   * default), or, `false`, as wide as `--bl-ac-menu-width` from 48em up. Read
+   * only when `menuWidth` is not given.
    */
   menuFollowsInputWidth?: boolean | undefined;
   look?: LookInput | undefined;
@@ -549,7 +570,8 @@ function GroupedView<R extends GroupedRoute>({
   layout: layoutInput,
   selection = null,
   open = false,
-  menuFollowsInputWidth = true,
+  menuWidth,
+  menuFollowsInputWidth,
   look: lookInput,
   messages,
   label,
@@ -915,6 +937,7 @@ function GroupedView<R extends GroupedRoute>({
   }
 
   const menu = useRef<HTMLDivElement>(null);
+  const width = menuWidthAttributes(menuWidth, menuFollowsInputWidth);
   const roleColumnStyle = useRoleColumn(
     menu,
     drawn.flatMap(({ lines }) =>
@@ -949,7 +972,8 @@ function GroupedView<R extends GroupedRoute>({
         className={cx("menu", "bl-ac-menu")}
         data-testid="autocomplete-menu"
         data-open={combobox.menuVisible ? "true" : "false"}
-        data-width={menuFollowsInputWidth ? undefined : "fixed"}
+        data-width={width.dataWidth}
+        style={width.style}
         hidden={!combobox.menuVisible}
         ref={menu}
       >
