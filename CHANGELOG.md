@@ -6,6 +6,8 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-28
+
 ### Added
 
 - `menuWidth` sets how wide the suggestions menu is, on `BusinessAutocomplete`,
