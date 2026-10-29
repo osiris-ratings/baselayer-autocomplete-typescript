@@ -37,7 +37,7 @@ import {
 } from "./BusinessAutocompleteView";
 import { useAutocompleteClient, useResolvedClient } from "./context";
 import type { IconSet } from "./icons";
-import type { MenuWidth } from "./menuWidth";
+import type { MenuWidthProps } from "./menuWidth";
 import { usePickedSelection, type PickTargets } from "./selection";
 import type { AutocompleteMessages } from "./messages";
 import {
@@ -73,7 +73,7 @@ export interface Pick {
   matchedOn: MatchedOn[];
 }
 
-interface CommonProps {
+interface CommonProps extends MenuWidthProps {
   id: string;
   value: string;
   /**
@@ -146,21 +146,6 @@ interface CommonProps {
    * autocomplete service.
    */
   include?: Include[];
-  /**
-   * The menu's width: `"input"` (the default) is the input's, `"wide"` the
-   * input's and 3.5rem more, `"fixed"` is `--bl-ac-menu-width`; or a width of
-   * your own, a number of pixels or a CSS length such as `"calc(100% + 56px)"`,
-   * where `100%` is the input's. From 48em up, and never wider than the screen:
-   * below that the menu is the input's. When given, it wins over
-   * `menuFollowsInputWidth`.
-   */
-  menuWidth?: MenuWidth | undefined;
-  /**
-   * The boolean form of `menuWidth`: the menu as wide as the input (the
-   * default), or, `false`, as wide as `--bl-ac-menu-width` from 48em up. Read
-   * only when `menuWidth` is not given.
-   */
-  menuFollowsInputWidth?: boolean;
   /** The deployment cannot mint (503 code 481), or can again. */
   onUnavailable?: (state: { unavailable: boolean }) => void;
 }

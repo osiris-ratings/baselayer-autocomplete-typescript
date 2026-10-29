@@ -178,6 +178,19 @@ describe("the Styling panel's exported configuration", () => {
     expect(menuWidthOf(own("40rem"))).toBe("40rem");
   });
 
+  it("exports what the preview draws: nothing for a width the component ignores", () => {
+    for (const typed of ["0", "-5", "wide-ish", "calc(100% + 56)", "auto"]) {
+      const state = {
+        ...DEFAULT_STYLE,
+        menuWidth: "custom" as const,
+        menuWidthCustom: typed,
+      };
+
+      expect(menuWidthOf(state), typed).toBeUndefined();
+      expect(exportCode(state).tsx, typed).not.toContain("menuWidth");
+    }
+  });
+
   it("gives the component no width for a width of its own that was left empty", () => {
     const state = {
       ...DEFAULT_STYLE,

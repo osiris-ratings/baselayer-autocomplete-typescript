@@ -1,5 +1,7 @@
 import type { CSSProperties } from "react";
 
+import { isCssWidth } from "./cssWidth";
+
 /**
  * The menu's width by name, from 48em up (below that it is the input's):
  * - `"input"`: the input's width, the default;
@@ -15,6 +17,25 @@ export type MenuWidthPreset = "input" | "wide" | "fixed";
  * allows (`100vw - 2rem`).
  */
 export type MenuWidth = MenuWidthPreset | number | (string & {});
+
+/** The props that size the menu, on the components and on their views. */
+export interface MenuWidthProps {
+  /**
+   * The menu's width: `"input"` (the default) is the input's, `"wide"` the
+   * input's and 3.5rem more, `"fixed"` is `--bl-ac-menu-width`; or a width of
+   * your own, a number of pixels or a CSS length such as `"calc(100% + 56px)"`,
+   * where `100%` is the input's. From 48em up, and never wider than the screen:
+   * below that the menu is the input's. When given, it wins over
+   * `menuFollowsInputWidth`.
+   */
+  menuWidth?: MenuWidth | undefined;
+  /**
+   * The boolean form of `menuWidth`: the menu as wide as the input (the
+   * default), or, `false`, as wide as `--bl-ac-menu-width` from 48em up. Read
+   * only when `menuWidth` is not given.
+   */
+  menuFollowsInputWidth?: boolean | undefined;
+}
 
 /** What the menu element carries for its width. */
 export interface MenuWidthAttributes {
@@ -41,26 +62,24 @@ const isPreset = (value: string): value is MenuWidthPreset =>
  * What a width is written with: digits, letters (units, words, `var(--gap)`),
  * `.`, `%`, the four operators, brackets, commas and spaces. Nothing that ends
  * a declaration, opens a string, a comment, an escape or an at-rule, or marks
- * a value `!important` is among it, so a string of it can only be a value.
+ * a value `!important` is among it, so a string of it can only be a value, even
+ * in the fallback of a `var()`, which is not read any further.
  */
 const LENGTH_CHARACTERS = /^[\w\s.%+\-*/(),]+$/;
 
 /**
  * A length the stylesheet can take as a width, or null. A width the browser
- * would drop leaves the menu with none at all, so it is turned away here; and
- * what is not written in the characters of a length never reaches the style
- * attribute, on a server too, where there is no CSS to ask.
+ * would drop leaves the menu with none at all, so it is turned away here, by
+ * what CSS says a width is (`isCssWidth`) and not by asking a browser, which a
+ * server has not got: both sides of a render say the same. And what is not
+ * written in the characters of a length never reaches the style attribute.
  */
 function lengthOf(value: number | string): string | null {
   if (typeof value === "number") {
     return Number.isFinite(value) && value > 0 ? `${value}px` : null;
   }
   const text = value.trim();
-  if (!LENGTH_CHARACTERS.test(text)) return null;
-  // Where there is no CSS to ask (a server, jsdom), the host is trusted.
-  const css = (globalThis as { CSS?: Partial<typeof CSS> }).CSS;
-  if (css?.supports && !css.supports("width", text)) return null;
-  return text;
+  return LENGTH_CHARACTERS.test(text) && isCssWidth(text) ? text : null;
 }
 
 /**

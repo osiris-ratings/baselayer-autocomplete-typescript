@@ -135,7 +135,6 @@ describe("menuWidth, of its own", () => {
   it("takes what lengths are made of: numbers, units, words, operators, brackets and commas", () => {
     for (const length of [
       "40rem",
-      "-2.5em",
       "100%",
       "calc(100% + 56px)",
       "calc(200% + var(--gap, 24px))",
@@ -151,22 +150,36 @@ describe("menuWidth, of its own", () => {
     }
   });
 
-  it("turns away a length the browser says is not a width, where there is a browser to ask", () => {
-    const supports = vi.fn((property: string, value: string) =>
-      /^[\d.]+(px|rem|em|%)$/.test(value),
-    );
+  it("turns away what CSS would drop as a width, and falls back as though it were not given", () => {
+    for (const notWidth of [
+      "wide-ish",
+      "calc(100% + 56)",
+      "inherit",
+      "initial",
+      "unset",
+      "auto",
+      "none",
+      "-2.5em",
+      "40",
+    ]) {
+      expect(drawn(notWidth), notWidth).toEqual({
+        dataWidth: undefined,
+        width: undefined,
+      });
+      expect(drawn(notWidth, false), notWidth).toEqual({
+        dataWidth: "fixed",
+        width: undefined,
+      });
+    }
+  });
+
+  it("does not ask a browser what a width is: a server and the page say the same", () => {
+    const supports = vi.fn(() => false);
     vi.stubGlobal("CSS", { supports });
 
-    expect(drawn("wide-ish")).toEqual({
-      dataWidth: undefined,
-      width: undefined,
-    });
-    expect(drawn("calc(100% + 56)", false)).toEqual({
-      dataWidth: "fixed",
-      width: undefined,
-    });
     expect(drawn("40rem").width).toBe("40rem");
-    expect(supports).toHaveBeenCalledWith("width", "wide-ish");
+    expect(drawn("calc(100% + 56)").width).toBeUndefined();
+    expect(supports).not.toHaveBeenCalled();
   });
 });
 

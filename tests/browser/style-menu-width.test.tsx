@@ -151,6 +151,28 @@ describe("the Styling panel's menu width", () => {
     await expect.poll(() => sample().menu).toBe(30 * EM);
   });
 
+  it("says so when what was typed is not a width, and the menu stays the input's", async () => {
+    mountApp();
+    await openBehavior();
+    const field = () =>
+      [...document.querySelectorAll<HTMLLabelElement>("label.field-row")]
+        .find(row => row.querySelector(".field-label")?.textContent === "Width")
+        ?.querySelector("input");
+    await userEvent.selectOptions(widthSelect()!, "custom");
+    await expect.poll(field).toBeDefined();
+    expect(field()!.getAttribute("aria-invalid")).toBeNull();
+
+    await userEvent.fill(field()!, "calc(100% + 56)");
+
+    await expect.poll(() => field()!.getAttribute("aria-invalid")).toBe("true");
+    expect(field()!.closest("label")!.textContent).toContain("not a width");
+    await expect.poll(() => sample().menu - sample().input).toBe(0);
+    const exported = [...document.querySelectorAll("pre")]
+      .map(pre => pre.textContent)
+      .join("\n");
+    expect(exported).not.toContain("menuWidth");
+  });
+
   it("names the width in the code it exports", async () => {
     mountApp();
     await openBehavior();

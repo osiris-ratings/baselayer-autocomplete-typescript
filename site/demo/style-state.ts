@@ -51,6 +51,7 @@ import {
   type MintTiming,
 } from "@baselayer-sdk/autocomplete/react";
 
+import { menuWidthAttributes } from "../../src/react/menuWidth";
 import type { Snippet } from "../shared/Code";
 
 /** The variables in react/styles.css that `look` does not set. */
@@ -312,8 +313,12 @@ export function menuWidthOf(
   if (state.menuWidth === "input") return undefined;
   if (state.menuWidth !== "custom") return state.menuWidth;
   const typed = state.menuWidthCustom.trim();
-  if (typed === "") return undefined;
-  return /^\d+(\.\d+)?$/.test(typed) ? Number(typed) : typed;
+  const width = /^\d+(\.\d+)?$/.test(typed) ? Number(typed) : typed;
+  // What the component would ignore is not given it, nor written out: the
+  // exported code draws what the preview does.
+  return menuWidthAttributes(width, undefined).dataWidth === undefined
+    ? undefined
+    : width;
 }
 
 export interface StyleState {

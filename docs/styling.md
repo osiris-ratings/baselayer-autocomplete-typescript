@@ -174,11 +174,18 @@ whatever you ask for: it stops at `100vw - 2rem`. Bound it from either side with
 CSS's `clamp()`, `min()` and `max()`, as above. The menu opens at the input's
 left edge and grows to the right, and is not moved: leave it the room.
 
-A string that is not a CSS width (`"wide-ish"`, `"calc(100% + 56)"`) and a
+A string is a width when it is a length or a percentage (`40rem`, `50%`),
+`max-content`, `min-content`, `fit-content`, or `calc()`, `min()`, `max()`,
+`clamp()`, `fit-content()`, `var()` or `env()` put together as CSS puts them: a
+number is not added to a length, and `+` and `-` take a space on each side. Any
+other string (`"wide-ish"`, `"calc(100% + 56)"`, `"inherit"`, `"auto"`) and a
 number that is not above zero are left out, as though `menuWidth` had not been
-given. So is a string written with anything but what a length is: letters,
+given, and so is a string written with anything but what a length is: letters,
 digits, `.`, `%`, `+ - * /`, brackets, commas and spaces. A `;`, a quote, a
-`!`, a `\` or a comment never reaches the page, on a server either.
+`!`, a `\` or a comment never reaches the page. That is decided in the
+component, not asked of the browser, so a page rendered on a server and the page
+it becomes agree. A unit's name is not checked, and a `var()` is taken as it
+comes.
 
 `menuFollowsInputWidth` is the boolean form and works as it always has: `true`,
 the default, is `"input"`, and `false` is `"fixed"`. When both are given,

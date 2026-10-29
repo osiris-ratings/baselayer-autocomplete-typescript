@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useMemo,
   useRef,
   useState,
   type ReactElement,
@@ -48,7 +49,7 @@ import {
 import type { MintTiming } from "./BusinessAutocomplete";
 import { useAutocompleteClient, useResolvedClient } from "./context";
 import { SegmentIcon, type IconSet } from "./icons";
-import { menuWidthAttributes, type MenuWidth } from "./menuWidth";
+import { menuWidthAttributes, type MenuWidthProps } from "./menuWidth";
 import {
   usePickedSelection,
   type GroupedSelection,
@@ -101,7 +102,7 @@ interface OptionItem {
   label: string;
 }
 
-interface GroupedCommonProps<R extends GroupedRoute> {
+interface GroupedCommonProps<R extends GroupedRoute> extends MenuWidthProps {
   id: string;
   /** The text typed: a person's name, or an address. */
   value: string;
@@ -159,21 +160,6 @@ interface GroupedCommonProps<R extends GroupedRoute> {
   unstyled?: boolean;
   /** Hold the menu open whatever focus does: a style preview. */
   open?: boolean;
-  /**
-   * The menu's width: `"input"` (the default) is the input's, `"wide"` the
-   * input's and 3.5rem more, `"fixed"` is `--bl-ac-menu-width`; or a width of
-   * your own, a number of pixels or a CSS length such as `"calc(100% + 56px)"`,
-   * where `100%` is the input's. From 48em up, and never wider than the screen:
-   * below that the menu is the input's. When given, it wins over
-   * `menuFollowsInputWidth`.
-   */
-  menuWidth?: MenuWidth | undefined;
-  /**
-   * The boolean form of `menuWidth`: the menu as wide as the input (the
-   * default), or, `false`, as wide as `--bl-ac-menu-width` from 48em up. Read
-   * only when `menuWidth` is not given.
-   */
-  menuFollowsInputWidth?: boolean;
   /** The deployment cannot mint (503 code 481), or can again. */
   onUnavailable?: (state: { unavailable: boolean }) => void;
   /**
@@ -430,7 +416,9 @@ function Connected<R extends GroupedRoute>({
   );
 }
 
-interface GroupedViewCommonProps<R extends GroupedRoute> {
+interface GroupedViewCommonProps<
+  R extends GroupedRoute,
+> extends MenuWidthProps {
   id: string;
   /** The input's value; the host owns it. */
   value: string;
@@ -480,21 +468,6 @@ interface GroupedViewCommonProps<R extends GroupedRoute> {
   selection?: GroupedSelection | null | undefined;
   /** Hold the menu open whatever focus does: a style preview. */
   open?: boolean | undefined;
-  /**
-   * The menu's width: `"input"` (the default) is the input's, `"wide"` the
-   * input's and 3.5rem more, `"fixed"` is `--bl-ac-menu-width`; or a width of
-   * your own, a number of pixels or a CSS length such as `"calc(100% + 56px)"`,
-   * where `100%` is the input's. From 48em up, and never wider than the screen:
-   * below that the menu is the input's. When given, it wins over
-   * `menuFollowsInputWidth`.
-   */
-  menuWidth?: MenuWidth | undefined;
-  /**
-   * The boolean form of `menuWidth`: the menu as wide as the input (the
-   * default), or, `false`, as wide as `--bl-ac-menu-width` from 48em up. Read
-   * only when `menuWidth` is not given.
-   */
-  menuFollowsInputWidth?: boolean | undefined;
   look?: LookInput | undefined;
   messages?: Partial<AutocompleteMessages> | undefined;
   label?: ReactNode;
@@ -937,7 +910,10 @@ function GroupedView<R extends GroupedRoute>({
   }
 
   const menu = useRef<HTMLDivElement>(null);
-  const width = menuWidthAttributes(menuWidth, menuFollowsInputWidth);
+  const width = useMemo(
+    () => menuWidthAttributes(menuWidth, menuFollowsInputWidth),
+    [menuWidth, menuFollowsInputWidth],
+  );
   const roleColumnStyle = useRoleColumn(
     menu,
     drawn.flatMap(({ lines }) =>

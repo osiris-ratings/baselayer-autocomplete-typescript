@@ -32,6 +32,7 @@ import {
   INITIAL_STYLE,
   MENU_WIDTHS,
   STRUCTURE_FLAGS,
+  menuWidthOf,
   activePreset,
   presetChanges,
   presetColor,
@@ -398,7 +399,8 @@ export function StylingPanel({
         <p className="hint fold-note">
           Rows shows on the sample rows too; the characters, the pause and the
           session act as you type. The menu's width holds from 48em up: on a
-          narrower screen the menu is the input's.
+          narrower screen the menu is the input's. The preview holds the menu to
+          its card.
         </p>
         <div className="field-grid">
           <Field label="Rows" hint="1 to 20">
@@ -463,13 +465,24 @@ export function StylingPanel({
           {state.menuWidth === "custom" && (
             <Field
               label="Width"
-              hint="pixels, or a CSS length; 100% is the input's"
+              hint={
+                state.menuWidthCustom.trim() !== "" &&
+                menuWidthOf(state) === undefined
+                  ? "not a width: the menu is the input's"
+                  : "pixels, or a CSS length; 100% is the input's"
+              }
             >
               <input
                 type="text"
                 value={state.menuWidthCustom}
                 placeholder="calc(100% + 56px)"
                 spellCheck={false}
+                aria-invalid={
+                  state.menuWidthCustom.trim() !== "" &&
+                  menuWidthOf(state) === undefined
+                    ? true
+                    : undefined
+                }
                 onChange={event => set("menuWidthCustom", event.target.value)}
               />
             </Field>
