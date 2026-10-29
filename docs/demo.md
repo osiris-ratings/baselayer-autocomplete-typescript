@@ -347,19 +347,20 @@ every color (the `look` prop's and the stylesheet's own variables, each with a
 swatch that opens a color picker), the font (the page's, the system's, a serif
 or a mono this page loads, or a stack of your own; the name's weight and the
 weight emphasis's two; and the HTML or CSS that loads a font of your own in the
-weights picked), shape and size, behavior (rows, 1 to 20; the characters typed
-before it asks, 2 to 10 and 3 by default; the pause before asking; when the
-session is minted: on the first keystroke, as it is by default, on focus or
-with the first request; and the menu's width: as wide as the input, as it is by
-default, the input's and a little more, a fixed 560px, or a width of your own,
-a number of pixels or a CSS length, with `menuWidth` in the exported code),
-the text (the label, and every message that is a string: `more` and
-`httpFallback` are functions, so they keep their defaults; and each structure's
-flag, an empty one drawing none), and the markup switches
-(`classNames`, `unstyled`). Changes apply as you make them. A color changed
-from its preset's carries a reset inside its field, which puts back the value
-the last preset chosen gave it. **Your configuration** at the bottom is the
-code that reproduces the result, in a React tab and a CSS tab with a **Copy**:
+weights picked), shape and size (the corners, the shadow and the list's
+height, and the menu's width: as wide as the input, as it is by default, the
+input's and a little more, a fixed 560px, or a width of your own, a number of
+pixels or a CSS length, with `menuWidth` in the exported code), behavior (rows,
+1 to 20; the characters typed before it asks, 2 to 10 and 3 by default; the
+pause before asking; and when the session is minted: on the first keystroke, as
+it is by default, on focus or with the first request), the text (the label, and
+every message that is a string: `more` and `httpFallback` are functions, so they
+keep their defaults; and each structure's flag, an empty one drawing none), and
+the markup switches (`classNames`, `unstyled`). Changes apply as you make
+them. A color changed from its preset's carries a reset inside its field, which
+puts back the value the last preset chosen gave it. **Your configuration** at
+the bottom is the code that reproduces the result, in a React tab and a CSS tab
+with a **Copy**:
 the props every host gives (the `id` filled in; the client, the value and the
 handlers left to you), then those that differ from the defaults (the `layout`
 names only the places that differ from the SDK's), for the search the form is

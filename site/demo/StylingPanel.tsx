@@ -376,6 +376,10 @@ export function StylingPanel({
       </Fold>
 
       <Fold title="Shape and size" summary={count(changes.shape)}>
+        <p className="hint fold-note">
+          The menu's width holds from 48em up: on a narrower screen the menu is
+          the input's. The preview holds the menu to its card.
+        </p>
         <div className="field-grid">
           {shapeVars.map(name => (
             <Field
@@ -392,15 +396,46 @@ export function StylingPanel({
               />
             </Field>
           ))}
+          <Field label="Menu width" hint={<code>menuWidth</code>}>
+            <Select
+              value={state.menuWidth}
+              options={MENU_WIDTHS}
+              labels={MENU_WIDTH_LABELS}
+              onChange={value => set("menuWidth", value)}
+            />
+          </Field>
+          {state.menuWidth === "custom" && (
+            <Field
+              label="Width"
+              hint={
+                state.menuWidthCustom.trim() !== "" &&
+                menuWidthOf(state) === undefined
+                  ? "not a width: the menu is the input's"
+                  : "pixels, or a CSS length; 100% is the input's"
+              }
+            >
+              <input
+                type="text"
+                value={state.menuWidthCustom}
+                placeholder="calc(100% + 56px)"
+                spellCheck={false}
+                aria-invalid={
+                  state.menuWidthCustom.trim() !== "" &&
+                  menuWidthOf(state) === undefined
+                    ? true
+                    : undefined
+                }
+                onChange={event => set("menuWidthCustom", event.target.value)}
+              />
+            </Field>
+          )}
         </div>
       </Fold>
 
       <Fold title="Behavior">
         <p className="hint fold-note">
           Rows shows on the sample rows too; the characters, the pause and the
-          session act as you type. The menu's width holds from 48em up: on a
-          narrower screen the menu is the input's. The preview holds the menu to
-          its card.
+          session act as you type.
         </p>
         <div className="field-grid">
           <Field label="Rows" hint="1 to 20">
@@ -454,39 +489,6 @@ export function StylingPanel({
               onChange={value => set("mintOn", value)}
             />
           </Field>
-          <Field label="Menu width" hint={<code>menuWidth</code>}>
-            <Select
-              value={state.menuWidth}
-              options={MENU_WIDTHS}
-              labels={MENU_WIDTH_LABELS}
-              onChange={value => set("menuWidth", value)}
-            />
-          </Field>
-          {state.menuWidth === "custom" && (
-            <Field
-              label="Width"
-              hint={
-                state.menuWidthCustom.trim() !== "" &&
-                menuWidthOf(state) === undefined
-                  ? "not a width: the menu is the input's"
-                  : "pixels, or a CSS length; 100% is the input's"
-              }
-            >
-              <input
-                type="text"
-                value={state.menuWidthCustom}
-                placeholder="calc(100% + 56px)"
-                spellCheck={false}
-                aria-invalid={
-                  state.menuWidthCustom.trim() !== "" &&
-                  menuWidthOf(state) === undefined
-                    ? true
-                    : undefined
-                }
-                onChange={event => set("menuWidthCustom", event.target.value)}
-              />
-            </Field>
-          )}
         </div>
       </Fold>
 

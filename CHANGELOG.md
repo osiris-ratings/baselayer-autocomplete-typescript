@@ -48,11 +48,12 @@ breaking change bumps the minor version.
 
 ### Changed
 
-- The demo's Styling panel has a **Menu width** choice in Behavior, in place of
-  the "As wide as the input" switch: the input's width, the input's and a little
-  more, a fixed 560px, or a width of your own (pixels, or a CSS length), which
-  the preview's menu draws and the exported code names as `menuWidth`. The field
-  for the stylesheet's `--bl-ac-menu-width` is now labelled "Fixed menu width".
+- The demo's Styling panel has a **Menu width** choice in Shape and size, in
+  place of the "As wide as the input" switch in Behavior: the input's width, the
+  input's and a little more, a fixed 560px, or a width of your own (pixels, or a
+  CSS length), which the preview's menu draws and the exported code names as
+  `menuWidth`. The field for the stylesheet's `--bl-ac-menu-width` is now
+  labelled "Fixed menu width".
 - The demo's Styling preview shows a typo the search found: among the made-up
   businesses HARBRO CONCRETE SUPPLY, INC. for the "harbor" typed, and among the
   people Daan Okafor for "dana", two letters swapped in each, so the two

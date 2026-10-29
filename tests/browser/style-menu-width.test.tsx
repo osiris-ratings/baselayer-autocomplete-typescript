@@ -41,12 +41,12 @@ const fold = (title: string) =>
     ...document.querySelectorAll<HTMLButtonElement>("button[aria-expanded]"),
   ].find(button => button.textContent?.trim().startsWith(title));
 
-/** Opens Styling, its Components fold, where the preview is, and its Behavior fold. */
-async function openBehavior() {
+/** Opens Styling, its Components fold, where the preview is, and its Shape and size fold. */
+async function openShape() {
   await userEvent.click(
     document.querySelector<HTMLElement>('[data-testid="demo-styling-open"]')!,
   );
-  for (const title of ["Components", "Behavior"]) {
+  for (const title of ["Components", "Shape and size"]) {
     await expect.poll(() => fold(title)).toBeDefined();
     if (fold(title)!.getAttribute("aria-expanded") !== "true") {
       await userEvent.click(fold(title)!);
@@ -74,7 +74,7 @@ const sample = () => ({
 describe("the Styling panel's menu width", () => {
   it("is the input's by default, and is a choice among the presets and a width of its own", async () => {
     mountApp();
-    await openBehavior();
+    await openShape();
 
     const select = widthSelect()!;
     expect(select.value).toBe("input");
@@ -91,7 +91,7 @@ describe("the Styling panel's menu width", () => {
 
   it("draws the preview's menu wider than its field for 'wide', and 560px for 'fixed'", async () => {
     mountApp();
-    await openBehavior();
+    await openShape();
     const room = () => {
       const { input, menu } = sample();
       return menu - input;
@@ -109,7 +109,7 @@ describe("the Styling panel's menu width", () => {
 
   it("leaves the menu room in the card, and no menu is wider than the card", async () => {
     mountApp();
-    await openBehavior();
+    await openShape();
     const card = () =>
       document.querySelector(".demo-preview")!.getBoundingClientRect();
     const { input } = sample();
@@ -132,7 +132,7 @@ describe("the Styling panel's menu width", () => {
 
   it("takes a width of its own from a field that shows only then", async () => {
     mountApp();
-    await openBehavior();
+    await openShape();
     const field = () =>
       [...document.querySelectorAll<HTMLLabelElement>("label.field-row")]
         .find(row => row.querySelector(".field-label")?.textContent === "Width")
@@ -153,7 +153,7 @@ describe("the Styling panel's menu width", () => {
 
   it("says so when what was typed is not a width, and the menu stays the input's", async () => {
     mountApp();
-    await openBehavior();
+    await openShape();
     const field = () =>
       [...document.querySelectorAll<HTMLLabelElement>("label.field-row")]
         .find(row => row.querySelector(".field-label")?.textContent === "Width")
@@ -173,9 +173,32 @@ describe("the Styling panel's menu width", () => {
     expect(exported).not.toContain("menuWidth");
   });
 
+  it("adds the width field after every other, so choosing a width of its own moves nothing", async () => {
+    mountApp();
+    await openShape();
+    const fold = widthSelect()!.closest("section.fold")!;
+    const tops = () =>
+      [...fold.querySelectorAll<HTMLElement>("label.field-row")].map(
+        row => row.getBoundingClientRect().top,
+      );
+    const before = tops();
+    expect(before.length).toBeGreaterThan(3);
+
+    await userEvent.selectOptions(widthSelect()!, "custom");
+    await expect.poll(() => tops().length).toBe(before.length + 1);
+
+    expect(tops().slice(0, before.length)).toEqual(before);
+    // And it is the fold's last, with the select it belongs to just before it.
+    const rows = [...fold.querySelectorAll("label.field-row")];
+    expect(rows.at(-2)).toBe(widthSelect()!.closest("label"));
+    expect(rows.at(-1)!.querySelector(".field-label")!.textContent).toBe(
+      "Width",
+    );
+  });
+
   it("names the width in the code it exports", async () => {
     mountApp();
-    await openBehavior();
+    await openShape();
     const exported = () =>
       [...document.querySelectorAll("pre")]
         .map(pre => pre.textContent)

@@ -59,6 +59,37 @@ describe("what is a width", () => {
     }
   });
 
+  it("is written with spaces inside its brackets, as CSS allows", () => {
+    for (const width of [
+      "fit-content( 30rem )",
+      "fit-content(  calc(100% + 1rem)  )",
+      "calc( 100% + 56px )",
+      "min( 100% , 40rem )",
+      "clamp( 22rem , 50% , 40rem )",
+      "var( --menu-width )",
+      "var( --menu-width , 40rem )",
+      "env( safe-area-inset-left )",
+    ]) {
+      expect(isCssWidth(width), width).toBe(true);
+    }
+  });
+
+  it("is a variable whose name starts with a digit, as a custom property's may", () => {
+    for (const width of [
+      "var(--2xl)",
+      "var(--123)",
+      "var(--2xl, 40rem)",
+      "calc(100% + var(--1x))",
+      "var(--a-b_c)",
+    ]) {
+      expect(isCssWidth(width), width).toBe(true);
+    }
+    // A custom property starts with two dashes; `env()` takes a plain name.
+    for (const width of ["var(menu-width)", "var(-menu)", "var(--)", "var()"]) {
+      expect(isCssWidth(width), width).toBe(false);
+    }
+  });
+
   it("is written in any case", () => {
     expect(isCssWidth("CALC(100% + 1PX)")).toBe(true);
     expect(isCssWidth("Max-Content")).toBe(true);

@@ -10,7 +10,7 @@ const KEYWORDS = new Set(["max-content", "min-content", "fit-content"]);
 const NUMBER = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:e[+-]?\d+)?/i;
 const UNIT = /^(?:%|[a-z]+)/i;
 const NAME = /^[a-z][\w-]*/i;
-const CUSTOM_NAME = /^(?:--)?[a-z_][\w-]*/i;
+const CUSTOM_NAME = /^--[\w-]+/;
 
 class Reader {
   at = 0;
@@ -117,10 +117,14 @@ function argumentsOf(reader: Reader, count: number | null): Kind | null {
   return count !== null && seen !== count ? null : kind;
 }
 
-/** `var(--name)`, `var(--name, anything balanced)`; `env()` alike. */
-function lookup(reader: Reader): Kind | null {
+/**
+ * `var(--name)`, `var(--name, anything balanced)`, and `env(name)` alike: the
+ * name is a custom property's, which may start with a digit after its two
+ * dashes, or an environment variable's.
+ */
+function lookup(reader: Reader, name: RegExp): Kind | null {
   reader.space();
-  if (reader.take(CUSTOM_NAME) === null) return null;
+  if (reader.take(name) === null) return null;
   reader.space();
   if (reader.peek() === ",") {
     let depth = 0;
@@ -162,8 +166,9 @@ function term(reader: Reader): Kind | null {
     case "clamp":
       return argumentsOf(reader, 3);
     case "var":
+      return lookup(reader, CUSTOM_NAME);
     case "env":
-      return lookup(reader);
+      return lookup(reader, NAME);
     default:
       return null;
   }
@@ -179,6 +184,7 @@ export function isCssWidth(text: string): boolean {
   }
   const reader = new Reader(width);
   if (reader.take(/^fit-content\(/) !== null) {
+    reader.space();
     const kind = sumOf(reader);
     reader.space();
     if (kind === null || kind === "number" || reader.peek() !== ")") {
