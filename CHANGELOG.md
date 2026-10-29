@@ -16,9 +16,10 @@ breaking change bumps the minor version.
   input's width; `clamp()`, `min()` and `max()` bound it. Like
   `--bl-ac-menu-width`, it holds from 48em up, and below that the menu is the
   input's; and the menu is never wider than the screen, whatever is asked for
-  (`100vw - 2rem`). A string that is not a CSS width, and a number that is not
-  above zero, are left out. `menuFollowsInputWidth` works as it did (`true` is
-  `"input"`, `false` is `"fixed"`), and `menuWidth` wins when both are given.
+  (`100vw - 2rem`). A string that is not a CSS width, one written with anything
+  but the characters of a length, and a number that is not above zero, are left
+  out. `menuFollowsInputWidth` works as it did (`true` is `"input"`, `false` is
+  `"fixed"`), and `menuWidth` wins when both are given.
   Left out, nothing changes: the default look, the class names and the markup
   are the same. The types `MenuWidth` and `MenuWidthPreset` are exported from
   `@baselayer-sdk/autocomplete/react`. A width of your own is

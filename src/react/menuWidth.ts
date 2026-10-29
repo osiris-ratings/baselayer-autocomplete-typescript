@@ -38,16 +38,25 @@ const isPreset = (value: string): value is MenuWidthPreset =>
   Object.hasOwn(PRESETS, value);
 
 /**
+ * What a width is written with: digits, letters (units, words, `var(--gap)`),
+ * `.`, `%`, the four operators, brackets, commas and spaces. Nothing that ends
+ * a declaration, opens a string, a comment, an escape or an at-rule, or marks
+ * a value `!important` is among it, so a string of it can only be a value.
+ */
+const LENGTH_CHARACTERS = /^[\w\s.%+\-*/(),]+$/;
+
+/**
  * A length the stylesheet can take as a width, or null. A width the browser
- * would drop leaves the menu with none at all, so it is turned away here; so
- * is anything that could end its declaration, in a page rendered on a server.
+ * would drop leaves the menu with none at all, so it is turned away here; and
+ * what is not written in the characters of a length never reaches the style
+ * attribute, on a server too, where there is no CSS to ask.
  */
 function lengthOf(value: number | string): string | null {
   if (typeof value === "number") {
     return Number.isFinite(value) && value > 0 ? `${value}px` : null;
   }
   const text = value.trim();
-  if (text === "" || /[;{}<>]/.test(text)) return null;
+  if (!LENGTH_CHARACTERS.test(text)) return null;
   // Where there is no CSS to ask (a server, jsdom), the host is trusted.
   const css = (globalThis as { CSS?: Partial<typeof CSS> }).CSS;
   if (css?.supports && !css.supports("width", text)) return null;

@@ -176,7 +176,9 @@ left edge and grows to the right, and is not moved: leave it the room.
 
 A string that is not a CSS width (`"wide-ish"`, `"calc(100% + 56)"`) and a
 number that is not above zero are left out, as though `menuWidth` had not been
-given.
+given. So is a string written with anything but what a length is: letters,
+digits, `.`, `%`, `+ - * /`, brackets, commas and spaces. A `;`, a quote, a
+`!`, a `\` or a comment never reaches the page, on a server either.
 
 `menuFollowsInputWidth` is the boolean form and works as it always has: `true`,
 the default, is `"input"`, and `false` is `"fixed"`. When both are given,

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -110,13 +111,43 @@ describe("menuWidth, of its own", () => {
     }
   });
 
-  it("turns away a string that would end the declaration it is written into", () => {
+  it("turns away a string that is not made of what a length is made of", () => {
     for (const unsafe of [
       "10px; color: red",
       "10px } .x { color: red",
       "10px</style>",
+      "10px !important",
+      'calc(100% + 1px) "',
+      "calc(100% + 1px) '",
+      "10px\\3b color:red",
+      "url(https://example.test/x)",
+      "10px /* */ ; color:red",
+      "@import 'x'",
+      "10px\n; color:red",
     ]) {
-      expect(drawn(unsafe)).toEqual({ dataWidth: undefined, width: undefined });
+      expect(drawn(unsafe), unsafe).toEqual({
+        dataWidth: undefined,
+        width: undefined,
+      });
+    }
+  });
+
+  it("takes what lengths are made of: numbers, units, words, operators, brackets and commas", () => {
+    for (const length of [
+      "40rem",
+      "-2.5em",
+      "100%",
+      "calc(100% + 56px)",
+      "calc(200% + var(--gap, 24px))",
+      "calc(100% - 2 * 1.5rem)",
+      "clamp(22rem, calc(100% + 3.5rem), 40rem)",
+      "min(100%, 40rem)",
+      "max(20rem, 50%)",
+      "fit-content(30rem)",
+      "max-content",
+      "calc(100cqw / 3)",
+    ]) {
+      expect(drawn(length).width, length).toBe(length);
     }
   });
 
@@ -272,5 +303,60 @@ describe("the menu each view draws", () => {
     expect(menu).toHaveAttribute("data-width", "fixed");
     expect(menu.style.getPropertyValue(WIDTH)).toBe("420px");
     expect(menu.className).toBe("");
+  });
+});
+
+// A page rendered on a server has no CSS to ask, and its style attribute is
+// text: nothing but a width may reach it.
+describe("the menu, rendered on a server", () => {
+  const menuTag = (markup: string) =>
+    /<div[^>]*data-testid="autocomplete-menu"[^>]*>/.exec(markup)![0];
+
+  const markup = (menuWidth: MenuWidth) =>
+    renderToStaticMarkup(
+      <BusinessAutocompleteView
+        id="field"
+        value=""
+        onInputChange={() => {}}
+        onSelect={() => {}}
+        suggestions={[]}
+        found={0}
+        foundCapped={false}
+        truncated={false}
+        indexTag={null}
+        roundTripMs={null}
+        isSearching={false}
+        error={null}
+        open
+        menuWidth={menuWidth}
+      />,
+    );
+
+  it("writes a width as the one custom property, and nothing else", () => {
+    const tag = menuTag(markup("calc(100% + 56px)"));
+
+    expect(tag).toContain('style="--bl-ac-menu-width:calc(100% + 56px)"');
+    expect(tag).toContain('data-width="fixed"');
+    expect((tag.match(/style="/g) ?? []).length).toBe(1);
+  });
+
+  it("writes a number as pixels", () => {
+    expect(menuTag(markup(420))).toContain('style="--bl-ac-menu-width:420px"');
+  });
+
+  it("writes no style at all for what is not a width, whatever it carries", () => {
+    for (const unsafe of [
+      '10px" onmouseover="alert(1)',
+      "10px; position: fixed; inset: 0",
+      "10px !important",
+      "url(https://example.test/x)",
+    ]) {
+      const tag = menuTag(markup(unsafe));
+
+      expect(tag, unsafe).not.toContain("style=");
+      expect(tag, unsafe).not.toContain("onmouseover");
+      expect(tag, unsafe).not.toContain("position");
+      expect(tag, unsafe).not.toContain("example.test");
+    }
   });
 });
