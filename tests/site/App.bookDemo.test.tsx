@@ -10,10 +10,17 @@ import { useDemoPage } from "./support/demo-page";
 
 useDemoPage();
 
+// The connection panel has a Book a demo link of its own (App.keyNote.test.tsx);
+// this is the button the introduction ends with.
+const introLink = () =>
+  screen
+    .getAllByRole("link", { name: "Book a demo" })
+    .find(link => link.closest(".demo-intro-cta") !== null)!;
+
 describe("the Book a demo button", () => {
   it("is under the introduction's lede and leads to the demo booking page", () => {
     render(<App />);
-    const link = screen.getByRole("link", { name: "Book a demo" });
+    const link = introLink();
     expect(link.getAttribute("href")).toBe("https://baselayer.com/demo/");
     const lede = screen.getByText(/real and billable on your organization/);
     expect(
@@ -23,7 +30,7 @@ describe("the Book a demo button", () => {
 
   it("opens in a new tab, so the key and session this page holds stay", () => {
     render(<App />);
-    const link = screen.getByRole("link", { name: "Book a demo" });
+    const link = introLink();
     expect(link.getAttribute("target")).toBe("_blank");
     expect(link.getAttribute("rel")).toBe("noreferrer noopener");
   });
