@@ -2596,6 +2596,7 @@ html[data-dragging] * {
 }
 
 .demo .apply-note {
+  flex: 1 1 220px;
   margin: 0;
   font-size: 13px;
 }

@@ -967,6 +967,26 @@ select.try-input {
   color: #ffffff;
 }
 
+/* Under the mint's key field: whose key it is, and where to get one. */
+.try-key-note {
+  margin: 5px 0 2px;
+  padding-left: 8px;
+  color: #8191b8;
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.try-key-note a {
+  color: #b9c6ff;
+  text-decoration: underline;
+  text-decoration-color: rgba(185, 198, 255, 0.4);
+  text-underline-offset: 2px;
+}
+
+.try-key-note a:hover {
+  color: #ffffff;
+}
+
 .try-outcome-minted {
   padding: 0 7px;
   border: 1px solid rgba(255, 255, 255, 0.2);

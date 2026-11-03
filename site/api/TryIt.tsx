@@ -23,6 +23,7 @@ import { LEGAL_RELATIONS, type Route } from "@baselayer-sdk/autocomplete";
 import { NO_FILL_ATTRIBUTES } from "../../src/react/inputAttributes";
 import { Icon } from "../shared/icons";
 import { jsonHtml } from "../shared/json";
+import { links } from "../shared/links";
 import { urlOf, type Pair, type Sample } from "./curl";
 import { resolveIn, type Schemas } from "./schema";
 import { refusalOf, sendTarget } from "./send";
@@ -479,6 +480,25 @@ function headerRank(name: string): number {
   return at === -1 ? fixed.length : at;
 }
 
+/** The header that takes the reader's own key, on the mint. */
+const isKeyHeader = (name: string) => name.toLowerCase() === "x-api-key";
+
+/**
+ * Under the key's field: whose key it is, and where a reader with none gets
+ * one. A new tab, so the form and the session it holds stay.
+ */
+function KeyNote({ id }: { id: string }) {
+  return (
+    <p className="try-key-note" id={id}>
+      Your Baselayer API key. Don't have one?{" "}
+      <a href={links.bookDemo} target="_blank" rel="noreferrer noopener">
+        Book a demo
+      </a>{" "}
+      to get one.
+    </p>
+  );
+}
+
 /** A required row's asterisk, which a screen reader hears as a word. */
 function Required() {
   return (
@@ -689,6 +709,7 @@ export function TryIt({
   const [sending, setSending] = useState(false);
   const [showRequest, setShowRequest] = useState(false);
   const previewId = useId();
+  const keyNoteId = useId();
   const url = urlOf(sample.url, query);
   // The URL box follows the typing once it rests, and grows or shrinks to the
   // new URL's lines in a stroke rather than a jump; what is sent, and what the
@@ -891,6 +912,9 @@ export function TryIt({
                   type="text"
                   className="try-input"
                   aria-label={`Header ${header.name}`}
+                  aria-describedby={
+                    isKeyHeader(header.name) ? keyNoteId : undefined
+                  }
                   {...NO_FILL_ATTRIBUTES}
                   readOnly={
                     FIXED_HEADERS[header.name.toLowerCase()] !== undefined
@@ -918,6 +942,7 @@ export function TryIt({
                     onUse={() => setOwn(null)}
                   />
                 )}
+                {isKeyHeader(header.name) && <KeyNote id={keyNoteId} />}
               </td>
               <td className="try-actions" />
             </tr>

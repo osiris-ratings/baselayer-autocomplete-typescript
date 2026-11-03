@@ -476,3 +476,62 @@ describe("Try it here, under StrictMode", () => {
     error.mockRestore();
   });
 });
+
+describe("the mint's key row, for a reader with no key", () => {
+  const keyNote = () => {
+    const input = screen.getByRole("textbox", { name: "Header X-API-Key" });
+    const note = within(input.closest("tr")!)
+      .getByText(/Don't have one\?/)
+      .closest("p")!;
+    return { input, note };
+  };
+
+  it("says whose key it is and where to get one, under the key's field", () => {
+    editor("/autocomplete/sessions");
+
+    const { note } = keyNote();
+    expect(note.textContent).toBe(
+      "Your Baselayer API key. Don't have one? Book a demo to get one.",
+    );
+    expect(note.querySelector("a")!.getAttribute("href")).toBe(
+      "https://baselayer.com/demo/",
+    );
+  });
+
+  it("opens the link in a new tab, so the form and the session it holds stay", () => {
+    editor("/autocomplete/sessions");
+
+    const link = keyNote().note.querySelector("a")!;
+    expect(link.getAttribute("target")).toBe("_blank");
+    expect(link.getAttribute("rel")).toBe("noreferrer noopener");
+  });
+
+  it("describes the key's field, for a screen reader", () => {
+    editor("/autocomplete/sessions");
+
+    const { input, note } = keyNote();
+    expect(note.id).not.toBe("");
+    expect(input.getAttribute("aria-describedby")).toBe(note.id);
+  });
+
+  it("is on the row that takes the key, and on no other form", () => {
+    editor("/autocomplete/businesses");
+
+    expect(screen.queryByText(/Don't have one\?/)).toBeNull();
+    expect(
+      screen.queryByRole("textbox", { name: "Header X-API-Key" }),
+    ).toBeNull();
+  });
+
+  it("changes nothing about the request the form makes", async () => {
+    const { code, user } = editor("/autocomplete/sessions");
+
+    expect(code()).toContain('-H "X-API-Key: $BASELAYER_API_KEY"');
+    await user.clear(screen.getByRole("textbox", { name: "Header X-API-Key" }));
+    await user.type(
+      screen.getByRole("textbox", { name: "Header X-API-Key" }),
+      "sk_test_example",
+    );
+    expect(code()).toContain('-H "X-API-Key: sk_test_example"');
+  });
+});
