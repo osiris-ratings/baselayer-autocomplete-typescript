@@ -762,9 +762,9 @@ export function Home() {
             </h2>
             <div>
               <p>
-                Paste an API key into the demo and watch every mint, request and
-                recovery the SDK makes, then run the search a pick leads to,
-                against production.
+                Paste your Baselayer API key into the demo and watch every mint,
+                request and recovery the SDK makes, then run the search a pick
+                leads to, against production.
               </p>
               <div className="hero-actions">
                 <a className="btn btn-primary" href={links.demo}>
@@ -774,6 +774,10 @@ export function Home() {
                   API reference
                 </a>
               </div>
+              <p className="cta-note">
+                Don't have a Baselayer API key?{" "}
+                <a href={links.bookDemo}>Book a demo</a> to get one.
+              </p>
             </div>
           </div>
         </section>

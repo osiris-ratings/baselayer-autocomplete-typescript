@@ -6,6 +6,18 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+### Changed
+
+- The demo's Connect step calls its field **Your Baselayer API key**, and its
+  collapsed line reads "Baselayer API key · …". Beside Apply it says "Don't have
+  a Baselayer API key? Book a demo to get one.", the link going to
+  <https://baselayer.com/demo/> in a new tab, so the key typed so far and the
+  session stay. The landing page's closing call to action asks for "your
+  Baselayer API key" too, with the same note and link, and so does the API
+  reference: under the `X-API-Key` field of Create a session's Try it here form
+  a note reads "Your Baselayer API key. Don't have one? Book a demo to get
+  one." Demo site only: the package and its types are untouched.
+
 ## [0.10.0] - 2026-10-28
 
 ### Added

@@ -8,6 +8,11 @@ const src = (path: string) =>
 // The package's two entry points, resolved to source. Exact matches, so the
 // root does not take the react one as a path inside itself.
 export const alias = [
+  // The stylesheet the site's pages import, as the site build resolves it.
+  {
+    find: /^@baselayer-sdk\/autocomplete\/react\/styles\.css$/,
+    replacement: src("react/styles.css"),
+  },
   {
     find: /^@baselayer-sdk\/autocomplete\/react$/,
     replacement: src("react/index.ts"),

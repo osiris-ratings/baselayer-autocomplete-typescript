@@ -304,7 +304,7 @@ describe("the row on the title, only while the key step is expanded", () => {
       stepFold().getAttribute("aria-describedby")!,
     )!;
 
-    expect(summary.textContent).toMatch(/API key/);
+    expect(summary.textContent).toMatch(/^Baselayer API key · /);
   });
 
   it("goes when opening Styling folds the step, too", async () => {

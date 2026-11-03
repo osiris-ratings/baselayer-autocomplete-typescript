@@ -43,8 +43,10 @@ motion, or in a browser without view transitions, the panes change at once.
 
 ## Connecting
 
-Pick the environment, give an API key and press **Apply**. The button stays
-gray until there is something to apply. Apply tests the key before the demo
+Pick the environment, give your Baselayer API key and press **Apply**. Without
+a key, the **Book a demo** link beside Apply leads to the page that books one
+(in a new tab, so the page and what is typed in it stay). The button stays gray
+until there is something to apply. Apply tests the key before the demo
 uses it, and says what was wrong: a key the API does not recognize, one
 without the permission, or a sandbox application's. Once it passes, Connect
 folds away to one line that says how you are connected and, at its right, a

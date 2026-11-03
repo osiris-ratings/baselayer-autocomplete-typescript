@@ -2588,6 +2588,13 @@ html[data-dragging] * {
   cursor: not-allowed;
 }
 
+/* The hints beside Apply: what it does, and what to do without a key. */
+.apply-notes {
+  display: grid;
+  flex: 1 1 220px;
+  gap: 2px;
+}
+
 .demo .apply-note {
   flex: 1 1 220px;
   margin: 0;

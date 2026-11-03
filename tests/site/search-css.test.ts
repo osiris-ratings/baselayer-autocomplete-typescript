@@ -163,3 +163,19 @@ describe("the report's text colours", () => {
     ).toBeGreaterThanOrEqual(4.5);
   });
 });
+
+describe("the hint beside an Apply or Run button", () => {
+  const rule = (selector: string) =>
+    new RegExp(`${selector.replace(/[.]/g, "\\.")} \\{([^}]*)\\}`).exec(
+      demoCss,
+    )?.[1] ?? "";
+
+  it("shares the row with the button where it stands bare in the row, as the Search step's does", () => {
+    // `.apply-note` is a direct child of `.apply-row` in the Search step.
+    expect(rule(".demo .apply-note")).toMatch(/flex:\s*1 1 220px/);
+  });
+
+  it("shares it as a pair of hints too, as the Connect step's do, in their own wrapper", () => {
+    expect(rule(".apply-notes")).toMatch(/flex:\s*1 1 220px/);
+  });
+});

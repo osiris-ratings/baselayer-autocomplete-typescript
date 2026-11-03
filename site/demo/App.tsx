@@ -838,7 +838,7 @@ export function App() {
     ) : (
       <>
         <span className="fold-summary-text">
-          API key · {ENVIRONMENT_LABELS[applied.environment]}
+          Baselayer API key · {ENVIRONMENT_LABELS[applied.environment]}
         </span>
         {client !== null && <ConnectionIndicator client={client} />}
       </>
@@ -1131,7 +1131,7 @@ export function App() {
               your product, the key belongs on your backend (
               <code>@baselayer-sdk/autocomplete/server</code>).
             </p>
-            <Field label="API key">
+            <Field label="Your Baselayer API key">
               {MASKS_TEXT ? (
                 // Masked by the page, and a textarea, not an input: Chrome and
                 // Safari offer a password field's passwords, and Safari takes
@@ -1198,9 +1198,23 @@ export function App() {
                     ? "Applied"
                     : "Apply API key"}
               </button>
-              <p className="hint apply-note">
-                Apply mints one session to test the key, and the demo uses it.
-              </p>
+              <div className="apply-notes">
+                <p className="hint apply-note">
+                  Apply mints one session to test the key, and the demo uses it.
+                </p>
+                <p className="hint apply-note">
+                  Don't have a Baselayer API key?{" "}
+                  <a
+                    href={links.bookDemo}
+                    // A new tab, so the key typed so far and the session stay.
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
+                    Book a demo
+                  </a>{" "}
+                  to get one.
+                </p>
+              </div>
             </div>
             {check !== null && check !== "testing" && (
               <p

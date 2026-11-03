@@ -204,7 +204,7 @@ describe("the Session fold, closed", () => {
     expect(step().contains(document.activeElement)).toBe(true);
   });
 
-  it("leaves the key path as it was: the key, Apply, and out of the step", async () => {
+  it("leaves the key path as it was: the key, Apply, the link for a visitor with no key, and out of the step", async () => {
     drawn();
 
     await userEvent.fill(byId("demo-key"), "a-key");
@@ -212,7 +212,11 @@ describe("the Session fold, closed", () => {
     await userEvent.tab();
     expect(document.activeElement).toBe(byId("demo-apply"));
     await userEvent.tab();
-    // Nothing in the step comes after Apply.
+    // The one thing after Apply is the note's link to book a demo.
+    expect((document.activeElement as HTMLAnchorElement).href).toBe(
+      "https://baselayer.com/demo/",
+    );
+    await userEvent.tab();
     expect(step().contains(document.activeElement)).toBe(false);
   });
 

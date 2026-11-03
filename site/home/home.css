@@ -587,6 +587,18 @@
   font-size: 19px;
 }
 
+/* For a visitor with no key: smaller than the pitch, and its link white, since
+   the blue of a link does not read on the navy. */
+.cta .cta-note {
+  margin: 0;
+  font-size: 15px;
+  text-wrap: pretty;
+}
+
+.cta .cta-note a {
+  color: #ffffff;
+}
+
 @media (max-width: 800px) {
   .cta-inner {
     grid-template-columns: minmax(0, 1fr);

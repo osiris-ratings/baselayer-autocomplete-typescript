@@ -74,8 +74,10 @@ DEMO_API=https://api.staging.example.test pnpm site   # a real API
 
 Then open `/api/`, pick an operation, open Try it here and press Send. With a
 real API the mint takes a real `X-API-Key`, which the form shows as typed,
-since the field is not masked: use it only on a screen no one else sees. A
-build sends to the URL the form shows, which a browser keeps from a page the
+since the field is not masked: use it only on a screen no one else sees. Under
+the field, a note says whose key it is ("Your Baselayer API key") and links a
+reader with none to book a demo, in a new tab so the form and its session stay.
+A build sends to the URL the form shows, which a browser keeps from a page the
 API does not admit.
 
 The session is shared. A Create a session that succeeds leaves its token, when
