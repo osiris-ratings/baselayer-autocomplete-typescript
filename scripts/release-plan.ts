@@ -181,6 +181,23 @@ export function releasedSection(
   );
 }
 
+/** The file whose presence holds every release: its first line says why. */
+export const RELEASE_HOLD = ".release-hold";
+
+/**
+ * Why a release is held, from the text of the hold file (null when there is
+ * none), or null when nothing holds it. A hold file that says nothing still
+ * holds.
+ */
+export function holdReason(text: string | null): string | null {
+  if (text === null) return null;
+  const first = text
+    .split("\n")
+    .map(line => line.trim())
+    .find(line => line !== "");
+  return first ?? `releases are on hold (${RELEASE_HOLD} says no more)`;
+}
+
 /**
  * A line that opens a block of its own, so it never continues the line above:
  * a heading, a list item, a quote, a table row, a rule or a code fence. A

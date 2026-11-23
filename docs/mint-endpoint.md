@@ -43,6 +43,11 @@ curl -s -X POST https://api.baselayer.com/autocomplete/sessions \
 }
 ```
 
+`mintForOrigin` also sends a `User-Agent` of
+`baselayer-autocomplete-typescript/<version>` (then the runtime's own token) and
+an `X-Baselayer-Client` header of the same product token, so Baselayer can see
+which SDK versions mint. A mint you write yourself need not send either.
+
 | Answer              | Meaning                                                  |
 | ------------------- | -------------------------------------------------------- |
 | 201                 | a session                                                |

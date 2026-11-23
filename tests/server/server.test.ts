@@ -368,10 +368,14 @@ describe("createMintHandler", () => {
     );
 
     const { init, headers } = sentAt(fetchImpl);
+    // The page's cookie and Authorization are not among them: the key, the
+    // origin, and what the SDK says about itself (`identifies-itself.test.ts`).
     expect([...headers.keys()].sort()).toEqual([
       "accept",
       "origin",
+      "user-agent",
       "x-api-key",
+      "x-baselayer-client",
     ]);
     expect(init?.credentials).not.toBe("include");
   });

@@ -10,6 +10,7 @@ import {
   distTagFor,
   forwardPort,
   githubReleaseArgs,
+  holdReason,
   hotfixBranch,
   latestRelease,
   parseVersion,
@@ -539,5 +540,52 @@ describe("backfillPlan", () => {
     expect(() => backfillPlan(["v0.3.0"], at)).toThrow(
       /v0\.3\.0.*no \[0\.3\.0\] section/,
     );
+  });
+});
+
+describe("holdReason", () => {
+  it("is null when there is no hold file", () => {
+    expect(holdReason(null)).toBeNull();
+  });
+
+  it("is the first line the hold file has", () => {
+    expect(
+      holdReason("\n  Do not release: the service is not ready.  \nMore.\n"),
+    ).toBe("Do not release: the service is not ready.");
+  });
+
+  it("still holds a release when the file says nothing", () => {
+    expect(holdReason("")).toMatch(/on hold/);
+    expect(holdReason(" \n\n")).toMatch(/on hold/);
+  });
+});
+
+describe("the release hold, where a release is made", () => {
+  const read = (path: string) =>
+    readFileSync(new URL(`../../${path}`, import.meta.url), "utf8");
+
+  it("stops the Release workflow before anyone is asked to approve a publish", () => {
+    const workflow = read(".github/workflows/release.yml");
+    // A job of its own, which the publish job needs: the `npm-publish`
+    // environment's approval is only asked for once every job it needs is done.
+    expect(workflow).toMatch(
+      /\n {2}hold:\n(?: {4}.*\n| *\n)+? {2}publish:\n {4}needs: hold\n/,
+    );
+    expect(workflow).toMatch(/if \[ -f \.release-hold \]/);
+  });
+
+  it("holds the GitHub Release too, and nothing can run it past a hold", () => {
+    const workflow = read(".github/workflows/release.yml");
+    // Both jobs need the hold, so a held run fails before either. A job that
+    // ran `if: always()` would go on without one.
+    expect(workflow).toMatch(
+      /\n {2}github-release:\n {4}needs: \[hold, publish\]\n/,
+    );
+    expect(workflow).not.toMatch(/always\(\)|!cancelled\(\)/);
+  });
+
+  it("stops `pnpm release` and `pnpm release tag`", () => {
+    const script = read("scripts/release.ts");
+    expect(script.match(/requireNoHold\(/g)?.length).toBeGreaterThanOrEqual(3);
   });
 });

@@ -6,6 +6,10 @@
 //   pnpm release tag                         tag what merged, which publishes it
 //   pnpm release backfill [--create]         GitHub Releases for tags with none
 //
+// A `.release-hold` file in the tree holds both: `patch|minor|major|<x.y.z>`
+// refuses while the working tree has it, and `tag` while the commit it would
+// tag does. Its first line says why.
+//
 // Every command takes --dry-run: it fetches, checks and says what it would
 // change, and changes nothing. `backfill` does that unless it is given
 // --create, since a Release is public and notifies the people watching.
@@ -14,7 +18,13 @@
 // version, and `dist-tag <version> <latest>` before it.
 
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { parseArgs } from "node:util";
@@ -28,9 +38,11 @@ import {
   formatVersion,
   forwardPort,
   githubReleaseArgs,
+  holdReason,
   hotfixBranch,
   latestRelease,
   parseVersion,
+  RELEASE_HOLD,
   releaseIsLatest,
   releaseNotes,
   releasedSection,
@@ -114,6 +126,20 @@ function indent(text: string): string {
 
 function tagExists(tag: string): boolean {
   return git("tag", "--list", tag) !== "";
+}
+
+/**
+ * Refuses a release while the tree it would release has a hold file. The hold
+ * lives in the tree, so a hotfix branch cut from a release before it is not
+ * held by it, and deleting the file is a change that is reviewed.
+ */
+function requireNoHold(holdFile: string | null): void {
+  const reason = holdReason(holdFile);
+  if (reason !== null) {
+    refuse(
+      `${reason}\n  Delete ${RELEASE_HOLD}, in a pull request, to lift it.`,
+    );
+  }
 }
 
 function branchExists(branch: string): boolean {
@@ -230,6 +256,9 @@ function prepare(to: string): void {
   }
   if (hotfixVersion === null) requireAtOrigin(branch);
   else requireNotBehindOrigin(branch);
+  requireNoHold(
+    existsSync(RELEASE_HOLD) ? readFileSync(RELEASE_HOLD, "utf8") : null,
+  );
 
   const packageJson = readFileSync("package.json", "utf8");
   const current = parseVersion(versionIn(packageJson));
@@ -395,6 +424,7 @@ function tag(): void {
   );
   if (commit === "")
     refuse(`no commit on ${ref} sets the version to ${version}`);
+  requireNoHold(fileAt(commit, RELEASE_HOLD));
   const section = releasedSection(
     fileAt(commit, "CHANGELOG.md") ?? "",
     version,

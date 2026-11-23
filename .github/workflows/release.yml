@@ -32,7 +32,26 @@ permissions:
   id-token: write
 
 jobs:
+  # A `.release-hold` file in the tagged tree stops the run here, before anyone
+  # is asked to approve a publish: the `npm-publish` environment waits for every
+  # job `publish` needs.
+  hold:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
+      - name: No release hold
+        run: |
+          if [ -f .release-hold ]; then
+            echo "::error::Releases are on hold: $(grep -m1 . .release-hold)"
+            exit 1
+          fi
+
   publish:
+    needs: hold
     runs-on: ubuntu-latest
     environment: npm-publish
     timeout-minutes: 15
@@ -83,9 +102,10 @@ jobs:
           echo "dist_tag=$tag" >> "$GITHUB_OUTPUT"
 
   # Re-running a failed run re-runs this job alone, and a version that has its
-  # Release already is left as it is.
+  # Release already is left as it is. It needs `hold` as well as `publish`, so
+  # a held run does not reach it even if `publish` ever stops needing `hold`.
   github-release:
-    needs: publish
+    needs: [hold, publish]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
