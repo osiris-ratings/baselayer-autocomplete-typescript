@@ -98,9 +98,10 @@ upstream cannot leave stale text behind.
 `pnpm release` does the bookkeeping, and the Release workflow publishes. The
 workflow runs on a `v*` tag, waits for someone to approve its `npm-publish`
 environment, checks that the tag, `package.json` and the changelog agree,
-runs every check, and publishes to npm. Every command below takes
-`--dry-run`, which checks everything and says what it would change without
-changing it. The script runs as TypeScript, which needs Node 22.18 or later.
+runs every check, publishes to npm, and then creates the tag's GitHub Release.
+Every command below takes `--dry-run`, which checks everything and says what
+it would change without changing it. The script runs as TypeScript, which needs
+Node 22.18 or later.
 
 ### A release
 
@@ -119,7 +120,11 @@ Mark it ready and merge it, then tag what merged:
 pnpm release tag     # tags the commit that set the version, and pushes the tag
 ```
 
-and approve the `npm-publish` environment on the Release run.
+and approve the `npm-publish` environment on the Release run. It publishes to
+npm and creates the GitHub Release: a title of the version, and the version's
+`CHANGELOG.md` entries as its notes, one line to an entry. If the run fails
+after npm has the version, re-run its failed jobs: the Release job runs alone,
+and a tag that has its Release already is left as it is.
 
 ### A hotfix
 
@@ -149,7 +154,7 @@ Release run and merge the forward-port.
 
 A hotfix to an older line, 0.1.2 while 0.2.0 is out, is published under the
 `release-0.1` dist-tag rather than `latest`, so `npm install` never goes back
-a minor.
+a minor, and its GitHub Release is not marked Latest either.
 
 ### A prerelease
 
@@ -161,3 +166,20 @@ dir="$(mktemp -d)/ac" && git worktree add "$dir" main && cd "$dir"
 npm version 0.2.0-rc.0 --no-git-tag-version
 pnpm install && pnpm build && npm publish --tag next
 ```
+
+### A tag without a GitHub Release
+
+Tags up to 0.10.0 were pushed before the workflow made Releases, and a run that
+could not create one leaves its tag without. `pnpm release backfill` lists
+every release tag that has none, oldest first, with the `gh` command and the
+notes it would use for each, and creates nothing. A Release is public and
+notifies the people watching the repository, so it makes them only with
+`--create`:
+
+```sh
+pnpm release backfill            # what it would create
+pnpm release backfill --create   # creates them
+```
+
+Each Release's notes come from the changelog as that tag has it, and only the
+highest version is marked Latest.

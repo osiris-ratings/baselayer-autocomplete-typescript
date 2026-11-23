@@ -182,6 +182,149 @@ export function releasedSection(
 }
 
 /**
+ * A line that opens a block of its own, so it never continues the line above:
+ * a heading, a list item, a quote, a table row, a rule or a code fence. A
+ * marker needs the space after it, so `3.5rem` and `**bold**` are text.
+ */
+const BLOCK_START =
+  /^\s*(?:#{1,6}(?:\s|$)|[-*+]\s|\d{1,9}[.)]\s|>|\||(?:-{3,}|\*{3,}|_{3,})\s*$|`{3,}|~{3,})/;
+
+/** A line a following line of text does not continue. */
+const SEALED = /^\s*(?:#{1,6}(?:\s|$)|\||(?:-{3,}|\*{3,}|_{3,})\s*$)/;
+
+/**
+ * Markdown with each paragraph and each list item on one line. The changelog
+ * wraps its prose at 80 columns, and GitHub shows a single newline in a
+ * release's notes as a line break, so the notes would come out ragged. Fenced
+ * code, tables, headings and hard breaks (two trailing spaces, or a backslash)
+ * are left alone, and so is where every block starts.
+ */
+export function unwrapMarkdown(text: string): string {
+  const out: string[] = [];
+  let fence: string | null = null;
+  // Whether the last line written is one a line of text may carry on.
+  let open = false;
+  for (const line of text.split("\n")) {
+    const mark = /^\s*(`{3,}|~{3,})/.exec(line)?.[1];
+    if (fence !== null) {
+      out.push(line);
+      // A fence closes on the same character, at least as long.
+      if (
+        mark !== undefined &&
+        mark[0] === fence[0] &&
+        mark.length >= fence.length
+      ) {
+        fence = null;
+      }
+      open = false;
+    } else if (mark !== undefined) {
+      fence = mark;
+      out.push(line);
+      open = false;
+    } else if (line.trim() === "") {
+      out.push(line);
+      open = false;
+    } else if (open && !BLOCK_START.test(line)) {
+      out[out.length - 1] =
+        `${(out[out.length - 1] ?? "").trimEnd()} ${line.trimStart()}`;
+      open = !/(?: {2}|\\)$/.test(line);
+    } else {
+      out.push(line);
+      open = !SEALED.test(line) && !/(?: {2}|\\)$/.test(line);
+    }
+  }
+  return out.join("\n");
+}
+
+/**
+ * What a GitHub Release says for a version: its changelog entries, without the
+ * heading the release's title already carries, one line to a paragraph or list
+ * item. Null when the changelog has no section for the version.
+ */
+export function releaseNotes(
+  changelog: string,
+  version: string,
+): string | null {
+  const section = releasedSection(changelog, version);
+  if (section === null) return null;
+  return unwrapMarkdown(trimBlank(section.split("\n").slice(1)).join("\n"));
+}
+
+/**
+ * Whether a release is the repository's latest: the one npm calls `latest`. A
+ * prerelease, which goes to `next`, and a hotfix to an older line, which goes
+ * to `release-X.Y`, are not.
+ */
+export function releaseIsLatest(distTag: string): boolean {
+  return distTag === "latest";
+}
+
+export interface GithubRelease {
+  /** The tag the release is of, `vX.Y.Z`; it must already exist on GitHub. */
+  tag: string;
+  version: string;
+  latest: boolean;
+}
+
+/**
+ * The `gh` arguments that create a release of an existing tag, notes read from
+ * standard input. `--verify-tag` stops `gh` from making a tag that is not
+ * there, and `--latest` is said either way, so GitHub does not guess from dates.
+ */
+export function githubReleaseArgs({
+  tag,
+  version,
+  latest,
+}: GithubRelease): string[] {
+  return [
+    "release",
+    "create",
+    tag,
+    "--title",
+    version,
+    "--notes-file",
+    "-",
+    "--verify-tag",
+    latest ? "--latest" : "--latest=false",
+  ];
+}
+
+export interface BackfillEntry extends GithubRelease {
+  notes: string;
+}
+
+/**
+ * The releases that give every existing release tag its GitHub Release, oldest
+ * first so the newest is created last: each with the notes from that tag's own
+ * changelog, and `latest` only on the highest version. Prerelease tags and
+ * strays are left out. Throws when a tag's changelog has no section for it.
+ */
+export function backfillPlan(
+  tags: readonly string[],
+  changelogAt: (tag: string) => string | null,
+): BackfillEntry[] {
+  const releases = tags
+    .filter(
+      tag =>
+        tag.startsWith("v") &&
+        VERSION.test(tag.slice(1)) &&
+        parseVersion(tag.slice(1)).pre === null,
+    )
+    .sort((a, b) =>
+      compareVersions(parseVersion(a.slice(1)), parseVersion(b.slice(1))),
+    );
+  const newest = releases.at(-1);
+  return releases.map(tag => {
+    const version = tag.slice(1);
+    const notes = releaseNotes(changelogAt(tag) ?? "", version);
+    if (notes === null) {
+      throw new Error(`${tag}: CHANGELOG.md has no [${version}] section`);
+    }
+    return { tag, version, latest: tag === newest, notes };
+  });
+}
+
+/**
  * The changelog with everything under `## [Unreleased]` moved under
  * `## [version] - date`, and the Unreleased heading left, empty.
  */
