@@ -8,21 +8,22 @@ breaking change bumps the minor version.
 
 ### Added
 
-- **Do not release this until the autocomplete service allows the header
-  below (minimum service version: to be named once the service is deployed to
-  production).** A browser asks the service which request headers it may send
-  from another origin, and a build that sends one the service does not list
-  fails that preflight, and with it every search. `.release-hold` stops
-  `pnpm release` and the Release workflow until it is deleted, in the pull
-  request that names the service version.
+- **Do not release this until autocomplete service 0.25.0 is live in
+  production.** The service refuses the header below before 0.25.0: a browser
+  asks the service which request headers it may send from another origin, and
+  a build that sends one the service does not list fails that preflight, and
+  with it every search. `.release-hold` stops `pnpm release` and the Release
+  workflow until it is deleted, in the pull request that confirms 0.25.0 is
+  live.
 - Every suggest request the browser client makes (businesses, people and
   addresses) carries an `X-Baselayer-Client` header whose value is
   `baselayer-autocomplete-typescript/<version>`, and the mint `mintForOrigin`
   makes (and so `createMintHandler`) carries the same header and a `User-Agent`
   of that value followed by the runtime's own token, so Baselayer can see which
   SDK versions are in use. Nothing else about a request changes. The version is
-  `package.json`'s, read when the SDK is built. A host that does not want to
-  send the header gives the client a `fetch` that drops it (`docs/security.md`).
+  `package.json`'s, read when the SDK is built. It needs autocomplete service
+  0.25.0 or later. A host that does not want to send the header gives the
+  client a `fetch` that drops it (`docs/security.md`).
 - Each release now also has a GitHub Release, created by the Release workflow
   once npm has the version: its title is the version and its notes are that
   version's entries here. A hotfix to an older line is not marked Latest.
