@@ -102,9 +102,10 @@ jobs:
           echo "dist_tag=$tag" >> "$GITHUB_OUTPUT"
 
   # Re-running a failed run re-runs this job alone, and a version that has its
-  # Release already is left as it is.
+  # Release already is left as it is. It needs `hold` as well as `publish`, so
+  # a held run does not reach it even if `publish` ever stops needing `hold`.
   github-release:
-    needs: publish
+    needs: [hold, publish]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
