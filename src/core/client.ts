@@ -60,6 +60,7 @@ import {
   unaskedResponse,
   type SuggestResponse,
 } from "./wire";
+import { CLIENT_HEADER, CLIENT_PRODUCT } from "../version";
 
 /** The subset of `Response` the client reads; `fetch` satisfies it. */
 export interface ResponseLike {
@@ -679,6 +680,9 @@ export function createAutocompleteClient(
           headers: {
             Accept: "application/json",
             [requestPolicy.sessionHeader]: grant.sessionToken,
+            // Names this SDK and its version to the autocomplete service; a
+            // browser would drop a User-Agent set here, and not this.
+            [CLIENT_HEADER]: CLIENT_PRODUCT,
           },
           ...(signal !== undefined ? { signal } : {}),
           credentials: "omit",

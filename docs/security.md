@@ -32,6 +32,34 @@ requests with no `Origin`, and, with `allowedOrigins`, requests from pages
 that are not yours, before it spends a mint. Every mint counts against your
 organization's session pool.
 
+## What the SDK says about itself
+
+Which SDK, and which version, and nothing about you or your users.
+
+- Every suggest request the browser client makes carries an
+  `X-Baselayer-Client` header, whose value is
+  `baselayer-autocomplete-typescript/<version>`. It is not `User-Agent`: a
+  browser ignores a `User-Agent` set from `fetch`.
+- The mint `mintForOrigin` and `createMintHandler` make carries the same
+  header, and a `User-Agent` of the same value followed by the runtime's own
+  token (`Node.js/22`, `Deno/2.1.4`, `Cloudflare-Workers`) where it names
+  itself.
+- Baselayer reads them to see which SDK versions are in use. Nothing depends
+  on them: a proxy that strips either one does no harm. Because
+  `X-Baselayer-Client` is not a header a browser may send to another origin
+  unasked, the autocomplete service names it in its CORS answer, which is what
+  lets the request through.
+- To send neither, give the client a `fetch` that drops it, and the mint a
+  `fetch` that drops both:
+
+  ```ts
+  const quiet: FetchLike = (url, { headers, ...init }) => {
+    const { "X-Baselayer-Client": _, ...rest } = headers;
+    return fetch(url, { ...init, headers: rest });
+  };
+  createAutocompleteClient({ baseUrl, mint, fetch: quiet });
+  ```
+
 ## What the pick carries
 
 `business_token` is sealed by Baselayer for your organization. It reveals

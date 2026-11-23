@@ -1,0 +1,2 @@
+Do not release: this build sends X-Baselayer-Client, and until the autocomplete service lists that header in its CORS answer (the service half of ENG-10867, deployed to production) a browser's preflight refuses every search.
+Delete this file in the pull request that names the minimum service version in the changelog entry.

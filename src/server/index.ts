@@ -16,6 +16,8 @@
  * 3. Never forward cookies, and never log the key.
  */
 
+import { CLIENT_HEADER, CLIENT_PRODUCT, userAgent } from "../version";
+
 export const DEFAULT_API_BASE_URL = "https://api.baselayer.com";
 export const SESSIONS_PATH = "/autocomplete/sessions";
 
@@ -133,6 +135,12 @@ export async function mintForOrigin(
       Accept: "application/json",
       "X-API-Key": options.apiKey,
       Origin: options.origin,
+      // Which SDK, and which runtime, mints: Baselayer reads it to see which
+      // versions are deployed. `User-Agent` is the usual name for it on a
+      // server, and the same product token rides in `X-Baselayer-Client`, the
+      // header the browser client sends.
+      "User-Agent": userAgent(),
+      [CLIENT_HEADER]: CLIENT_PRODUCT,
       ...(requestBody !== null ? { "Content-Type": "application/json" } : {}),
     },
     ...(requestBody !== null ? { body: requestBody } : {}),
