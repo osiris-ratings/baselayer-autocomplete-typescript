@@ -4,9 +4,14 @@
 //   pnpm release patch|minor|major|<x.y.z>   the release, as a PR from main
 //   pnpm release hotfix [<commit>...]        a hotfix branch off the last release
 //   pnpm release tag                         tag what merged, which publishes it
+//   pnpm release backfill [--create]         GitHub Releases for tags with none
 //
 // Every command takes --dry-run: it fetches, checks and says what it would
-// change, and changes nothing.
+// change, and changes nothing. `backfill` does that unless it is given
+// --create, since a Release is public and notifies the people watching.
+//
+// The Release workflow runs `github-release <tag> <dist-tag>` once npm has the
+// version, and `dist-tag <version> <latest>` before it.
 
 import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -15,24 +20,30 @@ import { join } from "node:path";
 import { parseArgs } from "node:util";
 
 import {
+  backfillPlan,
   bumpVersion,
   compareVersions,
   cutRelease,
   distTagFor,
   formatVersion,
   forwardPort,
+  githubReleaseArgs,
   hotfixBranch,
   latestRelease,
   parseVersion,
+  releaseIsLatest,
+  releaseNotes,
   releasedSection,
   setPackageVersion,
   versionOfHotfixBranch,
+  type BackfillEntry,
 } from "./release-plan.ts";
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
   options: {
     "dry-run": { type: "boolean", default: false },
+    create: { type: "boolean", default: false },
     from: { type: "string" },
   },
 });
@@ -410,10 +421,86 @@ function tag(): void {
   if (hotfixVersion !== null) forwardPortToMain(version, section);
 }
 
+/** Whether the tag already has a GitHub Release. */
+function releaseExists(tag: string): boolean {
+  return succeeds("gh", ["release", "view", tag]);
+}
+
+/** Creates a release, or says what it would: its command and its notes. */
+function createRelease(entry: BackfillEntry, live: boolean): void {
+  const args = githubReleaseArgs(entry);
+  if (!live) {
+    const shown = args.map(arg =>
+      /[\s"']/.test(arg) ? JSON.stringify(arg) : arg,
+    );
+    console.log(`  would run: gh ${shown.join(" ")}`);
+    console.log("  with these notes on standard input:");
+    console.log(indent(indent(entry.notes)));
+    return;
+  }
+  execFileSync("gh", args, {
+    input: entry.notes,
+    stdio: ["pipe", "inherit", "inherit"],
+  });
+}
+
+/**
+ * `pnpm release github-release <tag> <dist-tag>`: the GitHub Release of a tag
+ * npm now has, with the version's changelog section as its notes. It is the
+ * newest release unless the version went out under another dist-tag. A tag
+ * that has its Release already is left alone, so a re-run is safe.
+ */
+function githubRelease(tag: string, distTag: string): void {
+  if (!tag.startsWith("v")) refuse(`${tag} is not a version tag (vX.Y.Z)`);
+  const version = formatVersion(parseVersion(tag.slice(1)));
+  if (releaseExists(tag)) {
+    console.log(`${tag} has a GitHub Release already; nothing to do`);
+    return;
+  }
+  const notes = releaseNotes(readFileSync("CHANGELOG.md", "utf8"), version);
+  if (notes === null) refuse(`CHANGELOG.md has no [${version}] section`);
+  createRelease(
+    { tag, version, latest: releaseIsLatest(distTag), notes },
+    !dryRun,
+  );
+}
+
+/**
+ * `pnpm release backfill`: a GitHub Release for every release tag that has
+ * none, oldest first, each with the notes from that tag's own changelog and
+ * the highest version as the latest. It only says what it would do unless it
+ * is given --create.
+ */
+function backfill(): void {
+  git("fetch", "--quiet", "--tags", "origin");
+  const plan = backfillPlan(git("tag", "--list", "v*").split("\n"), tag =>
+    fileAt(tag, "CHANGELOG.md"),
+  );
+  const live = values.create && !dryRun;
+  let made = 0;
+  for (const entry of plan) {
+    if (releaseExists(entry.tag)) {
+      console.log(`${entry.tag}: has a GitHub Release already, skipped`);
+      continue;
+    }
+    console.log(`${entry.tag}${entry.latest ? " (the latest)" : ""}`);
+    createRelease(entry, live);
+    made += 1;
+  }
+  console.log(
+    live
+      ? `\nCreated ${made} GitHub Release${made === 1 ? "" : "s"}.`
+      : `\nNothing was created. ${made} Release${made === 1 ? "" : "s"} would be: ` +
+          "they are public and notify the people watching the repository. " +
+          "Run it with --create to make them.",
+  );
+}
+
 const USAGE = `usage:
   pnpm release patch|minor|major|<x.y.z> [--dry-run]
   pnpm release hotfix [<commit>...] [--from vX.Y.Z] [--dry-run]
-  pnpm release tag [--dry-run]`;
+  pnpm release tag [--dry-run]
+  pnpm release backfill [--create]`;
 
 try {
   const [command, ...rest] = positionals;
@@ -430,6 +517,13 @@ try {
     case "dist-tag":
       // For the Release workflow: the dist-tag for a version, given `latest`.
       console.log(distTagFor(rest[0] ?? refuse(USAGE), rest[1] ?? ""));
+      break;
+    case "github-release":
+      // For the Release workflow, after the publish: the tag and the dist-tag.
+      githubRelease(rest[0] ?? refuse(USAGE), rest[1] ?? "");
+      break;
+    case "backfill":
+      backfill();
       break;
     default:
       prepare(command);

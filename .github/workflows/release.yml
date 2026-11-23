@@ -1,9 +1,13 @@
-# Publish @baselayer-sdk/autocomplete to npm when a version tag is pushed.
+# Publish @baselayer-sdk/autocomplete to npm when a version tag is pushed, then
+# give the tag its GitHub Release.
 #
 # Auth is npm trusted publishing (OIDC): no long-lived token in the repo.
 # While the repository is private npm refuses provenance, so `--provenance`
 # is added only once it is public. NPM_TOKEN, when the secret exists, is the
 # fallback for a package that has no trusted publisher configured yet.
+#
+# The GitHub Release is its own job, after the publish and its approval, so its
+# token can write to the repository while the publish job's stays read-only.
 name: Release
 
 on:
@@ -32,6 +36,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: npm-publish
     timeout-minutes: 15
+    outputs:
+      # The dist-tag the version went out under: it decides whether its GitHub
+      # Release is the repository's latest.
+      dist_tag: ${{ steps.publish.outputs.dist_tag }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,6 +65,7 @@ jobs:
       - run: pnpm typecheck && pnpm lint && pnpm test && pnpm build
       - run: pnpm check:package
       - name: Publish
+        id: publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           PROVENANCE: ${{ github.event.repository.private && '' || '--provenance' }}
@@ -71,3 +80,27 @@ jobs:
           tag="${DIST_TAG:-$(node scripts/release.ts dist-tag "$version" "$latest")}"
           echo "Publishing $version under the $tag dist-tag"
           npm publish --access public --tag "$tag" $PROVENANCE
+          echo "dist_tag=$tag" >> "$GITHUB_OUTPUT"
+
+  # Re-running a failed run re-runs this job alone, and a version that has its
+  # Release already is left as it is.
+  github-release:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag || github.ref }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ inputs.tag || github.ref_name }}
+          DIST_TAG: ${{ needs.publish.outputs.dist_tag }}
+        run: node scripts/release.ts github-release "$TAG" "$DIST_TAG"

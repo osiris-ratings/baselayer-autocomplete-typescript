@@ -1,16 +1,23 @@
+import { readFileSync } from "node:fs";
+
 import { describe, expect, it } from "vitest";
 
 import {
+  backfillPlan,
   bumpVersion,
   compareVersions,
   cutRelease,
   distTagFor,
   forwardPort,
+  githubReleaseArgs,
   hotfixBranch,
   latestRelease,
   parseVersion,
+  releaseIsLatest,
+  releaseNotes,
   releasedSection,
   setPackageVersion,
+  unwrapMarkdown,
   versionOfHotfixBranch,
 } from "../../scripts/release-plan.ts";
 
@@ -316,6 +323,221 @@ describe("setPackageVersion", () => {
   it("refuses a package.json without a top-level version", () => {
     expect(() => setPackageVersion('{\n  "name": "x"\n}\n', "0.2.0")).toThrow(
       /no top-level "version"/,
+    );
+  });
+});
+
+describe("unwrapMarkdown", () => {
+  it("puts a wrapped list item and a wrapped paragraph on one line each", () => {
+    expect(
+      unwrapMarkdown(
+        "- A long entry that wraps\n  onto a second line and\n  a third.\n- Another.",
+      ),
+    ).toBe(
+      "- A long entry that wraps onto a second line and a third.\n- Another.",
+    );
+    expect(unwrapMarkdown("First line\nsecond line.\n\nNew paragraph.")).toBe(
+      "First line second line.\n\nNew paragraph.",
+    );
+  });
+
+  it("keeps headings, blank lines and where each list item starts", () => {
+    const text =
+      "### Added\n\n- One\n  two.\n\n### Fixed\n- Three.\n1. First\n2. Second";
+    expect(unwrapMarkdown(text)).toBe(
+      "### Added\n\n- One two.\n\n### Fixed\n- Three.\n1. First\n2. Second",
+    );
+  });
+
+  it("keeps a nested list item on its own line, and unwraps inside it", () => {
+    expect(
+      unwrapMarkdown(
+        "- Parent\n  wraps here:\n  - child one\n    wraps too\n  - child two",
+      ),
+    ).toBe("- Parent wraps here:\n  - child one wraps too\n  - child two");
+  });
+
+  it("starts a list item after a line of text with no blank between", () => {
+    expect(unwrapMarkdown("Intro:\n- a\n- b")).toBe("Intro:\n- a\n- b");
+  });
+
+  it("joins a line that only looks like a marker or a tag", () => {
+    // `3.5rem` has no space after its dot, so it is not a numbered item, and
+    // an autolink is text.
+    expect(
+      unwrapMarkdown(
+        "- Menu\n  3.5rem more, see\n  <https://example.com/x> too",
+      ),
+    ).toBe("- Menu 3.5rem more, see <https://example.com/x> too");
+  });
+
+  it("leaves a fenced block and a table as they are", () => {
+    const text =
+      "Before\n\n```ts\nconst a = 1;\nconst b = 2;\n```\n\n| a | b |\n| - | - |\n| 1 | 2 |\n\nAfter";
+    expect(unwrapMarkdown(text)).toBe(text);
+  });
+
+  it("keeps a hard break", () => {
+    expect(unwrapMarkdown("line one  \nline two")).toBe("line one  \nline two");
+    expect(unwrapMarkdown("line one\\\nline two")).toBe("line one\\\nline two");
+  });
+
+  it("does not change what it already changed", () => {
+    const once = unwrapMarkdown("- a\n  b\n\nc\nd\n- e\n  f");
+    expect(unwrapMarkdown(once)).toBe(once);
+  });
+});
+
+describe("releaseNotes", () => {
+  const text = changelog(
+    "## [Unreleased]",
+    "## [0.2.0] - 2026-10-02\n\n### Added\n\n- A new thing that is\n  described over two lines.\n\n### Fixed\n\n- A bug.",
+    "## [0.1.0] - 2026-09-24\n\n- The first release.",
+  );
+
+  it("is the version's entries without its heading, one line to an entry", () => {
+    expect(releaseNotes(text, "0.2.0")).toBe(
+      "### Added\n\n- A new thing that is described over two lines.\n\n### Fixed\n\n- A bug.",
+    );
+  });
+
+  it("reads the last section to the end of the file", () => {
+    expect(releaseNotes(text, "0.1.0")).toBe("- The first release.");
+  });
+
+  it("is null for a version the changelog does not have", () => {
+    expect(releaseNotes(text, "0.3.0")).toBeNull();
+  });
+
+  describe("on this repository's changelog", () => {
+    const real = readFileSync(
+      new URL("../../CHANGELOG.md", import.meta.url),
+      "utf8",
+    );
+    const versions = [...real.matchAll(/^## \[(\d[^\]]*)\]/gm)].map(
+      match => match[1] ?? "",
+    );
+    const words = (value: string) => value.split(/\s+/).filter(Boolean);
+    const items = (value: string) =>
+      value.split("\n").filter(line => /^\s*([-*+]|\d+[.)])\s/.test(line));
+
+    it("has released versions to read", () => {
+      expect(versions.length).toBeGreaterThan(10);
+    });
+
+    it.each(versions)(
+      "%s keeps every word, in order, and every item",
+      version => {
+        const section = releasedSection(real, version) ?? "";
+        const original = section.split("\n").slice(1).join("\n");
+        const notes = releaseNotes(real, version) ?? "";
+
+        expect(words(notes)).toEqual(words(original));
+        expect(items(notes).length).toBe(items(original).length);
+        expect(notes.split("\n").length).toBeLessThanOrEqual(
+          original.trim().split("\n").length,
+        );
+        expect(unwrapMarkdown(notes)).toBe(notes);
+      },
+    );
+  });
+});
+
+describe("releaseIsLatest", () => {
+  it("is the newest release, which npm calls `latest`", () => {
+    expect(releaseIsLatest("latest")).toBe(true);
+  });
+
+  it("is not a prerelease, nor a hotfix to an older line", () => {
+    expect(releaseIsLatest("next")).toBe(false);
+    expect(releaseIsLatest("release-0.1")).toBe(false);
+    expect(releaseIsLatest("")).toBe(false);
+  });
+});
+
+describe("githubReleaseArgs", () => {
+  it("creates the release of an existing tag, notes from stdin, as the latest", () => {
+    expect(
+      githubReleaseArgs({ tag: "v0.2.0", version: "0.2.0", latest: true }),
+    ).toEqual([
+      "release",
+      "create",
+      "v0.2.0",
+      "--title",
+      "0.2.0",
+      "--notes-file",
+      "-",
+      "--verify-tag",
+      "--latest",
+    ]);
+  });
+
+  it("says outright when it is not the latest", () => {
+    const args = githubReleaseArgs({
+      tag: "v0.1.2",
+      version: "0.1.2",
+      latest: false,
+    });
+    expect(args.at(-1)).toBe("--latest=false");
+    expect(args).not.toContain("--latest");
+  });
+});
+
+describe("backfillPlan", () => {
+  const files: Record<string, string> = {
+    "v0.1.0": changelog("## [0.1.0] - 2026-09-24\n\n- The first."),
+    "v0.1.1": changelog(
+      "## [0.1.1] - 2026-09-25\n\n- A fix.",
+      "## [0.1.0] - 2026-09-24\n\n- The first.",
+    ),
+    "v0.10.0": changelog(
+      "## [0.10.0] - 2026-10-28\n\n- The tenth\n  minor.",
+      "## [0.2.0] - 2026-09-28\n\n- The second.",
+    ),
+    "v0.2.0": changelog("## [0.2.0] - 2026-09-28\n\n- The second."),
+  };
+  const at = (tag: string) => files[tag] ?? null;
+
+  it("has a release for each tag, oldest first, with that tag's own notes", () => {
+    const plan = backfillPlan(["v0.10.0", "v0.1.0", "v0.2.0", "v0.1.1"], at);
+    expect(plan.map(entry => entry.tag)).toEqual([
+      "v0.1.0",
+      "v0.1.1",
+      "v0.2.0",
+      "v0.10.0",
+    ]);
+    expect(plan.map(entry => entry.version)).toEqual([
+      "0.1.0",
+      "0.1.1",
+      "0.2.0",
+      "0.10.0",
+    ]);
+    expect(plan.map(entry => entry.notes)).toEqual([
+      "- The first.",
+      "- A fix.",
+      "- The second.",
+      "- The tenth minor.",
+    ]);
+  });
+
+  it("makes only the highest version the latest", () => {
+    const plan = backfillPlan(["v0.10.0", "v0.2.0", "v0.1.0", "v0.1.1"], at);
+    expect(plan.filter(entry => entry.latest).map(entry => entry.tag)).toEqual([
+      "v0.10.0",
+    ]);
+  });
+
+  it("leaves out a tag that is not a release", () => {
+    const plan = backfillPlan(
+      ["v0.1.0", "v0.2.0-rc.0", "nightly", "v1", ""],
+      at,
+    );
+    expect(plan.map(entry => entry.tag)).toEqual(["v0.1.0"]);
+  });
+
+  it("refuses a tag whose changelog has no section for it", () => {
+    expect(() => backfillPlan(["v0.3.0"], at)).toThrow(
+      /v0\.3\.0.*no \[0\.3\.0\] section/,
     );
   });
 });

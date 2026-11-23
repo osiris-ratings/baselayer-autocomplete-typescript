@@ -6,6 +6,13 @@ breaking change bumps the minor version.
 
 ## [Unreleased]
 
+### Added
+
+- Each release now also has a GitHub Release, created by the Release workflow
+  once npm has the version: its title is the version and its notes are that
+  version's entries here. A hotfix to an older line is not marked Latest.
+  Repository tooling only: the package and its types are untouched.
+
 ### Changed
 
 - The demo's Connect step calls its field **Your Baselayer API key**, and its
